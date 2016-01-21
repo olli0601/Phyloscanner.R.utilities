@@ -1,4 +1,17 @@
+PR.PACKAGE		<- "phyloscan" 
+PR.EVAL.FASTA	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
 
+#' @export
+pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', verbose=1)
+{
+	cmd		<- paste('\n',PR.EVAL.FASTA, ' -indir=',indir, ' -strip.max.len=',strip.max.len, sep='')
+	if(select!='')
+		cmd	<- paste(cmd,' -select=',select,sep='')
+	cmd	<- paste(cmd,'\n',sep='')
+	cmd
+}
+
+#' @export
 pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='',out.dir='.')
 {	
 	stopifnot(is.character(file.bam),is.character(file.ref),is.numeric(window.coord), !length(window.coord)%%2)
@@ -31,6 +44,7 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	cmd
 }
 
+#' @export
 pty.cmdwrap <- function(pty.runs, pty.args) 		
 {
 	#
@@ -81,13 +95,14 @@ pty.cmdwrap <- function(pty.runs, pty.args)
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
+				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), verbose=1), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
 	pty.cmd
 }	
 
-
+#' @export
 project.dualinfecions.phylotypes.mltrees.160115<- function() 
 {
 	require(ggtree)
@@ -171,6 +186,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	}	
 }
 
+#' @export
 pty.evaluate.tree<- function(pty.infile, indir.tr)
 {
 	load( pty.infile )
@@ -398,55 +414,61 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 	}
 }	
 
-pty.evaluate.fasta<- function(pty.infile, indir)
+#' @export
+pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', verbose=1)
 {
+	#select			<- '^ptyr1_InWindow'
+	#strip.max.len	<- 350	
 	require(zoo)
 	require(big.phylo)
-	load( pty.infile )	
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
 	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
+	infiles			<- subset(infiles, grepl(select,FILE))
+	
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]	
-	strip.max.len	<- 350
-	#	read all fasta into R and save
-	pty.seq			<- lapply( infiles[, FILE], function(x) seq.strip.gap(read.dna(file.path(indir,x), format='fasta'), strip.max.len=strip.max.len)	)
-	names(pty.seq)	<- infiles[, FILE]
+	setkey(infiles, W_FROM)
+	#	read all fasta into R
+	pty.seq.rw			<- lapply( infiles[, FILE], function(x) read.dna(file.path(indir,x), format='fasta')	)
+	names(pty.seq.rw)	<- infiles[, FILE]	
+	pty.seq				<- lapply( infiles[, FILE], function(x) seq.strip.gap(pty.seq.rw[[x]], strip.max.len=strip.max.len)	)
+	names(pty.seq)		<- infiles[, FILE]
 	#	get statistics
-	pty.seqd		<- lapply( infiles[, unique(PTY_RUN)], function(ptyr)	
-		{
-			cat('\n\n\n\n\t\tRUN\t\t',ptyr,'\n\n\n\n')
-			seqd	<- subset(infiles, PTY_RUN==ptyr)[,{
-						cat('\n',FILE)
-						seq		<- pty.seq[[FILE]]					
-						tmp		<- rownames(seq)
-						seqd	<- data.table(READ=tmp, IND= gsub('_read.*','',tmp)) 
-						seqd[, READ_N:=as.integer(gsub('_count_','',regmatches(tmp,regexpr('_count_[0-9]+',tmp))))]			
-						tmp		<- as.character(seq)
-						seqd[, FIRST:= apply( tmp, 1, function(x) which(x!='-')[1] )]
-						seqd[, LAST:= ncol(tmp)-apply( tmp, 1, function(x) which(rev(x)!='-')[1] ) + 1L]
-						seqd[, LEN:= LAST-FIRST+1L]
-						seqd	<- merge(seqd, seqd[, list(UNIQUE_N=length(READ)),by='IND'], by='IND')
-						seqd[, TOTAL_N:= nrow(seqd)]
-						seqd
-					},by='FILE']
-			seqd	<- merge(infiles, seqd, by='FILE')
-			tmp		<- subset(si, select=c(SANGER_ID, PANGEA_ID))
-			set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
-			setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','IND'))
-			seqd	<- merge(seqd, tmp, by='IND',all.x=1)
-			tmp		<- seqd[, which(is.na(TAXA))]
-			set(seqd, tmp, 'TAXA', seqd[tmp, IND])
-			seqd	<- merge(pty.runs, seqd, by=c('PTY_RUN','TAXA'))
-			set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])
-			seqd
-		})
-	names(pty.seqd)	<- infiles[, unique(PTY_RUN)]
+	if(verbose==1)
+		cat('\ncollecting alignment statistics\t',select,'\n')
+	seqd	<- infiles[,{
+				if(verbose==1)	cat('\n',FILE)
+				#FILE	<- 'ptyr1_InWindow_1_to_60.fasta'
+				seq		<- pty.seq[[FILE]]					
+				tmp		<- rownames(seq)
+				seqd	<- data.table(READ=tmp, FILE_ID= gsub('_read.*','',tmp)) 
+				seqd[, READ_N:=as.integer(gsub('_count_','',regmatches(tmp,regexpr('_count_[0-9]+',tmp))))]			
+				tmp		<- as.character(seq)
+				seqd[, FIRST:= apply( tmp, 1, function(x) which(x!='-')[1] )]
+				seqd[, LAST:= ncol(tmp)-apply( tmp, 1, function(x) which(rev(x)!='-')[1] ) + 1L]
+				seqd[, LEN:= LAST-FIRST+1L]
+				seqd	<- merge(seqd, seqd[, list(UNIQUE_N=length(READ)),by='FILE_ID'], by='FILE_ID')
+				seqd[, TOTAL_N:= nrow(seqd)]
+				seqd
+			},by='FILE']
+	seqd	<- merge(infiles, seqd, by='FILE')
+	#tmp		<- subset(si, select=c(SANGER_ID, PANGEA_ID))
+	#set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
+	#setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','FILE_ID'))
+	#seqd	<- merge(seqd, tmp, by='FILE_ID',all.x=1)
+	#tmp		<- seqd[, which(is.na(TAXA))]
+	#set(seqd, tmp, 'TAXA', seqd[tmp, FILE_ID])
+	#seqd	<- merge(seqd, subset(pty.runs, select=c(FILE_ID,PTY_RUN,FILL)), by=c('PTY_RUN','FILE_ID'), all.x=1)
+	#set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])	
+	tmp		<- file.path(outdir, gsub('.fasta','.rda',gsub('_InWindow_[0-9]+_to_[0-9]+','',infiles[1,][,FILE])))
+	if(verbose)
+		cat('\nsave to',tmp)
 	#	save
-	save(pty.seq, file=gsub('ptyrunsinput','ptyrunsfasta',pty.infile))
-	save(pty.sedd, file=gsub('ptyrunsinput','ptyrunsevafa',pty.infile))	
+	save(pty.seq.rw, pty.seq, seqd, file=tmp)		
 }
 
+#' @export
 project.dualinfecions.phylotypes.countbam.150120<- function()
 {
 	require(ggplot2)
@@ -492,6 +514,7 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 	ggsave(file= gsub('ptyrunsinput.rda','bamlen.pdf',pty.infile), w=10, h=7)	
 }
 
+#' @export
 project.dualinfecions.phylotypes.pipeline.examl.160110<- function() 
 {
 	require(big.phylo)
@@ -548,6 +571,7 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 	}	
 }
 
+#' @export
 pty.pipeline.fasta<- function() 
 {
 	require(big.phylo)
@@ -595,21 +619,24 @@ pty.pipeline.fasta<- function()
 	if(0)
 	{
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='' )		
+										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
+										strip.max.len=350)		
 		pty.c				<- pty.cmdwrap(pty.runs, pty.args)		
 	}
 	#	run 160118	window length 60 & Q1 18 & keep overhangs
 	if(1)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs' )		
+										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+										strip.max.len=350)
 		pty.c				<- pty.cmdwrap(pty.runs, pty.args)		
 	}
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
 	if(0)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs' )		
+										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+										strip.max.len=350)
 		pty.c				<- pty.cmdwrap(pty.runs, pty.args)
 		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
 	}
@@ -638,6 +665,7 @@ pty.pipeline.fasta<- function()
 	}	
 }
 
+#' @export
 pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
 {
 	pty.maxn	<- ceiling( (pty.taxan-pty.sel.n) / (pty.sel.n-1) )
@@ -659,7 +687,8 @@ pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
 }
 
 
-######################################################################################
+
+#' @export
 pty.various<- function()
 {		
 	if(1)

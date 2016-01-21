@@ -1,0 +1,50 @@
+cat("#######################################################
+# phyloscan.evaluate.fasta.Rscript version 160121.	
+#######################################################")
+args <- commandArgs()
+if(!any(args=='--args'))
+	args<- vector("numeric",0)
+if(any(args=='--args'))
+	args<- args[-(1:match("--args", args)) ]
+#	default args
+indir			<- NA
+outdir			<- NA
+strip.max.len	<- NA
+select			<- ''
+
+if(exists("args"))
+{	
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,6),
+								indir= return(substr(arg,8,nchar(arg))),NA)	}))
+	if(length(tmp)>0) indir<- tmp[1]	
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,7),
+								outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+	if(length(tmp)>0) outdir<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,14),
+								strip.max.len= return(as.numeric(substr(arg,16,nchar(arg)))),NA)	}))
+	if(length(tmp)>0) strip.max.len<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,7),
+								select= return(substr(arg,9,nchar(arg))),NA)	}))
+	if(length(tmp)>0) select<- tmp[1]
+		
+}
+if( is.na(indir) )
+{
+	stop('\nUsage:
+Rscript phyloscan.evaluate.fasta.Rscript -indir=INDIR [-outdir=OUTDIR] -strip.max.len=STRIPMAXLEN -select=SELECT  
+')
+}
+if( is.na(outdir))
+	outdir	<- indir
+if(1)
+{
+	print(indir); print(outdir); print(strip.max.len); print(select)
+}
+###############################################################################
+#	run script
+library(phyloscan)
+pty.evaluate.fasta(indir, outdir=outdir, strip.max.len=strip.max.len, select=select, verbose=1)

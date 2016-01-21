@@ -443,7 +443,7 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 	
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	pty.infile		<- file.path(HOME,"data", "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")		
-	indir			<- file.path(HOME,"phylotypes")	
+	indir			<- file.path(HOME,"phylotypes_160119")	
 	pty.evaluate.fasta(pty.infile, indir)
 	
 	if(0)
