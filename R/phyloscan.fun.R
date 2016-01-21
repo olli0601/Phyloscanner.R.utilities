@@ -2,11 +2,13 @@ PR.PACKAGE		<- "phyloscan"
 PR.EVAL.FASTA	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
 
 #' @export
-pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', verbose=1)
+pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA, verbose=1)
 {
 	cmd		<- paste('\n',PR.EVAL.FASTA, ' -indir=',indir, ' -strip.max.len=',strip.max.len, sep='')
 	if(select!='')
 		cmd	<- paste(cmd,' -select=',select,sep='')
+	if(!is.na(min.ureads.individual))
+		cmd	<- paste(cmd,' -min.ureads.individual=',min.ureads.individual,sep='')	
 	cmd	<- paste(cmd,'\n',sep='')
 	cmd
 }
@@ -95,8 +97,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
-				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), verbose=1), sep='')
-				cmd			<- paste(cmd, '\nrm ',pty.args[['out.dir']],'/ptyr',PTY_RUN,'_In.*fasta\n',sep='')
+				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']], verbose=1), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
@@ -417,7 +418,7 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 
 #' @import ape zoo data.table
 #' @export
-pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', verbose=1)
+pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA, verbose=1)
 {
 	#select			<- '^ptyr1_InWindow'
 	#strip.max.len	<- 350	
@@ -463,8 +464,30 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	tmp		<- file.path(outdir, gsub('.fasta','_alignments.rda',gsub('_InWindow_[0-9]+_to_[0-9]+','',infiles[1,][,FILE])))
 	if(verbose)
 		cat('\nsave to',tmp)
-	#	save
+	#	save and delete old fasta files
 	save(pty.seq.rw, pty.seq, seqd, file=tmp)	
+	invisible( seqd[, file.remove(file.path(indir,FILE))] )
+	#
+	#	prepare examl files
+	#
+	setkey(seqd, W_FROM)
+	#	select
+	if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
+	{
+		seqd	<- subset(seqd, UNIQUE_N>=min.ureads.individual)
+	}
+	#	write fasta
+	pty.fa	<- seqd[, {	
+				#FILE<- 'ptyr1_InWindow_1_to_60.fasta'
+				#READ	<- tmp$READ[which(tmp$FILE==FILE)]
+				z		<- file.path(outdir, gsub('\\.fasta','_dophy\\.fasta',FILE))
+				if(!file.exists(z))
+				{
+					write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
+				}										
+				list(FILE=z, TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
+			}, by='FILE']
+	cat('\nwrote fasta files for trees, min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
 }
 
 #' @export
@@ -533,22 +556,19 @@ pty.cmdwrap.examl<- function(pty.args)
 						#	select
 						#
 						if(!is.na(pty.args[['min.ureads.individual']]))	#	select individuals with x unique reads in each window
-						{
-							#	deselect:
-							#tmp	<- subset(seqd, UNIQUE_N<min.ureads.individual)
-							#invisible( tmp[, cat('\nFrom window',W_FROM[1],'deselect',paste(FILE_ID,collapse=', ',sep='\n')), by='FILE'] )		
-							#	select these
-							tmp	<- subset(seqd, UNIQUE_N>=pty.args[['min.ureads.individual']])
-						}
+							seqd	<- subset(seqd, UNIQUE_N>=pty.args[['min.ureads.individual']])
 						#	write fasta
-						pty.fa	<- tmp[, {	
+						pty.fa		<- seqd[, {	
 									#FILE<- 'ptyr1_InWindow_1_to_60.fasta'
 									#READ	<- tmp$READ[which(tmp$FILE==FILE)]
 									z		<- file.path(outdir,gsub('\\.fasta','_dophy\\.fasta',FILE))
-									write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
+									if(!file.exists(z))
+									{
+										write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
+									}										
 									list(FILE=z, TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
 								}, by='FILE']
-						cat('\nwrote fasta files for trees, min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
+						cat('\nusing fasta files for trees',i,', min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
 						pty.fa
 					}))	
 	#
@@ -638,7 +658,7 @@ pty.pipeline.fasta<- function()
 		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
 		out.dir				<- file.path(HOME,"phylotypes")
-		pty.prog			<- '/Users/Oliver/Dropbox\\ \\(Infectious\\ Disease\\)/PhylotypesCode_localcopy_160118/phylotypes.py'
+		pty.prog			<- '/Users/Oliver/git/phylotypes/phylotypes.py'
 		raxml				<- 'raxmlHPC-AVX'
 		no.trees			<- '-T'
 		
@@ -673,7 +693,7 @@ pty.pipeline.fasta<- function()
 	{
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
-										strip.max.len=350)		
+										strip.max.len=350, min.ureads.individual=NA)		
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 	}
 	#	run 160118	window length 60 & Q1 18 & keep overhangs
@@ -681,16 +701,15 @@ pty.pipeline.fasta<- function()
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
-										strip.max.len=350)
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
-		pty.c				<- pty.c[1, ]
+										strip.max.len=350, min.ureads.individual=20)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)			
 	}
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
 	if(0)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
-										strip.max.len=350)
+										strip.max.len=350, min.ureads.individual=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
 	}

@@ -7,10 +7,11 @@ if(!any(args=='--args'))
 if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 #	default args
-indir			<- NA
-outdir			<- NA
-strip.max.len	<- NA
-select			<- ''
+indir					<- NA
+outdir					<- NA
+strip.max.len			<- NA
+min.ureads.individual	<- NA
+select					<- ''
 
 if(exists("args"))
 {	
@@ -30,6 +31,10 @@ if(exists("args"))
 					{	switch(substr(arg,2,7),
 								select= return(substr(arg,9,nchar(arg))),NA)	}))
 	if(length(tmp)>0) select<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,22),
+								min.ureads.individual= return(as.numeric(substr(arg,24,nchar(arg)))),NA)	}))
+	if(length(tmp)>0) min.ureads.individual<- tmp[1]
 		
 }
 if( is.na(indir) )
@@ -42,7 +47,7 @@ if( is.na(outdir))
 	outdir	<- indir
 if(1)
 {
-	print(indir); print(outdir); print(strip.max.len); print(select)
+	print(indir); print(outdir); print(strip.max.len); print(select); print(min.ureads.individual)
 }
 ###############################################################################
 #	run script
@@ -52,4 +57,4 @@ library(zoo)
 library(big.phylo)
 library(data.table)
 
-pty.evaluate.fasta(indir, outdir=outdir, strip.max.len=strip.max.len, select=select, verbose=1)
+pty.evaluate.fasta(indir, outdir=outdir, strip.max.len=strip.max.len, select=select, min.ureads.individual=min.ureads.individual, verbose=1)
