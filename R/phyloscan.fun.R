@@ -593,7 +593,7 @@ pty.pipeline.examl<- function()
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
 	}
 	#	get alignment rda files
-	if(1)
+	if(0)
 	{
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='fasta$'))
 		infiles			<- subset(infiles, !grepl('*',FILE,fixed=1) & !grepl('dophy\\.fasta',FILE))				
@@ -613,7 +613,8 @@ pty.pipeline.examl<- function()
 								min.ureads.individual=20, min.ureads.candidate=NA, 
 								args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
 	exa.cmd			<- pty.cmdwrap.examl(pty.args)
-	#exa.cmd[1, cat(CMD)]		
+	cat( exa.cmd[1, cat(CMD)] )		
+	stop()
 	invisible(exa.cmd[,	{		
 					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
 					#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
