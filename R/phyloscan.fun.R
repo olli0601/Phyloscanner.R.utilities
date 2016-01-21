@@ -526,7 +526,7 @@ pty.cmdwrap.examl<- function(pty.args)
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
 					{
-						i<- 1							
+						#i<- 1							
 						load(file.path(indir,infiles[i,FILE]))	#loads "pty.seq.rw" "pty.seq"    "seqd"
 						setkey(seqd, W_FROM)
 						#
