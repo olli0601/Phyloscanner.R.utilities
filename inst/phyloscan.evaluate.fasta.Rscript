@@ -46,5 +46,10 @@ if(1)
 }
 ###############################################################################
 #	run script
+library(data.table)
+library(ape)
 library(phyloscan)
+library(zoo)
+library(big.phylo)
+
 pty.evaluate.fasta(indir, outdir=outdir, strip.max.len=strip.max.len, select=select, verbose=1)
