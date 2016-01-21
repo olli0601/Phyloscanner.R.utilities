@@ -427,12 +427,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	set(infiles, NULL, 'PTY_RUN', as.numeric(gsub('ptyr','',sapply(strsplit(infiles$FILE,'_'),'[[',1))))
 	set(infiles, NULL, 'W_FROM', as.numeric(gsub('InWindow_','',regmatches(infiles$FILE,regexpr('InWindow_[0-9]+',infiles$FILE))))) 
 	set(infiles, NULL, 'W_TO', as.numeric(gsub('to_','',regmatches(infiles$FILE,regexpr('to_[0-9]+',infiles$FILE)))))	
-	setkey(infiles, W_FROM)
-	
-print('OK')	
-str(infiles)
-
-	infiles			<- copy(infiles)
+	setkey(infiles, W_FROM)	
 	#	read all fasta into R
 	pty.seq.rw			<- lapply( infiles[, FILE], function(x) read.dna(file.path(indir,x), format='fasta')	)
 	names(pty.seq.rw)	<- infiles[, FILE]	
@@ -604,7 +599,7 @@ pty.pipeline.examl<- function()
 		infiles			<- subset(infiles, !grepl('*',FILE,fixed=1) & !grepl('dophy\\.fasta',FILE))				
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 		invisible(infiles[, {
-					cmd			<- pty.cmd.evaluate.fasta(out.dir, strip.max.len=350, select=paste('ptyr',PTY_RUN,'_In'))
+					cmd			<- pty.cmd.evaluate.fasta(out.dir, strip.max.len=350, select=paste('ptyr',PTY_RUN,'_In',sep=''))
 					cat(cmd)
 					cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 					outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
