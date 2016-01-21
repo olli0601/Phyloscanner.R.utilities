@@ -14,8 +14,6 @@ Depends:
     grid,
     ggplot2,
     gridExtra
-Suggests:
-    Rsamtools
 Description: scan phylogenies created along a genome for patterns
 License: GPL (>=2)
 LazyLoad: yes

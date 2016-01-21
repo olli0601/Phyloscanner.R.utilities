@@ -415,12 +415,6 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 	}
 }	
 
-library(ape)
-library(phyloscan)
-library(zoo)
-library(big.phylo)
-library(data.table)
-
 #' @import ape zoo data.table
 #' @export
 pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', verbose=1)
