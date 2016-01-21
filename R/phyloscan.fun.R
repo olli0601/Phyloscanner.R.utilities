@@ -424,8 +424,8 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
 	infiles			<- subset(infiles, grepl(select,FILE))
 	set(infiles, NULL, 'PTY_RUN', as.numeric(gsub('ptyr','',sapply(strsplit(infiles$FILE,'_'),'[[',1))))
-	set(infiles, NULL, 'W_FROM', as.numeric(gsub('InWindow_','',regmatches(infiles$FILE,regexpr('InWindow_[0-9]+',FILE))))) 
-	set(infiles, NULL, 'W_TO', as.numeric(gsub('to_','',regmatches(infiles$FILE,regexpr('to_[0-9]+',FILE)))))	
+	set(infiles, NULL, 'W_FROM', as.numeric(gsub('InWindow_','',regmatches(infiles$FILE,regexpr('InWindow_[0-9]+',infiles$FILE))))) 
+	set(infiles, NULL, 'W_TO', as.numeric(gsub('to_','',regmatches(infiles$FILE,regexpr('to_[0-9]+',infiles$FILE)))))	
 	setkey(infiles, W_FROM)
 	
 print('OK')	
