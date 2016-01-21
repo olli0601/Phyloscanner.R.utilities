@@ -420,16 +420,15 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 {
 	#select			<- '^ptyr1_InWindow'
 	#strip.max.len	<- 350	
-	require(zoo)
-	require(big.phylo)
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
 	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
-	infiles			<- subset(infiles, grepl(select,FILE))
-print(infiles)
+	
+print(infiles, n=200)
 print(is.data.table(infiles))
 print(as.numeric(gsub('ptyr','',sapply(strsplit(infiles[,FILE],'_'),'[[',1))))
 
 	set(infiles, NULL, 'PTY_RUN', as.numeric(gsub('ptyr','',sapply(strsplit(infiles[,FILE],'_'),'[[',1))))
+	infiles			<- subset(infiles, grepl(select,FILE))
 print('OK')	
 	infiles[, PTY_RUN:= infiles[,as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]]
 	infiles[, W_FROM:= infiles[,as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))]] 
