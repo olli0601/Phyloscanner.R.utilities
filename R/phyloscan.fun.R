@@ -45,7 +45,7 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 }
 
 #' @export
-pty.cmdwrap <- function(pty.runs, pty.args) 		
+pty.cmdwrap.fasta <- function(pty.runs, pty.args) 		
 {
 	#
 	#	associate BAM and REF files with each scheduled phylotype run
@@ -466,7 +466,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	if(verbose)
 		cat('\nsave to',tmp)
 	#	save
-	save(pty.seq.rw, pty.seq, seqd, file=tmp)		
+	save(pty.seq.rw, pty.seq, seqd, file=tmp)	
 }
 
 #' @export
@@ -516,63 +516,113 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 }
 
 #' @export
-project.dualinfecions.phylotypes.pipeline.examl.160110<- function() 
+pty.cmdwrap.examl<- function(pty.args)
+{
+	indir					<- pty.args[['out.dir']]
+	outdir					<- indir
+	
+	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
+	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	#infiles		<- subset(infiles, PTY_RUN%in%c(15,17,22))
+	
+	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
+					{
+						i<- 1							
+						load(file.path(indir,infiles[i,FILE]))	#loads "pty.seq.rw" "pty.seq"    "seqd"
+						setkey(seqd, W_FROM)
+						#
+						#	select
+						#
+						if(!is.na(pty.args[['min.ureads.individual']]))	#	select individuals with x unique reads in each window
+						{
+							#	deselect:
+							#tmp	<- subset(seqd, UNIQUE_N<min.ureads.individual)
+							#invisible( tmp[, cat('\nFrom window',W_FROM[1],'deselect',paste(FILE_ID,collapse=', ',sep='\n')), by='FILE'] )		
+							#	select these
+							tmp	<- subset(seqd, UNIQUE_N>=pty.args[['min.ureads.individual']])
+						}
+						#	write fasta
+						pty.fa	<- tmp[, {	
+									#FILE<- 'ptyr1_InWindow_1_to_60.fasta'
+									#READ	<- tmp$READ[which(tmp$FILE==FILE)]
+									z		<- file.path(outdir,gsub('\\.fasta','_dophy\\.fasta',FILE))
+									write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
+									list(FILE=z, TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
+								}, by='FILE']
+						cat('\nwrote fasta files for trees, min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
+						pty.fa
+					}))	
+	#
+	#	get commands to reconstruct tree
+	#
+	if(pty.args[['bs.n']]>0)	#	bootstrap on one machine version 
+	{
+		exa.cmd			<- pty.fa[,	list(CMD=cmd.examl.bootstrap.on.one.machine(dirname(FILE), sub("\\.[^.]*$", "",basename(FILE)), bs.from=0, bs.to=pty.args[['bs.n']]-1, bs.n=pty.args[['bs.n']], opt.bootstrap.by="nucleotide", args.examl=pty.args[['args.examl']])), by='FILE']
+		exa.cmd[, RUN_ID:=seq_len(nrow(exa.cmd))]
+	}
+	if(pty.args[['bs.n']]==0)	#	no bootstrap version
+	{		
+		exa.cmd			<- pty.fa[,{				 					
+					cmd			<- cmd.examl.single(dirname(FILE), sub("\\.[^.]*$", "",basename(FILE)), args.examl=pty.args[['args.examl']])					
+					list(CMD=cmd)					
+				}, by=c('PTY_RUN','FILE')]
+		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/pty.args[['exa.n.per.run']])]
+		exa.cmd			<- exa.cmd[,	list(CMD=paste(CMD,collapse='\n',sep='\n')), 	by='RUN_ID']
+	}
+	exa.cmd
+}	
+
+#' @export
+pty.pipeline.examl<- function() 
 {
 	require(big.phylo)
 	#
 	#	input args
 	#	(used function project.dualinfecions.phylotypes.pipeline.fasta.160110 to create all fasta files)
 	#
-	#indir		<- "/Users/Oliver/duke/2016_PANGEAphylotypes/phylotypes"
-	indir		<- file.path(HOME,"phylotypes")
-	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
-	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	infiles		<- subset(infiles, PTY_RUN%in%c(15,17,22))	
-	args.examl	<- "-f d -D -m GAMMA"
-	#bs.to		<- 4;	bs.n<- 5
-	
-	#	open alignments; select windows; write windows to file; run examl on these
-	
-	#
-	#	bootstrap on one machine version
-	#
-	if(0)
+	#indir			<- "/Users/Oliver/duke/2016_PANGEAphylotypes/phylotypes"
+	if(0)	#test on Mac
 	{
-		invisible(infiles[,{				 
-							cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
-							#cmd			<- paste(cmd, cmd.examl(indir, sub("\\.[^.]*$", "", FILE), args.examl=args.examl), sep='\n')
-							cmd			<- paste(cmd, cmd.examl.bootstrap.on.one.machine(indir, sub("\\.[^.]*$", "", FILE), bs.from=0, bs.to=bs.to, bs.n=bs.n, outdir=indir, opt.bootstrap.by="nucleotide", args.examl=args.examl, verbose=1), sep='\n')
-							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=3, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-							outdir		<- file.path(HOME,"ptyruns")
-							outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-							cmd.hpccaller(outdir, outfile, cmd)
-							#list(CMD=cmd)
-							NULL
-						}, by=c('PTY_RUN','FILE')])
+		work.dir		<- file.path(HOME,"ptyruns")
+		out.dir			<- file.path(HOME,"phylotypes_160119")
+		hpc.load		<- ''
 	}
-	#
-	#	no bootstrap version
-	#
+	if(1)	#coinfections on HPC
+	{				
+		work.dir		<- file.path(HOME,"coinf_ptinput")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")		
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
+	}
+	#	get alignment rda files
 	if(1)
 	{
-		exa.n.per.run	<- 7
-		exa.cmd			<- infiles[,{				 
-					cmd			<- cmd.strip.gaps(file.path(indir,FILE), strip.max.len=350)
-					cmd			<- paste(cmd, cmd.examl.single(indir, sub("\\.[^.]*$", "", FILE), args.examl=args.examl), sep='')					
-					list(CMD=cmd)					
-				}, by=c('PTY_RUN','FILE')]
-		#exa.cmd[1, cat(CMD)]
-		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/exa.n.per.run)]
-		invisible(exa.cmd[,	{
-					cmd			<- paste(CMD,collapse='\n',sep='\n')		
-					cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1)
-					#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1)
-					outdir		<- file.path(HOME,"ptyruns")
-					outfile		<- paste("ptp",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-					cmd.hpccaller(outdir, outfile, cmd)
-				}, by='RUN_ID'])
-	}	
+		infiles			<- data.table(FILE=list.files(out.dir, pattern='fasta$'))
+		infiles			<- subset(infiles, !grepl('*',FILE,fixed=1) & !grepl('dophy\\.fasta',FILE))				
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		invisible(infiles[, {
+					cmd			<- pty.cmd.evaluate.fasta(out.dir, strip.max.len=350, select=paste('ptyr',PTY_RUN,'_In'))
+					cat(cmd)
+					cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+					outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+					cmd.hpccaller(work.dir, outfile, cmd)
+					NULL
+				}, by='PTY_RUN'])
+		stop()
+	}
+	#	get CMD
+	pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
+								min.ureads.individual=20, min.ureads.candidate=NA, 
+								args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
+	exa.cmd			<- pty.cmdwrap.examl(pty.args)
+	#exa.cmd[1, cat(CMD)]		
+	invisible(exa.cmd[,	{		
+					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+					#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
+					#cat(cmd)
+					outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+					cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+				}, by='RUN_ID'])		
 }
 
 #' @export
@@ -625,7 +675,7 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
 										strip.max.len=350)		
-		pty.c				<- pty.cmdwrap(pty.runs, pty.args)		
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 	}
 	#	run 160118	window length 60 & Q1 18 & keep overhangs
 	if(1)
@@ -633,7 +683,7 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350)
-		pty.c				<- pty.cmdwrap(pty.runs, pty.args)	
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
 		pty.c				<- pty.c[1, ]
 	}
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
@@ -642,7 +692,7 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350)
-		pty.c				<- pty.cmdwrap(pty.runs, pty.args)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
 	}
 	if(no.trees=='-T')

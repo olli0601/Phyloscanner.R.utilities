@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	pty.pipeline.fasta()
-	#project.dualinfecions.phylotypes.pipeline.examl.160110()
+	#pty.pipeline.fasta()
+	pty.pipeline.examl()	
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
 	#	various
@@ -439,13 +439,14 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 }
 
 project.dualinfecions.phylotypes.evaluatereads.150119<- function()
-{
+{	
 	
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
-	pty.infile		<- file.path(HOME,"data", "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")		
-	indir			<- file.path(HOME,"phylotypes_160119")	
-	pty.evaluate.fasta(pty.infile, indir)
 	
+	HOME			<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"			
+	indir			<- file.path(HOME,"phylotypes_160119")		
+	pty.evaluate.fasta(indir, strip.max.len=350, select='^ptyr1')
+	
+	#pty.infile		<- file.path(HOME,"data", "PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 	if(0)
 	{		
 		indir			<- file.path(HOME,"phylotypes_160120")
@@ -503,10 +504,7 @@ project.dualinfecions.phylotypes.evaluatereads.150119<- function()
 				labs(y='run', x='number of selected windows')
 		ggsave(file=file.path(indir,'pty_selected_windows.pdf'), w=5, h=20, limitsize = FALSE)
 		
-		tmp		<- seqd[, list(SELECT=all(UNIQUE_N[FILL=='candidate']>10)), by=c('PTY_RUN','W_FROM')]
-		subset(tmp, SELECT)[,]
 		
-		seqd[, table(UNIQUE_N>10, PTY_RUN)]
 	}
 	
 }
