@@ -5,7 +5,7 @@ Title:
 Author: {Oliver Ratmann}
 Maintainer: Oliver Ratmann <oliver.ratmann@imperial.ac.uk>
 Suggests:
-    R (>= 3.1),    
+    R (>= 3.1),
     ape,
     phytools,
     reshape2,

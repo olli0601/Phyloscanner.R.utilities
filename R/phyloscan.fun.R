@@ -96,6 +96,7 @@ pty.cmdwrap <- function(pty.runs, pty.args)
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
 				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), verbose=1), sep='')
+				cmd			<- paste(cmd, '\nrm ',pty.args[['out.dir']],'/ptyr',PTY_RUN,'_In.*fasta\n',sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
@@ -461,7 +462,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	#set(seqd, tmp, 'TAXA', seqd[tmp, FILE_ID])
 	#seqd	<- merge(seqd, subset(pty.runs, select=c(FILE_ID,PTY_RUN,FILL)), by=c('PTY_RUN','FILE_ID'), all.x=1)
 	#set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])	
-	tmp		<- file.path(outdir, gsub('.fasta','.rda',gsub('_InWindow_[0-9]+_to_[0-9]+','',infiles[1,][,FILE])))
+	tmp		<- file.path(outdir, gsub('.fasta','_alignments.rda',gsub('_InWindow_[0-9]+_to_[0-9]+','',infiles[1,][,FILE])))
 	if(verbose)
 		cat('\nsave to',tmp)
 	#	save
@@ -524,11 +525,14 @@ project.dualinfecions.phylotypes.pipeline.examl.160110<- function()
 	#
 	#indir		<- "/Users/Oliver/duke/2016_PANGEAphylotypes/phylotypes"
 	indir		<- file.path(HOME,"phylotypes")
-	infiles		<- data.table(FILE=list.files(indir, pattern='fasta$'))
+	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	infiles		<- subset(infiles, PTY_RUN%in%c(15,17,22))	
 	args.examl	<- "-f d -D -m GAMMA"
 	#bs.to		<- 4;	bs.n<- 5
+	
+	#	open alignments; select windows; write windows to file; run examl on these
+	
 	#
 	#	bootstrap on one machine version
 	#
@@ -599,7 +603,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		HPC.LOAD		<<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
 	}
 	if(1)	#coinfections on HPC
 	{
@@ -610,7 +614,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		HPC.LOAD		<<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
 	}
 	#
 	#	set up all temporary files and create bash commands
@@ -629,7 +633,8 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350)
-		pty.c				<- pty.cmdwrap(pty.runs, pty.args)		
+		pty.c				<- pty.cmdwrap(pty.runs, pty.args)	
+		pty.c				<- pty.c[1, ]
 	}
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
 	if(0)
@@ -643,8 +648,8 @@ pty.pipeline.fasta<- function()
 	if(no.trees=='-T')
 	{
 		invisible(pty.c[,	{					
-					#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="4800mb",  hpc.nproc=1)
-					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1)
+					#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="4800mb",  hpc.nproc=1, hpc.load=hpc.load)
+					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 					#cat(cmd)					
 					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 					cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
@@ -656,8 +661,8 @@ pty.pipeline.fasta<- function()
 		#	add HPC header and submit
 		#
 		invisible(pty.c[,	{
-							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1)
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2)
+							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2, hpc.load=hpc.load)
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							stop()

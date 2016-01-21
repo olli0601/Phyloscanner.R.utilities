@@ -17,11 +17,12 @@ if(!any(args=='--args'))
 if(any(args=='--args'))
 	args<- args[-(1:match("--args", args)) ]
 
+require(ape)
 require(data.table)
 require(grid)
 require(reshape2)
 require(ggplot2)
-require(hivclust)
+require(phyloscan)
 
 
 CODE.HOME	<<- "/Users/Oliver/git/phyloscan"
@@ -37,7 +38,7 @@ default.fun		<- "project.dual"
 #default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","phyloscan.projcts.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","phyloscan.projects.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################
 .ls.objects <- function (pos = 1, pattern, order.by,
@@ -77,8 +78,7 @@ my.mkdir<-function(root,data.name)
 
 my.make.documentation<- function()
 {
-	require(roxygen2)		
-	roxygenize(CODE.HOME)
+	roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
 }
 
 #index of row i (i=1..n) and col j (j=1..n) of nxn matrix in a distance object (as.vector of lower triangular matrix)
@@ -288,9 +288,6 @@ plot.persplocfit<- function(x, pv, theta= 30, phi= 20, palette= "gray",tcl=-0.05
 }
 
 ###############################################################################
-my.mkdir(HOME,"data")
-my.mkdir(HOME,"pdf")
-my.mkdir(HOME,"script")
 argv<- list()
 if(length(args))
 {
