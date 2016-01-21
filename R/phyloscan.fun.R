@@ -426,13 +426,13 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
 	infiles			<- subset(infiles, grepl(select,FILE))
 print(infiles)	
-print(as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1))))
+print(as.numeric(gsub('ptyr','',sapply(strsplit(infiles[,FILE],'_'),'[[',1))))
 print(is.data.table(infiles))
-	set(infiles, NULL, 'PTY_RUN', as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1))))
+	set(infiles, NULL, 'PTY_RUN', as.numeric(gsub('ptyr','',sapply(strsplit(infiles[,FILE],'_'),'[[',1))))
 print('OK')	
-	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
-	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]	
+	infiles[, PTY_RUN:= infiles[,as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]]
+	infiles[, W_FROM:= infiles[,as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))]] 
+	infiles[, W_TO:= infiles[,as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]]	
 	setkey(infiles, W_FROM)
 	#	read all fasta into R
 	pty.seq.rw			<- lapply( infiles[, FILE], function(x) read.dna(file.path(indir,x), format='fasta')	)
