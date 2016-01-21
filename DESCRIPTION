@@ -1,0 +1,20 @@
+Package: phyloscan
+Version: 0.1-0
+Date: 2016/01/21
+Title: 
+Author: {Oliver Ratmann}
+Maintainer: Oliver Ratmann <oliver.ratmann@imperial.ac.uk>
+Suggests:
+    R (>= 3.1),    
+    ape,
+    phytools,
+    reshape2,
+    data.table,
+    RColorBrewer,
+    grid,
+    ggplot2,
+    gridExtra,
+    Rsamtools
+Description: scan phylogenies created along a genome for patterns
+License: GPL (>=2)
+LazyLoad: yes
