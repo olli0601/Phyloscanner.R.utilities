@@ -351,16 +351,12 @@ pty.scan.coinfections	<- function()
 			#geom_line(aes(y=pr50)) + 
 			geom_point(aes(y=pr50)) + geom_errorbar(aes(ymin=pr25, ymax=pr75)) 
 			
-			geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
+			#geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
 	
 
 	ggplot(coi.div, aes(x=W_FROM, fill=FILE_ID)) + 
 			geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
-	
-	aes(x = X1, ymin = `0%`, lower = `25%`, middle = `50%`, upper = `75%`, ymax = `100%`))
-b + geom_boxplot(stat = "identity")
-	#	
-	
+		
 }
 
 #' @import ape data.table gridExtra colorspace ggtree
