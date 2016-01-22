@@ -1,0 +1,57 @@
+cat("#######################################################
+# phyloscan.evaluate.examl.Rscript version 160122.	
+#######################################################")
+args <- commandArgs()
+if(!any(args=='--args'))
+	args<- vector("numeric",0)
+if(any(args=='--args'))
+	args<- args[-(1:match("--args", args)) ]
+#	default args
+indir					<- NA
+infile					<- NA
+outdir					<- NA
+outgroup				<- NA
+select					<- ''
+
+if(exists("args"))
+{	
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,7),
+								infile= return(substr(arg,9,nchar(arg))),NA)	}))
+	if(length(tmp)>0) infile<- tmp[1]		
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,6),
+								indir= return(substr(arg,8,nchar(arg))),NA)	}))
+	if(length(tmp)>0) indir<- tmp[1]	
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,7),
+								outdir= return(substr(arg,9,nchar(arg))),NA)	}))
+	if(length(tmp)>0) outdir<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,7),
+								select= return(substr(arg,9,nchar(arg))),NA)	}))
+	if(length(tmp)>0) select<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,9),
+								outgroup= return(substr(arg,11,nchar(arg))),NA)	}))
+	if(length(tmp)>0) outgroup<- tmp[1]
+	
+}
+if( is.na(indir) )
+{
+	stop('\nUsage:
+Rscript phyloscan.evaluate.examl.Rscript -infile=INFILE -indir=INDIR [-outdir=OUTDIR] -outgroup=OUTGROUP -select=SELECT  
+')
+}
+if( is.na(outdir) )
+	outdir	<- indir
+if(1)
+{
+	print(infile); print(indir); print(outdir); print(select); print(outgroup)
+}
+###############################################################################
+#	run script
+library(phyloscan)
+load( infile )		# need pty.runs
+pty.evaluate.tree(indir, pty.runs, outdir=indir, select=select, outgroup=outgroup)
+

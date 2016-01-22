@@ -353,6 +353,7 @@ project.dualinfecions.phylotypes.setup.coinfections.ZA.160110<- function()
 	tmp			<- pty.runs[, which(is.na(FILE_ID))]
 	set(pty.runs, tmp,'FILE_ID', pty.runs[tmp, TAXA])
 	setkey(pty.runs, PTY_RUN)
+	pty.runs[, FILL:=0]
 	#	
 	cat('\nNumber of clusters=', pty.runs[, length(unique(CLU_ID))])
 	cat('\nNumber of scheduled phylotype runs=', pty.runs[, max(PTY_RUN)])

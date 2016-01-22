@@ -1,14 +1,27 @@
 PR.PACKAGE		<- "phyloscan" 
 PR.EVAL.FASTA	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
+PR.EVAL.EXAML	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
 
 #' @export
-pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA, verbose=1)
+pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA)
 {
 	cmd		<- paste('\n',PR.EVAL.FASTA, ' -indir=',indir, ' -strip.max.len=',strip.max.len, sep='')
 	if(select!='')
 		cmd	<- paste(cmd,' -select=',select,sep='')
 	if(!is.na(min.ureads.individual))
 		cmd	<- paste(cmd,' -min.ureads.individual=',min.ureads.individual,sep='')	
+	cmd	<- paste(cmd,'\n',sep='')
+	cmd
+}
+
+#' @export
+pty.cmd.evaluate.examl<- function(infile, indir, outdir=indir, select='', outgroup=NA)
+{
+	cmd		<- paste('\n',PR.EVAL.EXAML, ' -infile=',infile, ' -indir=',indir, sep='')
+	if(select!='')
+		cmd	<- paste(cmd,' -select=',select,sep='')
+	if(!is.na(outgroup))
+		cmd	<- paste(cmd,' -outgroup=',outgroup,sep='')	
 	cmd	<- paste(cmd,'\n',sep='')
 	cmd
 }
@@ -97,7 +110,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
-				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']], verbose=1), sep='')
+				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
@@ -189,50 +202,58 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 }
 
 #' @export
-pty.evaluate.tree<- function(pty.infile, indir.tr)
+pty.evaluate.tree.root.nofill<- function(ptyfiles, pty.ph, pty.runs)
 {
-	load( pty.infile )
-	tmp				<- subset(si, select=c(SANGER_ID,PANGEA_ID))
-	set(tmp, NULL, 'SANGER_ID', tmp[, gsub('-','_',SANGER_ID)])
-	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
-	setnames(tmp, c('SANGER_ID','PANGEA_ID'),c('FILE_ID','TAXA'))
-	pty.runs		<- merge(pty.runs, tmp, by='TAXA',all.x=1)
-	tmp				<- pty.runs[, which(is.na(FILE_ID))]
-	set(pty.runs, tmp, 'FILE_ID', pty.runs[tmp, TAXA])
-	#
-	#	collect ML tree files
-	#
-	ptyfiles		<- data.table(FILE=list.files(indir.tr, 'newick$'))
-	ptyfiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	ptyfiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
-	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]		
-	ptyfiles		<- subset(ptyfiles, W_FROM<9000)
-	#
-	ptyfiles[, table(PTY_RUN)]
-	#	raw trees w/o any attributes
-	pty.ph		<- lapply( seq_len(nrow(ptyfiles)), function(i)
-			{				
-				ph			<- read.tree(file.path(indir.tr,ptyfiles[i, FILE]))
-				#	node labels
-				if(is.null(ph$node.label))
-					ph$node.label	<- rep('0',Nnode(ph))
-				tmp				<- ph$node.label
-				tmp[which(tmp=='Root'|tmp=='')]	<- '0'
-				ph$node.label	<- as.numeric(tmp)
-				ph
+	pty.root	<- lapply(ptyfiles[, unique(PTY_RUN)], function(ptyr){	
+				#print(ptyr)	
+				#ptyr<- 15
+				tmp					<- subset(ptyfiles, PTY_RUN==ptyr)[,FILE]
+				phs					<- lapply(tmp, function(x) pty.ph[[x]])	
+				names(phs)			<- tmp
+				#	number of read counts per individual				
+				phpd				<- do.call('rbind',lapply(seq_along(phs),function(i){
+									#i			<- 1
+									#print(i)		
+									ph			<- phs[[i]]
+									phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))
+									phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+									phb			<- merge(phb, subset(pty.runs[pty.runs$PTY_RUN==ptyr,],select=FILE_ID), by='FILE_ID', all=1)
+									set(phb, phb[, which(is.na(COUNT))], 'COUNT', 0)
+									phb			<- phb[, list(COUNT=sum(COUNT)), by='FILE_ID']
+									phb[, FILE:= names(phs)[i]]
+									phb					
+								}))
+				phpd				<- merge(phpd, subset(ptyfiles, PTY_RUN==ptyr, select=c(FILE, W_FROM)), by='FILE')
+				setkey(phpd, W_FROM)
+				outgroup.order		<- phpd[, list(COUNT=mean(COUNT)), by='FILE_ID']				
+				outgroup.order		<- merge(outgroup.order, phpd[, list(PRESENT=length(which(COUNT>0))), by='FILE_ID'], by='FILE_ID')
+				setkey(outgroup.order, COUNT)
+				outgroup.order		<- subset(outgroup.order, PRESENT>0)
+				#	ususally not all present throughout; pick in order
+				ans					<- do.call('rbind',lapply(seq_along(phs),function(i){
+							#i			<- 147
+							#print(i)
+							ph				<- phs[[i]]							
+							phb				<- data.table( IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+							phb				<- merge(phb, outgroup.order, by='FILE_ID')
+							outgroup.ind	<- phb[which.min(COUNT), FILE_ID]							
+							phgd			<- cophenetic.phylo(ph)
+							tmp				<- subset(phb, FILE_ID==outgroup.ind)[, BAM]
+							if(length(tmp)<nrow(phgd))
+								phgd		<- phgd[ tmp, setdiff(rownames(phgd), tmp), drop=FALSE]
+							outgroup.seq	<- rownames(phgd)[ which(min(phgd)==phgd, arr.ind=TRUE)[1,1] ]
+							data.table(FILE=names(phs)[i], ROOT=outgroup.seq)					
+						}))
+				ans[, PTY_RUN:= ptyr]
+				ans				
 			})
-	names(pty.ph)<- ptyfiles[, FILE]
-	#
-	#	rm trees with just one individual
-	#
-	ptyfiles[, IND_N:= sapply(seq_along(pty.ph), function(i)  length(unique(gsub('_read.*','',pty.ph[[i]]$tip.label)))		)]
-	ptyfiles			<- subset(ptyfiles, IND_N>1)
-	ptyfiles[, IDX:=seq_len(nrow(ptyfiles))]
-	pty.ph			<- lapply( ptyfiles[, FILE], function(x)	pty.ph[[x]]		)
-	names(pty.ph)	<- ptyfiles[, FILE]	
-	#
-	#	determine root for each run: find taxon with largest distance from BAM of select individuals
-	#
+	pty.root	<- do.call('rbind',pty.root)
+	pty.root
+}
+
+#' @export
+pty.evaluate.tree.root.withfill<- function(ptyfiles, pty.ph, pty.runs)
+{
 	pty.root	<- lapply(ptyfiles[, unique(PTY_RUN)], function(ptyr){	
 				#print(ptyr)	
 				#ptyr<- 15
@@ -243,6 +264,7 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 				#if no target, select target_ind with lowest taxon index (just makes an unambiguous selection when windows are considered one by one)
 				phpd		<- do.call('rbind',lapply(seq_along(phs),function(i){
 									#i			<- 1
+									print(i)
 									ph			<- phs[[i]]							
 									phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
 									phb			<- merge(phb, pty.runs[pty.runs$PTY_RUN==ptyr,], by='FILE_ID', all=1)
@@ -286,12 +308,82 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 				ans
 			})
 	pty.root	<- do.call('rbind',pty.root)
-	ptyfiles		<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
+	pty.root
+}
+
+#' @import ape data.table gridExtra colorspace ggtree
+#' @export
+pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=NA)
+{
+	if(0)
+	{
+		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+		outdir		<- indir
+		pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
+		select		<- '^ptyr1_In'
+		outgroup	<- NA
+	}
+	require(gridExtra)
+	require(colorspace)	
+	require(ggtree)
 	#
-	#	root and ladderize trees
+	#	collect ML tree files
 	#
-	pty.ph.cp						<- copy(pty.ph)	
+	ptyfiles		<- data.table(FILE=list.files(indir, 'newick$'))
+	ptyfiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	ptyfiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
+	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
+	ptyfiles		<- subset(ptyfiles, grepl(select,FILE))
+	setkey(ptyfiles, PTY_RUN, W_FROM)
+	cat('\nfound newick files, n=',nrow(ptyfiles))
+	#ptyfiles		<- subset(ptyfiles, W_FROM<9000)
+	#
+	#ptyfiles[, table(PTY_RUN)]
+	#	raw trees w/o any attributes
+	pty.ph		<- lapply( seq_len(nrow(ptyfiles)), function(i)
+			{				
+				ph			<- read.tree(file.path(indir,ptyfiles[i, FILE]))
+				#	node labels
+				if(is.null(ph$node.label))
+					ph$node.label	<- rep('0',Nnode(ph))
+				tmp				<- ph$node.label
+				tmp[which(tmp=='Root'|tmp=='')]	<- '0'
+				ph$node.label	<- as.numeric(tmp)
+				ph
+			})
+	names(pty.ph)<- ptyfiles[, FILE]
+	#
+	ptyfiles[, IND_N:= sapply(seq_along(pty.ph), function(i)  length(unique(gsub('_read.*','',pty.ph[[i]]$tip.label)))		)]
+	#	rm trees with just one individual if no outgroup specified	
+	if(is.na(outgroup) & pty.runs[, any(FILL==1)])
+	{
+		cat('\nignoring trees with only one individual (only when no root specified)', subset(ptyfiles, IND_N==1)[, paste(unique(FILE),collapse=', ')])
+		ptyfiles		<- subset(ptyfiles, IND_N>1)
+		pty.ph			<- lapply( ptyfiles[, FILE], function(x)	pty.ph[[x]]		)
+		names(pty.ph)	<- ptyfiles[, FILE]			
+	}	
+	ptyfiles[, IDX:=seq_len(nrow(ptyfiles))]
+	#
+	#	determine root for each run: find taxon with largest distance from BAM of select individuals
+	#
+	if(is.na(outgroup) & pty.runs[, any(FILL==1)])
+	{
+		cat('\ndetermine root among fillers')
+		pty.root	<- pty.evaluate.tree.root.withfill(ptyfiles, pty.ph, pty.runs)
+		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
+	}
+	if(is.na(outgroup) & pty.runs[, all(FILL==0)])
+	{
+		cat('\ndetermine root among all individuals')
+		pty.root	<- pty.evaluate.tree.root.nofill(ptyfiles, pty.ph, pty.runs)
+		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
+	}	
+	#
+	#	trees: root, ladderize, group
+	#
+	pty.ph.cp			<- copy(pty.ph)	
 	#	pty.ph	<- copy(pty.ph.cp)
+	cat('\nroot, ladderize, group trees')
 	for(i in seq_along(pty.ph))
 	{
 		print(i)
@@ -327,9 +419,15 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 		pty.ph[[i]]		<- ph
 	}		
 	#
-	#	save trees
+	#	save trees and remove newick
+	#	
+	tmp		<- ptyfiles[1, gsub('\\.newick','\\.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
+	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))	
+	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
 	#
-	save(pty.ph, ptyfiles, file=gsub('ptyrunsinput','ptyrunstrees',pty.infile) )	
+	#
+	#	plot trees
+	#
 	#	need node heights for plotting
 	tmp					<- ptyfiles[,{										
 				ph		<- pty.ph[[FILE]]
@@ -337,11 +435,6 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 				list(BAM=ph$tip.label, HEIGHT=tmp)
 			}, by='FILE']	
 	ptyfiles				<- merge(ptyfiles, tmp[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
-	#
-	#	plot trees
-	#
-	require(gridExtra)
-	require(colorspace)
 	setkey(ptyfiles, PTY_RUN, W_FROM)	
 	#ptyfiles			<- subset(ptyfiles, PTY_RUN==1)
 	for(ptyr in ptyfiles[, unique(PTY_RUN)])
@@ -369,10 +462,10 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 							labs(x='subst/site', title=names(phs)[i])
 					p
 				})	
-		file	<- file.path( indir.tr, tmp[1,gsub('newick','pdf',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE))] )
-		if(0)
+		file	<- file.path( indir, tmp[1,gsub('.newick','.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+		if(0)		#for window length 300 (just one long page)
 		{
-			pdf(file=file, w=120, h=40)	#for win=300
+			pdf(file=file, w=120, h=40)
 			tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
 			grid.newpage()
 			pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
@@ -380,7 +473,7 @@ pty.evaluate.tree<- function(pty.infile, indir.tr)
 				print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
 			dev.off()			
 		}
-		if(1)
+		if(1)		#for window length 60 (multiple pages)
 		{
 			tmp		<- seq_len(ceiling(length(phps)/10))		
 			for(i in tmp)
@@ -602,12 +695,14 @@ pty.pipeline.examl<- function()
 	#indir			<- "/Users/Oliver/duke/2016_PANGEAphylotypes/phylotypes"
 	if(0)	#test on Mac
 	{
+		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
 		work.dir		<- file.path(HOME,"ptyruns")
 		out.dir			<- file.path(HOME,"phylotypes_160119")
 		hpc.load		<- ''
 	}
 	if(1)	#coinfections on HPC
-	{				
+	{			
+		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
 		work.dir		<- file.path(HOME,"coinf_ptinput")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")		
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
@@ -626,6 +721,22 @@ pty.pipeline.examl<- function()
 					cmd.hpccaller(work.dir, outfile, cmd)
 					NULL
 				}, by='PTY_RUN'])
+		stop()
+	}
+	#	process newick output
+	if(1)
+	{
+		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$'))						
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		invisible(infiles[, {
+							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_In',sep=''))							
+							cat(cmd)
+							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							stop()
+							NULL
+						}, by='PTY_RUN'])
 		stop()
 	}
 	#	get CMD

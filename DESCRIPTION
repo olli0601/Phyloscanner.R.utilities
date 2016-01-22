@@ -11,9 +11,12 @@ Depends:
     reshape2,
     data.table,
     RColorBrewer,
-    grid,
+    colorspace,
+    grid,    
+    gridExtra,
     ggplot2,
-    gridExtra
+    ggtree,
+    zoo
 Description: scan phylogenies created along a genome for patterns
 License: GPL (>=2)
 LazyLoad: yes
