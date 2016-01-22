@@ -633,8 +633,8 @@ pty.pipeline.examl<- function()
 								min.ureads.individual=20, min.ureads.candidate=NA, 
 								args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
 	exa.cmd			<- pty.cmdwrap.examl(pty.args)
-	cat( exa.cmd[1, cat(CMD)] )		
-	stop()
+	#cat( exa.cmd[1, cat(CMD)] )		
+	#stop()
 	invisible(exa.cmd[,	{		
 					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
 					#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
