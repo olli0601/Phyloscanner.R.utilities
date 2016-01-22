@@ -576,13 +576,13 @@ pty.cmdwrap.examl<- function(pty.args)
 	#
 	if(pty.args[['bs.n']]>0)	#	bootstrap on one machine version 
 	{
-		exa.cmd			<- pty.fa[,	list(CMD=cmd.examl.bootstrap.on.one.machine(dirname(FILE), sub("\\.[^.]*$", "",basename(FILE)), bs.from=0, bs.to=pty.args[['bs.n']]-1, bs.n=pty.args[['bs.n']], opt.bootstrap.by="nucleotide", args.examl=pty.args[['args.examl']])), by='FILE']
+		exa.cmd			<- pty.fa[,	list(CMD=cmd.examl.bootstrap.on.one.machine(outdir, sub("\\.[^.]*$", "",FILE), bs.from=0, bs.to=pty.args[['bs.n']]-1, bs.n=pty.args[['bs.n']], opt.bootstrap.by="nucleotide", args.examl=pty.args[['args.examl']])), by='FILE']
 		exa.cmd[, RUN_ID:=seq_len(nrow(exa.cmd))]
 	}
 	if(pty.args[['bs.n']]==0)	#	no bootstrap version
 	{		
 		exa.cmd			<- pty.fa[,{				 					
-					cmd			<- cmd.examl.single(dirname(FILE), sub("\\.[^.]*$", "",basename(FILE)), args.examl=pty.args[['args.examl']])					
+					cmd			<- cmd.examl.single(outdir, sub("\\.[^.]*$", "",FILE), args.examl=pty.args[['args.examl']])					
 					list(CMD=cmd)					
 				}, by=c('PTY_RUN','FILE')]
 		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/pty.args[['exa.n.per.run']])]
