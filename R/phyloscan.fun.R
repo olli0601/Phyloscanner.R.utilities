@@ -566,7 +566,7 @@ pty.cmdwrap.examl<- function(pty.args)
 									{
 										write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
 									}										
-									list(FILE=z, TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
+									list(TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
 								}, by='FILE']
 						cat('\nusing fasta files for trees',i,', min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
 						pty.fa
@@ -576,13 +576,13 @@ pty.cmdwrap.examl<- function(pty.args)
 	#
 	if(pty.args[['bs.n']]>0)	#	bootstrap on one machine version 
 	{
-		exa.cmd			<- pty.fa[,	list(CMD=cmd.examl.bootstrap.on.one.machine(outdir, sub("\\.[^.]*$", "",FILE), bs.from=0, bs.to=pty.args[['bs.n']]-1, bs.n=pty.args[['bs.n']], opt.bootstrap.by="nucleotide", args.examl=pty.args[['args.examl']])), by='FILE']
+		exa.cmd			<- pty.fa[,	list(CMD=cmd.examl.bootstrap.on.one.machine(outdir, sub("\\.fasta$", "_dophy",FILE), bs.from=0, bs.to=pty.args[['bs.n']]-1, bs.n=pty.args[['bs.n']], opt.bootstrap.by="nucleotide", args.examl=pty.args[['args.examl']])), by='FILE']
 		exa.cmd[, RUN_ID:=seq_len(nrow(exa.cmd))]
 	}
 	if(pty.args[['bs.n']]==0)	#	no bootstrap version
 	{		
 		exa.cmd			<- pty.fa[,{				 					
-					cmd			<- cmd.examl.single(outdir, sub("\\.[^.]*$", "",FILE), args.examl=pty.args[['args.examl']])					
+					cmd			<- cmd.examl.single(outdir, sub("\\.fasta$", "_dophy",FILE), args.examl=pty.args[['args.examl']])					
 					list(CMD=cmd)					
 				}, by=c('PTY_RUN','FILE')]
 		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/pty.args[['exa.n.per.run']])]
