@@ -824,7 +824,8 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350, min.ureads.individual=20)
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)			
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
+		pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
 	}
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
 	if(0)

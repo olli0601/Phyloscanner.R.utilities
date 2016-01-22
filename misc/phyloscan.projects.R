@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	#pty.pipeline.fasta()
-	pty.pipeline.examl()	
+	pty.pipeline.fasta()
+	#pty.pipeline.examl()	
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
 	#	various
@@ -19,6 +19,13 @@ project.dual<- function()
 		hivc.cmd.hpccaller(outdir, outfile, cmd)
 		quit("no")	
 	}			
+}
+
+project.dual.alignments.missing<- function()
+{
+	infiles	<- data.table(FILE=list.files(out.dir, pattern='alignments.rda'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	setdiff(1:52, infiles[, PTY_RUN])
 }
 
 
