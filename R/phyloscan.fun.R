@@ -424,6 +424,8 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	tmp		<- ptyfiles[1, gsub('\\.newick','\\.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
 	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))	
 	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
+	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('newick','txt',FILE)))), by='FILE'] )
+	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
 	#
 	#
 	#	plot trees
@@ -462,6 +464,7 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 							labs(x='subst/site', title=names(phs)[i])
 					p
 				})	
+		names(phps)	<- names(phs)
 		file	<- file.path( indir, tmp[1,gsub('.newick','.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
 		if(0)		#for window length 300 (just one long page)
 		{
@@ -474,18 +477,18 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 			dev.off()			
 		}
 		if(1)		#for window length 60 (multiple pages)
-		{
-			tmp		<- seq_len(ceiling(length(phps)/10))		
+		{				
+			tmp			<- seq_len(ceiling(length(phps)/10))
+			pdf(file=file, w=20, h=40)		#for win=60
 			for(i in tmp)
-			{			
-				pdf(file=gsub('pdf',paste(i,'.pdf',sep=''),file), w=20, h=40)		#for win=60
+			{		
 				grid.newpage()
 				pushViewport(viewport(layout=grid.layout(2, 5)))
 				z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
 				for(j in z)
-					print(phps[[j]], vp = viewport(layout.pos.row=(j+1)%%2+1, layout.pos.col=(j-1)%%5+1))
-				dev.off()	
+					print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
 			}
+			dev.off()	
 		}
 		if(0)	#devel
 		{
@@ -678,7 +681,10 @@ pty.cmdwrap.examl<- function(pty.args)
 					cmd			<- cmd.examl.single(outdir, sub("\\.fasta$", "_dophy",FILE), args.examl=pty.args[['args.examl']])					
 					list(CMD=cmd)					
 				}, by=c('PTY_RUN','FILE')]
-		exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/pty.args[['exa.n.per.run']])]
+		if(!is.na(pty.args[['exa.n.per.run']]))
+			exa.cmd[, RUN_ID:= ceiling(seq_len(nrow(exa.cmd))/pty.args[['exa.n.per.run']])]		
+		if(is.na(pty.args[['exa.n.per.run']]))
+			exa.cmd[, RUN_ID:=PTY_RUN]
 		exa.cmd			<- exa.cmd[,	list(CMD=paste(CMD,collapse='\n',sep='\n')), 	by='RUN_ID']
 	}
 	exa.cmd
@@ -723,6 +729,23 @@ pty.pipeline.examl<- function()
 				}, by='PTY_RUN'])
 		stop()
 	}
+	#	run ExaML
+	if(0)
+	{
+		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
+				min.ureads.individual=20, min.ureads.candidate=NA, 
+				args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
+		exa.cmd			<- pty.cmdwrap.examl(pty.args)
+		#cat( exa.cmd[1, cat(CMD)] )		
+		#stop()
+		invisible(exa.cmd[,	{		
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cat(cmd)
+							outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						}, by='RUN_ID'])	
+	}	
 	#	process newick output
 	if(1)
 	{
@@ -739,20 +762,8 @@ pty.pipeline.examl<- function()
 						}, by='PTY_RUN'])
 		stop()
 	}
-	#	get CMD
-	pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
-								min.ureads.individual=20, min.ureads.candidate=NA, 
-								args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
-	exa.cmd			<- pty.cmdwrap.examl(pty.args)
-	#cat( exa.cmd[1, cat(CMD)] )		
-	#stop()
-	invisible(exa.cmd[,	{		
-					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
-					#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
-					#cat(cmd)
-					outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-					cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-				}, by='RUN_ID'])		
+	
+		
 }
 
 #' @export
