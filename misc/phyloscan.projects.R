@@ -4,8 +4,8 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	pty.pipeline.fasta()
-	#pty.pipeline.examl()	
+	#pty.pipeline.fasta()
+	pty.pipeline.examl()	
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
 	#	various
@@ -438,7 +438,20 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 	set(bam.len, bam.len[, which(is.na(FILL))], 'FILL', 2)
 	set(bam.len, NULL, 'FILL', bam.len[, factor(FILL, levels=c(0,1, 2), labels=c('candidate','filler','no consensus'))])
 	setnames(bam.len, 'FILL', 'TYPE')
-	save(bam.len, file= gsub('ptyrunsinput','bamlen',pty.infile))	
+	#
+	bam.len[, SEQ_LOC:='AfricaCentre']
+	set(bam.len, bam.len[, which(!grepl('^R[0-9]+_',FILE))],'SEQ_LOC','Sanger')
+	bam.len[, SEQ_RUN:=0L]
+	tmp			<- bam.len[, which(SEQ_LOC=='AfricaCentre')]
+	set( bam.len, tmp, 'SEQ_RUN', bam.len[tmp, as.integer(gsub('R','',regmatches(FILE,regexpr('^R[0-9]+',FILE))))] )
+	set(bam.len,NULL,'SEQ_RUN', bam.len[, paste(SEQ_LOC,SEQ_RUN,sep='-')])
+	#
+	save(bam.len, file= gsub('ptyrunsinput','bamlen',pty.infile))
+	#
+	ggplot(subset(bam.len,QU>=40 & QU<320), aes(y=CDF, x=factor(QU), fill=SEQ_RUN)) + geom_boxplot() + 
+			theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of quality-trimmed short reads\n(nt)', fill='sequence run') +
+			theme(legend.position='bottom')
+	ggsave(file= gsub('ptyrunsinput.rda','bamlen_byrun.pdf',pty.infile), w=14, h=7)
 	#
 	ggplot(bam.len, aes(y=CDF, x=factor(QU), fill=TYPE)) + geom_boxplot() + 
 			theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of quality-trimmed short reads\n(nt)', fill='individual') +

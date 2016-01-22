@@ -311,6 +311,58 @@ pty.evaluate.tree.root.withfill<- function(ptyfiles, pty.ph, pty.runs)
 	pty.root
 }
 
+pty.scan.coinfections	<- function()
+{
+	pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+	outdir		<- indir
+
+	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	load( file.path(indir,infiles[1,FILE]) )	#loads "pty.ph"   "ptyfiles"
+	
+	coi.div.probs	<- seq(0.01,0.99,0.01)
+	coi.div.probs	<- c(0.02,0.25,0.5,0.75,0.98)
+	coi.div		<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				phb			<- data.table( BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]	
+				phgd		<- cophenetic.phylo(ph)	
+				phgd		<- as.data.table(melt(phgd, value.name='PATR'))
+				setnames(phgd, c('Var1','Var2'), c('BAM','BAM2'))
+				phgd		<- merge(phb, phgd, by='BAM')
+				setnames(phgd, c('BAM','FILE_ID','COUNT','BAM2'), c('BAM1','FILE_ID1','COUNT1','BAM'))
+				phgd		<- merge(phb, phgd, by='BAM')
+				setnames(phgd, c('BAM','FILE_ID','COUNT'), c('BAM2','FILE_ID','COUNT2'))
+				phgd		<- subset(phgd, FILE_ID1==FILE_ID)
+				phgd[, FILE_ID1:= NULL]
+				tmp			<- phgd[, list(READS='UNIQUE', P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
+				ans			<- phgd[, list(READS='ALL', P=coi.div.probs, QU=quantile(rep(PATR,COUNT1*COUNT2),p=coi.div.probs)), by='FILE_ID']
+				ans			<- rbind(ans,tmp)
+				phgd[, list(P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
+				
+				dcast.data.table(, FILE_ID~P, value.var='QU')				
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	set(coi.div, NULL, 'P', coi.div[, paste('pr',P*100,sep='')])
+	coi.div		<- dcast.data.table( subset(coi.div, P%in%c('pr2','pr25','pr50','pr75','pr98')), PTY_RUN+W_FROM+W_TO+FILE+FILE_ID~P, value.var='QU')
+	
+	
+	ggplot(coi.div, aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 
+			#geom_line(aes(y=pr50)) + 
+			geom_point(aes(y=pr50)) + geom_errorbar(aes(ymin=pr25, ymax=pr75)) 
+			
+			geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
+	
+
+	ggplot(coi.div, aes(x=W_FROM, fill=FILE_ID)) + 
+			geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
+	
+	aes(x = X1, ymin = `0%`, lower = `25%`, middle = `50%`, upper = `75%`, ymax = `100%`))
+b + geom_boxplot(stat = "identity")
+	#	
+	
+}
+
 #' @import ape data.table gridExtra colorspace ggtree
 #' @export
 pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=NA)
@@ -571,6 +623,8 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
 	{
 		seqd	<- subset(seqd, UNIQUE_N>=min.ureads.individual)
+		seqd[, TOTAL_N:=NULL]
+		seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
 	}
 	#	write fasta
 	pty.fa	<- seqd[, {	
@@ -641,7 +695,7 @@ pty.cmdwrap.examl<- function(pty.args)
 	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
 	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	#infiles		<- subset(infiles, PTY_RUN%in%c(15,17,22))
+	infiles		<- subset(infiles, PTY_RUN%in%c(3, 9, 12, 15))
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
 					{
@@ -730,7 +784,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 				min.ureads.individual=20, min.ureads.candidate=NA, 
@@ -747,7 +801,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	process newick output
-	if(1)
+	if(0)
 	{
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
