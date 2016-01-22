@@ -12,7 +12,7 @@ Depends:
     data.table,
     RColorBrewer,
     colorspace,
-    grid,    
+    grid,
     gridExtra,
     ggplot2,
     ggtree,
