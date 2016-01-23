@@ -339,24 +339,51 @@ pty.scan.coinfections	<- function()
 				tmp			<- phgd[, list(READS='UNIQUE', P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
 				ans			<- phgd[, list(READS='ALL', P=coi.div.probs, QU=quantile(rep(PATR,COUNT1*COUNT2),p=coi.div.probs)), by='FILE_ID']
 				ans			<- rbind(ans,tmp)
-				phgd[, list(P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
-				
-				dcast.data.table(, FILE_ID~P, value.var='QU')				
+				set(ans, NULL, 'P', ans[, paste('p',P*100,sep='')])
+				ans			<- dcast.data.table( ans, READS+FILE_ID~P, value.var='QU')
+				tmp			<- phb[, list(READS='ALL', N=sum(COUNT)), by='FILE_ID']
+				tmp			<- rbind(tmp, phb[, list(READS='UNIQUE', N=length(BAM)), by='FILE_ID'])
+				ans			<- merge(ans,tmp,by=c('READS','FILE_ID'))								
 			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-	set(coi.div, NULL, 'P', coi.div[, paste('pr',P*100,sep='')])
-	coi.div		<- dcast.data.table( subset(coi.div, P%in%c('pr2','pr25','pr50','pr75','pr98')), PTY_RUN+W_FROM+W_TO+FILE+FILE_ID~P, value.var='QU')
-	
-	
-	ggplot(coi.div, aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 
+	ggplot(subset(coi.div,READS=='ALL'), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 
 			#geom_line(aes(y=pr50)) + 
-			geom_point(aes(y=pr50)) + geom_errorbar(aes(ymin=pr25, ymax=pr75)) 
+			geom_point(aes(y=p50, size=N)) + geom_errorbar(aes(ymin=p25, ymax=p75)) + theme_bw() +
+			facet_grid(~READS)
 			
-			#geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
-	
-
-	ggplot(coi.div, aes(x=W_FROM, fill=FILE_ID)) + 
-			geom_boxplot(aes(ymin=pr2, lower=pr25, middle=pr50, upper=pr75, ymax=pr98), stat = "identity")
-		
+	coi.lsep	<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				
+				phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
+				#	find longest branch and diversity in clade below
+				phm			<- phm[, {
+							#MRCA<- 1892
+							z	<- extract.clade(ph, MRCA, root.edge=1)
+							#plot(z, show.tip.label=0)
+							#add.scale.bar()
+							# find largest internal branch							
+							df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))
+							df[, LEN:= z$edge.length[E_IDX]]
+							df[, TO:= z$edge[E_IDX,2]]
+							df	<- df[which.max(LEN), ]
+							# get length of stem and average node edge length to stem
+							tmp	<- extract.clade(z, df[,TO], root.edge=0)
+							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	
+							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]
+							list(	MRCA=MRCA[1], 
+									TAXA_N=Ntip(z),
+									COUNT_N=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)],
+									CL_MX_LOCAL_SEP=df[,LEN], 
+									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),
+									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),
+									CL_TAXA_N=Ntip(tmp),
+									CL_COUNT_N=sum(tmp3))
+						}, by='FILE_ID']
+				phm
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	ggplot(subset(coi.lsep, CL_TAXA_N>5), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 			 
+			geom_point(aes(y=CL_MX_LOCAL_SEP/CL_AVG_HEIGHT_ALL, size=CL_COUNT_N)) + theme_bw() 
 }
 
 #' @import ape data.table gridExtra colorspace ggtree
@@ -429,7 +456,7 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	#
 	#	trees: root, ladderize, group
 	#
-	pty.ph.cp			<- copy(pty.ph)	
+	#pty.ph.cp			<- copy(pty.ph)	
 	#	pty.ph	<- copy(pty.ph.cp)
 	cat('\nroot, ladderize, group trees')
 	for(i in seq_along(pty.ph))
@@ -471,9 +498,9 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	#	
 	tmp		<- ptyfiles[1, gsub('\\.newick','\\.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
 	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))	
-	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
-	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('newick','txt',FILE)))), by='FILE'] )
-	invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
+	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
+	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('newick','txt',FILE)))), by='FILE'] )
+	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
 	#
 	#
 	#	plot trees
@@ -780,7 +807,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 				min.ureads.individual=20, min.ureads.candidate=NA, 
@@ -797,7 +824,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	process newick output
-	if(0)
+	if(1)
 	{
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
@@ -807,7 +834,7 @@ pty.pipeline.examl<- function()
 							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
-							stop()
+							#stop()
 							NULL
 						}, by='PTY_RUN'])
 		stop()
