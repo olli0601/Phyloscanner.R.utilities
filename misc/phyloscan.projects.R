@@ -401,6 +401,39 @@ project.dualinfecions.phylotypes.test<- function()
 	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
+pty.pipeline.coinfection.statistics<- function()
+{	
+	in.dir			<- file.path(HOME,"coinf_ptoutput_150121")			
+	hpc.load		<- "module load R/3.2.0"
+
+	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	setkey(infiles, PTY_RUN)
+	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
+	invisible(infiles[, {
+						cmd			<- pty.cmd.scan.statistics(in.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
+						cat(cmd)							
+						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						cmd.hpccaller(work.dir, outfile, cmd)
+						#stop()
+						NULL
+					}, by='PTY_RUN'])
+	stop()
+	
+	
+	#	R11_GA0053_S71_L001		23		May be a root issue. There s a lot of diversity but no clearly defined separate clade
+	#	R1_RES301_S13_L001		14		** Could be! There s a deep split that reproduces
+	#	R2_RES142_S40_L001		31		Not clear. Consecutive phylogenies should give similar results -- is this the case??
+	#	R1_RES452_S17_L001		27		** There are deep splits, occasionally intermingled with R5_RES414. Again, not super clear.
+	#	R1_RES124_S6_L001		23		Not clear. What complicates: x-axes across windows not on same scale.
+	#	13554_1_43				37		** This one is super diverse throughout. Not sure what this means though.. at 700 also mixup with another individual
+	#	13557_1_93				18
+	#	R1_RES282_S12_L001		33
+	#	R6_RES025_S58_L001		16
+	#	R11_PA0012_S28_L001		14		Root issue?
+}
+
 project.dualinfecions.phylotypes.countbam.150120<- function()
 {
 	require(ggplot2)

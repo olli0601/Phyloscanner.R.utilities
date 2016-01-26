@@ -1,6 +1,7 @@
-PR.PACKAGE		<- "phyloscan" 
-PR.EVAL.FASTA	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
-PR.EVAL.EXAML	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
+PR.PACKAGE			<- "phyloscan" 
+PR.EVAL.FASTA		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
+PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
+PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
 
 #' @export
 pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA)
@@ -10,6 +11,18 @@ pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select
 		cmd	<- paste(cmd,' -select=',select,sep='')
 	if(!is.na(min.ureads.individual))
 		cmd	<- paste(cmd,' -min.ureads.individual=',min.ureads.individual,sep='')	
+	cmd	<- paste(cmd,'\n',sep='')
+	cmd
+}
+
+#' @export
+pty.cmd.scan.statistics<- function(indir, outdir=indir, select='')
+{
+	cmd		<- paste('\n',PR.SCAN.STATISTICS, ' -indir=',indir, sep='')
+	if(select!='')
+		cmd	<- paste(cmd,' -select=',select,sep='')
+	if(!is.na(outdir))
+		cmd	<- paste(cmd,' -outdir=',outdir,sep='')	
 	cmd	<- paste(cmd,'\n',sep='')
 	cmd
 }
@@ -311,6 +324,135 @@ pty.evaluate.tree.root.withfill<- function(ptyfiles, pty.ph, pty.runs)
 	pty.root
 }
 
+pty.stat.different<- function(ph)
+{
+	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				
+	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
+	#	find longest branch and diversity in clade below
+	phm			<- phm[, {
+				#FILE_ID<- '13554_1_18'
+				#MRCA<- 2331
+				z	<- extract.clade(ph, MRCA, root.edge=1)
+				#plot(z, show.tip.label=0)
+				#add.scale.bar()
+				# tips in same clade have consecutive tip indices in ape format
+				df	<- data.table(IDX=seq_along(z$tip.label), BAM=z$tip.label, FILE_ID= gsub('_read.*','',z$tip.label))
+				df	<- merge(df, data.table(IDX= df$IDX[which(df$FILE_ID!=FILE_ID)]), by='IDX')
+				tmp	<- c(nrow(df), df[, length(unique(FILE_ID))])
+				if(tmp[1])
+				{
+					
+					df[, GROUP:= cumsum(c(1,as.numeric(diff(IDX)>1)))]
+					df[, GROUP:= df[, as.numeric(factor(paste(FILE_ID,'-',GROUP,sep='')))]]
+					df[, GROUP:= df[, cumsum(c(1,as.numeric(diff(GROUP)>1)))]]
+					tmp[1]	<- df[, length(unique(GROUP))]					
+				}
+				list(DIFF=tmp[1], DIFF_IND=tmp[2] )								
+			}, by='FILE_ID']
+	phm
+}
+
+
+pty.stat.maxlocalsep<- function(ph, threshold.min.stem=0.01)
+{
+	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				
+	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
+	#	find longest branch and diversity in clade below
+	phm			<- phm[, {
+				#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213
+				#print(MRCA)
+				z		<- extract.clade(ph, MRCA, root.edge=1)
+				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)
+				#plot(z, cex=0.2)
+				#add.scale.bar()
+				# find largest internal branch							
+				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))
+				df[, LEN:= z$edge.length[E_IDX]]
+				df[, TO:= z$edge[E_IDX,2]]
+				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )
+				ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_real_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)
+				if(nrow(df))
+					ans	<- df[, {
+							tmp	<- extract.clade(z, TO, root.edge=0)
+							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	
+							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]
+							list(	CL_MX_LOCAL_SEP=LEN, 
+									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),
+									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),
+									CL_TAXA_N=Ntip(tmp),
+									CL_COUNT_N=sum(tmp3))
+						}, by='E_IDX']
+				ans[, MRCA:=MRCA]				 
+				ans[, TAXA_N:=Ntip(z)]
+				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]
+				ans
+			}, by='FILE_ID']
+	subset(phm, !is.na(E_IDX))
+}
+
+pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,0.98))
+{
+	phb			<- data.table( BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
+	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]	
+	phgd		<- cophenetic.phylo(ph)	
+	phgd		<- as.data.table(melt(phgd, value.name='PATR'))
+	setnames(phgd, c('Var1','Var2'), c('BAM','BAM2'))
+	phgd		<- merge(phb, phgd, by='BAM')
+	setnames(phgd, c('BAM','FILE_ID','COUNT','BAM2'), c('BAM1','FILE_ID1','COUNT1','BAM'))
+	phgd		<- merge(phb, phgd, by='BAM')
+	setnames(phgd, c('BAM','FILE_ID','COUNT'), c('BAM2','FILE_ID','COUNT2'))
+	phgd		<- subset(phgd, FILE_ID1==FILE_ID)
+	phgd[, FILE_ID1:= NULL]
+	tmp			<- phgd[, list(READS='UNIQUE', P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
+	ans			<- phgd[, list(READS='ALL', P=coi.div.probs, QU=quantile(rep(PATR,COUNT1*COUNT2),p=coi.div.probs)), by='FILE_ID']
+	ans			<- rbind(ans,tmp)
+	set(ans, NULL, 'P', ans[, paste('WHD_p',P*100,sep='')])
+	ans			<- dcast.data.table( ans, READS+FILE_ID~P, value.var='QU')
+	tmp			<- phb[, list(READS='ALL', N=sum(COUNT)), by='FILE_ID']
+	tmp			<- rbind(tmp, phb[, list(READS='UNIQUE', N=length(BAM)), by='FILE_ID'])
+	ans			<- merge(ans,tmp,by=c('READS','FILE_ID'))	
+}
+
+pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
+{
+	#
+	#	quantiles of within individual diversity (patristic distance)
+	#	calculated among unique reads, and all reads (expand by count of each read)		
+	coi.div		<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==6961)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				pty.stat.withinhost.diversity(ph)
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	coi.div[, N:=NULL]
+	tmp			<- subset(coi.div, READS=='ALL')
+	setnames(tmp, c("WHD_p2","WHD_p25","WHD_p50","WHD_p75","WHD_p98"), c("WHDA_p2","WHDA_p25","WHDA_p50","WHDA_p75","WHDA_p98"))
+	tmp[, READS:=NULL]
+	coi.div		<- subset(coi.div, READS=='UNIQUE')
+	setnames(coi.div, c("WHD_p2","WHD_p25","WHD_p50","WHD_p75","WHD_p98"), c("WHDU_p2","WHDU_p25","WHDU_p50","WHDU_p75","WHDU_p98"))
+	coi.div[, READS:=NULL]
+	coi.div		<- merge(coi.div, tmp, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))
+	#
+	#	maximum branch length within individual, and mean path length of subtending clade
+	#	calculated among unique reads, and all reads (expand by count of each read)
+	coi.lsep	<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==1021)[,FILE]						
+				ph			<- pty.ph[[FILE]]
+				pty.stat.maxlocalsep(ph)														
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	coi.div		<- merge(coi.div, coi.lsep, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))
+	#
+	#	Different: number of clades from different individual
+	coi.diff	<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==1621)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				pty.stat.different(ph)								
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	pty.stat	<- merge(coi.div, coi.diff, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))	
+	pty.stat
+}
+
 pty.scan.coinfections	<- function()
 {
 	pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
@@ -318,70 +460,75 @@ pty.scan.coinfections	<- function()
 	outdir		<- indir
 
 	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
-	load( file.path(indir,infiles[1,FILE]) )	#loads "pty.ph"   "ptyfiles"
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	setkey(infiles, PTY_RUN)
+	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
+		
+	#pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i)
+	for(i in seq_len(nrow(infiles)))	
+	for(i in 24:52)
+	{
+		cat('\nprocess',infiles[i,FILE])
+		file		<- file.path(indir,infiles[i,FILE])
+		load( file )	#loads "pty.ph"   "ptyfiles"
+		pty.stat	<- pty.scan.statistics.160128(pty.ph, ptyfiles)		
+		save(pty.stat, file=gsub('\\.rda','_stat\\.rda', file))
+		pty.stat<- coi.div<- coi.lsep<- coi.diff<- NULL
+		gc()
+		#coi.div
+	}
+	#
+	#	collect all results
+	#
+	pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i){
+				load( gsub('\\.rda','_stat\\.rda', file.path(indir, infiles[i,FILE])) )				
+				pty.stat
+			}))
+	pty.stat.file	<- file.path(indir, gsub('ptyr[0-9]+','ptyr',gsub('\\.rda','_stat\\.rda',infiles[1,FILE])) )
+	save(pty.stat, file=pty.stat.file)
+	#	how many windows per individual ?
+	tmp	<- pty.stat[, list(FILE_ID_N=length(unique(W_FROM))), by='FILE_ID']
+	ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram()
+	#	within host diversity
+	tmp	<- pty.stat[, list(WHDA_p50=quantile(WHDA_p50,p=0.5), WHDA_p025=quantile(WHDA_p50,p=0.025), WHDA_p10=quantile(WHDA_p50,p=0.1), WHDA_p90=mean(WHDA_p50,p=0.9), WHDA_p95=quantile(WHDA_p50,p=0.95) ), by='W_FROM']	
+	ggplot(pty.stat, aes(x=W_FROM)) +  geom_point(aes(y=WHDA_p50, colour=WHDA_p50, size=COUNT_N), alpha=0.2 ) + 
+		geom_ribbon(data=tmp, aes(ymin=WHDA_p10, ymax=WHDA_p90), fill='grey50', alpha=0.7) +
+		geom_ribbon(data=tmp, aes(ymin=WHDA_p90, ymax=WHDA_p95), fill='grey80', alpha=0.7) +
+		#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +
+		scale_colour_continuous(guide=FALSE) + 
+		scale_x_continuous(breaks=seq(0,10e3,500)) +
+		geom_line(data=tmp, aes(y=WHDA_p95), colour='red') +
+		geom_line(data=tmp, aes(y=WHDA_p90), colour='DarkRed') +
+		geom_line(data=tmp, aes(y=WHDA_p50)) + theme_bw() + theme(legend.position='bottom') +
+		labs(x='\ngenome position of window start in each run\n(bp)',y='mean within-host diversity\n(patristic distance, subst/site)\n', size='quality trimmed short reads per individual\n(#)')
+	ggsave(file=gsub('\\.rda','_whdivallreads\\.pdf',pty.stat.file), w=12, h=6)
+	#	get candidates by wh diversity	
+	#	not clear where to make cut.off. Just keep them all with decreasing priority, and plot for inspection.
+	pty.div	<- merge(subset(pty.stat, select=c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, WHDA_p50, TAXA_N, COUNT_N)), subset(tmp, select=c(W_FROM, WHDA_p90, WHDA_p95)), by='W_FROM')
+	tmp		<- subset(pty.div, WHDA_p50>WHDA_p95 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), WHDA_p50_avg=mean(WHDA_p50)), by='FILE_ID']
+	tmp		<- tmp[order(-FILE_ID_N),]	
+	write.csv(tmp, file=gsub('\\.rda','_whdivallreads_g90qu\\.csv',pty.stat.file), row.names=FALSE)
 	
-	coi.div.probs	<- seq(0.01,0.99,0.01)
-	coi.div.probs	<- c(0.02,0.25,0.5,0.75,0.98)
-	coi.div		<- ptyfiles[, {
-				#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]
-				ph			<- pty.ph[[FILE]]
-				phb			<- data.table( BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
-				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]	
-				phgd		<- cophenetic.phylo(ph)	
-				phgd		<- as.data.table(melt(phgd, value.name='PATR'))
-				setnames(phgd, c('Var1','Var2'), c('BAM','BAM2'))
-				phgd		<- merge(phb, phgd, by='BAM')
-				setnames(phgd, c('BAM','FILE_ID','COUNT','BAM2'), c('BAM1','FILE_ID1','COUNT1','BAM'))
-				phgd		<- merge(phb, phgd, by='BAM')
-				setnames(phgd, c('BAM','FILE_ID','COUNT'), c('BAM2','FILE_ID','COUNT2'))
-				phgd		<- subset(phgd, FILE_ID1==FILE_ID)
-				phgd[, FILE_ID1:= NULL]
-				tmp			<- phgd[, list(READS='UNIQUE', P=coi.div.probs, QU=quantile(PATR,p=coi.div.probs)), by='FILE_ID']
-				ans			<- phgd[, list(READS='ALL', P=coi.div.probs, QU=quantile(rep(PATR,COUNT1*COUNT2),p=coi.div.probs)), by='FILE_ID']
-				ans			<- rbind(ans,tmp)
-				set(ans, NULL, 'P', ans[, paste('p',P*100,sep='')])
-				ans			<- dcast.data.table( ans, READS+FILE_ID~P, value.var='QU')
-				tmp			<- phb[, list(READS='ALL', N=sum(COUNT)), by='FILE_ID']
-				tmp			<- rbind(tmp, phb[, list(READS='UNIQUE', N=length(BAM)), by='FILE_ID'])
-				ans			<- merge(ans,tmp,by=c('READS','FILE_ID'))								
-			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-	ggplot(subset(coi.div,READS=='ALL'), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 
-			#geom_line(aes(y=pr50)) + 
-			geom_point(aes(y=p50, size=N)) + geom_errorbar(aes(ymin=p25, ymax=p75)) + theme_bw() +
-			facet_grid(~READS)
-			
-	coi.lsep	<- ptyfiles[, {
-				#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]
-				ph			<- pty.ph[[FILE]]
-				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
-				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				
-				phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
-				#	find longest branch and diversity in clade below
-				phm			<- phm[, {
-							#MRCA<- 1892
-							z	<- extract.clade(ph, MRCA, root.edge=1)
-							#plot(z, show.tip.label=0)
-							#add.scale.bar()
-							# find largest internal branch							
-							df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))
-							df[, LEN:= z$edge.length[E_IDX]]
-							df[, TO:= z$edge[E_IDX,2]]
-							df	<- df[which.max(LEN), ]
-							# get length of stem and average node edge length to stem
-							tmp	<- extract.clade(z, df[,TO], root.edge=0)
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]
-							list(	MRCA=MRCA[1], 
-									TAXA_N=Ntip(z),
-									COUNT_N=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)],
-									CL_MX_LOCAL_SEP=df[,LEN], 
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),
-									CL_TAXA_N=Ntip(tmp),
-									CL_COUNT_N=sum(tmp3))
-						}, by='FILE_ID']
-				phm
-			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	
+	#	long branches
+	tmp	<- pty.stat[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	
+	ggplot(pty.stat, aes(x=W_FROM)) +  geom_point(aes(y=CL_MX_LOCAL_SEP, colour=CL_MX_LOCAL_SEP, size=COUNT_N), alpha=0.2 ) + 
+			geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p10, ymax=CL_MX_LOCAL_SEP_p90), fill='grey50', alpha=0.7) +
+			geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p90, ymax=CL_MX_LOCAL_SEP_p95), fill='grey80', alpha=0.7) +
+			#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +
+			scale_colour_continuous(guide=FALSE) + 
+			scale_x_continuous(breaks=seq(0,10e3,500)) +
+			geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p95), colour='red') +
+			geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p90), colour='DarkRed') +
+			geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p50)) + theme_bw() + theme(legend.position='bottom') +
+			labs(x='\ngenome position of window start in each run\n(bp)',y='mean within-host diversity\n(patristic distance, subst/site)\n', size='quality trimmed short reads per individual\n(#)')
+
+	subset(pty.stat, CL_MX_LOCAL_SEP>1)	#	entry 12 looks like an error!
+	
+	
+	ggsave(file=gsub('\\.rda','_whdivallreads\\.pdf',pty.stat.file), w=12, h=6)
+	ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram(binwidth=1)
+	
 	ggplot(subset(coi.lsep, CL_TAXA_N>5), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 			 
 			geom_point(aes(y=CL_MX_LOCAL_SEP/CL_AVG_HEIGHT_ALL, size=CL_COUNT_N)) + theme_bw() 
 }
@@ -718,7 +865,7 @@ pty.cmdwrap.examl<- function(pty.args)
 	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
 	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	infiles		<- subset(infiles, PTY_RUN%in%c(3, 9, 12, 15))
+	#infiles		<- subset(infiles, PTY_RUN%in%c(3, 9, 12, 15))
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
 					{
