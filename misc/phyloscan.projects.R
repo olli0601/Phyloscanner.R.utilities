@@ -404,6 +404,7 @@ project.dualinfecions.phylotypes.test<- function()
 
 pty.pipeline.coinfection.statistics<- function()
 {	
+	require(big.phylo)
 	indir			<- file.path(HOME,"coinf_ptoutput_150121")			
 	hpc.load		<- "module load R/3.2.0"
 
