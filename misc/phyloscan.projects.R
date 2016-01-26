@@ -405,7 +405,8 @@ project.dualinfecions.phylotypes.test<- function()
 pty.pipeline.coinfection.statistics<- function()
 {	
 	require(big.phylo)
-	indir			<- file.path(HOME,"coinf_ptoutput_150121")			
+	indir			<- file.path(HOME,"coinf_ptoutput_150121")
+	work.dir		<- file.path(HOME,"coinf_ptinput")
 	hpc.load		<- "module load R/3.2.0"
 
 	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
