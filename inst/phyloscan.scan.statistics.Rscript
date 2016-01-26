@@ -42,7 +42,6 @@ if(1)
 #	run script
 library(phyloscan)
 
-indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
 infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
 infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 setkey(infiles, PTY_RUN)
