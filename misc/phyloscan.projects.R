@@ -5,7 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.examl()	
+	#pty.pipeline.examl()	
+	pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
 	#	various
@@ -403,7 +404,7 @@ project.dualinfecions.phylotypes.test<- function()
 
 pty.pipeline.coinfection.statistics<- function()
 {	
-	in.dir			<- file.path(HOME,"coinf_ptoutput_150121")			
+	indir			<- file.path(HOME,"coinf_ptoutput_150121")			
 	hpc.load		<- "module load R/3.2.0"
 
 	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
@@ -411,12 +412,12 @@ pty.pipeline.coinfection.statistics<- function()
 	setkey(infiles, PTY_RUN)
 	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
 	invisible(infiles[, {
-						cmd			<- pty.cmd.scan.statistics(in.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
+						cmd			<- pty.cmd.scan.statistics(indir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 						cat(cmd)							
 						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
-						#stop()
+						stop()
 						NULL
 					}, by='PTY_RUN'])
 	stop()
