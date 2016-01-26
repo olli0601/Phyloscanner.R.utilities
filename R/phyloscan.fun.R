@@ -324,6 +324,7 @@ pty.evaluate.tree.root.withfill<- function(ptyfiles, pty.ph, pty.runs)
 	pty.root
 }
 
+#' @export
 pty.stat.different<- function(ph)
 {
 	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
@@ -353,7 +354,7 @@ pty.stat.different<- function(ph)
 	phm
 }
 
-
+#' @export
 pty.stat.maxlocalsep<- function(ph, threshold.min.stem=0.01)
 {
 	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
@@ -392,6 +393,7 @@ pty.stat.maxlocalsep<- function(ph, threshold.min.stem=0.01)
 	subset(phm, !is.na(E_IDX))
 }
 
+#' @export
 pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,0.98))
 {
 	phb			<- data.table( BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				
@@ -415,6 +417,7 @@ pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,
 	ans			<- merge(ans,tmp,by=c('READS','FILE_ID'))	
 }
 
+#' @export
 pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
 {
 	#
