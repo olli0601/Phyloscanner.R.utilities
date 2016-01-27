@@ -1153,7 +1153,7 @@ pty.pipeline.examl<- function()
 		infiles			<- subset(infiles, !grepl('*',FILE,fixed=1) & !grepl('dophy\\.fasta',FILE))				
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 		invisible(infiles[, {
-					cmd			<- pty.cmd.evaluate.fasta(out.dir, strip.max.len=350, select=paste('ptyr',PTY_RUN,'_In',sep=''))
+					cmd			<- pty.cmd.evaluate.fasta(out.dir, strip.max.len=350, select=paste('ptyr',PTY_RUN,'_',sep=''))
 					cat(cmd)
 					cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 					outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -1185,7 +1185,7 @@ pty.pipeline.examl<- function()
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$|examl\\.rda$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 		invisible(infiles[, {
-							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_In',sep=''))							
+							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 							cat(cmd)							
 							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
