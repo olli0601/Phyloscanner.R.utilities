@@ -1187,7 +1187,7 @@ pty.pipeline.examl<- function()
 		invisible(infiles[, {
 							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 							cat(cmd)							
-							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
