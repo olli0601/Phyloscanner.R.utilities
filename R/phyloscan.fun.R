@@ -541,8 +541,8 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 		pty.phc[[i]]	<- ph		
 	}
 	#	save
-	tmp		<- ptyfiles[1, gsub('\\.newick','\\collapsed.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
-	cat('\nsave to file', file)
+	tmp		<- file.path( outdir, ptyfiles[1, gsub('\\.newick','\\collapsed.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+	cat('\nsave to file', tmp)
 	save(pty.phc, file=tmp)
 	#	need node heights for plotting
 	tmp				<- ptyfiles[,	{
@@ -589,7 +589,7 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 					p					
 				})	
 		names(phps)	<- names(phs)
-		file	<- file.path( indir, tmp[1,gsub('.newick','collapsed.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+		file	<- file.path( outdir, tmp[1,gsub('.newick','collapsed.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
 		cat('\nplotting cladograms to file',file)
 		if(1)		#for window length 60 (multiple pages)
 		{				
