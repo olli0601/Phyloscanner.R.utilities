@@ -485,8 +485,12 @@ pty.evaluate.tree.collapse.clusters<- function(ph, thresh.brl=8e-6)
 		for(clu.id in df[, unique(CLU_ID)])
 		{
 			tmp			<- subset(df, CLU_ID==clu.id)			
-			phc			<- drop.tip(phc, tip=tmp[, BAM], subtree=TRUE)							
-			phc$tip.label[ which(grepl("[",phc$tip.label,fixed=TRUE)) ]	<- tmp[1,BAMCLU] 				
+			z			<- drop.tip(phc, tip=tmp[, BAM], subtree=TRUE)
+			if(!is.null(z))
+			{
+				phc		<- z
+				phc$tip.label[ which(grepl("[",phc$tip.label,fixed=TRUE)) ]	<- tmp[1,BAMCLU]	
+			}			 				
 		}
 	}	
 	phc
