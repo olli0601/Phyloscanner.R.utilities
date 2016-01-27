@@ -429,6 +429,7 @@ pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
 				pty.stat.withinhost.diversity(ph)
 			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
 	coi.div[, N:=NULL]
+	gc()
 	tmp			<- subset(coi.div, READS=='ALL')
 	setnames(tmp, c("WHD_p2","WHD_p25","WHD_p50","WHD_p75","WHD_p98"), c("WHDA_p2","WHDA_p25","WHDA_p50","WHDA_p75","WHDA_p98"))
 	tmp[, READS:=NULL]
@@ -445,6 +446,8 @@ pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
 				pty.stat.maxlocalsep(ph)														
 			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
 	coi.div		<- merge(coi.div, coi.lsep, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))
+	coi.lsep	<- NULL
+	gc()
 	#
 	#	Different: number of clades from different individual
 	coi.diff	<- ptyfiles[, {
@@ -452,7 +455,9 @@ pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
 				ph			<- pty.ph[[FILE]]
 				pty.stat.different(ph)								
 			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-	pty.stat	<- merge(coi.div, coi.diff, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))	
+	pty.stat	<- merge(coi.div, coi.diff, by=c('PTY_RUN','W_FROM','W_TO','FILE','FILE_ID'))
+	coi.diff	<- coi.div	<- NULL
+	gc()
 	pty.stat
 }
 

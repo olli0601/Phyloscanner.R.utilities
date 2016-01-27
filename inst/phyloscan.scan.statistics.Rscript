@@ -53,8 +53,10 @@ for(i in seq_len(nrow(infiles)))
 		cat('\nprocess',infiles[i,FILE])
 		file		<- file.path(indir,infiles[i,FILE])
 		load( file )	#loads "pty.ph"   "ptyfiles"
-		pty.stat	<- pty.scan.statistics.160128(pty.ph, ptyfiles)		
-		save(pty.stat, file=file.path(outdir,gsub('\\.rda','_stat\\.rda', basename(file))))
+		pty.stat	<- pty.scan.statistics.160128(pty.ph, ptyfiles)
+		file		<- file.path(outdir,gsub('\\.rda','_stat\\.rda', basename(file)))
+		cat('\nwrite to',file)
+		save(pty.stat, file=file)
 		pty.stat<- coi.div<- coi.lsep<- coi.diff<- NULL
 		gc()
 }

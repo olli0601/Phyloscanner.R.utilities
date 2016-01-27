@@ -408,18 +408,24 @@ pty.pipeline.coinfection.statistics<- function()
 	indir			<- file.path(HOME,"coinf_ptoutput_150121")
 	work.dir		<- file.path(HOME,"coinf_ptinput")
 	hpc.load		<- "module load R/3.2.0"
-
-	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	resume			<- 1
+	
+	infiles			<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-	setkey(infiles, PTY_RUN)
 	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
+	tmp			<- data.table(FILE_STAT=list.files(indir, pattern='examl_stat.rda$'))
+	tmp[, FILE:= gsub('_stat','',FILE_STAT)]
+	infiles		<- merge(infiles, tmp, by='FILE',all.x=1)
+	if(resume)
+		infiles	<- subset(infiles, is.na(FILE_STAT))
+	setkey(infiles, PTY_RUN)
+	
 	invisible(infiles[, {
 						cmd			<- pty.cmd.scan.statistics(indir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 						cat(cmd)							
-						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
-						stop()
 						NULL
 					}, by='PTY_RUN'])
 	stop()
