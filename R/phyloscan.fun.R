@@ -522,7 +522,8 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 {	
 	#pty.phc<- copy(pty.ph)
 	#length(pty.phc)<- 10
-	#	collapse nodes to make browsing of plots easier	
+	#	collapse nodes to make browsing of plots easier
+	cat('\ncalculating cladograms')
 	for(i in seq_along(pty.phc))
 	{
 		print(i) 
@@ -541,6 +542,7 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 	}
 	#	save
 	tmp		<- ptyfiles[1, gsub('\\.newick','\\collapsed.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
+	cat('\nsave to file', file)
 	save(pty.phc, file=tmp)
 	#	need node heights for plotting
 	tmp				<- ptyfiles[,	{
@@ -556,6 +558,7 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 	for(ptyr in ptyfiles[, unique(PTY_RUN)])
 	{
 		#ptyr<- 15
+		cat('\nplotting cladograms to R for',ptyr)
 		tmp			<- subset(ptyfiles, PTY_RUN==ptyr)
 		#	title
 		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]
@@ -563,9 +566,9 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 		phs			<- lapply(tmp[, FILE], function(x) pty.phc[[x]])
 		names(phs)	<- tmp[, TITLE] 
 		#	colours	
-		tmp2		<- sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	))))
-		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))
-		names(col)	<- tmp2	
+		tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')
+		col			<- c('black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
+		names(col)	<- c('not characterized',tmp2)	
 		phps		<- lapply(seq_along(phs), function(i){					
 					max.node.height	<- tmp[i,][, HMX]
 					df				<- data.table(	BAM=phs[[i]]$tip.label, IDX=seq_along(phs[[i]]$tip.label), 
@@ -586,7 +589,8 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 					p					
 				})	
 		names(phps)	<- names(phs)
-		file	<- file.path( indir, tmp[1,gsub('.newick','collapsed.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )		
+		file	<- file.path( indir, tmp[1,gsub('.newick','collapsed.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+		cat('\nplotting cladograms to file',file)
 		if(1)		#for window length 60 (multiple pages)
 		{				
 			tmp			<- seq_len(ceiling(length(phps)/10))
@@ -729,9 +733,9 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 		phs			<- lapply(tmp[, FILE], function(x) pty.ph[[x]])
 		names(phs)	<- tmp[, TITLE] 
 		#	colours	
-		tmp2		<- sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	))))
-		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))
-		names(col)	<- tmp2	
+		tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')
+		col			<- c('black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
+		names(col)	<- c('not characterized',tmp2)			
 		phps		<- lapply(seq_along(phs), function(i){
 					max.node.height	<- tmp[i,][, HMX]
 					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) + 
