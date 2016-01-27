@@ -52,6 +52,10 @@ if(1)
 ###############################################################################
 #	run script
 library(phyloscan)
-load( infile )		# need pty.runs
-pty.evaluate.tree(indir, pty.runs, outdir=indir, select=select, outgroup=outgroup)
-
+load( infile )		# loads pty.runs
+#pty.evaluate.tree(indir, pty.runs, outdir=outdir, select=select, outgroup=outgroup)
+tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))
+tmp		<- subset(tmp, grepl(select,FILE))
+tmp		<- file.path(outdir, tmp[1,FILE])
+load( tmp )			# loads ptyfiles, pty.ph
+pty.evaluate.tree.collapse(pty.runs, ptyfiles, pty.ph, outdir, thresh.brl=8e-6)

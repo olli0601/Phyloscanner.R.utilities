@@ -5,8 +5,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	#pty.pipeline.examl()	
-	pty.pipeline.coinfection.statistics()
+	pty.pipeline.examl()	
+	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	
 	#	various
@@ -402,6 +402,126 @@ project.dualinfecions.phylotypes.test<- function()
 	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
+pty.scan.coinfections	<- function()
+{
+	pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
+	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+	outdir		<- indir
+	if(0)	#	get phylo statistics
+	{
+		infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		setkey(infiles, PTY_RUN)
+		cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))		
+		#pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i)
+		for(i in seq_len(nrow(infiles)))	
+			for(i in 24:52)
+			{
+				cat('\nprocess',infiles[i,FILE])
+				file		<- file.path(indir,infiles[i,FILE])
+				load( file )	#loads "pty.ph"   "ptyfiles"
+				pty.stat	<- pty.scan.statistics.160128(pty.ph, ptyfiles)		
+				save(pty.stat, file=gsub('\\.rda','_stat\\.rda', file))
+				pty.stat<- coi.div<- coi.lsep<- coi.diff<- NULL
+				gc()
+				#coi.div
+			}
+	}
+	if(0)	#collect all results
+	{
+		infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		tmp			<- data.table(FILE_STAT=list.files(indir, pattern='examl_stat.rda$'))
+		tmp[, FILE:= gsub('_stat','',FILE_STAT)]
+		infiles		<- merge(infiles, tmp, by='FILE',all.x=1)	
+		setkey(infiles, PTY_RUN)		
+		infiles		<- subset(infiles, !is.na(FILE_STAT))
+		
+		pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i){
+							load( gsub('\\.rda','_stat\\.rda', file.path(indir, infiles[i,FILE])) )				
+							pty.stat
+						}))
+		pty.stat.file	<- file.path(indir, gsub('ptyr[0-9]+','ptyr',gsub('\\.rda','_stat\\.rda',infiles[1,FILE])) )
+		save(pty.stat, file=pty.stat.file)		
+	}
+	if(1)
+	{
+		pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
+		load(pty.stat.file)
+		
+		#	how many windows per individual ?
+		tmp	<- pty.stat[, list(FILE_ID_N=length(unique(W_FROM))), by='FILE_ID']
+		ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram()
+		#	within host diversity
+		tmp	<- pty.stat[, list(WHDA_p50=quantile(WHDA_p50,p=0.5), WHDA_p025=quantile(WHDA_p50,p=0.025), WHDA_p10=quantile(WHDA_p50,p=0.1), WHDA_p90=mean(WHDA_p50,p=0.9), WHDA_p95=quantile(WHDA_p50,p=0.95) ), by='W_FROM']	
+		ggplot(pty.stat, aes(x=W_FROM)) +  geom_point(aes(y=WHDA_p50, colour=WHDA_p50, size=COUNT_N), alpha=0.2 ) + 
+				geom_ribbon(data=tmp, aes(ymin=WHDA_p10, ymax=WHDA_p90), fill='grey50', alpha=0.7) +
+				geom_ribbon(data=tmp, aes(ymin=WHDA_p90, ymax=WHDA_p95), fill='grey80', alpha=0.7) +
+				#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +
+				scale_colour_continuous(guide=FALSE) + 
+				scale_x_continuous(breaks=seq(0,10e3,500)) +
+				geom_line(data=tmp, aes(y=WHDA_p95), colour='red') +
+				geom_line(data=tmp, aes(y=WHDA_p90), colour='DarkRed') +
+				geom_line(data=tmp, aes(y=WHDA_p50)) + theme_bw() + theme(legend.position='bottom') +
+				labs(x='\ngenome position of window start in each run\n(bp)',y='mean within-host diversity\n(patristic distance, subst/site)\n', size='quality trimmed short reads per individual\n(#)')
+		ggsave(file=gsub('\\.rda','_whdivallreads\\.pdf',pty.stat.file), w=12, h=6)
+		#	get candidates by wh diversity	
+		#	not clear where to make cut.off. Just keep them all with decreasing priority, and plot for inspection.
+		pty.div	<- merge(subset(pty.stat, select=c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, WHDA_p50, TAXA_N, COUNT_N)), subset(tmp, select=c(W_FROM, WHDA_p90, WHDA_p95)), by='W_FROM')
+		tmp		<- subset(pty.div, WHDA_p50>WHDA_p95 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), WHDA_p50_avg=mean(WHDA_p50)), by='FILE_ID']
+		tmp		<- tmp[order(-FILE_ID_N),]	
+		write.csv(tmp, file=gsub('\\.rda','_whdivallreads_g90qu\\.csv',pty.stat.file), row.names=FALSE)
+		#	160126
+		#
+		#	R11_GA0053_S71_L001		23		May be a root issue. There s a lot of diversity but no clearly defined separate clade
+		#	R1_RES301_S13_L001		14		** Could be! There s a deep split that reproduces
+		#	R2_RES142_S40_L001		31		Not clear. Consecutive phylogenies should give similar results -- is this the case??
+		#	R1_RES452_S17_L001		27		** There are deep splits, occasionally intermingled with R5_RES414. Again, not super clear.
+		#	R1_RES124_S6_L001		23		Not clear. What complicates: x-axes across windows not on same scale.
+		#	13554_1_43				37		** This one is super diverse throughout. Not sure what this means though.. at 700 also mixup with another individual
+		#	13557_1_93				18
+		#	R1_RES282_S12_L001		33
+		#	R6_RES025_S58_L001		16
+		#	R11_PA0012_S28_L001		14		Root issue?
+		
+		#
+		#	long branches. focus on subtending clades with more than 100 reads
+		pty.lsep	<- subset(pty.stat, CL_COUNT_N>100)
+		pty.lsep[, THR_WHER:= 0.1]
+		set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)
+		tmp	<- pty.lsep[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	
+		ggplot(pty.lsep, aes(x=W_FROM)) +  geom_point(aes(y=CL_MX_LOCAL_SEP, colour=CL_MX_LOCAL_SEP, size=COUNT_N), alpha=0.2 ) + 
+				geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p10, ymax=CL_MX_LOCAL_SEP_p90), fill='grey50', alpha=0.7) +
+				geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p90, ymax=CL_MX_LOCAL_SEP_p95), fill='grey80', alpha=0.7) +
+				#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +
+				scale_colour_continuous(guide=FALSE) + 
+				scale_x_continuous(breaks=seq(0,10e3,500)) +
+				geom_step(aes(y=THR_WHER), colour='red') +
+				geom_step(aes(y=THR_WHER/2), colour='DarkRed') +
+				#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p95), colour='red') +
+				#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p90), colour='DarkRed') +
+				geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p50)) + theme_bw() + theme(legend.position='bottom') +
+				labs(x='\ngenome position of window start in each run\n(bp)',y='stem length of clades with >100 reads\n(subst/site)\n', size='quality trimmed short reads per individual\n(#)')
+		ggsave(file=gsub('\\.rda','_whlsepallreads100\\.pdf',pty.stat.file), w=12, h=6)
+		#	get candidates
+		tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), CL_MX_LOCAL_SEP_avg=mean(CL_MX_LOCAL_SEP)), by='FILE_ID']
+		tmp		<- tmp[order(-FILE_ID_N),]	
+		write.csv(tmp, file=gsub('\\.rda','_whlsepallreads100\\.csv',pty.stat.file), row.names=FALSE)	
+		#	160127	6	Looks very promising
+		#	
+		
+		subset(pty.lsep, CL_MX_LOCAL_SEP>.5)	#	entry 12 looks like an error!
+		ggplot(pty.lsep, aes(x=COUNT_N)) + geom_histogram()
+		
+		ggsave(file=gsub('\\.rda','_whdivallreads\\.pdf',pty.stat.file), w=12, h=6)
+		ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram(binwidth=1)
+		
+		ggplot(subset(coi.lsep, CL_TAXA_N>5), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 			 
+				geom_point(aes(y=CL_MX_LOCAL_SEP/CL_AVG_HEIGHT_ALL, size=CL_COUNT_N)) + theme_bw()
+	}
+	 
+}
+
 pty.pipeline.coinfection.statistics<- function()
 {	
 	require(big.phylo)
@@ -423,24 +543,12 @@ pty.pipeline.coinfection.statistics<- function()
 	invisible(infiles[, {
 						cmd			<- pty.cmd.scan.statistics(indir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 						cat(cmd)							
-						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+						#cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)
+						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)										
 						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
 						NULL
 					}, by='PTY_RUN'])
-	stop()
-	
-	
-	#	R11_GA0053_S71_L001		23		May be a root issue. There s a lot of diversity but no clearly defined separate clade
-	#	R1_RES301_S13_L001		14		** Could be! There s a deep split that reproduces
-	#	R2_RES142_S40_L001		31		Not clear. Consecutive phylogenies should give similar results -- is this the case??
-	#	R1_RES452_S17_L001		27		** There are deep splits, occasionally intermingled with R5_RES414. Again, not super clear.
-	#	R1_RES124_S6_L001		23		Not clear. What complicates: x-axes across windows not on same scale.
-	#	13554_1_43				37		** This one is super diverse throughout. Not sure what this means though.. at 700 also mixup with another individual
-	#	13557_1_93				18
-	#	R1_RES282_S12_L001		33
-	#	R6_RES025_S58_L001		16
-	#	R11_PA0012_S28_L001		14		Root issue?
 }
 
 project.dualinfecions.phylotypes.countbam.150120<- function()
@@ -448,7 +556,7 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 	require(ggplot2)
 	require(data.table)
 	require(Rsamtools)
-	pty.infile	<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
+	pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 	pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 	#pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		
@@ -498,7 +606,21 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 	ggplot(bam.len, aes(y=CDF, x=factor(QU), fill=TYPE)) + geom_boxplot() + 
 			theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of quality-trimmed short reads\n(nt)', fill='individual') +
 			theme(legend.position='bottom')
-	ggsave(file= gsub('ptyrunsinput.rda','bamlen.pdf',pty.infile), w=10, h=7)	
+	ggsave(file= gsub('ptyrunsinput.rda','bamlen.pdf',pty.infile), w=10, h=7)
+	#
+	#	compare against horizontal coverage
+	#
+	sqi[, FILE_ID:= TAXA]
+	tmp		<- sqi[, which(!is.na(SANGER_ID))]
+	set(sqi, tmp, 'FILE_ID', sqi[tmp, SANGER_ID])
+	bam.len	<- merge(bam.len, subset(sqi, select=c(FILE_ID, COV)), by='FILE_ID', all.x=1)
+	tmp		<- subset(bam.len, QU==140)
+	ggplot(tmp, aes(y=100*CDF, x=COV, colour=SEQ_RUN)) + 
+			geom_point() + 
+			labs(x='horizontal coverage of consensus\n(bp)', y='proportion of reads with len<=140bp\n(%)', colour='sequence run') +
+			theme_bw()
+	ggsave(file= gsub('ptyrunsinput.rda','bamlen_vs_horizontalcoverage.pdf',pty.infile), w=7, h=7)
+	write.csv(tmp, file=gsub('ptyrunsinput.rda','bamlen_vs_horizontalcoverage.csv',pty.infile),  row.names=FALSE)_
 }
 
 project.dualinfecions.phylotypes.evaluatereads.150119<- function()
