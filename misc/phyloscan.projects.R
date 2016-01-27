@@ -620,7 +620,7 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 			labs(x='horizontal coverage of consensus\n(bp)', y='proportion of reads with len<=140bp\n(%)', colour='sequence run') +
 			theme_bw()
 	ggsave(file= gsub('ptyrunsinput.rda','bamlen_vs_horizontalcoverage.pdf',pty.infile), w=7, h=7)
-	write.csv(tmp, file=gsub('ptyrunsinput.rda','bamlen_vs_horizontalcoverage.csv',pty.infile),  row.names=FALSE)_
+	write.csv(tmp, file=gsub('ptyrunsinput.rda','bamlen_vs_horizontalcoverage.csv',pty.infile),  row.names=FALSE)
 }
 
 project.dualinfecions.phylotypes.evaluatereads.150119<- function()
