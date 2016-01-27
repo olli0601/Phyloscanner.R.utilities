@@ -478,7 +478,10 @@ pty.evaluate.tree.collapse.clusters<- function(ph, thresh.brl=8e-6)
 		#	only collapse sequences from same individual
 		tmp		<- subset(df[, list(CLU_N=length(unique(FILE_ID))), by='CLU_ID'], CLU_N==1)
 		df		<- merge(df, tmp, by='CLU_ID')			
-		df		<- merge(df, df[, list(BAMCLU= paste( FILE_ID[1],'_clu_',CLU_ID,'_count_',sum(COUNT), sep='' ) ), by='CLU_ID'], by='CLU_ID')					
+		df		<- merge(df, df[, list(TAXA_N=length(FILE_ID), BAMCLU= paste( FILE_ID[1],'_clu_',CLU_ID,'_count_',sum(COUNT), sep='' ) ), by='CLU_ID'], by='CLU_ID')
+		#	do not collapse if this results in singleton
+		if(Ntip(phc)==nrow(df) && df[, length(unique(CLU_ID))]==1)
+			df	<- subset(df, CLU_ID<0)
 		for(clu.id in df[, unique(CLU_ID)])
 		{
 			tmp			<- subset(df, CLU_ID==clu.id)			
