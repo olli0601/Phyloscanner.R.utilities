@@ -1,25 +1,30 @@
 project.dual<- function()
-{
+{	
+	CODE.HOME	<<- "/work/or105/libs/phyloscan"
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.examl()	
+	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
-	#project.dualinfecions.phylotypes.evaluatereads.150119()
-	
+	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
-	if(0)
+	if(1)
 	{
-		cmd			<- hivc.cmd.various()
-		cmd			<- hivc.cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeph', hpc.walltime=3, hpc.mem="3600mb")
+		require(big.phylo)
+		cmd			<- paste(file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=10, hpc.mem="5000mb")
 		cat(cmd)		
-		outdir		<- file.path(HOME,"ptyruns")
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-		hivc.cmd.hpccaller(outdir, outfile, cmd)
+		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
 		quit("no")	
 	}			
+}
+
+pty.various	<- function()
+{
+	project.scan.superinfections()
 }
 
 project.dual.alignments.missing<- function()
@@ -402,7 +407,95 @@ project.dualinfecions.phylotypes.test<- function()
 	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
-pty.scan.coinfections	<- function()
+pty.scan.contaminants	<- function()
+{	
+	pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
+	load(pty.stat.file)
+	
+	pty.cm		<- subset(pty.stat, DIFF_IND>0 & DIFF>5*DIFF_IND)
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']
+	tmp			<- tmp[order(-W_N),]
+	subset(tmp, W_N>2)
+	ggplot(pty.stat, aes(x=DIFF)) + geom_histogram()
+}
+
+project.scan.superinfections	<- function()
+{
+	#stat.infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
+	stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')
+	outfile		<- file.path(dirname(stat.infile),'superinfections.csv')
+
+	load(stat.infile)	
+	#
+	#	long branches. focus on subtending clades with more than 100 reads
+	pty.lsep	<- subset(pty.stat, CL_COUNT_N>100 & TAXA_N>40)
+	pty.lsep[, THR_WHER:= 0.1]
+	set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)
+	tmp	<- pty.lsep[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	
+	ggplot(pty.lsep, aes(x=W_FROM)) +  geom_point(aes(y=CL_MX_LOCAL_SEP, colour=CL_MX_LOCAL_SEP, size=COUNT_N), alpha=0.2 ) + 
+			geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p10, ymax=CL_MX_LOCAL_SEP_p90), fill='grey50', alpha=0.7) +
+			geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p90, ymax=CL_MX_LOCAL_SEP_p95), fill='grey80', alpha=0.7) +
+			#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +
+			scale_colour_continuous(guide=FALSE) + 
+			scale_x_continuous(breaks=seq(0,10e3,500)) +
+			geom_step(aes(y=THR_WHER), colour='red') +
+			geom_step(aes(y=THR_WHER/2), colour='DarkRed') +
+			#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p95), colour='red') +
+			#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p90), colour='DarkRed') +
+			geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p50)) + theme_bw() + theme(legend.position='bottom') +
+			labs(x='\ngenome position of window start in each run\n(bp)',y='stem length of clades with >100 reads\n(subst/site)\n', size='quality trimmed short reads per individual\n(#)')
+	ggsave(file=gsub('\\.csv','_scan\\.pdf',outfile), w=12, h=6)
+	#
+	#	get candidates
+	#tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), CL_MX_LOCAL_SEP_avg=mean(CL_MX_LOCAL_SEP)), by='FILE_ID']
+	#tmp		<- tmp[order(-FILE_ID_N),]	
+	tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']
+	tmp		<- subset(tmp, FILE_ID_N>2 & DIFF_IND>0)		
+	tmp		<- tmp[order(-FILE_ID_N),]	
+	write.csv(tmp, file=outfile, row.names=FALSE)
+	#
+	#	plot candidates
+	tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
+	tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 )
+	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
+	phps	<- lapply(seq_len(nrow(tmp2)), function(i)
+			{
+				#i				<-1
+				cat('\nprepare plot',i,'/',nrow(tmp2))
+				file			<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
+				load(file)
+				ph				<- pty.ph[[ tmp2[i,FILE]  ]]
+				max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])
+				tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))
+				col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))
+				names(col)		<- tmp			
+				ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO,'\ndiffind', DIFF_IND,' diff',DIFF, ' lsep', round(CL_MX_LOCAL_SEP,d=3), sep='')]
+				p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
+						geom_nodepoint(size=ph$node.label/100*3) +
+						geom_tiplab(size=1.2,  hjust=-.1) +							 
+						scale_color_manual(values=col, guide = FALSE) +											 
+						scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+						theme_tree2() +
+						theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
+						labs(x='subst/site', title=ph.title)
+				p
+			})	
+	tmp			<- seq_len(ceiling(length(phps)/10))
+	pdf(file=gsub('\\.csv','_trees\\.pdf',outfile), w=20, h=40)		#for win=60
+	for(i in tmp)
+	{		
+		grid.newpage()
+		pushViewport(viewport(layout=grid.layout(2, 5)))
+		z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
+		for(j in z)
+			print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
+	}
+	dev.off()			
+}
+
+pty.scan.explore	<- function()
 {
 	pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
 	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
@@ -420,7 +513,7 @@ pty.scan.coinfections	<- function()
 				cat('\nprocess',infiles[i,FILE])
 				file		<- file.path(indir,infiles[i,FILE])
 				load( file )	#loads "pty.ph"   "ptyfiles"
-				pty.stat	<- pty.scan.statistics.160128(pty.ph, ptyfiles)		
+				pty.stat	<- pty.stat.all.160128(pty.ph, ptyfiles)		
 				save(pty.stat, file=gsub('\\.rda','_stat\\.rda', file))
 				pty.stat<- coi.div<- coi.lsep<- coi.diff<- NULL
 				gc()
@@ -429,22 +522,9 @@ pty.scan.coinfections	<- function()
 	}
 	if(0)	#collect all results
 	{
-		infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
-		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
-		tmp			<- data.table(FILE_STAT=list.files(indir, pattern='examl_stat.rda$'))
-		tmp[, FILE:= gsub('_stat','',FILE_STAT)]
-		infiles		<- merge(infiles, tmp, by='FILE',all.x=1)	
-		setkey(infiles, PTY_RUN)		
-		infiles		<- subset(infiles, !is.na(FILE_STAT))
-		
-		pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i){
-							load( gsub('\\.rda','_stat\\.rda', file.path(indir, infiles[i,FILE])) )				
-							pty.stat
-						}))
-		pty.stat.file	<- file.path(indir, gsub('ptyr[0-9]+','ptyr',gsub('\\.rda','_stat\\.rda',infiles[1,FILE])) )
-		save(pty.stat, file=pty.stat.file)		
+		pty.stat.collect(indir)	
 	}
-	if(1)
+	if(0)	#devel
 	{
 		pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
 		load(pty.stat.file)
@@ -506,9 +586,66 @@ pty.scan.coinfections	<- function()
 		#	get candidates
 		tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), CL_MX_LOCAL_SEP_avg=mean(CL_MX_LOCAL_SEP)), by='FILE_ID']
 		tmp		<- tmp[order(-FILE_ID_N),]	
-		write.csv(tmp, file=gsub('\\.rda','_whlsepallreads100\\.csv',pty.stat.file), row.names=FALSE)	
-		#	160127	6	Looks very promising
-		#	
+		
+		
+		tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']
+		tmp		<- subset(tmp, FILE_ID_N>2 & DIFF_IND>0)		
+		tmp		<- tmp[order(-FILE_ID_N),]	
+		write.csv(tmp, file=gsub('\\.rda','_whlsepallreads100\\.csv',pty.stat.file), row.names=FALSE)
+		
+		tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
+		tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)
+		
+		
+		infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
+		phps	<- lapply(seq_len(nrow(tmp2)), function(i)
+				{
+					#i				<-1
+					file			<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
+					load(file)
+					ph				<- pty.ph[[ tmp2[i,FILE]  ]]
+					max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])
+					tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))
+					col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))
+					names(col)		<- tmp			
+					ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO, sep='')]
+					p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
+							geom_nodepoint(size=ph$node.label/100*3) +
+							geom_tiplab(size=1.2,  hjust=-.1) +							 
+							scale_color_manual(values=col, guide = FALSE) +											 
+							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+							theme_tree2() +
+							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
+							labs(x='subst/site', title=ph.title)
+					p
+				})
+		file	<- file.path( indir, '160128_coinf_lsep05_txn40_fileidn2_diffind1')
+		tmp			<- seq_len(ceiling(length(phps)/10))
+		pdf(file=file, w=20, h=40)		#for win=60
+		for(i in tmp)
+		{		
+			grid.newpage()
+			pushViewport(viewport(layout=grid.layout(2, 5)))
+			z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
+			for(j in z)
+				print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
+		}
+		dev.off()			
+		#subset(tmp2, FILE_ID=='13557_1_86', c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, DIFF_IND, CL_MX_LOCAL_SEP, CL_AVG_HEIGHT_UNIQUE, CL_AVG_HEIGHT_ALL, CL_TAXA_N, CL_COUNT_N,TAXA_N, COUNT_N))
+		#
+		#	160127	
+		#
+		#	13557_1_82			6		Two separate clusters split by others. Promising.
+		#	13557_1_86			36		Seems highly divergent. Some branches are v long. Perhaps minority variant??
+		#	13557_1_77			34		Two separate clusters split by others in pol; else long branches. Promising. 
+		#	13557_1_60			34		Has long branches but not split by others
+		#	13557_1_56			11		Little support. Some phylogenies look weird. There are duplicates, occasionally breaking clades.
+		#	R1_RES406_S14_L001	19		Several separate clades, broken by others. Promising.
+		#	13554_1_24			44		Separate clusters. Occasionally split by others. Promising. 
+		
+		#	looking for high density trees that have two clades broken by others		--> super-infection?
+		#	unclear how to intepret separate clades that are rooted in same individual 	--> co-infection?
 		
 		subset(pty.lsep, CL_MX_LOCAL_SEP>.5)	#	entry 12 looks like an error!
 		ggplot(pty.lsep, aes(x=COUNT_N)) + geom_histogram()
@@ -519,7 +656,7 @@ pty.scan.coinfections	<- function()
 		ggplot(subset(coi.lsep, CL_TAXA_N>5), aes(x=W_FROM, fill=FILE_ID, colour=FILE_ID, group=FILE_ID)) + 			 
 				geom_point(aes(y=CL_MX_LOCAL_SEP/CL_AVG_HEIGHT_ALL, size=CL_COUNT_N)) + theme_bw()
 	}
-	 
+	
 }
 
 pty.pipeline.coinfection.statistics<- function()

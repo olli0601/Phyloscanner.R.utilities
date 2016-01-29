@@ -419,7 +419,26 @@ pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,
 }
 
 #' @export
-pty.scan.statistics.160128	<- function(pty.ph, ptyfiles)
+pty.stat.collect	<- function(indir, outdir=indir, outfile=file.path(outdir,'ptyr_examl_stat.rda'))
+{
+	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	tmp			<- data.table(FILE_STAT=list.files(indir, pattern='examl_stat.rda$'))
+	tmp[, FILE:= gsub('_stat','',FILE_STAT)]
+	infiles		<- merge(infiles, tmp, by='FILE',all.x=1)	
+	setkey(infiles, PTY_RUN)
+	if( infiles[, any(is.na(FILE_STAT))] )
+		cat('\nwarning stat files not available for=',paste( subset(infiles, is.na(FILE_STAT))[, FILE], collapse=', '))	
+	infiles		<- subset(infiles, !is.na(FILE_STAT))	
+	pty.stat	<- do.call('rbind',lapply(seq_len(nrow(infiles)), function(i){
+						load( gsub('\\.rda','_stat\\.rda', file.path(indir, infiles[i,FILE])) )				
+						pty.stat
+					}))	
+	save(pty.stat, file=outfile)
+}
+
+#' @export
+pty.stat.all.160128	<- function(pty.ph, ptyfiles)
 {
 	#
 	#	quantiles of within individual diversity (patristic distance)
@@ -1192,21 +1211,42 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	process newick output
-	if(1)
+	if(0)
 	{
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$|examl\\.rda$'))						
-		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
 		invisible(infiles[, {
 							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
 							cat(cmd)							
-							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
 							NULL
 						}, by='PTY_RUN'])
 		stop()
-	}		
+	}	
+	#	collapse trees
+	if(1)
+	{
+		infiles			<- data.table(FILE=list.files(out.dir, pattern='examl\\.rda$'))						
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+		tmp				<- data.table(OUT=list.files(out.dir, pattern='examlcollapsed\\.rda$'))
+		tmp[,FILE:=gsub('collapsed','',OUT)]
+		infiles			<- merge(infiles, tmp, by='FILE',all.x=1)
+		infiles			<- subset(infiles, is.na(OUT))
+		
+		invisible(infiles[, {
+							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
+							cat(cmd)							
+							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+							NULL
+						}, by='PTY_RUN'])
+		stop()
+	}	
 }
 
 #' @export
