@@ -14,7 +14,7 @@ project.dual<- function()
 	{
 		require(big.phylo)
 		cmd			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
-		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=10, hpc.mem="90000mb")
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=10, hpc.mem="50000mb")
 		cat(cmd)		
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
@@ -422,15 +422,28 @@ pty.scan.contaminants	<- function()
 
 project.scan.superinfections	<- function()
 {
+	#
+	# input files
 	#stat.infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
 	stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')
 	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')
-	outfile		<- file.path(dirname(stat.infile),'superinfections.csv')
-
+	#	should have strong evidence for superinfections: separating individuals
+	if(0)	
+	{
+		coi.args<- list(clcountn=100, taxan=40, diffind=1, winn=3)
+	}
+	#	weaker evidence for superinfections: no separating individuals
+	if(1)	
+	{
+		coi.args<- list(clcountn=100, taxan=40, diffind=0, winn=3)
+	}
+	
+	tmp			<- paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))
 	load(stat.infile)	
 	#
 	#	long branches. focus on subtending clades with more than 100 reads
-	pty.lsep	<- subset(pty.stat, CL_COUNT_N>100 & TAXA_N>40)
+	pty.lsep	<- subset(pty.stat, CL_COUNT_N>=coi.args[['clcountn']] & TAXA_N>=coi.args[['taxan']])
 	pty.lsep[, THR_WHER:= 0.1]
 	set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)
 	tmp	<- pty.lsep[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	
@@ -452,11 +465,14 @@ project.scan.superinfections	<- function()
 	#tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), CL_MX_LOCAL_SEP_avg=mean(CL_MX_LOCAL_SEP)), by='FILE_ID']
 	#tmp		<- tmp[order(-FILE_ID_N),]	
 	tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']
-	tmp		<- subset(tmp, FILE_ID_N>2 & DIFF_IND>0)		
+	if(coi.args[['diffind']]>0)
+		tmp	<- subset(tmp, FILE_ID_N>=coi.args[['winn']] & DIFF_IND>=coi.args[['diffind']])
+	if(coi.args[['diffind']]==0)
+		tmp	<- subset(tmp, FILE_ID_N>=coi.args[['winn']] & DIFF_IND==0)
 	tmp		<- tmp[order(-FILE_ID_N),]	
 	write.csv(tmp, file=outfile, row.names=FALSE)
 	#
-	#	plot candidates
+	#	plot windows of candidates
 	tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
 	tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 )
 	infiles		<- data.table(FILE=list.files(tree.indir, pattern='examl.rda$'))
