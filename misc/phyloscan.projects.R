@@ -24,7 +24,8 @@ project.dual<- function()
 
 pty.various	<- function()
 {
-	project.scan.superinfections()
+	#project.scan.superinfections()
+	project.scan.contaminants()
 }
 
 project.dual.alignments.missing<- function()
@@ -407,19 +408,6 @@ project.dualinfecions.phylotypes.test<- function()
 	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
-pty.scan.contaminants	<- function()
-{	
-	pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
-	load(pty.stat.file)
-	
-	pty.cm		<- subset(pty.stat, DIFF_IND>0 & DIFF>5*DIFF_IND)
-	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)
-	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']
-	tmp			<- tmp[order(-W_N),]
-	subset(tmp, W_N>2)
-	ggplot(pty.stat, aes(x=DIFF)) + geom_histogram()
-}
-
 project.scan.superinfections	<- function()
 {
 	#
@@ -444,6 +432,8 @@ project.scan.superinfections	<- function()
 	#
 	#	long branches. focus on subtending clades with more than 100 reads
 	pty.lsep	<- subset(pty.stat, CL_COUNT_N>=coi.args[['clcountn']] & TAXA_N>=coi.args[['taxan']])
+	setkey(pty.lsep, PTY_RUN, W_FROM, W_TO, FILE_ID)
+	pty.lsep	<- unique(pty.lsep)	
 	pty.lsep[, THR_WHER:= 0.1]
 	set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)
 	tmp	<- pty.lsep[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	
@@ -472,7 +462,7 @@ project.scan.superinfections	<- function()
 	tmp		<- tmp[order(-FILE_ID_N),]	
 	write.csv(tmp, file=outfile, row.names=FALSE)
 	#
-	#	plot windows of candidates
+	#	plot trees for each window of candidates
 	tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
 	tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 )
 	infiles		<- data.table(FILE=list.files(tree.indir, pattern='examl.rda$'))
@@ -489,6 +479,75 @@ project.scan.superinfections	<- function()
 				col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))
 				names(col)		<- tmp			
 				ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO,'\ndiffind', DIFF_IND,' diff',DIFF, ' lsep', round(CL_MX_LOCAL_SEP,d=3), sep='')]
+				p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
+						geom_nodepoint(size=ph$node.label/100*3) +
+						geom_tiplab(size=1.2,  hjust=-.1) +							 
+						scale_color_manual(values=col, guide = FALSE) +											 
+						scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+						theme_tree2() +
+						theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
+						labs(x='subst/site', title=ph.title)
+				p
+			})	
+	tmp			<- seq_len(ceiling(length(phps)/10))
+	pdf(file=gsub('\\.csv','_trees\\.pdf',outfile), w=20, h=40)		#for win=60
+	for(i in tmp)
+	{		
+		grid.newpage()
+		pushViewport(viewport(layout=grid.layout(2, 5)))
+		z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
+		for(j in z)
+			print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
+	}
+	dev.off()			
+}
+
+project.scan.contaminants	<- function()
+{
+	#
+	# input files
+	#stat.infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
+	stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')
+	#	should have strong evidence for superinfections: separating individuals
+	if(1)	
+	{
+		cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=10, winx=10)
+	}
+	
+	
+	tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')
+	outfile		<- file.path(dirname(stat.infile),paste('contaminants_',tmp,'.csv',sep=''))
+	load(stat.infile)	
+	#
+	#	select individuals with at least one other individual inbetween and many separate clades of the other individual
+	pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)
+	pty.cm		<- unique(pty.cm)
+	tmp			<- pty.cm[, list(W_N=length(W_FROM)), by='FILE_ID']
+	tmp			<- tmp[order(-W_N),]
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])
+	write.csv(tmp, file=outfile, row.names=FALSE)
+	#
+	#	plot trees for each window of candidates
+	tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')
+	tmp2	<- tmp2[order(FILE_ID, -COUNT_N),]
+	#	select at max winx trees per individual
+	tmp2	<- merge(tmp2, tmp2[, list(W_FROM=W_FROM[1:min(cnt.args[['winx']],length(W_FROM))]), by='FILE_ID'], by=c('FILE_ID','W_FROM'))	
+	infiles		<- data.table(FILE=list.files(tree.indir, pattern='examl.rda$'))
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
+	phps	<- lapply(seq_len(nrow(tmp2)), function(i)
+			{
+				#i				<-1
+				cat('\nprepare plot',i,'/',nrow(tmp2))
+				file			<- file.path(tree.indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
+				load(file)
+				ph				<- pty.ph[[ tmp2[i,FILE]  ]]
+				max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])
+				tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))
+				col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))
+				names(col)		<- tmp			
+				ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO,'\ndiffind', DIFF_IND,' diff',DIFF, sep='')]
 				p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + 
 						geom_nodepoint(size=ph$node.label/100*3) +
 						geom_tiplab(size=1.2,  hjust=-.1) +							 
