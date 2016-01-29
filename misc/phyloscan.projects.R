@@ -424,6 +424,7 @@ project.scan.superinfections	<- function()
 {
 	#stat.infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'
 	stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')
 	outfile		<- file.path(dirname(stat.infile),'superinfections.csv')
 
 	load(stat.infile)	
@@ -458,13 +459,13 @@ project.scan.superinfections	<- function()
 	#	plot candidates
 	tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
 	tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 )
-	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	infiles		<- data.table(FILE=list.files(tree.indir, pattern='examl.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
 	phps	<- lapply(seq_len(nrow(tmp2)), function(i)
 			{
 				#i				<-1
 				cat('\nprepare plot',i,'/',nrow(tmp2))
-				file			<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
+				file			<- file.path(tree.indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
 				load(file)
 				ph				<- pty.ph[[ tmp2[i,FILE]  ]]
 				max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])
