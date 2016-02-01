@@ -1078,6 +1078,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 				z		<- file.path(outdir, gsub('\\.fasta','_dophy\\.fasta',FILE))
 				if(!file.exists(z))
 				{
+					cat('\nwrite to',z)
 					write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
 				}										
 				list(FILE=z, TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
@@ -1209,7 +1210,8 @@ pty.pipeline.examl<- function()
 	{			
 		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
 		work.dir		<- file.path(HOME,"coinf_ptinput")
-		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")		
+		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_15021")
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
 	}
 	#	get alignment rda files
@@ -1229,16 +1231,16 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 				min.ureads.individual=20, min.ureads.candidate=NA, 
-				args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=10)	
+				args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=5)	
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
 		invisible(exa.cmd[,	{		
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
 							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)
 							outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -1262,7 +1264,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}	
 	#	collapse trees
-	if(1)
+	if(0)
 	{
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='examl\\.rda$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]

@@ -672,7 +672,9 @@ pty.pipeline.fasta<- function()
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350, min.ureads.individual=20)
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
+		pty.c[1,cat(CMD)]
+		stop()
 		#pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
 	}
 	if(no.trees=='-T')
