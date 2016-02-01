@@ -14,7 +14,7 @@ project.dual<- function()
 	{
 		require(big.phylo)
 		cmd			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
-		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=10, hpc.mem="50000mb")
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=40, hpc.mem="50000mb")
 		cat(cmd)		
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
@@ -25,7 +25,8 @@ project.dual<- function()
 pty.various	<- function()
 {
 	#project.scan.superinfections()
-	project.scan.contaminants()
+	#project.scan.contaminants()
+	project.readlength.count.all()
 }
 
 project.dual.alignments.missing<- function()
@@ -375,7 +376,6 @@ project.dualinfecions.phylotypes.setup.coinfections.ZA.160110<- function()
 	tmp			<- paste(indir, '/', gsub('\\.rda','_coinfrunsinput\\.rda',infile), sep='')
 	save(pty.runs, pty.clu, ph, dist.brl, ph.gdtr, ph.mrca, clustering, sqi, sq, file= tmp)	
 }
-
 
 project.dualinfecions.phylotypes.test<- function()
 {
@@ -764,7 +764,30 @@ pty.pipeline.coinfection.statistics<- function()
 					}, by='PTY_RUN'])
 }
 
-project.dualinfecions.phylotypes.countbam.150120<- function()
+project.readlength.count.all<- function()
+{
+	indir		<- '/work/cw109/SAseqs/ReadLengths'
+	#indir		<- file.path(HOME,'readlengths')
+	outfile		<- file.path(HOME,'readlen.rda')
+	infiles		<- data.table(FILE=list.files(indir, pattern='dat$', recursive=TRUE))
+	cat('\nFound files, n=', nrow(infiles))
+	cat('\nWill save to', outfile)
+	
+	infiles[, TYPE:=dirname(FILE)]
+	infiles[, ID:=gsub('\\.dat','',basename(FILE))]
+	rl			<- infiles[, {
+				stopifnot(length(FILE)==1)				
+				#z	<- as.data.table(read.table('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/RawFastqs/R13_X84265_S17_L001_2.dat',sep='',stringsAsFactors=FALSE))
+				z	<- as.data.table(read.table(file.path(indir,FILE),sep='',stringsAsFactors=FALSE))
+				setnames(z, c('V1','V2'),c('COUNT','LEN'))
+				z
+			}, by=c('TYPE','ID')]
+	cat('\nRead reads, n=', nrow(rl))
+	save(rl, file=outfile)
+	cat('\nSaved to',outfile)
+}
+
+project.readlength.count.bam.150120<- function()
 {
 	require(ggplot2)
 	require(data.table)

@@ -1,858 +1,729 @@
-infiles
-seqd	<- merge(infiles, seqd, by='FILE')
-seqd
-setkey(seqd, PTY_RUN, W_FROM)
-unique(seqd)
-unique(seqd)[, table(TOTAL_N)]
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, colour=IND)) + geom_bar(stat='identity')
-require(ggplot2)
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, colour=IND)) + geom_bar(stat='identity')
-setkey(seqd, PTY_RUN, W_FROM, IND)#
-	ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, colour=IND)) + geom_bar(stat='identity')
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND)) + geom_bar(stat='identity')
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND)) + geom_bar(stat='identity') + theme_bw() +#
-			labs(x='window start', y='unique reads', fill='individuals')
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-z<- load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
-z
-pty.runs
-infiles
-merge(pty_runs, seqd, by='PTY_RUN')
-merge(pty.runs, seqd, by='PTY_RUN')
-seqd
-str(seqd)
-str(pty.runs)
-pty.runs
-subset(pty.runs, PTY_RUN==1)
-infiles
-seqd
-si
-seqd
-pty.runs
-tmp			<- subset(si, select=c(SANGER_ID, PANGEA_ID))#
-	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])#
-	setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','IND'))
-tmp
-merge(seqd, tmp, by='IND')
-seqd
-merge(seqd, tmp, by='IND',all=1)
-seqd
-merge(seqd, tmp, by='IND',all.x=1)
-seqd	<- merge(seqd, tmp, by='IND',all.x=1)
-pty.runs
-tmp		<- seqd[, which(is.na(TAXA))]#
-	set(seqd, tmp, 'TAXA', seqd[tmp, IND])
-seqd
-pty.runs
-merge(pty.runs, seqd, by=c('PTY_RUN','TAXA'))
-seqd	<- merge(pty.runs, seqd, by=c('PTY_RUN','TAXA'))
-seqd
-setkey(seqd, PTY_RUN, W_FROM, IND)
-unique(seqd)
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])
-seqd
-setkey(seqd, PTY_RUN, W_FROM, IND)#
-	ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.5))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.3))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-unique(seqd)
-subset(unique(seqd),FILL=='candidate')
-subset(unique(seqd),FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','IND','W_FROM')]
-tmp		<- subset(unique(seqd),FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','IND','W_FROM')]
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_line()
-tmp		<- subset(unique(seqd),FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','W_FROM')]#
-	ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_line()
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step()
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +			#
-			labs(x='window start', y='candidate individuals\n(#)')
-indir
-infiles
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +			#
-			labs(x='window start', y='candidate individuals\n(#)') +#
-			facet_grid(~PTY_RUN)
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +			#
-			labs(x='window start', y='candidate individuals\n(#)') +#
-			facet_grid(~PTY_RUN) + theme_bw()
-ggsave(file=file.path(indir,'pty_candidate_individuals.pdf'), w=5, h=4)
-ggsave(file=file.path(indir,'pty_candidate_individuals.pdf'), w=10, h=4)
-ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +			#
-			labs(x='window start', y='candidate individuals\n(#)') +#
-			facet_grid(PTY_RUN~.) + theme_bw()#
-	ggsave(file=file.path(indir,'pty_candidate_individuals.pdf'), w=5, h=4)
-ggsave(file=file.path(indir,'pty_candidate_individuals.pdf'), w=10, h=4)
-ggplot(unique(seqd),aes(x=W_FROM, y=UNIQUE_N, fill=IND, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.3))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-tmp		<- unique(seqd)
-tmp
-tmp[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]
-tmp
-ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.3))+#
-			scale_fill_#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.3))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.3))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')
-tmp
-subset(tmp, IND=='R8_RES486_S8_L001')
-ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=4)
-tmp		<- subset(unique(seqd), FILL=='candidate')
-tmp
-tmp[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
-ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar()
-ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity')
-subset(unique(seqd), FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
-tmp		<- subset(unique(seqd), FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
-tmp
-ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity')
-ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity') +#
-			labs(x='candidate individuals', y='sum of unique reads\n(#)') + theme_bw()
-ggplot(tmp, aes(x=IND, y=TOTAL_N)) + geom_bar(stat='identity') +#
-			labs(x='candidate individuals', y='sum of unique reads\n(#)') + theme_bw() +facet_grid(PTY_RUN~.)
-ggsave(file=file.path(indir,'pty_reads_from_candidate.pdf'), w=4, h=4)
-tmp		<- unique(seqd)#
-	tmp[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]#
-	ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')+#
-			theme(legend.position='bottom')#
-	ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=4)
-ggplot(tmp,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, alpha=FILL)) + geom_bar(stat='identity', colour='black') + theme_bw() +#
-			scale_x_continuous(breaks=seq(0,10000,500)) +#
-			scale_fill_discrete(guide=FALSE) +#
-			scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-			labs(x='window start', y='unique reads\n(#)', fill='individuals')#
-	ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=4)
-tmp		<- subset(unique(seqd), FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]
-tmp
-seqd
-require(big.phylo)#
-	HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"#
-	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )#
-	indir			<- file.path(HOME,"phylotypes_160119")#
-	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))#
-	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]#
-	infiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] #
-	infiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]#
-	strip.max.len	<- 350
-seqd	<- infiles[,{#
-				seq		<- read.dna(file.path(indir,FILE),format='fasta')#
-				#seq		<- seq.strip.gap(seq, strip.max.len=strip.max.len)#
-				tmp		<- rownames(seq)#
-				seqd	<- data.table(READ=tmp, IND= gsub('_read.*','',tmp)) #
-				seqd[, READ_N:=as.integer(gsub('_count_','',regmatches(tmp,regexpr('_count_[0-9]+',tmp))))]			#
-				tmp		<- as.character(seq)#
-				seqd[, FIRST:= apply( tmp, 1, function(x) which(x!='-')[1] )]#
-				seqd[, LAST:= ncol(tmp)-apply( tmp, 1, function(x) which(rev(x)!='-')[1] ) + 1L]#
-				seqd[, LEN:= LAST-FIRST+1L]#
-				seqd	<- merge(seqd, seqd[, list(UNIQUE_N=length(READ)),by='IND'], by='IND')#
-				seqd[, TOTAL_N:= nrow(seqd)]#
-				seqd#
-			},by='FILE']
-seqd
-infiles
-infiles[, unique(PTY_RUN)]
-seqd
-seqd	<- merge(infiles, seqd, by='FILE')
-seqd
-subset(seqd, PTY_RUN==1)
-seqd<- subset(seqd, PTY_RUN==1)
-seqd
-tmp		<- subset(si, select=c(SANGER_ID, PANGEA_ID))#
-	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])#
-	setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','IND'))#
-	seqd	<- merge(seqd, tmp, by='IND',all.x=1)#
-	tmp		<- seqd[, which(is.na(TAXA))]#
-	set(seqd, tmp, 'TAXA', seqd[tmp, IND])#
-	seqd	<- merge(pty.runs, seqd, by=c('PTY_RUN','TAXA'))#
-	set(seqd, NULL, 'FILL', seqd[, factor(FILL, levels=c(0,1), labels=c('candidate','filler'))])
-seqd
-seqd[, list(LEN_MED=median(LEN), LEN_QL=quantile(LEN,p=0.025), LEN_QU=quantile(LEN,p=0.975)), by=c('PTY_RUN','IND','W_FROM')]
-seqd[, list(LEN_MED=as.numeric(median(LEN)), LEN_QL=as.numeric(quantile(LEN,p=0.025)), LEN_QU=as.numeric(quantile(LEN,p=0.975))), by=c('PTY_RUN','IND','W_FROM')]
-tmp		<- seqd[, list(LEN_MED=as.numeric(median(LEN)), LEN_QL=as.numeric(quantile(LEN,p=0.025)), LEN_QU=as.numeric(quantile(LEN,p=0.975))), by=c('PTY_RUN','IND','W_FROM')]
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED, ymin=LEN_QL, ymax=LEN_QU, colour=IND, group=LEN_MED)) + #
-				geom_line() + geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				labs(x='window start', y='read length')
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED, ymin=LEN_QL, ymax=LEN_QU, colour=IND, group=LEN_MED)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				labs(x='window start', y='read length')
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED, ymin=LEN_QL, ymax=LEN_QU, colour=IND, group=IND)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				labs(x='window start', y='read length')
-tmp[, LEN_MED_RM:=tmp[, rollapply(LEN_MED, width=10, FUN=mean, align="center", partial=TRUE)]]
-require(zoo)
-tmp[, LEN_MED_RM:=tmp[, rollapply(LEN_MED, width=10, FUN=mean, align="center", partial=TRUE)]]
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED_RM, ymin=LEN_QL, ymax=LEN_QU, colour=IND, group=IND)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				labs(x='window start', y='read length')
-seqd
-tmp		<- seqd[, list(FILL=FILL[1], LEN_MED=as.numeric(median(LEN)), LEN_QL=as.numeric(quantile(LEN,p=0.025)), LEN_QU=as.numeric(quantile(LEN,p=0.975))), by=c('PTY_RUN','IND','W_FROM')]
-tmp
-tmp[, LEN_MED_RM:=tmp[, rollapply(LEN_MED, width=10, FUN=mean, align="center", partial=TRUE)]]
-tmp[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]#
-		ggplot(tmp, aes(x=W_FROM, y=LEN_MED_RM, ymin=LEN_QL, ymax=LEN_QU, colour=IND_L, group=IND_L)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				labs(x='window start', y='read length')
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED_RM, alpha=FILL, colour=IND_L, group=IND_L)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-				labs(x='window start', y='read length')
-ggplot(tmp, aes(x=W_FROM, y=LEN_MED_RM, alpha=FILL, colour=IND_L, group=IND_L)) + #
-				geom_line() + #geom_ribbon(alpha=0.5) +#
-				theme_bw() +#
-				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-				labs(x='window start', y='read length') + facet_grid(PTY_RUN~.)#
-		ggsave(file=file.path(indir,'pty_read_lengths.pdf'), w=4, h=4)
-seqd
-infiles
-pty.runs
-subset(pty.runs, PTY_RUN==15)
-seqd
-indir
-indir			<- file.path(HOME,"phylotypes_160120")#
-		infiles	<- list.files(indir, pattern='rda$')#
-		seqd	<- do.call('rbind',lapply(seq_along(infiles),function(i){#
-					load(file.path(indir,infiles[i]))#
-					tmp		<- seqd[, list(LEN_MED=as.numeric(median(LEN)), LEN_QL=as.numeric(quantile(LEN,p=0.025)), LEN_QU=as.numeric(quantile(LEN,p=0.975))), by=c('PTY_RUN','IND','W_FROM')]#
-					tmp[, LEN_MED_RM:=tmp[, rollapply(LEN_MED, width=10, FUN=mean, align="center", partial=TRUE)]]#
-					setkey(seqd, PTY_RUN, W_FROM, IND)#
-					seqd	<- unique(seqd)#
-					seqd	<- merge(seqd, tmp, by=c('PTY_RUN','IND','W_FROM'))#
-					seqd#
-				}))#
-		seqd[, IND_L:= paste('(',substring(FILL,1,1),') ',IND,sep='')]
-tmp		<- subset(seqd,FILL=='candidate')[, list(CAND_N=length(IND)), by=c('PTY_RUN','W_FROM')]#
-		ggplot(tmp, aes(x=W_FROM, y=CAND_N)) + geom_step() +#
-				scale_x_continuous(breaks=seq(0,10000,500)) +			#
-				labs(x='window start', y='candidate individuals\n(#)') +#
-				facet_grid(PTY_RUN~., scales='free_y') + theme_bw()#
-		ggsave(file=file.path(indir,paste('pty_candidate_individuals.pdf')), w=10, h=80,limitsize = FALSE)
-ggplot(seqd,aes(x=W_FROM, y=UNIQUE_N, fill=IND_L, colour=FILL, alpha=FILL)) + geom_bar(stat='identity') + theme_bw() +#
-				scale_x_continuous(breaks=seq(0,10000,500)) +#
-				scale_fill_discrete(guide=FALSE) +#
-				scale_colour_manual(values=c('candidate'='black', 'filler'='transparent'), guide=FALSE) +#
-				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-				labs(x='window start', y='unique reads\n(#)', fill='individuals') +#
-				facet_grid(PTY_RUN~., scales='free_y') + theme_bw()#
-		ggsave(file=file.path(indir,'pty_unique_reads.pdf'), w=10, h=80,limitsize = FALSE)
-tmp		<- subset(seqd, FILL=='candidate')[, list(TOTAL_N=sum(UNIQUE_N)), by=c('PTY_RUN','IND')]#
-		ggplot(tmp, aes(y=IND, yend=IND, x=0, xend=TOTAL_N, colour=factor(TOTAL_N<1e2, levels=c(TRUE,FALSE),labels=c('<100','>=100')))) + geom_segment(size=3) +#
-				labs(y='candidate individuals', x='sum of unique reads\n(#)', colour='') + theme_bw() +#
-				scale_colour_brewer(palette='Set1') + facet_grid(PTY_RUN~., scales='free_y', space='free_y') +#
-				theme(legend.position='bottom')#
-		ggsave(file=file.path(indir,'pty_reads_from_candidate.pdf'), w=5, h=30, limitsize = FALSE)#
-		#		#
-		ggplot(seqd, aes(x=W_FROM, y=LEN_MED_RM, alpha=FILL, colour=IND_L, group=IND_L)) + #
-				geom_line() + theme_bw() + scale_x_continuous(breaks=seq(0,10000,500)) +#
-				scale_alpha_manual(values=c('candidate'=1, 'filler'=0.2))+#
-				labs(x='window start', y='median read length\n(rolling mean over 10 windows)') + #
-				facet_grid(PTY_RUN~., scales='free_y') + guides(colour=FALSE) #
-		ggsave(file=file.path(indir,'pty_read_lengths.pdf'), w=10, h=60, limitsize = FALSE)
-pty.c
-?system
-require(big.phylo)#
-	infile				<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2015/2015_SA/ACpolext160120/ZA_aln4_160120.fasta'#
-	acxs				<- read.dna(file=infile, format='fasta')#
-	tmp					<- which(grepl("B.FR.K03455.1983",rownames(acxs)))
-tmp
-rownames(acxs)[tmp]	<- 'HXB2'#
-	tmp					<- big.phylo:::seq.rm.drugresistance(acxs)
-melt(ph.gdtr)
-nodr.info			<- tmp$nodr.info#
-	seq					<- tmp$nodr.seq
-nodr.info
-gsub('aln4','aln4noDRM',infile)
-write.dna(seq, file= gsub('aln4','aln4noDRM',infile), format='fasta', colsep='', nbcol=-1)#
-	save(seq, nodr.info, file= gsub('aln4','aln4noDRM',infile))
-seq
-write.dna(seq, file= gsub('aln4','aln4noDRM',infile), format='fasta')
-?library
-require(phyloscan)
-pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"#
-	indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"#
-	outdir		<- indir#
-#
-	infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))#
-	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]#
-	setkey(infiles, PTY_RUN)#
-	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
-infiles[35,]
-i<- 35
-file		<- file.path(indir,infiles[i,FILE])#
-		load( file )	#loads "pty.ph"   "ptyfiles"
-FILE		<- subset(ptyfiles, W_FROM==6961)[,FILE]
-FILE
-ph			<- pty.ph[[FILE]]
-ph
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
-phm
-FILE_ID<- 'R2_RES309_S30_L001'; MRCA<- 375
-z	<- extract.clade(ph, MRCA, root.edge=1)
-z
-df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]
+phc			<- copy(ph)
+tmp		<- subset(df[, list(CLU_N=length(unique(FILE_ID))), by='CLU_ID'], CLU_N==1)#
+		df		<- merge(df, tmp, by='CLU_ID')
 df
-df[which.max(LEN), ]
-z$edge[5,]
-plot(z, cex=0.2)
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R2_RES309_S30_L001'; MRCA<- 375#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- df[which.max(LEN), ]#
-				# get length of stem and average node edge length to stem#
-				tmp	<- extract.clade(z, df[,TO], root.edge=0)#
-				tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-				tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-				list(	MRCA=MRCA[1], #
-						TAXA_N=Ntip(z),#
-						COUNT_N=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)],#
-						CL_MX_LOCAL_SEP=df[,LEN], #
-						CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-						CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-						CL_TAXA_N=Ntip(tmp),#
-						CL_COUNT_N=sum(tmp3))#
-			}, by='FILE_ID']
-phm
-FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372
-z	<- extract.clade(ph, MRCA, root.edge=1)
-z
-ph
-z$tip.label[ !grepl(FILE_ID, z$tip.label) ]
-z$tip.label[ grepl(FILE_ID, z$tip.label) ]
+df		<- merge(df, df[, list(BAMCLU= paste( FILE_ID[1],'_clu_',CLU_ID,'_count_',sum(COUNT), sep='' ) ), by='CLU_ID'], by='CLU_ID')
+df
 ?drop.tip
-z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)
-z
-plot(z, cex=0.2)
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- df[which.max(LEN), ]#
-				# get length of stem and average node edge length to stem#
-				tmp	<- extract.clade(z, df[,TO], root.edge=0)#
-				tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-				tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-				list(	MRCA=MRCA[1], #
-						TAXA_N=Ntip(z),#
-						COUNT_N=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)],#
-						CL_MX_LOCAL_SEP=df[,LEN], #
-						CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-						CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-						CL_TAXA_N=Ntip(tmp),#
-						CL_COUNT_N=sum(tmp3))#
-			}, by='FILE_ID']
-phm
-FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- df[which.max(LEN), ]
+data(bird.families)#
+tip <- c(#
+"Eopsaltriidae", "Acanthisittidae", "Pittidae", "Eurylaimidae",#
+"Philepittidae", "Tyrannidae", "Thamnophilidae", "Furnariidae",#
+"Formicariidae", "Conopophagidae", "Rhinocryptidae", "Climacteridae",#
+"Menuridae", "Ptilonorhynchidae", "Maluridae", "Meliphagidae",#
+"Pardalotidae", "Petroicidae", "Irenidae", "Orthonychidae",#
+"Pomatostomidae", "Laniidae", "Vireonidae", "Corvidae",#
+"Callaeatidae", "Picathartidae", "Bombycillidae", "Cinclidae",#
+"Muscicapidae", "Sturnidae", "Sittidae", "Certhiidae",#
+"Paridae", "Aegithalidae", "Hirundinidae", "Regulidae",#
+"Pycnonotidae", "Hypocoliidae", "Cisticolidae", "Zosteropidae",#
+"Sylviidae", "Alaudidae", "Nectariniidae", "Melanocharitidae",#
+"Paramythiidae","Passeridae", "Fringillidae")
+plot(drop.tip(bird.orders, 6:23, subtree = TRUE))
+data(bird.orders)
+plot(drop.tip(bird.orders, 6:23, subtree = TRUE))
+plot(bird.orders)
+plot(drop.tip(bird.orders, 6:23, subtree = TRUE))
+pty.phc<- copy(pty.ph)
+length(pty.phc)<- 10
+for(i in seq_along(pty.phc))#
+	{#
+		print(i) #
+		ph				<- pty.phc[[i]]		#
+		#FILE<- "ptyr1_InWindow_481_to_540_dophy_examl.newick"#
+		#ph		<- pty.phc[[FILE]]		#
+		ph				<- pty.evaluate.tree.collapse.clusters(ph, thresh.brl=thresh.brl)#
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))#
+		#	group edges by individual#
+		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)#
+		#	group edges by FILL#
+		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))#
+		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')#
+		ph				<- pty.evaluate.tree.groupcandidates(ph, phb)	#
+		pty.phc[[i]]	<- ph		#
+	}
+tmp				<- ptyfiles[,	{#
+								print(FILE)#
+								FILE<- "ptyr1_InWindow_481_to_540_dophy_examl.newick"#
+								ph		<- pty.phc[[FILE]]#
+								tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]#
+								list(BAM=ph$tip.label, HEIGHT=tmp)#
+							}, by='FILE']	#
+	ptyfiles		<- merge(ptyfiles, tmp[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')#
+	setkey(ptyfiles, PTY_RUN, W_FROM)
+tmp			<- subset(ptyfiles, PTY_RUN==ptyr)#
+		#	title#
+		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]#
+		setkey(tmp, W_FROM)#
+		phs			<- lapply(tmp[, FILE], function(x) pty.phc[[x]])#
+		names(phs)	<- tmp[, TITLE] #
+		#	colours	#
+		tmp2		<- unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))#
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
+		names(col)	<- tmp2
+i<- 3
+max.node.height	<- tmp[i,][, HMX]#
+					df				<- data.table(	BAM=phs[[i]]$tip.label, IDX=seq_along(phs[[i]]$tip.label), #
+													COUNT= as.numeric(gsub('count_','',regmatches(phs[[i]]$tip.label, regexpr('count_[0-9]+',phs[[i]]$tip.label)))), #
+													CLU=grepl('_clu',phs[[i]]$tip.label), #
+													FILE_ID= gsub('_read.*|_clu.*','',phs[[i]]$tip.label))#
+					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) %<+% df + #
+													geom_nodepoint(size=phs[[i]]$node.label/100*3) +#
+													geom_tippoint(aes(size=COUNT, shape=CLU)) +#
+													geom_tiplab(size=1.2,  hjust=-.1) +							 #
+													scale_color_manual(values=col, guide = FALSE) +#
+													scale_shape_manual(values=c(20,18), guide=FALSE) +#
+													scale_size_area(guide=FALSE) +							#
+													scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+													theme_tree2() +#
+													theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+													labs(x='subst/site', title=names(phs)[i])
+tmp
+i
+ptyfiles
+ptyfiles[, HMX.y:=NULL]
+setnames(pty.files, 'HMX.x', 'HMX')
+setnames(ptyfiles, 'HMX.x', 'HMX')
+tmp			<- subset(ptyfiles, PTY_RUN==ptyr)#
+		#	title#
+		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]#
+		setkey(tmp, W_FROM)#
+		phs			<- lapply(tmp[, FILE], function(x) pty.phc[[x]])#
+		names(phs)	<- tmp[, TITLE] #
+		#	colours	#
+		tmp2		<- unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))#
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
+		names(col)	<- tmp2
+i<- 3
+tmp
+max.node.height	<- tmp[i,][, HMX]#
+					df				<- data.table(	BAM=phs[[i]]$tip.label, IDX=seq_along(phs[[i]]$tip.label), #
+													COUNT= as.numeric(gsub('count_','',regmatches(phs[[i]]$tip.label, regexpr('count_[0-9]+',phs[[i]]$tip.label)))), #
+													CLU=grepl('_clu',phs[[i]]$tip.label), #
+													FILE_ID= gsub('_read.*|_clu.*','',phs[[i]]$tip.label))
+tmp
+max.node.height
 df
-FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]
+print(df, n=200)
+print(df, n=200)
+p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) %<+% df + #
+													geom_nodepoint(size=phs[[i]]$node.label/100*3) +#
+													geom_tippoint(aes(size=COUNT, shape=CLU)) +#
+													geom_tiplab(size=1.2,  hjust=-.1) +							 #
+													scale_color_manual(values=col, guide = FALSE) +#
+													scale_shape_manual(values=c(20,18), guide=FALSE) +#
+													scale_size_area(guide=FALSE) +							#
+													scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+													theme_tree2() +#
+													theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+													labs(x='subst/site', title=names(phs)[i])
+p
+phs[[i]]
 df
-df[order(-LEN),]
-df	<- subset( df[order(-LEN),], LEN>1e-2 )
-df
-df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']
-df
-df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']
-df
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>1e-2 )#
-				df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				df[, MRCA:=MRCA]				 #
-				df[, TAXA_N:=Ntip(z)]#
-				df[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-phm
-pty.stat.maxlocalsep<- function(ph, threshold.min.stem=0.01)#
-{#
-	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				df[, MRCA:=MRCA]				 #
-				df[, TAXA_N:=Ntip(z)]#
-				df[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']#
-	phm#
-}
-i<- 35
-cat('\nprocess',infiles[i,FILE])#
-		file		<- file.path(indir,infiles[i,FILE])#
-		load( file )	#loads "pty.ph"   "ptyfiles"
-coi.lsep	<- ptyfiles[, {#
-					#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]#
-					ph			<- pty.ph[[FILE]]#
-					pty.stat.maxlocalsep(ph)														#
-				}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-coi.lsep	<- ptyfiles[, {#
-					#FILE		<- subset(ptyfiles, W_FROM==1801)[,FILE]#
-						print(FILE)#
-					ph			<- pty.ph[[FILE]]#
-					pty.stat.maxlocalsep(ph)														#
-				}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-FILE		<- subset(ptyfiles, W_FROM==1021)[,FILE]
-ph			<- pty.ph[[FILE]]
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
-phm
-phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				df[, MRCA:=MRCA]				 #
-				df[, TAXA_N:=Ntip(z)]#
-				df[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-threshold.min.stem=0.01
-phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				df[, MRCA:=MRCA]				 #
-				df[, TAXA_N:=Ntip(z)]#
-				df[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res177_S69_L001'; MRCA<- 372#
-				print(MRCA)#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				df	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				df[, MRCA:=MRCA]				 #
-				df[, TAXA_N:=Ntip(z)]#
-				df[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
-phm
-FILE_ID<- 'R10_83687_S75_L001'; MRCA<- 1416
-print(MRCA)#
-				z	<- extract.clade(ph, MRCA, root.edge=1)#
-				z	<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)
-df	<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df	<- subset( df[order(-LEN),], LEN>threshold.min.stem )
-df
-phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R10_83687_S75_L001'; MRCA<- 1416#
-				print(MRCA)#
-				z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				ans		<- data.table(CL_MX_LOCAL_SEP=NA_integer_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)#
-				if(nrow(df))#
-					ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R10_83687_S75_L001'; MRCA<- 1416#
-				print(MRCA)#
-				z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_integer_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)#
-				if(nrow(df))#
-					ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]				#
-			}, by='FILE_ID']
-phm
-FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213#
-				print(MRCA)
-z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )
-df
-ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_integer_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)
-ans
-ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']
-ans
-merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]
-ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]
-ans
-phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213#
-				print(MRCA)#
-				z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_integer_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)#
-				if(nrow(df))#
-					ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]#
-				ans#
-			}, by='FILE_ID']
-phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213#
-				print(MRCA)#
-				z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_real_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)#
-				if(nrow(df))#
-					ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]#
-				ans#
-			}, by='FILE_ID']
-phm
-subset(phm, !is.na(E_IDX))
-pty.stat.maxlocalsep<- function(ph, threshold.min.stem=0.01)#
-{#
-	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))				#
-	phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]				#
-	phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']#
-	#	find longest branch and diversity in clade below#
-	phm			<- phm[, {#
-				#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213#
-				print(MRCA)#
-				z		<- extract.clade(ph, MRCA, root.edge=1)#
-				z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)#
-				#plot(z, cex=0.2)#
-				#add.scale.bar()#
-				# find largest internal branch							#
-				df		<- data.table(E_IDX=which(z$edge[,2]>Ntip(z)))#
-				df[, LEN:= z$edge.length[E_IDX]]#
-				df[, TO:= z$edge[E_IDX,2]]#
-				df		<- subset( df[order(-LEN),], LEN>threshold.min.stem )#
-				ans		<- data.table(E_IDX=NA_integer_, CL_MX_LOCAL_SEP=NA_real_, CL_AVG_HEIGHT_UNIQUE=NA_real_, CL_AVG_HEIGHT_ALL=NA_real_, CL_TAXA_N=NA_integer_, CL_COUNT_N=NA_real_)#
-				if(nrow(df))#
-					ans	<- df[, {#
-							tmp	<- extract.clade(z, TO, root.edge=0)#
-							tmp2<- node.depth.edgelength(tmp)[seq_len(Ntip(tmp))]	#
-							tmp3<- merge(phb,data.table(BAM=tmp$tip.label),by='BAM')[, COUNT]#
-							list(	CL_MX_LOCAL_SEP=LEN, #
-									CL_AVG_HEIGHT_UNIQUE=mean(tmp2),#
-									CL_AVG_HEIGHT_ALL=mean(rep(tmp2,tmp3)),#
-									CL_TAXA_N=Ntip(tmp),#
-									CL_COUNT_N=sum(tmp3))#
-						}, by='E_IDX']#
-				ans[, MRCA:=MRCA]				 #
-				ans[, TAXA_N:=Ntip(z)]#
-				ans[, COUNT_N:=merge(phb,data.table(BAM=z$tip.label),by='BAM')[, sum(COUNT)]]#
-				ans#
-			}, by='FILE_ID']#
-	subset(phm, !is.na(E_IDX))#
-}
-coi.lsep	<- ptyfiles[, {#
-					#FILE		<- subset(ptyfiles, W_FROM==1021)[,FILE]#
-						print(FILE)#
-					ph			<- pty.ph[[FILE]]#
-					pty.stat.maxlocalsep(ph)														#
-				}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-coi.lsep
-roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
-ph			<- pty.ph[[30]]#
-			tmp2		<- levels(attr(phs[[i]],'INDIVIDUAL'))#
-			col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
-			names(col)	<- tmp2
-ph			<- pty.ph[[30]]#
-			tmp2		<- levels(attr(ph,'INDIVIDUAL'))#
-			col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
-			names(col)	<- tmp2
 col
-ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + #
+ggtree(phs[[i]])
+ggtree(phs[[i]]) + #
+							#%<+% df + #
+							#geom_nodepoint(size=phs[[i]]$node.label/100*3) +#
+							#geom_tippoint(aes(size=COUNT, shape=CLU)) +#
+							#geom_tiplab(size=1.2,  hjust=-.1) +							 #
+							#scale_color_manual(values=col, guide = FALSE) +#
+							#scale_shape_manual(values=c(20,18), guide=FALSE) +#
+							#scale_size_area(guide=FALSE) +							#
+							#scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+							theme_tree2() +#
+							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+							labs(x='subst/site', title=names(phs)[i])
+tmp
+i
+tmp				<- ptyfiles[,	{#
+								#print(FILE)#
+								#FILE<- "ptyr1_InWindow_481_to_540_dophy_examl.newick"#
+								ph		<- pty.phc[[FILE]]#
+								tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]#
+								list(BAM=ph$tip.label, HEIGHT=tmp)#
+							}, by='FILE']
+ptyfiles
+ptyfiles[, HMX:=NULL]
+ptyfiles		<- merge(ptyfiles, tmp[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')#
+	setkey(ptyfiles, PTY_RUN, W_FROM)
+tmp			<- subset(ptyfiles, PTY_RUN==ptyr)#
+		#	title#
+		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]#
+		setkey(tmp, W_FROM)#
+		phs			<- lapply(tmp[, FILE], function(x) pty.phc[[x]])#
+		names(phs)	<- tmp[, TITLE] #
+		#	colours	#
+		tmp2		<- unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))#
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
+		names(col)	<- tmp2
+max.node.height	<- tmp[i,][, HMX]#
+					df				<- data.table(	BAM=phs[[i]]$tip.label, IDX=seq_along(phs[[i]]$tip.label), #
+													COUNT= as.numeric(gsub('count_','',regmatches(phs[[i]]$tip.label, regexpr('count_[0-9]+',phs[[i]]$tip.label)))), #
+													CLU=grepl('_clu',phs[[i]]$tip.label), #
+													FILE_ID= gsub('_read.*|_clu.*','',phs[[i]]$tip.label))#
+					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) %<+% df + #
+													geom_nodepoint(size=phs[[i]]$node.label/100*3) +#
+													geom_tippoint(aes(size=COUNT, shape=CLU)) +#
+													geom_tiplab(size=1.2,  hjust=-.1) +							 #
+													scale_color_manual(values=col, guide = FALSE) +#
+													scale_shape_manual(values=c(20,18), guide=FALSE) +#
+													scale_size_area(guide=FALSE) +							#
+													scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+													theme_tree2() +#
+													theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+													labs(x='subst/site', title=names(phs)[i])#
+					p
+phps		<- lapply(seq_along(phs), function(i){					#
+					max.node.height	<- tmp[i,][, HMX]#
+					df				<- data.table(	BAM=phs[[i]]$tip.label, IDX=seq_along(phs[[i]]$tip.label), #
+													COUNT= as.numeric(gsub('count_','',regmatches(phs[[i]]$tip.label, regexpr('count_[0-9]+',phs[[i]]$tip.label)))), #
+													CLU=grepl('_clu',phs[[i]]$tip.label), #
+													FILE_ID= gsub('_read.*|_clu.*','',phs[[i]]$tip.label))#
+					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) %<+% df + #
+													geom_nodepoint(size=phs[[i]]$node.label/100*3) +#
+													geom_tippoint(aes(size=COUNT, shape=CLU)) +#
+													geom_tiplab(size=1.2,  hjust=-.1) +							 #
+													scale_color_manual(values=col, guide = FALSE) +#
+													scale_shape_manual(values=c(20,18), guide=FALSE) +#
+													scale_size_area(guide=FALSE) +							#
+													scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+													theme_tree2() +#
+													theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+													labs(x='subst/site', title=names(phs)[i])#
+					p					#
+				})	#
+		names(phps)	<- names(phs)#
+		file	<- file.path( indir, tmp[1,gsub('.newick','collapsed.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )		#
+		if(1)		#for window length 60 (multiple pages)#
+		{				#
+			tmp			<- seq_len(ceiling(length(phps)/10))#
+			pdf(file=file, w=20, h=40)		#for win=60#
+			for(i in tmp)#
+			{		#
+				grid.newpage()#
+				pushViewport(viewport(layout=grid.layout(2, 5)))#
+				z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))#
+				for(j in z)#
+					print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				#
+			}#
+			dev.off()	#
+		}
+pty.phc<- copy(pty.ph)
+for(i in seq_along(pty.phc))#
+	{#
+		print(i) #
+		ph				<- pty.phc[[i]]		#
+		#FILE<- "ptyr1_InWindow_481_to_540_dophy_examl.newick"#
+		#ph		<- pty.phc[[FILE]]		#
+		ph				<- pty.evaluate.tree.collapse.clusters(ph, thresh.brl=thresh.brl)#
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))#
+		#	group edges by individual#
+		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)#
+		#	group edges by FILL#
+		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))#
+		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')#
+		ph				<- pty.evaluate.tree.groupcandidates(ph, phb)	#
+		pty.phc[[i]]	<- ph		#
+	}
+roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
+roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
+library(help='igraph')
+?graph.dfs
+library(phyloscan)#
+load( infile )		# loads pty.runs#
+#pty.evaluate.tree(indir, pty.runs, outdir=outdir, select=select, outgroup=outgroup)#
+tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))
+infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
+infile
+load(infile)
+tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))#
+tmp		<- subset(tmp, grepl(select,FILE))#
+tmp		<- file.path(outdir, tmp[1,FILE])#
+load( tmp )			# loads ptyfiles, pty.ph
+select<- 'ptyr12_'
+tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))#
+tmp		<- subset(tmp, grepl(select,FILE))#
+tmp		<- file.path(outdir, tmp[1,FILE])#
+load( tmp )			# loads ptyfiles, pty.ph
+tmp
+pty.phc<- copy(pty.ph)
+for(i in seq_along(pty.phc))#
+	{#
+		print(i) #
+		ph				<- pty.phc[[i]]		#
+		#FILE<- "ptyr1_InWindow_481_to_540_dophy_examl.newick"#
+		#ph		<- pty.phc[[FILE]]		#
+		ph				<- pty.evaluate.tree.collapse.clusters(ph, thresh.brl=thresh.brl)#
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))#
+		#	group edges by individual#
+		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)#
+		#	group edges by FILL#
+		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))#
+		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')#
+		ph				<- pty.evaluate.tree.groupcandidates(ph, phb)	#
+		pty.phc[[i]]	<- ph		#
+	}
+ph				<- pty.phc[[i]]
+ph
+thresh.brl=8e-6
+dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)							#
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.brl=thresh.brl, dist.brl=dist.brl, retval="all")			#
+	#print(clustering)	#
+	df			<- data.table(BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label), COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))),  CLU_ID=clustering$clu.mem[seq_len(Ntip(ph))])#
+	#df			<- merge(df, data.table(CLU_ID=seq_along(clustering$clu.idx), MRCA=clustering$clu.idx), by='CLU_ID', all.x=1)#
+	df			<- subset(df,!is.na(CLU_ID))#
+	phc			<- copy(ph)
+df
+tmp		<- subset(df[, list(CLU_N=length(unique(FILE_ID))), by='CLU_ID'], CLU_N==1)#
+		df		<- merge(df, tmp, by='CLU_ID')			#
+		df		<- merge(df, df[, list(BAMCLU= paste( FILE_ID[1],'_clu_',CLU_ID,'_count_',sum(COUNT), sep='' ) ), by='CLU_ID'], by='CLU_ID')
+df
+clu.id<- 1
+Ntip(ph)
+df			<- data.table(BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label), COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))),  CLU_ID=clustering$clu.mem[seq_len(Ntip(ph))])#
+	#df			<- merge(df, data.table(CLU_ID=seq_along(clustering$clu.idx), MRCA=clustering$clu.idx), by='CLU_ID', all.x=1)#
+	df			<- subset(df,!is.na(CLU_ID))#
+	phc			<- copy(ph)
+tmp		<- subset(df[, list(CLU_N=length(unique(FILE_ID))), by='CLU_ID'], CLU_N==1)#
+		df		<- merge(df, tmp, by='CLU_ID')			#
+		df		<- merge(df, df[, list(TAXA_N=length(FILE_ID), BAMCLU= paste( FILE_ID[1],'_clu_',CLU_ID,'_count_',sum(COUNT), sep='' ) ), by='CLU_ID'], by='CLU_ID')
+df
+Ntip(phc)==nrow(df)
+Ntip(phc)==nrow(df) && df[, length(unique(CLU_ID))]==1
+subset(df, CLU_ID<0)
+ptyfiles
+col
+setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')
+tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')#
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))#
+		names(col)	<- c('not characterized',tmp2)
+tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')#
+		col			<- c('black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))#
+		names(col)	<- c('not characterized',tmp2)
+col
+ptyfiles[1, gsub('\\.newick','\\collapsed.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
+file.path( outdir, ptyfiles[1, gsub('\\.newick','\\collapsed.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+ph
+drop.tip(ph, ph$tip.label)
+out.dir
+HOME
+out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
+infiles			<- data.table(FILE=list.files(out.dir, pattern='examl\\.rda$'))						#
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]#
+		tmp				<- data.table(OUT=list.files(out.dir, pattern='examlcollapsed\\.rda$'))
+tmp
+tmp[,FILE:=gsub('collapsed','',OUT)]
+tmp
+infiles			<- merge(infiles, tmp, by='FILE',all.x=1)
+infiles
+pty.div
+pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'#
+		load(pty.stat.file)
+tmp	<- pty.stat[, list(FILE_ID_N=length(unique(W_FROM))), by='FILE_ID']#
+		ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram()#
+		#	within host diversity#
+		tmp	<- pty.stat[, list(WHDA_p50=quantile(WHDA_p50,p=0.5), WHDA_p025=quantile(WHDA_p50,p=0.025), WHDA_p10=quantile(WHDA_p50,p=0.1), WHDA_p90=mean(WHDA_p50,p=0.9), WHDA_p95=quantile(WHDA_p50,p=0.95) ), by='W_FROM']	#
+		ggplot(pty.stat, aes(x=W_FROM)) +  geom_point(aes(y=WHDA_p50, colour=WHDA_p50, size=COUNT_N), alpha=0.2 ) + #
+				geom_ribbon(data=tmp, aes(ymin=WHDA_p10, ymax=WHDA_p90), fill='grey50', alpha=0.7) +#
+				geom_ribbon(data=tmp, aes(ymin=WHDA_p90, ymax=WHDA_p95), fill='grey80', alpha=0.7) +#
+				#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +#
+				scale_colour_continuous(guide=FALSE) + #
+				scale_x_continuous(breaks=seq(0,10e3,500)) +#
+				geom_line(data=tmp, aes(y=WHDA_p95), colour='red') +#
+				geom_line(data=tmp, aes(y=WHDA_p90), colour='DarkRed') +#
+				geom_line(data=tmp, aes(y=WHDA_p50)) + theme_bw() + theme(legend.position='bottom') +#
+				labs(x='\ngenome position of window start in each run\n(bp)',y='mean within-host diversity\n(patristic distance, subst/site)\n', size='quality trimmed short reads per individual\n(#)')#
+		ggsave(file=gsub('\\.rda','_whdivallreads\\.pdf',pty.stat.file), w=12, h=6)#
+		#	get candidates by wh diversity	#
+		#	not clear where to make cut.off. Just keep them all with decreasing priority, and plot for inspection.#
+		pty.div	<- merge(subset(pty.stat, select=c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, WHDA_p50, TAXA_N, COUNT_N)), subset(tmp, select=c(W_FROM, WHDA_p90, WHDA_p95)), by='W_FROM')#
+		tmp		<- subset(pty.div, WHDA_p50>WHDA_p95 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), WHDA_p50_avg=mean(WHDA_p50)), by='FILE_ID']#
+		tmp		<- tmp[order(-FILE_ID_N),]	#
+		write.csv(tmp, file=gsub('\\.rda','_whdivallreads_g90qu\\.csv',pty.stat.file), row.names=FALSE)
+pty.lsep	<- subset(pty.stat, CL_COUNT_N>100)#
+		pty.lsep[, THR_WHER:= 0.1]#
+		set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)#
+		tmp	<- pty.lsep[, list(CL_MX_LOCAL_SEP_p50=quantile(CL_MX_LOCAL_SEP,p=0.5), CL_MX_LOCAL_SEP_p025=quantile(CL_MX_LOCAL_SEP,p=0.025), CL_MX_LOCAL_SEP_p10=quantile(CL_MX_LOCAL_SEP,p=0.1), CL_MX_LOCAL_SEP_p90=mean(CL_MX_LOCAL_SEP,p=0.9), CL_MX_LOCAL_SEP_p95=quantile(CL_MX_LOCAL_SEP,p=0.95) ), by='W_FROM']	#
+		ggplot(pty.lsep, aes(x=W_FROM)) +  geom_point(aes(y=CL_MX_LOCAL_SEP, colour=CL_MX_LOCAL_SEP, size=COUNT_N), alpha=0.2 ) + #
+				geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p10, ymax=CL_MX_LOCAL_SEP_p90), fill='grey50', alpha=0.7) +#
+				geom_ribbon(data=tmp, aes(ymin=CL_MX_LOCAL_SEP_p90, ymax=CL_MX_LOCAL_SEP_p95), fill='grey80', alpha=0.7) +#
+				#geom_ribbon(data=tmp, aes(ymin=WHDA_p025, ymax=WHDA_p10), fill='grey80', alpha=0.5) +#
+				scale_colour_continuous(guide=FALSE) + #
+				scale_x_continuous(breaks=seq(0,10e3,500)) +#
+				geom_step(aes(y=THR_WHER), colour='red') +#
+				geom_step(aes(y=THR_WHER/2), colour='DarkRed') +#
+				#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p95), colour='red') +#
+				#geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p90), colour='DarkRed') +#
+				geom_line(data=tmp, aes(y=CL_MX_LOCAL_SEP_p50)) + theme_bw() + theme(legend.position='bottom') +#
+				labs(x='\ngenome position of window start in each run\n(bp)',y='stem length of clades with >100 reads\n(subst/site)\n', size='quality trimmed short reads per individual\n(#)')#
+		ggsave(file=gsub('\\.rda','_whlsepallreads100\\.pdf',pty.stat.file), w=12, h=6)#
+		#	get candidates#
+		tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), CL_MX_LOCAL_SEP_avg=mean(CL_MX_LOCAL_SEP)), by='FILE_ID']#
+		tmp		<- tmp[order(-FILE_ID_N),]	#
+		write.csv(tmp, file=gsub('\\.rda','_whlsepallreads100\\.csv',pty.stat.file), row.names=FALSE)
+tmp
+pty.lsep
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM)), by='FILE_ID']
+tmp
+pty.lsep
+merge(tmp, subset(pty.lsep, select=c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, DIFF_IND, CL_MX_LOCAL_SEP, CL_AVG_HEIGHT_UNIQUE, CL_AVG_HEIGHT_ALL, CL_TAXA_N, CL_COUNT_N,TAXA_N, COUNT_N)), by='FILE_ID')
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']
+tmp		<- tmp[order(-FILE_ID_N),]
+tmp
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']#
+		tmp		<- subset(tmp, FILE_ID_N>2)#
+		#merge(tmp, subset(pty.lsep, select=c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, DIFF_IND, CL_MX_LOCAL_SEP, CL_AVG_HEIGHT_UNIQUE, CL_AVG_HEIGHT_ALL, CL_TAXA_N, CL_COUNT_N,TAXA_N, COUNT_N)), by='FILE_ID')#
+		tmp		<- tmp[order(-FILE_ID_N),]
+tmp
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']#
+		tmp		<- subset(tmp, FILE_ID_N>2)		#
+		tmp		<- tmp[order(-FILE_ID_N),]
+tmp
+merge(pty.lsep, tmp, by='FILE_ID')
+merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
+tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')
+subset(tmp2, FILE_ID=='13557_1_86')
+tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')#
+		tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)#
+		subset(tmp2, FILE_ID=='13557_1_86')
+subset(tmp2, FILE_ID=='13557_1_86', c(PTY_RUN, W_FROM, W_TO, FILE, FILE_ID, DIFF_IND, CL_MX_LOCAL_SEP, CL_AVG_HEIGHT_UNIQUE, CL_AVG_HEIGHT_ALL, CL_TAXA_N, CL_COUNT_N,TAXA_N, COUNT_N))
+tmp2
+tmp2[, length(unique(FILE_ID))]
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']#
+		tmp		<- subset(tmp, FILE_ID_N>2 & DIFF_IND>0)		#
+		tmp		<- tmp[order(-FILE_ID_N),]
+tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')#
+		tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)
+tmp2[, length(unique(FILE_ID))]
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)[, list(FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']#
+		tmp		<- subset(tmp, FILE_ID_N>2 & DIFF_IND>0)		#
+		tmp		<- tmp[order(-FILE_ID_N),]	#
+		write.csv(tmp, file=gsub('\\.rda','_whlsepallreads100\\.csv',pty.stat.file), row.names=FALSE)#
+		tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')#
+		tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 & TAXA_N>40)
+tmp2
+indir
+infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))#
+		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+infiles
+tmp2[i,]
+tmp2[i,PTY_RUN]
+subset(infiles, PTY_RUN==tmp2[i,PTY_RUN])
+infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE]
+file	<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])
+z<-load(file)
+z
+names(pty.ph)
+tmp2[i,]
+pty.ph[[ tmp2[i,FILE]  ]]
+ph		<- pty.ph[[ tmp2[i,FILE]  ]]
+str(ph)
+node.depth.edgelength(ph)[1:Ntip(ph)]
+max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])
+max.node.height
+sort(levels(attr(ph,'INDIVIDUAL')))
+setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),tmp2[i,FILE_ID])
+tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))
+tmp
+tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))#
+			col				<- c('black','grey50',rainbow_hcl(length(tmp2)-2, start = 270, end = -30, c=100, l=50))#
+			names(col)		<- tmp
+col
+tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))#
+			col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))#
+			names(col)		<- tmp
+col
+tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,' ',W_FROM,'-',W_TO, sep='')]
+ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,' ',W_FROM,'-',W_TO, sep='')]
+p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + #
 					geom_nodepoint(size=ph$node.label/100*3) +#
-					#geom_text(aes(label=label), size=1.5,  hjust=-.1) +#
-					geom_tiplab(size=1.2,  hjust=-.1) +#
+					geom_tiplab(size=1.2,  hjust=-.1) +							 #
 					scale_color_manual(values=col, guide = FALSE) +											 #
 					scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
 					theme_tree2() +#
-					theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +#
-					labs(x='subst/site')
-dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-require(hivclust)
-dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+					theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+					labs(x='subst/site', title=ph.title)#
+			p
+phps	<- lapply(seq_len(tmp2), function(i)#
+				{#
+					#i				<-1#
+					file			<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])#
+					load(file)#
+					ph				<- pty.ph[[ tmp2[i,FILE]  ]]#
+					max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])#
+					tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))#
+					col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))#
+					names(col)		<- tmp			#
+					ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO, sep='')]#
+					p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + #
+							geom_nodepoint(size=ph$node.label/100*3) +#
+							geom_tiplab(size=1.2,  hjust=-.1) +							 #
+							scale_color_manual(values=col, guide = FALSE) +											 #
+							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+							theme_tree2() +#
+							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+							labs(x='subst/site', title=ph.title)#
+					p#
+				})
+tmp2
+phps	<- lapply(seq_len(nrow(tmp2)), function(i)#
+				{#
+					#i				<-1#
+					file			<- file.path(indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])#
+					load(file)#
+					ph				<- pty.ph[[ tmp2[i,FILE]  ]]#
+					max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])#
+					tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))#
+					col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))#
+					names(col)		<- tmp			#
+					ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO, sep='')]#
+					p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + #
+							geom_nodepoint(size=ph$node.label/100*3) +#
+							geom_tiplab(size=1.2,  hjust=-.1) +							 #
+							scale_color_manual(values=col, guide = FALSE) +											 #
+							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+							theme_tree2() +#
+							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+							labs(x='subst/site', title=ph.title)#
+					p#
+				})
+dir('/usr/filg.x')
+dir('/usr/oliver/filg.x')
+dir('/usr/oliver/filg.txt')
+dirname('/usr/oliver/filg.txt')
+tmp2
+i<- 5
+ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO,'\ndiffind', DIFF_IND,' diff',DIFF, ' lsep', round(CL_MX_LOCAL_SEP,d=3), sep='')]
+ph.title
+CODE.HOME	<<- "/work/or105/libs/phyloscan"
+cmd			<- paste(file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), '-exe=VARIOUS', '\n', sep='')#
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=10, hpc.mem="5000mb")#
+		cat(cmd)
+require(big.phylo)#
+		cmd			<- paste(file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')#
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q='pqeelab', hpc.walltime=10, hpc.mem="5000mb")#
+		cat(cmd)
 roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
-?detach
-detach('package:phyloscan')
-require(phyloscan)
-dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
-setwd("/Users/Oliver/git/phyloscan"); source("misc/phyloscan.startme.Rscript")
-hivc.clu.brdist.stats
+coi.args	<- list(cl_count_n=100, taxa_n=40, diff_ind=1, win_n=3)
+coi.args
+paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')
+coi.args	<- list(clcountn=100, taxan=40, diffind=1, winn=3)#
+	paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')
+HOME
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(0)	#
+	{#
+		coi.args<- list(clcountn=100, taxan=40, diffind=1, winn=3)#
+	}#
+	#	weaker evidence for superinfections: no separating individuals#
+	if(1)	#
+	{#
+		coi.args<- list(clcountn=100, taxan=40, diffind=1, winn=3)#
+	}
+tmp			<- paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),'superinfections',tmp,'.csv')#
+	load(stat.infile)	#
+	##
+	#	long branches. focus on subtending clades with more than 100 reads#
+	pty.lsep	<- subset(pty.stat, CL_COUNT_N>=coi.args[['clcountn']] & TAXA_N>=coi.args[['taxan']])#
+	pty.lsep[, THR_WHER:= 0.1]#
+	set(pty.lsep, pty.lsep[,which(W_FROM>5200)],'THR_WHER',0.3)
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']
+coi.args[['diffind']]==0
+coi.args
+coi.args<- list(clcountn=100, taxan=40, diffind=0, winn=3)
+tmp	<- subset(tmp, FILE_ID_N>=coi.args[['winn']] & DIFF_IND==0)
+tmp		<- tmp[order(-FILE_ID_N),]
+outfile
+outfile		<- file.path(dirname(stat.infile),paste('superinfections',tmp,sep=''),'.csv')
+outfile
+tmp			<- paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections',tmp,sep=''),'.csv')
+outfile
+outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))
+outfile
+tmp		<- subset(pty.lsep, CL_MX_LOCAL_SEP>THR_WHER/2)[, list(PTY_RUN=PTY_RUN[1], FILE_ID_N=length(W_FROM), DIFF_IND= max(DIFF_IND)), by='FILE_ID']#
+	if(coi.args[['diffind']]>0)#
+		tmp	<- subset(tmp, FILE_ID_N>=coi.args[['winn']] & DIFF_IND>=coi.args[['diffind']])#
+	if(coi.args[['diffind']]==0)#
+		tmp	<- subset(tmp, FILE_ID_N>=coi.args[['winn']] & DIFF_IND==0)#
+	tmp		<- tmp[order(-FILE_ID_N),]
+tmp
+write.csv(tmp, file=outfile, row.names=FALSE)#
+	##
+	#	plot windows of candidates#
+	tmp2	<- merge(pty.lsep, subset(tmp, select=FILE_ID), by='FILE_ID')#
+	tmp2	<- subset(tmp2, CL_MX_LOCAL_SEP>THR_WHER/2 )#
+	infiles		<- data.table(FILE=list.files(tree.indir, pattern='examl.rda$'))#
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		#
+	phps	<- lapply(seq_len(nrow(tmp2)), function(i)#
+			{#
+				#i				<-1#
+				cat('\nprepare plot',i,'/',nrow(tmp2))#
+				file			<- file.path(tree.indir, infiles[ PTY_RUN==tmp2[i,PTY_RUN],	FILE])#
+				load(file)#
+				ph				<- pty.ph[[ tmp2[i,FILE]  ]]#
+				max.node.height	<- max(node.depth.edgelength(ph)[1:Ntip(ph)])#
+				tmp				<- c(c(tmp2[i,FILE_ID],'not characterized'), sort(setdiff(sort(levels(attr(ph,'INDIVIDUAL'))),c(tmp2[i,FILE_ID],'not characterized'))))#
+				col				<- c('black','grey50',rainbow_hcl(length(tmp)-2, start = 270, end = -30, c=100, l=50))#
+				names(col)		<- tmp			#
+				ph.title		<- tmp2[i, paste( FILE_ID,'\nrun=',PTY_RUN,', win=',W_FROM,'-',W_TO,'\ndiffind', DIFF_IND,' diff',DIFF, ' lsep', round(CL_MX_LOCAL_SEP,d=3), sep='')]#
+				p				<- ggtree(ph, aes(color=INDIVIDUAL, linetype=TYPE)) + #
+						geom_nodepoint(size=ph$node.label/100*3) +#
+						geom_tiplab(size=1.2,  hjust=-.1) +							 #
+						scale_color_manual(values=col, guide = FALSE) +											 #
+						scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +#
+						theme_tree2() +#
+						theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +#
+						labs(x='subst/site', title=ph.title)#
+				p#
+			})	#
+	tmp			<- seq_len(ceiling(length(phps)/10))
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(0)	#
+	{#
+		coi.args<- list(clcountn=100, taxan=40, diffind=1, winn=3)#
+	}#
+	#	weaker evidence for superinfections: no separating individuals#
+	if(1)	#
+	{#
+		coi.args<- list(clcountn=100, taxan=40, diffind=0, winn=3)#
+	}#
+	tmp			<- paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))#
+	load(stat.infile)
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(0)	#
+	{#
+		cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=3)#
+	}#
+	tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))#
+	load(stat.infile)
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(1)	#
+	{#
+		cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=3)#
+	}#
+	tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))#
+	load(stat.infile)
+pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]
+tmp
+tmp			<- subset(tmp, FILE_ID_N>=cnt.args[['winn']])
+ttmp			<- subset(tmp, WIN_N>=cnt.args[['winn']])
+tpty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]#
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])
+tmp
+pty.cm
+cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=5)
+tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('superinfections_',tmp,'.csv',sep=''))#
+	load(stat.infile)	#
+	##
+	#	select individuals with at least one other individual inbetween and many separate clades of the other individual#
+	pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]#
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])
+tmp
+subset(tmp, W_N>=10)
+cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=10)
+pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]#
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(1)	#
+	{#
+		cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=10)#
+	}#
+	tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('contaminants_',tmp,'.csv',sep=''))#
+	load(stat.infile)	#
+	##
+	#	select individuals with at least one other individual inbetween and many separate clades of the other individual#
+	pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	tmp			<- unique(pty.cm)[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]#
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])
+outfile
+tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')
+tmp2
+subset(tmp2, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])
+pty.stat[, length(unique(DIFF)), by='FILE_ID']
+pty.stat
+tmp[,length(FILE_ID)]
+stat.infile	<- file.path(HOME,'coinf_ptoutput_150121/ptyr_examl_stat.rda')#
+	tree.indir	<- file.path(HOME,'coinf_ptoutput_150121')#
+	#	should have strong evidence for superinfections: separating individuals#
+	if(1)	#
+	{#
+		cnt.args<- list(countn=100, taxan=40, diffind=1, diff=10, winn=10)#
+	}#
+	tmp			<- paste(sapply(seq_along(cnt.args),function(i) paste(names(cnt.args)[i],cnt.args[i],sep='_')	),collapse='_')#
+	outfile		<- file.path(dirname(stat.infile),paste('contaminants_',tmp,'.csv',sep=''))#
+	load(stat.infile)	#
+	##
+	#	select individuals with at least one other individual inbetween and many separate clades of the other individual#
+	pty.cm		<- subset(pty.stat, DIFF_IND>=cnt.args[['diffind']] & DIFF>cnt.args[['diff']])#
+	setkey(pty.cm, PTY_RUN, W_FROM, W_TO, FILE_ID)#
+	pty.cm		<- unique(pty.cm)#
+	tmp			<- pty.cm[, list(W_N=length(W_FROM)), by='FILE_ID']#
+	tmp			<- tmp[order(-W_N),]#
+	tmp			<- subset(tmp, W_N>=cnt.args[['winn']])#
+	write.csv(tmp, file=outfile, row.names=FALSE)#
+	##
+	#	plot trees for each window of candidates#
+	tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')
+tmp2
+setkey(tmp2, PTY_RUN, W_FROM, W_TO, FILE_ID, COUNT_N)
+tmp2
+tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')#
+	tmp2	<- tmp2[order(PTY_RUN, W_FROM, W_TO, FILE_ID, -COUNT_N),]
+tmp2
+tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')#
+	tmp2	<- tmp2[order(FILE_ID,PTY_RUN, W_FROM, W_TO, -COUNT_N),]
+tmp2
+tmp2	<- merge(pty.cm, subset(tmp, select=FILE_ID), by='FILE_ID')#
+	tmp2	<- tmp2[order(FILE_ID, -COUNT_N),]
+tmp2
+tmp2[, list(W_FROM=W_FROM[1:min(10,length(W_FROM))]), by='FILE_ID']
+tmp2	<- merge(tmp2, tmp2[, list(W_FROM=W_FROM[1:min(10,length(W_FROM))]), by='FILE_ID'], by=c('FILE_ID','W_FROM'))
+tmp2
+coi.args<- list(clcountn=100, taxan=40, diffind=1, winn=3)
+tmp			<- paste(sapply(seq_along(coi.args),function(i) paste(names(coi.args)[i],coi.args[i],sep='_')	),collapse='_')
+tmp
+pty.runs
+pty.runs[, length(unique(TAXA))]
+780/20
+pty.runs[, table(PTY_RUN)]
+tmp2
+tmp2[, length(unique(W_FROM))]
+pty.stat[, length(unique(W_FROM))]
+as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3.csv"))
+as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
+df<-as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
+colnames(df)
+df[, table(grepl('^Super',THOUGHTS_OR))]
+(8.5+3.5 )/ 2
