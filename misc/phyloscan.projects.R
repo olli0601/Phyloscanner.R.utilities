@@ -5,12 +5,12 @@ project.dual<- function()
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	#pty.pipeline.fasta()
+	pty.pipeline.fasta()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
-	if(1)
+	if(0)
 	{
 		require(big.phylo)
 		cmd			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
@@ -36,6 +36,20 @@ project.dual.alignments.missing<- function()
 	setdiff(1:52, infiles[, PTY_RUN])
 }
 
+project.dual.alignments.reference<- function()
+{
+	file			<- '~/Dropbox (Infectious Disease)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
+	outfile			<- '~/git/phyloscan/inst/HIV1_compendium_C_B_CPX.fasta'
+	ref				<- read.dna(file, format='fasta')
+	df				<- data.table(TAXA=rownames(ref))
+	df[,SUBTYPE:= toupper(gsub('^[0-9]+_','',regmatches(TAXA,regexpr('^[^\\.]+',TAXA))))]
+	df				<- subset(df, grepl('AF460972',TAXA) | grepl('HXB2',TAXA) | SUBTYPE%in%c('C','BC','CD'))
+	df[,GENBANK:= regmatches(TAXA,regexpr('[^\\.]+$',TAXA))]
+	df[,TAXA_NEW:= df[,paste('R0_REF_',SUBTYPE,'_',GENBANK,'_read_1_count_0',sep='')]]
+	ref				<- ref[ df[, TAXA], ]
+	rownames(ref)	<- df[,TAXA_NEW]
+	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
+}
 
 project.dual.alignments.160110<- function()
 {
@@ -571,6 +585,121 @@ project.scan.contaminants	<- function()
 	dev.off()			
 }
 
+#' @export
+pty.pipeline.fasta<- function() 
+{
+	require(big.phylo)
+	#
+	#	input args
+	#	(used function project.dualinfecions.phylotypes.setup.ZA.160110 to select bam files for one run)
+	#
+	if(0)	#trm pairs on Mac
+	{
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
+		out.dir				<- file.path(HOME,"phylotypes")
+		pty.prog			<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		raxml				<- 'raxmlHPC-AVX'
+		no.trees			<- '-T'
+		
+	}	
+	if(0)	#trm pairs on HPC
+	{
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
+		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		work.dir		<- file.path(HOME,"ptyruns")
+		out.dir			<- file.path(HOME,"phylotypes")
+		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		raxml			<- 'raxml'
+		no.trees		<- '-T'
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+	}
+	if(0)	#coinfections on Mac
+	{
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
+		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
+		out.dir			<- file.path(HOME,"phylotypes")
+		pty.prog		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		raxml			<- 'raxml'
+		no.trees		<- '-T'
+		hpc.load		<- ""
+	}
+	if(1)	#coinfections on HPC
+	{
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
+		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		work.dir		<- file.path(HOME,"coinf_ptinput")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
+		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		raxml			<- 'raxml'
+		no.trees		<- '-T'
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+	}
+	#
+	#	set up all temporary files and create bash commands
+	#
+	#	run 160115	window length 300
+	if(0)
+	{
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+				merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
+				strip.max.len=350, min.ureads.individual=NA)		
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
+	}
+	#	run 160118	window length 60 & Q1 18 & keep overhangs
+	if(0)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+				merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+				strip.max.len=350, min.ureads.individual=20)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
+		pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
+	}
+	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
+	if(0)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+				merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+				strip.max.len=350, min.ureads.individual=NA)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
+		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
+	}
+	#	run 160201	window length 60 & Q1 18 & keep overhangs & alignment specified
+	if(1)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+										window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+										strip.max.len=350, min.ureads.individual=20)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
+		#pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
+	}
+	if(no.trees=='-T')
+	{
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cat(cmd)					
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						}, by='PTY_RUN'])
+	}
+	if(0)
+	{
+		#
+		#	add HPC header and submit
+		#
+		invisible(pty.c[,	{
+							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2, hpc.load=hpc.load)
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							stop()
+						}, by='PTY_RUN'])
+	}	
+}
+
 pty.scan.explore	<- function()
 {
 	pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
@@ -765,26 +894,103 @@ pty.pipeline.coinfection.statistics<- function()
 }
 
 project.readlength.count.all<- function()
-{
-	indir		<- '/work/cw109/SAseqs/ReadLengths'
-	#indir		<- file.path(HOME,'readlengths')
-	outfile		<- file.path(HOME,'readlen.rda')
-	infiles		<- data.table(FILE=list.files(indir, pattern='dat$', recursive=TRUE))
-	cat('\nFound files, n=', nrow(infiles))
-	cat('\nWill save to', outfile)
+{	
 	
-	infiles[, TYPE:=dirname(FILE)]
-	infiles[, ID:=gsub('\\.dat','',basename(FILE))]
-	rl			<- infiles[, {
-				stopifnot(length(FILE)==1)				
-				#z	<- as.data.table(read.table('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/RawFastqs/R13_X84265_S17_L001_2.dat',sep='',stringsAsFactors=FALSE))
-				z	<- as.data.table(read.table(file.path(indir,FILE),sep='',stringsAsFactors=FALSE))
-				setnames(z, c('V1','V2'),c('COUNT','LEN'))
-				z
-			}, by=c('TYPE','ID')]
-	cat('\nRead reads, n=', nrow(rl))
-	save(rl, file=outfile)
-	cat('\nSaved to',outfile)
+	if(0)
+	{
+		indir		<- '/work/cw109/SAseqs/ReadLengths'
+		outfile		<- file.path(HOME,'readlen.rda')
+		infiles		<- data.table(FILE=list.files(indir, pattern='dat$', recursive=TRUE))
+		cat('\nFound files, n=', nrow(infiles))
+		cat('\nWill save to', outfile)
+		
+		infiles[, TYPE:=dirname(FILE)]
+		infiles[, ID:=gsub('\\.dat','',basename(FILE))]
+		rl			<- infiles[, {
+					stopifnot(length(FILE)==1)				
+					#z	<- as.data.table(read.table('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/RawFastqs/R13_X84265_S17_L001_2.dat',sep='',stringsAsFactors=FALSE))
+					z	<- as.data.table(read.table(file.path(indir,FILE),sep='',stringsAsFactors=FALSE))
+					setnames(z, c('V1','V2'),c('COUNT','LEN'))
+					z
+				}, by=c('TYPE','ID')]
+		cat('\nRead reads, n=', nrow(rl))
+		save(rl, file=outfile)
+		cat('\nSaved to',outfile)
+	}
+	if(1)
+	{
+		indir		<- file.path(HOME,'readlengths')
+		file		<- file.path(indir,'readlen.rda')
+		load(file)
+		rl[, RUN:= regmatches(ID,regexpr('^R[0-9]+', ID))]
+		#
+		rle			<- rl[, {
+					zz	<- rep(LEN,COUNT)
+					z	<- ecdf(zz)(seq(0,320,20))
+					list(QU=seq(0,320,20), CDF=z, CUM_COUNT=z*length(zz), PDF=c(0,diff(z)))	
+				}, by=c('RUN','ID','TYPE')]
+		setkey(rle, RUN, ID, TYPE)
+		#	files without reads after quality trimming
+		tmp			<- unique(rle)[, list(TN=length(TYPE), TYPE=TYPE), by=c('RUN','ID')]
+		tmp			<- subset(tmp, TN!=3)
+		setkey(tmp, RUN, ID)
+		write.csv(tmp, file=gsub('\\.rda','_NoReadsAfterQualTrim\\.csv',file), row.names=FALSE)
+		#	total number of reads with len<240 increases for some individuals?
+		tmp			<- subset(rle, QU==320 & TYPE!='Trimmed_AdaptersPrimersOnly')
+		tmp			<- dcast.data.table(tmp, RUN+ID~TYPE, value.var='CUM_COUNT')
+		subset(tmp, RawFastqs<Trimmed_QualToo)	#none, phew
+		tmp			<- subset(rle, QU==320)
+		ggplot(tmp, aes(y=CUM_COUNT, x=RUN, fill=TYPE)) + geom_boxplot() + 
+				theme_bw() + labs(y='total reads per individual\n', x='\nsequence run', fill='processing stage') +
+				theme(legend.position='bottom')
+		ggsave(file=gsub('\\.rda','_TotalCounts\\.pdf',file), w=7,h=7)
+		#
+		#	plot by individual
+		#		
+		ggplot(rle, aes(y=CDF, x=factor(QU), colour=TYPE, group=TYPE)) + geom_line() + 
+				theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of reads\n(nt)', colour='processing stage') +
+				theme(legend.position='bottom') + facet_wrap(~ID,ncol=5)
+		ggsave(file=gsub('\\.rda','_byInd\\.pdf',file), w=15,h=300,limitsize = FALSE)
+		#	after adaptors or primers are trimmed, the reads should be shorter 
+		#	for some individuals, the reads are quite a bit longer!? 
+		#	suggesting that many reads are just primer+adaptor?
+		tmp			<- subset(rle, QU==100 & TYPE!='Trimmed_QualToo')
+		tmp			<- subset(dcast.data.table(tmp, RUN+ID~TYPE, value.var='CDF'), RawFastqs-0.07>Trimmed_AdaptersPrimersOnly)
+		setnames(tmp, c('RawFastqs','Trimmed_AdaptersPrimersOnly'), c('RawFastqs_PropOfReads<100bp','Trimmed_AdaptersPrimersOnly_PropOfReads<100bp'))
+		write.csv(tmp, file=gsub('\\.rda','_LongerReadsAfterAdaptorsPrimersTrimmed\\.csv',file), row.names=FALSE)		
+		#
+		#	plot by run
+		#		
+		ggplot(rle, aes(y=CDF, x=factor(QU), fill=TYPE)) + geom_boxplot() + 
+				theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of reads\n(nt)', fill='processing stage') +
+				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3)
+		ggsave(file=gsub('\\.rda','_byRun\\.pdf',file), w=15,h=15)
+		#
+		#	plot of cumulative counts by run
+		#		
+		ggplot(rle, aes(y=CUM_COUNT, x=factor(QU), fill=TYPE)) + geom_boxplot() + 
+				theme_bw() + labs(y='total reads with length <x\nin one individual\n', x='\nlength of reads\n(nt)', fill='processing stage') +
+				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3, scales='free')
+		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)
+		
+		tmp			<- subset(rle, ID=='R10_100889_S15_L001_1')
+		
+		
+		
+		ggplot(tmp, aes(y=CDF, x=factor(QU), fill=SEQ_RUN)) + geom_boxplot() + 
+				theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of quality-trimmed short reads\n(nt)', fill='sequence run') +
+				theme(legend.position='bottom')
+		
+		
+		
+		rl			<- melt(rl, id.vars=c('ID','TYPE'), value.name='V', variable.name='TYPE_SUB')
+		set(rl,NULL,'TYPE',rl[,paste(TYPE,'_',as.character(TYPE_SUB),sep='')])
+		rl[, IDX:=seq_len(nrow(rl))]
+		
+		
+		
+		rl			<- dcast.data.table(rl, ID~TYPE, value.var='V')
+	}
 }
 
 project.readlength.count.bam.150120<- function()

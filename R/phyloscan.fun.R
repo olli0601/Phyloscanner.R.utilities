@@ -2,6 +2,8 @@ PR.PACKAGE			<- "phyloscan"
 PR.EVAL.FASTA		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
 PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
+PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
+PR.ALIGNMENT.ROOT	<- "R0_CPX_AF460972_read_1_count_0"
 EPS					<- 1e-12
 
 #' @export
@@ -41,9 +43,23 @@ pty.cmd.evaluate.examl<- function(infile, indir, outdir=indir, select='', outgro
 }
 
 #' @export
-pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='',out.dir='.')
+pty.cmd.mafft.add<- function(infile, reffile, outfile, options='')
+{
+	#mafft --reorder --anysymbol --add new_sequences --auto input
+	tmp		<- c( 	gsub(' ','\\ ',gsub('(','\\(',gsub(')','\\)',infile,fixed=T),fixed=T),fixed=T),
+			gsub(' ','\\ ',gsub('(','\\(',gsub(')','\\)',reffile,fixed=T),fixed=T),fixed=T),
+			gsub(' ','\\ ',gsub('(','\\(',gsub(')','\\)',outfile,fixed=T),fixed=T),fixed=T)
+	)
+	cmd		<- paste('mafft --anysymbol ',options,' --add ',tmp[1],' --auto ',tmp[2],' > ',tmp[3], sep='')
+	cmd
+}
+
+#' @export
+pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='', ref.file=PR.ALIGNMENT.FILE, ref.root=PR.ALIGNMENT.ROOT, out.dir='.')
 {	
-	stopifnot(is.character(file.bam),is.character(file.ref),is.numeric(window.coord), !length(window.coord)%%2)
+	stopifnot(is.character(file.bam),is.character(file.ref))
+	if(!nchar(window.automatic))	stopifnot( is.numeric(window.coord), !length(window.coord)%%2)
+	if(nchar(window.automatic))		stopifnot( !length(window.coord) )
 	#	create local tmp dir
 	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
 	cmd		<- paste(cmd,"echo $CWD\n",sep='')
@@ -56,7 +72,13 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',paste(as.character(window.coord), collapse=' '),sep='')	
-	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
+	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)	
+	if(nchar(window.automatic))
+		cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
+	if(nchar(ref.file) & keep.overhangs!='--keep-overhangs')
+		cmd	<- paste(cmd,' --alignment-of-other-refs ',ref.file,sep='')	
+	if(nchar(ref.root) & keep.overhangs!='--keep-overhangs')
+		cmd	<- paste(cmd,' --ref-for-rooting ',ref.root,sep='')
 	if(nchar(no.trees))		
 		cmd	<- paste(cmd, no.trees)	
 	if(nchar(keep.overhangs))
@@ -64,8 +86,16 @@ pty.cmd<- function(file.bam, file.ref, window.coord, prog=PROG.PTY, prog.raxml='
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
-	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')	
-	cmd		<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')
+	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
+	if(nchar(ref.file) & keep.overhangs=='--keep-overhangs')
+	{
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(ref.file,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
+		cmd	<- paste(cmd, 'for file in RefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
+	}
+	if(!nchar(ref.file) || keep.overhangs!='--keep-overhangs')
+	{
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')	
+	}	
 	cmd		<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')	
 	cmd		<- paste(cmd, 'mv ',tmp,'*fasta "',out.dir,'"\n',sep='')
 	#	clean up
@@ -116,10 +146,15 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 				file.bam	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
 				file.ref	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_ref.txt',sep=''))
 				cat( paste(file.path(pty.args[['data.dir']],BAM),collapse='\n'), file= file.bam	)
-				cat( paste(file.path(pty.args[['data.dir']],REF),collapse='\n'), file= file.ref	)				
-				windows		<- seq(1,by=pty.win,len=ceiling(max(REF_LEN)/pty.win))
-				windows		<- as.vector(rbind( windows,windows-1+pty.win ))
-				cmd			<- pty.cmd(	file.bam, file.ref, window.coord=windows, 
+				cat( paste(file.path(pty.args[['data.dir']],REF),collapse='\n'), file= file.ref	)
+				windows		<- integer(0)
+				if(!nchar(pty.args[['window.automatic']]))
+				{
+					windows		<- seq(1,by=pty.win,len=ceiling(max(REF_LEN)/pty.win))
+					windows		<- as.vector(rbind( windows,windows-1+pty.win ))									
+				}
+				cmd			<- pty.cmd(	file.bam, file.ref, 
+										window.coord=windows, window.automatic=pty.args[['window.automatic']],
 										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
@@ -979,7 +1014,7 @@ pty.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.e
 pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA, verbose=1)
 {
 	#select			<- '^ptyr1_InWindow'
-	#strip.max.len	<- 350	
+	#strip.max.len	<- 350		
 	infiles			<- data.table(FILE=list.files(indir, pattern='fasta$'))
 	infiles			<- subset(infiles, !grepl('*',FILE,fixed=1))
 	infiles			<- subset(infiles, grepl(select,FILE))
@@ -989,7 +1024,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	setkey(infiles, W_FROM)	
 	#	read all fasta into R
 	pty.seq.rw			<- lapply( infiles[, FILE], function(x) read.dna(file.path(indir,x), format='fasta')	)
-	names(pty.seq.rw)	<- infiles[, FILE]	
+	names(pty.seq.rw)	<- infiles[, FILE]
 	pty.seq				<- lapply( infiles[, FILE], function(x) seq.strip.gap(pty.seq.rw[[x]], strip.max.len=strip.max.len)	)
 	names(pty.seq)		<- infiles[, FILE]
 	#	get statistics
@@ -1032,7 +1067,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	#	select
 	if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
 	{
-		seqd	<- subset(seqd, UNIQUE_N>=min.ureads.individual)
+		seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=min.ureads.individual)
 		seqd[, TOTAL_N:=NULL]
 		seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
 	}
@@ -1249,100 +1284,6 @@ pty.pipeline.examl<- function()
 	}	
 }
 
-#' @export
-pty.pipeline.fasta<- function() 
-{
-	require(big.phylo)
-	#
-	#	input args
-	#	(used function project.dualinfecions.phylotypes.setup.ZA.160110 to select bam files for one run)
-	#
-	if(0)	#trm pairs on Mac
-	{
-		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )	
-		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
-		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
-		out.dir				<- file.path(HOME,"phylotypes")
-		pty.prog			<- '/Users/Oliver/git/phylotypes/phylotypes.py'
-		raxml				<- 'raxmlHPC-AVX'
-		no.trees			<- '-T'
-		
-	}	
-	if(0)	#trm pairs on HPC
-	{
-		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda") )
-		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
-		work.dir		<- file.path(HOME,"ptyruns")
-		out.dir			<- file.path(HOME,"phylotypes")
-		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
-		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
-	}
-	if(1)	#coinfections on HPC
-	{
-		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
-		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
-		work.dir		<- file.path(HOME,"coinf_ptinput")
-		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
-		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
-		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
-	}
-	#
-	#	set up all temporary files and create bash commands
-	#
-	#	run 160115	window length 300
-	if(0)
-	{
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
-										strip.max.len=350, min.ureads.individual=NA)		
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
-	}
-	#	run 160118	window length 60 & Q1 18 & keep overhangs
-	if(1)
-	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
-										strip.max.len=350, min.ureads.individual=20)
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
-		pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
-	}
-	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
-	if(0)
-	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
-										strip.max.len=350, min.ureads.individual=NA)
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
-		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
-	}
-	if(no.trees=='-T')
-	{
-		invisible(pty.c[,	{					
-					#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeelab", hpc.mem="4800mb",  hpc.nproc=1, hpc.load=hpc.load)
-					cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-					#cat(cmd)					
-					outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-					cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-				}, by='PTY_RUN'])
-	}
-	if(0)
-	{
-		#
-		#	add HPC header and submit
-		#
-		invisible(pty.c[,	{
-							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5000mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=1, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=2, hpc.load=hpc.load)
-							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							stop()
-						}, by='PTY_RUN'])
-	}	
-}
 
 #' @export
 pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
