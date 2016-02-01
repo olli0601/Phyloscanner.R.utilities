@@ -631,7 +631,7 @@ pty.pipeline.fasta<- function()
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		work.dir		<- file.path(HOME,"coinf_ptinput")
-		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_150201")
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
