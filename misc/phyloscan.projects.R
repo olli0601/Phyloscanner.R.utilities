@@ -613,7 +613,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.245 anaconda/2.3.0 samtools"
 	}
 	if(0)	#coinfections on Mac
 	{
@@ -635,7 +635,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.245 anaconda/2.3.0 samtools\nunsetenv MAFFT_BINARIES"
 	}
 	#
 	#	set up all temporary files and create bash commands
