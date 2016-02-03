@@ -604,7 +604,7 @@ pty.pipeline.examl<- function()
 	{			
 		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
 		work.dir		<- file.path(HOME,"coinf_ptinput")
-		out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
+		#out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150201")
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
 	}
@@ -625,7 +625,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									min.ureads.individual=20, min.ureads.candidate=NA, 
@@ -634,7 +634,7 @@ pty.pipeline.examl<- function()
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
 		invisible(exa.cmd[,	{		
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
 							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)
 							outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -642,7 +642,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	run ExaML with bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									min.ureads.individual=20, min.ureads.candidate=NA, 
@@ -1008,7 +1008,19 @@ pty.pipeline.coinfection.statistics<- function()
 
 project.readlength.count.all<- function()
 {	
+	#	for each individual, we first create a file that counts how often a read is in the fasq/bam file (COUNT) and how long the read is (LENGTH)
+	#	the file format is: rows->unique read. cols separated by whitespace-> col1 is COUNT, col2 is LENGTH 
+	#	if you produce similar files, then the scripts below can be used
 	
+	#	read the read length files and store in data table 'rl'	
+	#
+	#	Please note:
+	#	1) currently, all files start with 'R[0-9]+_' eg 'R13_' to indicate run 13
+	#	2) the above files are also stored in three directories 'RawFastqs','Trimmed_AdaptersPrimersOnly','Trimmed_QualToo'
+	#	   these directory names are used to determine the processing stage, which is stored in the column 'TYPE' below
+	#
+	#	If 1 and 2 are not the case, the following will need a bit of modification :-)
+	require(data.table)
 	if(0)
 	{
 		indir		<- '/work/cw109/SAseqs/ReadLengths'
@@ -1030,6 +1042,10 @@ project.readlength.count.all<- function()
 		save(rl, file=outfile)
 		cat('\nSaved to',outfile)
 	}
+	#
+	#	produce various plots on read length
+	#
+	require(ggplot2)
 	if(1)
 	{
 		indir		<- file.path(HOME,'readlengths')
@@ -1084,25 +1100,7 @@ project.readlength.count.all<- function()
 		ggplot(rle, aes(y=CUM_COUNT, x=factor(QU), fill=TYPE)) + geom_boxplot() + 
 				theme_bw() + labs(y='total reads with length <x\nin one individual\n', x='\nlength of reads\n(nt)', fill='processing stage') +
 				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3, scales='free')
-		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)
-		
-		tmp			<- subset(rle, ID=='R10_100889_S15_L001_1')
-		
-		
-		
-		ggplot(tmp, aes(y=CDF, x=factor(QU), fill=SEQ_RUN)) + geom_boxplot() + 
-				theme_bw() + labs(y='cumulative frequency\nin one individual\n', x='\nlength of quality-trimmed short reads\n(nt)', fill='sequence run') +
-				theme(legend.position='bottom')
-		
-		
-		
-		rl			<- melt(rl, id.vars=c('ID','TYPE'), value.name='V', variable.name='TYPE_SUB')
-		set(rl,NULL,'TYPE',rl[,paste(TYPE,'_',as.character(TYPE_SUB),sep='')])
-		rl[, IDX:=seq_len(nrow(rl))]
-		
-		
-		
-		rl			<- dcast.data.table(rl, ID~TYPE, value.var='V')
+		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)	
 	}
 }
 
