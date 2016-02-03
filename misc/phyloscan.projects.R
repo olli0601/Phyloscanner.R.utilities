@@ -613,7 +613,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.245 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	if(0)	#coinfections on Mac
 	{
@@ -635,7 +635,7 @@ pty.pipeline.fasta<- function()
 		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.245 anaconda/2.3.0 samtools\nunsetenv MAFFT_BINARIES"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	#
 	#	set up all temporary files and create bash commands
@@ -674,13 +674,13 @@ pty.pipeline.fasta<- function()
 										strip.max.len=350, min.ureads.individual=20)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
-		stop()
+		#stop()
 		#pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
 	}
 	if(no.trees=='-T')
 	{
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
