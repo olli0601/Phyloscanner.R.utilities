@@ -1,6 +1,3 @@
-cat("#######################################################
-# phyloscan.evaluate.examl.Rscript version 160122.	
-#######################################################")
 args <- commandArgs()
 if(!any(args=='--args'))
 	args<- vector("numeric",0)
@@ -59,24 +56,42 @@ if(exists("args"))
 }
 if( is.na(indir) )
 {
-	stop('\nUsage:
-Rscript phyloscan.evaluate.examl.Rscript -indir=INDIR\n
-\t[-infile=INFILE]  [-outdir=OUTDIR] [-outgroup=OUTGROUP]\n
-\t[-select=SELECT] [-references.pattern=REFPATTERN] [-run.pattern=RUNPATTERN]\n
-\t[-rm.newick=RMNEWICK] [-rm.fasta=RMFASTA]\n
-\nThis R script processes phylotype newick files for further analyses. Processing includes the following steps.
-\nRooting. Ancestral state reconstruction with maximum parsimony. Save trees in R ape format. Plot trees.
+	cat('\nusage: Rscript phyloscan.evaluate.examl.Rscript -indir=INDIR
+\t\t\t[-infile=INFILE]  [-outdir=OUTDIR] [-outgroup=OUTGROUP]
+\t\t\t[-select=SELECT] [-references.pattern=REFPATTERN] [-run.pattern=RUNPATTERN]
+\t\t\t[-rm.newick=RMNEWICK] [-rm.fasta=RMFASTA]
+\nThis R script processes phylotype newick files for further analyses. Processing includes 
+\t\t\tthe following steps. Rooting. Ancestral state reconstruction with maximum parsimony. 
+\t\t\tSave trees as a named list of trees in R ape format, and basic file info in an R object 
+\t\t\tfile. Plot trees. The R object file contains the trees in "pty.ph" and the basic file 
+\t\t\tinfo in "ptyfiles". The output file names are derived from the input file names, and end 
+\t\t\twith ".rda" and ".pdf" respectively.
+\nR users can use the function "pty.evaluate.tree" directly.    
 \narguments:\n
-\t-indir=INDIR: Input directory with newick trees.\n
-\t-infile=INFILE: Deprecated.\n
-\t-outdir=OUTDIR: Output directory. By default set to indir.\n
-\t-outgroup=OUTGROUP: Regular expression that uniquely identifies the root name. Must be specified if infile is ommitted.\n
-\t-select=SELECT: Regular expression that selects a subset of newick files in the input directory. This is useful to avoid very large file sizes and memory consumption of this Rscript. By default ""; could e.g. be "^ptyr22_".\n
-\t-references.pattern=REFPATTERN: Regular expression that identifies all reference sequences. By default "REF".\n
-\t-run.pattern=RUNPATTERN: String that identifies files of separate phylotype runs. The string must be followed by a number. Output is produced for each run separately. By default ""; could e.g. be "^ptyr" to group newick files starting with "ptyr1_" and "ptyr2_" into two separate runs "1" and "2".\n
-\t-rm.newick=RMNEWICK: 1 to delete all newick files in the input directory. By default 0.\n
-\t-rm.fasta=RMFASTA: 1 to delete all fasta files in the input directory. By default 0.\n
+\t-indir=INDIR: Input directory with newick trees.
+\noptional arguments:\n
+\t-infile=INFILE: Deprecated.
+\t-outdir=OUTDIR: Output directory. By default set to INDIR.
+\t-outgroup=OUTGROUP: Regular expression that uniquely identifies the root name. 
+\t\t\tMust be specified if infile is ommitted.
+\t-references.pattern=REFPATTERN: Regular expression that identifies all reference 
+\t\t\tsequences. By default "REF".
+\t-run.pattern=RUNPATTERN: String that identifies files of separate phylotype runs. 
+\t\t\tThe string must be followed by a number. Output is produced for each run separately.
+\t\t\tThis option is useful to group output as desired. Without the SELECT option, all 
+\t\t\tgroups will be processed sequentially. By default ""; could e.g. be "^ptyr" to 
+\t\t\tgroup newick files starting with "ptyr1_" and "ptyr2_" into two separate runs 
+\t\t\t"1" and "2".
+\t-select=SELECT: Regular expression that selects a subset of newick files in the 
+\t\t\tinput directory. This is useful to avoid very large file sizes and memory consumption 
+\t\t\tof this Rscript. Also useful to parallelize this processing step. By default ""; 
+\t\t\tcould e.g. be "^ptyr22_".
+\t-rm.newick=RMNEWICK: 1 to delete all newick files in the input directory. 
+\t\t\tBy default 0.
+\t-rm.fasta=RMFASTA: 1 to delete all fasta files in the input directory. 
+\t\t\tBy default 0.
 ')
+	quit('no')
 }
 if( is.na(outdir) )
 	outdir	<- indir
