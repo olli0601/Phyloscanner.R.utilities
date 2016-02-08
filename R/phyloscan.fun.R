@@ -478,6 +478,162 @@ pty.stat.collect	<- function(indir, outdir=indir, outfile=file.path(outdir,'ptyr
 	save(pty.stat, file=outfile)
 }
 
+
+# For each patient: 
+# Determine all the distinct monophyletic clades that the patient's tips make
+# N.b. a single isolated read is considered a type of monophyletic clade
+# Count the number of reads associated with each clade
+# ordered.clades is a list of these clades, ordered by decreasing number of reads
+# Compute the overall root-to-tip distance for all reads associated with a patient
+# and for each of the monophyletic subclades
+# Root to tip distance is considered zero for single isolated read
+# Record details for the five largest subclades in the summary statistic data frame
+
+pty.stat.makeSingleTipTree <- function(tip.label, num.reads) {
+	# creates a clade object based on a single tip label
+	# num.reads is a named vector of all number of reads for all labels
+	return( list(tree = tip.label, is.a.tip = T, num.reads = num.reads[tip.label] ))
+}
+
+pty.stat.getLargestClade <- function( patient.subtree, tree, num.reads ) {
+	# from a 'patient.subtree' of 'tree', this function returns the largest 
+	# monophyletic subtree, as a clade object. 
+	# Clade objects can be a single tip.
+	# This function only currently works if the patient.subtree is a tree (not
+	# a clade object). This could be modified, which might simplify the main
+	# code for finding all monophyletic subclades
+	subtrees <- subtrees( patient.subtree  )
+	subtrees[[length(subtrees) + 1]] <- patient.subtree
+	subtrees.monophyletic <- sapply( subtrees, function(x) is.monophyletic(tree, tips = x$tip.label))
+	monophyletic.subtrees <- subtrees[ subtrees.monophyletic == T ]
+	
+	num.reads.largest.clade <- 0
+	if (length(monophyletic.subtrees) > 0) {
+		# if there is a monphyletic subtree
+		for(subtree in monophyletic.subtrees){
+			num.reads.sub <- 0
+			for(tip in subtree$tip.label){
+				num.reads.sub <- num.reads.sub + num.reads[tip]
+			}
+			if(num.reads.sub > num.reads.largest.clade){
+				num.reads.largest.clade <- num.reads.sub
+				largest.mononophyletic.clade <- subtree 
+				largest.mononophyletic.clade.is.a.tip <- F
+			}
+		}
+	} 
+	for(tip in patient.subtree$tip.label){
+		# this will either find the most common tip if there isn't a monophyletic
+		# subtree, or find a tip which isn't in the monophyletic subtree which is
+		# more common than that the sum of all the reads in that tree. 
+		# For that second option to work, this loop must come after the one above. 
+		num.reads.sub <- num.reads[tip]
+		if(num.reads.sub > num.reads.largest.clade){
+			num.reads.largest.clade <- num.reads.sub
+			largest.mononophyletic.clade <- tip 
+			largest.mononophyletic.clade.is.a.tip <- T
+		}
+	}
+	return(list(tree = largest.mononophyletic.clade, is.a.tip = largest.mononophyletic.clade.is.a.tip, num.reads = unname(num.reads.largest.clade)))  
+}
+
+pty.stat.calcMeanRootToTip <- function( clade, num.reads ) {
+	# Mean root-to-tip distance, weighted by the number of reads associated with 
+	# each tip. Returns 0 if the clade is a single tip. 
+	# Input is a clade object (a named list), with three items: 
+	# $is.a.tip is a logical, indicating whether the tree is a single tip of a 
+	# 'proper' tree
+	# $tree is either the tree, or the label of the tip
+	# $num.reads is the number of reads associated with the whole clade
+	# The second input is num.reads, a vector with named entries, which 
+	# returns the number of reads associated with each tip label in the tree
+	root.to.tip <- 0
+	if(clade$is.a.tip == F) {
+		for (i in 1:length(clade$tree$tip.label)) {
+			root.to.tip <- root.to.tip +
+					nodeheight(clade$tree,i) * num.reads[ clade$tree$tip.label[i] ]
+		}
+		root.to.tip <- root.to.tip/clade$num.reads
+	}
+	return( unname(root.to.tip) )
+}
+
+#' @export
+pty.stat.all.160208<- function(pty.ph, ptyfiles)
+{
+	references.pattern<- 'REF'
+	# For each phylotype run (PTY_RUN), each patient (IND), each window (W_FROM, W_TO):
+	#	@CF: with data.table, the df[, {}, by=BY] syntax specifies the columns BY to loop over 
+	#	- record the total number of reads 
+	#	- record the number of unique reads
+	stat.n		<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==241)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
+				set(phb, phb[, which(REF)],'IND','REFERENCE')
+				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+				phb[, list(READS_N=sum(COUNT), UREADS_N=length(COUNT)), by='IND']				
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	stat.n		<- subset(stat.n, IND!='REFERENCE')
+	#	- collect MRCA of all patient clades
+	#	in ape, tips in the same patient clade have consecutive tip indices in the tree
+	#	since edges do not cross	
+	coi.div[, N:=NULL]
+	gc()
+	
+	
+	
+	
+	
+	
+	#	- record whether his/her tips are monophyletic
+	#	- find the
+	# pairwise patristic distances between the tips - the 'cophenetic distances' -
+	# and characterise those distances. 
+	dummy.p.value<-0
+	
+	for (i in 1:num.ids) {
+		id <- ids[i]
+		num.leaves <- length(patient.tips[[id]])
+		num.reads<-0
+		for (tip in patient.tips[[id]]) num.reads <- num.reads + as.numeric(unlist(strsplit(tip,"count_"))[2])
+		if (num.leaves>0) {
+			monophyletic <- as.numeric(is.monophyletic(tree, patient.tips[[id]]))
+			if (num.leaves > 1) {
+				subtree <- drop.tip(phy=tree,
+						tip=tree$tip.label[!(tree$tip.label %in% patient.tips[[id]])])
+				subtree.dist.matrix <- cophenetic(subtree)
+				subtree.dist <- subtree.dist.matrix[lower.tri(subtree.dist.matrix)]
+				mean.size <- mean(subtree.dist)
+				variance <- var(subtree.dist)
+				coeff.of.var.size <- ifelse(num.leaves > 2, sqrt(variance)/mean.size, 0)
+				## Distances are not weighted for the number of reads for each tip. 
+				## Corrections are included because mean and variance of distance matrices
+				## include zeros on diagonal, but shouldn't.
+				#subtree.dist.cf <- as.vector(subtree.dist.matrix)
+				#mean.size.cf <- mean(subtree.dist.cf)/(1-1/num.leaves)
+				#variance.cf <- var(subtree.dist.cf)*(1+1/num.leaves)-mean.size.cf^2/num.leaves
+				#cat("CF mean & var: ", mean.size.cf, variance.cf, '\n')
+				#cat("CW mean & var: ", mean.size.cw, variance.cw, '\n')
+				#cat('\n')
+			} else {
+				mean.size <- NA
+				coeff.of.var.size <- NA
+			}
+			root.to.tip<-0
+			for (i in 1:length(subtree$tip.label)) root.to.tip<-root.to.tip+nodeheight(subtree,i)
+			root.to.tip<-root.to.tip/length(subtree$tip.label)
+		} else {
+			monophyletic<-NA
+			mean.size<-NA
+			coeff.of.var.size<-NA
+			root.to.tip<-NA
+		}
+		pat.stats <- rbind(pat.stats, c(id, window, num.leaves, num.reads, monophyletic,
+						mean.size, coeff.of.var.size,root.to.tip))
+	}
+}
+
 #' @export
 pty.stat.all.160128	<- function(pty.ph, ptyfiles)
 {
@@ -686,7 +842,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		outgroup	<- NA
 		outgroup	<- "CPX_AF460972"
 	}
-	stopifnot(is.null(pty.runs) & is.na(outgroup))
+	stopifnot(is.null(pty.runs) & !is.na(outgroup))
 	require(gridExtra)
 	require(colorspace)	
 	require(ggtree)
