@@ -580,7 +580,43 @@ pty.stat.all.160208<- function(pty.ph, ptyfiles)
 	#	since edges do not cross	
 	coi.div[, N:=NULL]
 	gc()
-	
+	ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==661)[,FILE]
+				ph			<- pty.ph[[FILE]]
+				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
+				set(phb, phb[, which(REF)],'IND','REFERENCE')
+				#	consecutive tips of the same individual could define separate clades
+				phb[, GROUP:=cumsum(c(1,as.numeric(diff(as.numeric(factor(IND)))!=0)))]
+				#	for each potential clade, determine MRCA and 
+				#		check if clade below corresponds to same individual
+				phb[, {
+							mrca	<- as.numeric(getMRCA(ph, IDX))
+							
+						}, by='GROUP']
+				
+				phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
+				#	find longest branch and diversity in clade below
+				
+							#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213
+							#print(MRCA)
+							z		<- extract.clade(ph, MRCA, root.edge=1)
+							z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)
+							
+				df	<- merge(df, data.table(IDX= df$IDX[which(df$FILE_ID!=FILE_ID)]), by='IDX')
+				tmp	<- c(nrow(df), df[, length(unique(FILE_ID))])
+				if(tmp[1])
+				{
+					
+					df[, GROUP:= cumsum(c(1,as.numeric(diff(IDX)>1)))]
+					df[, GROUP:= df[, as.numeric(factor(paste(FILE_ID,'-',GROUP,sep='')))]]
+					df[, GROUP:= df[, cumsum(c(1,as.numeric(diff(GROUP)>1)))]]
+					tmp[1]	<- df[, length(unique(GROUP))]					
+				}
+				
+				
+				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+				phb[, list(READS_N=sum(COUNT), UREADS_N=length(COUNT)), by='IND']				
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
 	
 	
 	
@@ -842,7 +878,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		outgroup	<- NA
 		outgroup	<- "CPX_AF460972"
 	}
-	stopifnot(is.null(pty.runs) & !is.na(outgroup))
+	stopifnot(!is.null(pty.runs) || (is.null(pty.runs) & !is.na(outgroup)))
 	require(gridExtra)
 	require(colorspace)	
 	require(ggtree)
