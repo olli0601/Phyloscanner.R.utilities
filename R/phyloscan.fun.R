@@ -587,11 +587,21 @@ pty.stat.all.160208<- function(pty.ph, ptyfiles)
 				set(phb, phb[, which(REF)],'IND','REFERENCE')
 				#	consecutive tips of the same individual could define separate clades
 				phb[, GROUP:=cumsum(c(1,as.numeric(diff(as.numeric(factor(IND)))!=0)))]
-				#	for each potential clade, determine MRCA and 
+				#	for each potential clade, 
+				#		determine MRCA 
 				#		check if clade below corresponds to same individual
 				phb[, {
-							mrca	<- as.numeric(getMRCA(ph, IDX))
-							
+							#print(GROUP)
+							mrca	<- IDX
+							diff	<- 0L
+							if(length(IDX)>1)
+							{
+								mrca	<- as.integer(getMRCA(ph, IDX))
+								tmp		<- extract.clade(ph, mrca, root.edge=1)
+								#print(tmp)
+								diff	<- length(setdiff(gsub('_read.*','',tmp$tip.label), IND))
+							}															
+							list(MRCA=mrca, DIFF_IND=diff)							
 						}, by='GROUP']
 				
 				phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
@@ -888,7 +898,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	ptyfiles		<- data.table(FILE=list.files(indir, 'newick$'))
 	if(nchar(run.pattern))
 		ptyfiles[, PTY_RUN:= as.numeric(gsub(run.pattern,'',sapply(strsplit(FILE,'_'),'[[',1)))]
-	if(!run.pattern)
+	if(!nchar(run.pattern))
 		ptyfiles[, PTY_RUN:=1L]
 	ptyfiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
