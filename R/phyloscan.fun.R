@@ -31,11 +31,17 @@ pty.cmd.scan.statistics<- function(indir, outdir=indir, select='')
 }
 
 #' @export
-pty.cmd.evaluate.examl<- function(infile, indir, outdir=indir, select='', outgroup=NA)
+pty.cmd.evaluate.examl<- function(indir, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', rm.newick=0, rm.fasta=0, infile=NA)
 {
-	cmd		<- paste('\n',PR.EVAL.EXAML, ' -infile=',infile, ' -indir=',indir, sep='')
+	cmd		<- paste('\n',PR.EVAL.EXAML, ' -indir=',indir, ' -rm.newick=', rm.newick, ' -rm.fasta=', rm.fasta, sep='')
+	if(!is.na(infile))
+		cmd	<- paste(cmd,' -infile=',infile,sep='')		
 	if(select!='')
 		cmd	<- paste(cmd,' -select=',select,sep='')
+	if(references.pattern!='')
+		cmd	<- paste(cmd,' -references.pattern=',references.pattern,sep='')
+	if(run.pattern!='')
+		cmd	<- paste(cmd,' -run.pattern=',run.pattern,sep='')
 	if(!is.na(outgroup))
 		cmd	<- paste(cmd,' -outgroup=',outgroup,sep='')	
 	cmd	<- paste(cmd,'\n',sep='')
@@ -668,16 +674,19 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 
 #' @import ape data.table gridExtra colorspace ggtree
 #' @export
-pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=NA)
+pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', rm.newick=FALSE, rm.fasta=FALSE)
 {
 	if(0)
 	{
 		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201"
 		outdir		<- indir
 		pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
-		select		<- '^ptyr1_In'
+		select		<- '^ptyr22_In'
 		outgroup	<- NA
+		outgroup	<- "CPX_AF460972"
 	}
+	stopifnot(is.null(pty.runs) & is.na(outgroup))
 	require(gridExtra)
 	require(colorspace)	
 	require(ggtree)
@@ -685,7 +694,10 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	#	collect ML tree files
 	#
 	ptyfiles		<- data.table(FILE=list.files(indir, 'newick$'))
-	ptyfiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	if(nchar(run.pattern))
+		ptyfiles[, PTY_RUN:= as.numeric(gsub(run.pattern,'',sapply(strsplit(FILE,'_'),'[[',1)))]
+	if(!run.pattern)
+		ptyfiles[, PTY_RUN:=1L]
 	ptyfiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
 	ptyfiles		<- subset(ptyfiles, grepl(select,FILE))
@@ -719,14 +731,35 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	}	
 	ptyfiles[, IDX:=seq_len(nrow(ptyfiles))]
 	#
-	#	determine root for each run: find taxon with largest distance from BAM of select individuals
-	#
+	#	GET ROOTS
+	#	
+	#	root specified; check if in tree
+	if(!is.na(outgroup))
+	{
+		cat('\nroot and evaluate trees')
+		pty.root	<- ptyfiles[, {
+					#FILE<- 'ptyr22_InWindow_241_to_300_dophy_examl.newick'
+					ans		<- NA_character_
+					tmp		<- which(grepl(outgroup,pty.ph[[FILE]]$tip.label))
+					if(length(tmp)==0)
+						cat('\ncannot find root', outgroup,'in tree',FILE,', ignoring file')
+					if(length(tmp)==1)
+						ans	<- pty.ph[[FILE]]$tip.label[tmp]
+					if(length(tmp)>1)
+						cat('\nfound >1 roots', outgroup,'in tree',FILE,', ignoring file')
+					list(ROOT=ans)
+				}, by= c('FILE','PTY_RUN')]
+		pty.root	<- subset(pty.root, !is.na(ROOT))	
+		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
+	}
+	#	root not specified; determine root for each run: find taxon with largest distance from BAM of selected individuals (these have FILL==0)
 	if(is.na(outgroup) & pty.runs[, any(FILL==1)])
 	{
 		cat('\ndetermine root among fillers')
 		pty.root	<- pty.evaluate.tree.root.withfill(ptyfiles, pty.ph, pty.runs)
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}
+	#	root not specified; determine root for each run: 
 	if(is.na(outgroup) & pty.runs[, all(FILL==0)])
 	{
 		cat('\ndetermine root among all individuals')
@@ -741,7 +774,8 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 	cat('\nroot, ladderize, group trees')
 	for(i in seq_along(pty.ph))
 	{
-		print(i)
+		cat('\nprocess tree ',names(pty.ph)[i])
+		#print(i)
 		#i<- 44
 		#i<- 5
 		root			<- subset(ptyfiles, FILE==names(pty.ph)[i])[, ROOT]
@@ -751,28 +785,38 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 		ph$node.label[ph$node.label=='Root']	<- 0
 		ph$node.label							<- as.numeric(ph$node.label)			
 		ph				<- ladderize(ph)
-		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label))
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
+		set(phb, phb[, which(REF)],'FILE_ID','REFERENCE')
 		#	group edges by individual
 		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)
 		#	group edges by FILL
-		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
-		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')
-		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)	
+		#tmp			<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
+		#phb			<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')
+		#ph				<- pty.evaluate.tree.groupindividuals(ph, phb)	
 		pty.ph[[i]]		<- ph
 	}		
 	#
-	#	save trees and remove newick
+	#	save trees
 	#	
 	tmp		<- ptyfiles[1, gsub('\\.newick','\\.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
-	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))	
-	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
-	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('newick','txt',FILE)))), by='FILE'] )
-	#invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
+	cat('\nsave trees to file ',tmp)
+	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))
 	#
+	#	remove newick / fasta files
 	#
-	#	plot trees
+	if(rm.newick)
+	{
+		invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,FILE))), by='FILE'] )
+		invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('newick','txt',FILE)))), by='FILE'] )
+	}
+	if(rm.fasta)
+	{
+		invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
+	}
 	#
-	#	need node heights for plotting
+	#	plot full trees
+	#
+	#	need node heights to determine x-axis for plotting
 	tmp					<- ptyfiles[,{										
 				ph		<- pty.ph[[FILE]]
 				tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]
@@ -780,27 +824,51 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 			}, by='FILE']	
 	ptyfiles				<- merge(ptyfiles, tmp[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
 	setkey(ptyfiles, PTY_RUN, W_FROM)	
+	#	plot by run.pattern
 	#ptyfiles			<- subset(ptyfiles, PTY_RUN==1)
 	for(ptyr in ptyfiles[, unique(PTY_RUN)])
 	{
-		#ptyr<- 15
+		#ptyr<- 22
+		cat('\nplot trees with run.pattern',ptyr,'\n\n')
 		tmp			<- subset(ptyfiles, PTY_RUN==ptyr)
-		#	title
+		#	setup title
 		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]
 		setkey(tmp, W_FROM)
 		phs			<- lapply(tmp[, FILE], function(x) pty.ph[[x]])
 		names(phs)	<- tmp[, TITLE] 
-		#	colours	
-		tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),'not characterized')
-		col			<- c('black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
-		names(col)	<- c('not characterized',tmp2)			
+		#	setup colours	
+		tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),c('not characterized'))
+		if(!'REFERENCE'%in%tmp2)
+		{
+			col			<- c('black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
+			names(col)	<- c('not characterized',tmp2)						
+		}
+		if('REFERENCE'%in%tmp2)
+		{
+			tmp2		<- setdiff(tmp2,'REFERENCE')
+			col			<- c('grey50','black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
+			names(col)	<- c('not characterized','REFERENCE',tmp2)						
+		}		
+		#	setup ggtrees
 		phps		<- lapply(seq_along(phs), function(i){
+					cat('\nsetup tree ',names(phs)[i])
 					max.node.height	<- tmp[i,][, HMX]
-					p				<- ggtree(phs[[i]], aes(color=INDIVIDUAL, linetype=TYPE)) + 
-							geom_nodepoint(size=phs[[i]]$node.label/100*3) +
-							geom_tiplab(size=1.2,  hjust=-.1) +							 
-							scale_color_manual(values=col, guide = FALSE) +											 
-							scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+					ph				<- phs[[i]]					
+					df			<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
+							COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))), 
+							CLU=grepl('_clu',ph$tip.label), 
+							FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
+					set(df, df[, which(grepl(references.pattern,FILE_ID))],'FILE_ID','REFERENCE')
+					p			<- ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
+							geom_nodepoint(size=ph$node.label/100*3) +
+							geom_tippoint(aes(size=COUNT, shape=CLU)) +
+							#geom_point2(aes(subset=(node==42)), size=5, shape=23, fill='#068C00') +
+							#geom_point2(data=df, aes(subset=(node==IDX)), size=5, shape=23, fill=df[,COL]) +
+							#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
+							geom_tiplab(size=1.2,  hjust=-.1) +
+							scale_color_manual(values=col, guide=FALSE) +
+							scale_shape_manual(values=c(20,18), guide=FALSE) +
+							scale_size_area(guide=FALSE) +							
 							theme_tree2() +
 							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
 							labs(x='subst/site', title=names(phs)[i])
@@ -808,78 +876,72 @@ pty.evaluate.tree<- function(indir, pty.runs, outdir=indir, select='', outgroup=
 				})	
 		names(phps)	<- names(phs)
 		file	<- file.path( indir, tmp[1,gsub('.newick','.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
-		if(0)		#for window length 300 (just one long page)
-		{
-			pdf(file=file, w=120, h=40)
-			tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
-			grid.newpage()
-			pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
-			for(i in seq_along(phps))
-				print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
-			dev.off()			
-		}
-		if(1)		#for window length 60 (multiple pages)
-		{				
-			tmp			<- seq_len(ceiling(length(phps)/10))
-			pdf(file=file, w=20, h=40)		#for win=60
-			for(i in tmp)
-			{		
+		cat('\nplot trees to file ',file)
+		#	multi-page plot
+		tmp			<- seq_len(ceiling(length(phps)/10))
+		pdf(file=file, w=20, h=40)		#for win=60
+		for(i in tmp)
+		{		
 				grid.newpage()
 				pushViewport(viewport(layout=grid.layout(2, 5)))
 				z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
 				for(j in z)
 					print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
-			}
-			dev.off()	
 		}
-		if(0)	#devel
-		{
-			tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
-			grid.newpage()
-			pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
-			for(i in seq_along(phps))
-				print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
-			dev.off()
-		}
-		if(0)	#devel
-		{	
-			ph				<- pty.ph[[30]]
-			ph				<- pty.evaluate.tree.collapse.clusters(ph, thresh.brl=8e-6)
-			phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
-			#	group edges by individual
-			ph				<- pty.evaluate.tree.groupindividuals(ph, phb)
-			#	group edges by FILL
-			tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
-			phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')
-			ph				<- pty.evaluate.tree.groupcandidates(ph, phb)	
-			pty.phc[[i]]	<- ph
-			
-			
-			tmp2		<- levels(attr(ph,'INDIVIDUAL'))
-			col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))
-			names(col)	<- tmp2	
-			df			<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
-										COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))), 
-										CLU=grepl('_clu',ph$tip.label), 
-										FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))			
-			ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
-					geom_nodepoint(size=ph$node.label/100*3) +
-					geom_tippoint(aes(size=COUNT, shape=CLU)) +
-					#geom_point2(aes(subset=(node==42)), size=5, shape=23, fill='#068C00') +
-					#geom_point2(data=df, aes(subset=(node==IDX)), size=5, shape=23, fill=df[,COL]) +
-					#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
-					geom_tiplab(size=1.2,  hjust=-.1) +
-					scale_color_manual(values=col, guide=FALSE) +
-					scale_shape_manual(values=c(20,18), guide=FALSE) +
-					scale_size_area(guide=FALSE) +
-					#scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
-					theme_tree2() +
-					theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +
-					labs(x='subst/site')
-			
-		}
+		dev.off()			
 	}
 }	
+
+pty.evaluate.tree.plot.develstuff<- function()
+{
+	if(0)	#devel
+	{
+		tmp	 	<- matrix(seq(1, 2*ceiling(length(phps)/2)), ncol=ceiling(length(phps)/2), nrow=2)
+		grid.newpage()
+		pushViewport(viewport(layout = grid.layout(nrow(tmp), ncol(tmp))))
+		for(i in seq_along(phps))
+			print(phps[[i]], vp = viewport(layout.pos.row=which(tmp==i, arr.ind=TRUE)[1,'row'], layout.pos.col=which(tmp==i, arr.ind=TRUE)[1,'col']))	
+		dev.off()
+	}
+	if(0)	#devel
+	{	
+		ph				<- pty.ph[[30]]
+		ph				<- pty.evaluate.tree.collapse.clusters(ph, thresh.brl=8e-6)
+		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
+		#	group edges by individual
+		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)
+		#	group edges by FILL
+		tmp				<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
+		phb				<- merge(phb, subset(pty.runs, PTY_RUN==tmp), by='FILE_ID')
+		ph				<- pty.evaluate.tree.groupcandidates(ph, phb)	
+		pty.phc[[i]]	<- ph
+		
+		
+		tmp2		<- levels(attr(ph,'INDIVIDUAL'))
+		col			<- c('black',rainbow_hcl(length(tmp2)-1, start = 270, end = -30, c=100, l=50))
+		names(col)	<- tmp2	
+		df			<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
+				COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))), 
+				CLU=grepl('_clu',ph$tip.label), 
+				FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
+		set(df, df[, which(grepl(references.pattern,FILE_ID))],'FILE_ID','REFERENCE')
+		ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
+				geom_nodepoint(size=ph$node.label/100*3) +
+				geom_tippoint(aes(size=COUNT, shape=CLU)) +
+				#geom_point2(aes(subset=(node==42)), size=5, shape=23, fill='#068C00') +
+				#geom_point2(data=df, aes(subset=(node==IDX)), size=5, shape=23, fill=df[,COL]) +
+				#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
+				geom_tiplab(size=1.2,  hjust=-.1) +
+				scale_color_manual(values=col, guide=FALSE) +
+				scale_shape_manual(values=c(20,18), guide=FALSE) +
+				scale_size_area(guide=FALSE) +
+				#scale_linetype_manual(values=c('target'='solid','filler'='dotted'),guide = FALSE) +
+				theme_tree2() +
+				theme(legend.position="bottom") + ggplot2::xlim(0, 0.3) +
+				labs(x='subst/site')
+		
+	}
+}
 
 pty.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.edge = 0, 
 		rooted = is.rooted(phy), interactive = FALSE, subtree.label=NA) 

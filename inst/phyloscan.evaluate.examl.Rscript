@@ -12,6 +12,11 @@ infile					<- NA
 outdir					<- NA
 outgroup				<- NA
 select					<- ''
+references.pattern		<- 'REF'
+run.pattern				<- ''
+rm.newick				<- 0
+rm.fasta				<- 0
+
 
 if(exists("args"))
 {	
@@ -34,28 +39,73 @@ if(exists("args"))
 	tmp<- na.omit(sapply(args,function(arg)
 					{	switch(substr(arg,2,9),
 								outgroup= return(substr(arg,11,nchar(arg))),NA)	}))
-	if(length(tmp)>0) outgroup<- tmp[1]
-	
+	if(length(tmp)>0) outgroup<- tmp[1]		
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,19),
+								references.pattern= return(substr(arg,21,nchar(arg))),NA)	}))
+	if(length(tmp)>0) references.pattern<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,12),
+								run.pattern= return(substr(arg,14,nchar(arg))),NA)	}))
+	if(length(tmp)>0) run.pattern<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,9),
+								rm.fasta= return(as.numeric(substr(arg,11,nchar(arg)))),NA)	}))
+	if(length(tmp)>0) rm.fasta<- tmp[1]
+	tmp<- na.omit(sapply(args,function(arg)
+					{	switch(substr(arg,2,10),
+								rm.newick= return(as.numeric(substr(arg,12,nchar(arg)))),NA)	}))
+	if(length(tmp)>0) rm.newick<- tmp[1]
 }
 if( is.na(indir) )
 {
 	stop('\nUsage:
-Rscript phyloscan.evaluate.examl.Rscript -infile=INFILE -indir=INDIR [-outdir=OUTDIR] -outgroup=OUTGROUP -select=SELECT  
+Rscript phyloscan.evaluate.examl.Rscript -indir=INDIR\n
+\t[-infile=INFILE]  [-outdir=OUTDIR] [-outgroup=OUTGROUP]\n
+\t[-select=SELECT] [-references.pattern=REFPATTERN] [-run.pattern=RUNPATTERN]\n
+\t[-rm.newick=RMNEWICK] [-rm.fasta=RMFASTA]\n
+\nThis R script processes phylotype newick files for further analyses. Processing includes the following steps.
+\nRooting. Ancestral state reconstruction with maximum parsimony. Save trees in R ape format. Plot trees.
+\narguments:\n
+\t-indir=INDIR: Input directory with newick trees.\n
+\t-infile=INFILE: Deprecated.\n
+\t-outdir=OUTDIR: Output directory. By default set to indir.\n
+\t-outgroup=OUTGROUP: Regular expression that uniquely identifies the root name. Must be specified if infile is ommitted.\n
+\t-select=SELECT: Regular expression that selects a subset of newick files in the input directory. This is useful to avoid very large file sizes and memory consumption of this Rscript. By default ""; could e.g. be "^ptyr22_".\n
+\t-references.pattern=REFPATTERN: Regular expression that identifies all reference sequences. By default "REF".\n
+\t-run.pattern=RUNPATTERN: String that identifies files of separate phylotype runs. The string must be followed by a number. Output is produced for each run separately. By default ""; could e.g. be "^ptyr" to group newick files starting with "ptyr1_" and "ptyr2_" into two separate runs "1" and "2".\n
+\t-rm.newick=RMNEWICK: 1 to delete all newick files in the input directory. By default 0.\n
+\t-rm.fasta=RMFASTA: 1 to delete all fasta files in the input directory. By default 0.\n
 ')
 }
 if( is.na(outdir) )
 	outdir	<- indir
 if(1)
 {
-	print(infile); print(indir); print(outdir); print(select); print(outgroup)
+	print(infile) 
+	print(indir) 
+	print(outdir) 
+	print(select) 
+	print(outgroup)
+	print(references.pattern)
+	print(run.pattern)
+	print(rm.newick)
+	print(rm.fasta)
 }
 ###############################################################################
 #	run script
 library(phyloscan)
-load( infile )		# loads pty.runs
-#pty.evaluate.tree(indir, pty.runs, outdir=outdir, select=select, outgroup=outgroup)
-tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))
-tmp		<- subset(tmp, grepl(select,FILE))
-tmp		<- file.path(outdir, tmp[1,FILE])
-load( tmp )			# loads ptyfiles, pty.ph
-pty.evaluate.tree.collapse(pty.runs, ptyfiles, pty.ph, outdir, thresh.brl=8e-6)
+pty.runs	<- NULL
+if(!is.na(infile))
+{
+	load( infile )		# loads pty.runs, only used to define outgroup if not specified
+}
+pty.evaluate.tree(indir, pty.runs=pty.runs, outdir=outdir, select=select, outgroup=outgroup, references.pattern=references.pattern, run.pattern=run.pattern, rm.newick=rm.newick, rm.fasta=rm.fasta)
+#
+#	plot additional smaller trees, not do for now
+#
+#tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))
+#tmp		<- subset(tmp, grepl(select,FILE))
+#tmp		<- file.path(outdir, tmp[1,FILE])
+#load( tmp )			# loads ptyfiles, pty.ph
+#pty.evaluate.tree.collapse(pty.runs, ptyfiles, pty.ph, outdir, thresh.brl=8e-6)

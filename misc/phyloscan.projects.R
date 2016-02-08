@@ -625,9 +625,10 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
+									outgroup="CPX_AF460972",
 									min.ureads.individual=20, min.ureads.candidate=NA, 
 									args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=5)								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
@@ -645,6 +646,7 @@ pty.pipeline.examl<- function()
 	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
+									outgroup="CPX_AF460972",
 									min.ureads.individual=20, min.ureads.candidate=NA, 
 									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=NA)								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
@@ -659,12 +661,22 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output
-	if(0)
+	if(1)
 	{
+		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
+									outgroup="CPX_AF460972",
+									rm.newick=0, rm.fasta=0)								
+		
 		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$|examl\\.rda$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
 		invisible(infiles[, {
-							cmd			<- pty.cmd.evaluate.examl(pty.infile, out.dir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
+							cmd			<- pty.cmd.evaluate.examl(out.dir, 	select=paste('ptyr',PTY_RUN,'_',sep=''), 
+																			outgroup=pty.args[['outgroup']],
+																			references.pattern=pty.args[['references.pattern']],
+																			run.pattern=pty.args[['run.pattern']],
+																			rm.newick=pty.args[['rm.newick']],
+																			rm.fasta=pty.args[['rm.fasta']],
+																			infile=pty.infile)							
 							cat(cmd)							
 							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
