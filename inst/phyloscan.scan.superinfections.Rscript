@@ -45,9 +45,9 @@ if( is.na(indir) )
 \t\t\t[-run.pattern=RUNPATTERN] [-plot.max.clade=PMAXCLADE]
 \nThis R script scans short read trees for phylogenetic evidence of super-infections. 
 \t\t\tShort read trees must have been pre-processed with "phyloscan.evaluate.examl.Rscript"
-\t\t\tand stored in an R object file ending in "_examl.rda". The script reads these files from
+\t\t\tand stored in an R object file ending in "_preprtr.rda". The script reads these files from
 \t\t\tdirectory INDIR and calculates several tree statistics. Tree statistics are stored in
-\t\t\tcorresponding R object files ending in "_examl_stat.rda", as well as several ".csv" files. 
+\t\t\tcorresponding R object files ending in "_stat.rda", as well as several ".csv" files. 
 \t\t\tIf PMAXCLADE is set to a value >1, scan statistics for each individual are plotted to a 
 \t\t\tcorresponding pdf file.
 \nR users can use the functions "pty.stat.superinfections.XXX" and "pty.stat.superinfections.XXX.plot" directly.    
@@ -87,7 +87,7 @@ if(1)
 #	run script
 library(phyloscan)
 
-infiles		<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+infiles		<- data.table(FILE=list.files(indir, pattern='preprtr.rda$'))
 if(nchar(run.pattern))
 	infiles[, PTY_RUN:= as.numeric(gsub(run.pattern,'',sapply(strsplit(FILE,'_'),'[[',1)))]
 if(!nchar(run.pattern))
@@ -105,7 +105,7 @@ for(i in seq_len(nrow(infiles)))
 		stat.ind	<- tmp$stat.ind
 		stat.clades	<- tmp$stat.clades
 		#	save to file
-		file		<- file.path(outdir, basename(gsub('examl\\.rda','examl_stat\\.rda',file)))
+		file		<- file.path(outdir, basename(gsub('preprtr\\.rda','stat\\.rda',file)))
 		cat('\nsave to file',file)
 		save(stat.ind, stat.clades, pty.ph, ptyfiles, file=file)		
 		cat('\nwrite "stat.ind" to file',gsub('\\.rda','_ind.csv',file))

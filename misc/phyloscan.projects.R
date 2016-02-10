@@ -422,6 +422,25 @@ project.dualinfecions.phylotypes.test<- function()
 	load("/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_ptyrunsinput.rda")
 }
 
+project.test.BEEHIVEtree<- function()
+{
+	indir				<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/beehive_test'
+	pty.runs			<- NULL 
+	outdir				<- indir
+	select				<- ''
+	outgroup			<- 'HXB2'
+	references.pattern	<- 'Ref'
+	run.pattern			<- ''
+	rm.newick			<- FALSE
+	rm.fasta			<- FALSE	
+	tree.pattern		<- 'tree$'
+	plot.trees.per.page	<- 1
+	plot.w				<- 20
+	plot.h				<- 120
+	pty.evaluate.tree(indir, pty.runs=pty.runs, outdir=indir, select=select, outgroup=outgroup, references.pattern=references.pattern, run.pattern=run.pattern, rm.newick=rm.newick, rm.fasta=rm.fasta)
+}
+	
+
 project.scan.superinfections	<- function()
 {
 	#
@@ -1003,10 +1022,10 @@ pty.pipeline.coinfection.statistics<- function()
 	hpc.load		<- "module load R/3.2.0"
 	resume			<- 1
 	
-	infiles			<- data.table(FILE=list.files(indir, pattern='examl.rda$'))
+	infiles			<- data.table(FILE=list.files(indir, pattern='preprtr.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
 	cat('\nno examl for runs=',paste( setdiff(seq.int(1,infiles[,max(PTY_RUN)]), infiles[,PTY_RUN]), collapse=',' ))
-	tmp			<- data.table(FILE_STAT=list.files(indir, pattern='examl_stat.rda$'))
+	tmp			<- data.table(FILE_STAT=list.files(indir, pattern='stat.rda$'))
 	tmp[, FILE:= gsub('_stat','',FILE_STAT)]
 	infiles		<- merge(infiles, tmp, by='FILE',all.x=1)
 	if(resume)

@@ -1,6 +1,6 @@
 PR.PACKAGE			<- "phyloscan" 
 PR.EVAL.FASTA		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
-PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
+PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.readtrees.Rscript"))
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
 PR.SCAN.SUPERINF	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.superinfections.Rscript"))
 PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
@@ -498,7 +498,6 @@ pty.stat.collect	<- function(indir, outdir=indir, outfile=file.path(outdir,'ptyr
 #' @export
 pty.stat.monophyletic.clades<- function(ph)
 {
-	require(phangorn)
 	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
 	set(phb, phb[, which(REF)],'IND','REFERENCE')
 	#	for each patient define mrca (MRCA)
@@ -758,10 +757,7 @@ pty.stat.avgnodedepth.and.counts<- function(ph, mrca, select=NA)
 
 #' @export
 pty.stat.superinfections.160208<- function(pty.ph, ptyfiles, references.pattern='REF')
-{
-	
-	plot.max.clade		<- 5
-	outfile				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201/ptyr22_examl_stat.pdf'
+{	
 	#	@CF: with data.table, the df[, {}, by=BY] syntax specifies the columns BY to loop over
 	#	@CF: the return variables of a data.table block {} are either a named list, or another data.table
 	#	@CF: one difference to data.frame is that the column names are available as variable names inside the block {}
@@ -860,10 +856,10 @@ pty.stat.superinfections.160208.plot<- function(stat.clades, stat.ind, outfile, 
 				col			<- c('black',rainbow_hcl(tmp[, length(unique(ORDER_CLADE))-1], start = 270, end = -30, c=100, l=50))
 				names(col)	<- tmp[, unique(ORDER_CLADE)]	
 				setkey(tmp, PTY_RUN, W_FROM, IND, ORDER_CLADE)
-				p			<- ggplot(tmp , aes(x=W_FROM, y=V, group=STAT)) +
+				p			<- ggplot(tmp , aes(x=W_FROM, y=V)) +
 						geom_point(data=subset(tmp, !grepl('Reads\n(%)',STAT)), size=0.5, aes(colour=ORDER_CLADE)) +
 						geom_bar(data=subset(tmp, STAT=='Reads\n(%)'), stat='identity', aes(fill=ORDER_CLADE)) +
-						geom_line(data=subset(tmp, grepl('Root-to-tip',STAT)), aes(colour=ORDER_CLADE)) +
+						geom_line(data=subset(tmp, grepl('Root-to-tip',STAT)), aes(colour=ORDER_CLADE, group=ORDER_CLADE)) +
 						scale_colour_manual(values=col) +
 						scale_fill_manual(values=col, guide=FALSE) +
 						scale_x_continuous(breaks=seq(0,12e3,1e3), minor_breaks=seq(0,12e3,2e2), expand=c(0,0), lim=c(1,stat.plot[, max(W_TO)+1])) +
@@ -1073,8 +1069,8 @@ pty.evaluate.tree.collapse<- function(pty.runs, ptyfiles, pty.phc, outdir, thres
 
 #' @import ape data.table gridExtra colorspace ggtree
 #' @export
-pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', rm.newick=FALSE, rm.fasta=FALSE)
-{
+pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', tree.pattern='newick$', rm.newick=FALSE, rm.fasta=FALSE, plot.trees.per.page=10, plot.w=20, plot.h=40)
+{	
 	if(0)
 	{
 		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
@@ -1086,13 +1082,10 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		outgroup	<- "CPX_AF460972"
 	}
 	stopifnot(!is.null(pty.runs) || (is.null(pty.runs) & !is.na(outgroup)))
-	require(gridExtra)
-	require(colorspace)	
-	require(ggtree)
 	#
 	#	collect ML tree files
 	#
-	ptyfiles		<- data.table(FILE=list.files(indir, 'newick$'))
+	ptyfiles		<- data.table(FILE=list.files(indir, tree.pattern))
 	if(nchar(run.pattern))
 		ptyfiles[, PTY_RUN:= as.numeric(gsub(run.pattern,'',sapply(strsplit(FILE,'_'),'[[',1)))]
 	if(!nchar(run.pattern))
@@ -1101,7 +1094,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
 	ptyfiles		<- subset(ptyfiles, grepl(select,FILE))
 	setkey(ptyfiles, PTY_RUN, W_FROM)
-	cat('\nfound newick files, n=',nrow(ptyfiles))
+	cat('\nfound tree files, n=',nrow(ptyfiles))
 	#ptyfiles		<- subset(ptyfiles, W_FROM<9000)
 	#
 	#ptyfiles[, table(PTY_RUN)]
@@ -1186,6 +1179,15 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		ph				<- ladderize(ph)
 		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
 		set(phb, phb[, which(REF)],'FILE_ID','REFERENCE')
+		tmp				<- phb[, which(!grepl('_read_[0-9]+_count_[0-9]+',BAM))]
+		#	homogenize taxon labels
+		if(length(tmp))
+		{
+			stopifnot( !nrow(subset(phb[tmp, ],!REF))	)	#incorrect taxon label
+			set(phb, tmp, 'BAM', phb[tmp, paste(BAM,'_read_1_count_0',sep='')])
+			setkey(phb, IDX)
+			ph$tip.label	<- phb[,BAM]			
+		}
 		#	group edges by individual
 		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)
 		#	group edges by FILL
@@ -1197,7 +1199,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	#
 	#	save trees
 	#	
-	tmp		<- ptyfiles[1, gsub('\\.newick','\\.rda',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
+	tmp		<- ptyfiles[1, gsub(paste('.',tree.pattern,sep=''),'_preprtr.rda',gsub('_dophy','',gsub('\\.InWindow_[0-9]+_to_[0-9]+|_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
 	cat('\nsave trees to file ',tmp)
 	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))
 	#
@@ -1274,20 +1276,32 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 					p
 				})	
 		names(phps)	<- names(phs)
-		file	<- file.path( indir, tmp[1,gsub('.newick','.pdf',gsub('_dophy','',gsub('_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
-		cat('\nplot trees to file ',file)
-		#	multi-page plot
-		tmp			<- seq_len(ceiling(length(phps)/10))
-		pdf(file=file, w=20, h=40)		#for win=60
-		for(i in tmp)
-		{		
-				grid.newpage()
-				pushViewport(viewport(layout=grid.layout(2, 5)))
-				z	<- intersect(seq.int((i-1)*10+1, i*10), seq_len(length(phps)))
-				for(j in z)
-					print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/5)-1)%%2+1, layout.pos.col=(j-1)%%5+1))				
+		file	<- file.path( indir, tmp[1,gsub(paste('.',tree.pattern,sep=''),'.pdf',gsub('_dophy','',gsub('.InWindow_[0-9]+_to_[0-9]+|_InWindow_[0-9]+_to_[0-9]+','',FILE)))] )
+		cat('\nplot trees to file ',file)		
+		tmp			<- seq_len(ceiling(length(phps)/plot.trees.per.page))
+		#	single-page plot
+		if(plot.trees.per.page==1)
+		{
+			pdf(file=file, w=plot.w, h=plot.h)		#for win=60
+			for(i in tmp)
+				print(phps[[i]])
+			dev.off()
 		}
-		dev.off()			
+		#	multi-page plot
+		if(plot.trees.per.page>1)
+		{
+			stopifnot( plot.trees.per.page%%2==0 )			
+			pdf(file=file, w=plot.w, h=plot.h)		#for win=60
+			for(i in tmp)
+			{		
+				grid.newpage()
+				pushViewport(viewport(layout=grid.layout(2, plot.trees.per.page/2)))
+				z	<- intersect(seq.int((i-1)*plot.trees.per.page+1, i*plot.trees.per.page), seq_len(length(phps)))
+				for(j in z)
+					print(phps[[j]], vp = viewport(layout.pos.row=(ceiling(j/(plot.trees.per.page/2))-1)%%2+1, layout.pos.col=(j-1)%%(plot.trees.per.page/2)+1))				
+			}
+			dev.off()
+		}					
 	}
 }	
 
