@@ -75,7 +75,7 @@ if(exists("args"))
 }
 if( is.na(indir) )
 {
-	cat('\nusage: Rscript phyloscan.evaluate.readtrees.Rscript -indir=INDIR
+	cat('\nusage: Rscript phyloscan.read.trees.Rscript -indir=INDIR
 \t\t\t[-infile=INFILE]  [-outdir=OUTDIR] [-outgroup=OUTGROUP]
 \t\t\t[-select=SELECT] [-references.pattern=REFPATTERN] [-run.pattern=RUNPATTERN]
 \t\t\t[-tree.pattern=TREEPATTERN] [-rm.newick=RMNEWICK] [-rm.fasta=RMFASTA]

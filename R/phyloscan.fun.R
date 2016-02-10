@@ -1,6 +1,6 @@
 PR.PACKAGE			<- "phyloscan" 
 PR.EVAL.FASTA		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
-PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.readtrees.Rscript"))
+PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.read.trees.Rscript"))
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
 PR.SCAN.SUPERINF	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.superinfections.Rscript"))
 PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
