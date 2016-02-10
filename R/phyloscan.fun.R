@@ -1630,7 +1630,7 @@ pty.cmdwrap.examl<- function(pty.args)
 									}										
 									list(TAXA_N=length(READ), PTY_RUN=PTY_RUN[1], W_FROM=W_FROM[1], W_TO=W_TO[1])
 								}, by='FILE']
-						cat('\nusing fasta files for trees',i,', min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
+						cat('\nusing fasta files for trees',infiles[i,FILE],', min taxa=',pty.fa[,min(TAXA_N)],'median taxa=',pty.fa[,median(TAXA_N)],'max taxa=',pty.fa[,max(TAXA_N)])
 						pty.fa
 					}))	
 	#

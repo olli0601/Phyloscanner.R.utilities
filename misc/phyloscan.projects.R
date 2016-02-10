@@ -6,8 +6,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.examl()	
-	#pty.pipeline.coinfection.statistics()
+	#pty.pipeline.examl()	
+	pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
 	if(0)
@@ -625,7 +625,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
@@ -1016,8 +1016,8 @@ pty.pipeline.coinfection.statistics<- function()
 	invisible(infiles[, {
 						cmd			<- pty.cmd.scan.superinfections(indir, select=paste('ptyr',PTY_RUN,'_',sep=''), references.pattern='REF', run.pattern='ptyr', plot.max.clade=0)													
 						cat(cmd)							
-						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)
-						#cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)										
+						#cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)
+						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)										
 						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
 						NULL
