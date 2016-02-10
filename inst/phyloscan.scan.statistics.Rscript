@@ -1,6 +1,3 @@
-cat("#######################################################
-# phyloscan.scan.statistics.Rscript version 160126.	
-#######################################################")
 args <- commandArgs()
 if(!any(args=='--args'))
 	args<- vector("numeric",0)

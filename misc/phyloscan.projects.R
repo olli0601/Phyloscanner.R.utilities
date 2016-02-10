@@ -625,7 +625,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
@@ -660,15 +660,20 @@ pty.pipeline.examl<- function()
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 						}, by='RUN_ID'])	
 	}
-	#	process newick output
-	if(1)
+	#	process newick output into examl.rda files
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972",
-									rm.newick=0, rm.fasta=0)								
-		
-		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$|examl\\.rda$'))						
+									rm.newick=0, rm.fasta=0)										
+		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$'))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
+		tmp				<- data.table(OUTFILE=list.files(out.dir, pattern='examl.rda$'))						
+		tmp[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(OUTFILE,'_'),'[[',1)))]
+		infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1)		
+		setkey(infiles, PTY_RUN)
+		infiles			<- subset(unique(infiles), is.na(OUTFILE))
+		
 		invisible(infiles[, {
 							cmd			<- pty.cmd.evaluate.examl(out.dir, 	select=paste('ptyr',PTY_RUN,'_',sep=''), 
 																			outgroup=pty.args[['outgroup']],
@@ -992,7 +997,8 @@ pty.scan.explore	<- function()
 pty.pipeline.coinfection.statistics<- function()
 {	
 	require(big.phylo)
-	indir			<- file.path(HOME,"coinf_ptoutput_150121")
+	#indir			<- file.path(HOME,"coinf_ptoutput_150121")
+	indir			<- file.path(HOME,"coinf_ptoutput_150201")
 	work.dir		<- file.path(HOME,"coinf_ptinput")
 	hpc.load		<- "module load R/3.2.0"
 	resume			<- 1
@@ -1008,10 +1014,10 @@ pty.pipeline.coinfection.statistics<- function()
 	setkey(infiles, PTY_RUN)
 	
 	invisible(infiles[, {
-						cmd			<- pty.cmd.scan.statistics(indir, select=paste('ptyr',PTY_RUN,'_',sep=''))							
+						cmd			<- pty.cmd.scan.superinfections(indir, select=paste('ptyr',PTY_RUN,'_',sep=''), references.pattern='REF', run.pattern='ptyr', plot.max.clade=0)													
 						cat(cmd)							
-						#cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)
-						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)										
+						cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q="pqeelab", hpc.mem="15600mb",  hpc.nproc=1, hpc.load=hpc.load)
+						#cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=2, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)										
 						outfile		<- paste("pts",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
 						NULL

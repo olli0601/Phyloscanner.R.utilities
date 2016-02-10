@@ -2,6 +2,7 @@ PR.PACKAGE			<- "phyloscan"
 PR.EVAL.FASTA		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.fasta.Rscript"))
 PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.evaluate.examl.Rscript"))
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
+PR.SCAN.SUPERINF	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.superinfections.Rscript"))
 PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
 PR.ALIGNMENT.ROOT	<- "R0_CPX_AF460972_read_1_count_0"
 EPS					<- 1e-12
@@ -26,6 +27,21 @@ pty.cmd.scan.statistics<- function(indir, outdir=indir, select='')
 		cmd	<- paste(cmd,' -select=',select,sep='')
 	if(!is.na(outdir))
 		cmd	<- paste(cmd,' -outdir=',outdir,sep='')	
+	cmd	<- paste(cmd,'\n',sep='')
+	cmd
+}
+
+
+#' @export
+pty.cmd.scan.superinfections<- function(indir, outdir=indir, select='', references.pattern='REF', run.pattern='ptyr', plot.max.clade=0)
+{
+	cmd		<- paste('\n',PR.SCAN.SUPERINF, ' -indir=',indir, ' -plot.max.clade=', plot.max.clade, sep='')
+	if(select!='')
+		cmd	<- paste(cmd,' -select=',select,sep='')
+	if(references.pattern!='')
+		cmd	<- paste(cmd,' -references.pattern=',references.pattern,sep='')
+	if(run.pattern!='')
+		cmd	<- paste(cmd,' -run.pattern=',run.pattern,sep='')
 	cmd	<- paste(cmd,'\n',sep='')
 	cmd
 }
@@ -479,205 +495,386 @@ pty.stat.collect	<- function(indir, outdir=indir, outfile=file.path(outdir,'ptyr
 }
 
 
-# For each patient: 
-# Determine all the distinct monophyletic clades that the patient's tips make
-# N.b. a single isolated read is considered a type of monophyletic clade
-# Count the number of reads associated with each clade
-# ordered.clades is a list of these clades, ordered by decreasing number of reads
-# Compute the overall root-to-tip distance for all reads associated with a patient
-# and for each of the monophyletic subclades
-# Root to tip distance is considered zero for single isolated read
-# Record details for the five largest subclades in the summary statistic data frame
-
-pty.stat.makeSingleTipTree <- function(tip.label, num.reads) {
-	# creates a clade object based on a single tip label
-	# num.reads is a named vector of all number of reads for all labels
-	return( list(tree = tip.label, is.a.tip = T, num.reads = num.reads[tip.label] ))
+#' @export
+pty.stat.monophyletic.clades<- function(ph)
+{
+	require(phangorn)
+	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
+	set(phb, phb[, which(REF)],'IND','REFERENCE')
+	#	for each patient define mrca (MRCA)
+	#	for each patient, 
+	#		determine MRCA (mrca)
+	#		calculate number of other individuals in clade below MRCA (diff)	
+	z			<- phb[, {
+				#print(GROUP)
+				mrca	<- IDX		
+				diff	<- 0L
+				if(length(IDX)>1)
+				{
+					mrca	<- as.integer(getMRCA(ph, IDX))
+					tmp		<- extract.clade(ph, mrca, root.edge=1)
+					#print(tmp)
+					diff	<- length(setdiff(gsub('_read.*','',tmp$tip.label), IND))								
+				}												
+				list(MRCA=mrca, DIFF_IND=diff)							
+			}, by=c('IND')]	
+	z			<- subset(z, IND!='REFERENCE')
+	#	for all patients that are not monophyletic, there could be several clades
+	#		trace back all ancestors between tips of other individuals and MRCA
+	#		for each such tip, construct the unique path to MRCA that is not on a previous path
+	#		find change points on these unique paths below which the subtree contains reads from the current patient
+	#		the idea is that all monophyletic clades of this patient must break off from one of these paths	
+	tmp			<- subset(z, DIFF_IND>0, c(IND, MRCA))
+	if(nrow(tmp))
+	{
+		#	find all tips that belong to another patient than the current individual
+		tmp			<- tmp[, {
+					if(MRCA<=Ntip(ph))
+						tmp	<- ph$tip.label[MRCA]
+					if(MRCA>Ntip(ph))
+						tmp	<- extract.clade(ph,MRCA)$tip.label
+					list(MRCA=MRCA, MRCA_IND=IND, BAM=tmp)	
+				}, by='IND']
+		tmp[, IND:=NULL]
+		zz			<- merge(tmp, subset(phb, select=c(BAM, IND, IDX)), by='BAM')
+		zz			<- subset(zz, MRCA_IND!=IND)
+		#	determine change points
+		zz			<- zz[, {
+					#IDX<- c(980,910,912,950); MRCA<- 1580; IND<- 'R1_RES669_S20_L001'; MRCA_IND<- 'R1_RES827_S23_L001'					
+					#	determine paths to MRCA from each tip
+					anc.group		<- Ancestors(ph, IDX)	
+					if(!is.list(anc.group))
+						anc.group	<- list(anc.group)
+					anc.group	<- lapply(seq_along(anc.group), function(i)  anc.group[[i]][ seq_len(which(anc.group[[i]]==MRCA[1])-1)] )							
+					#	determine unique paths until we hit a path that is already visited
+					anc.join	<- lapply(seq_along(anc.group), function(i){	unique(unlist(lapply(seq_len(i), function(j) anc.group[[j]])))	})
+					anc.join	<- c(NA,anc.join)
+					anc.group	<- lapply(seq_along(anc.group), function(i)	setdiff(anc.group[[i]],anc.join[[i]])	)
+					#	check which clades defined by the mrcas on the ancestor path contain at least one read from MRCA_IND
+					tmp			<- lapply(seq_along(anc.group), function(i) sapply(anc.group[[i]], function(j)	any(grepl(MRCA_IND, extract.clade(ph,j)$tip.label))		)	)				
+					#	determine lowest node (counting from tips) which contains at least one read from MRCA_IND
+					tmp			<- lapply(seq_along(tmp), function(i){
+								ans		<- NA_integer_	
+								tmp2	<- integer(0)
+								if(length(tmp[[i]]))
+									tmp2<- which(tmp[[i]]) 
+								if(length(tmp2))
+									ans	<- as.integer(anc.group[[i]][tmp2[1]])										
+								ans
+							})				
+					list(IDX=IDX, CHANGE_NODE=unlist(tmp))
+				},by=c('IND','MRCA','MRCA_IND')]
+		zz			<- subset(zz, !is.na(CHANGE_NODE))
+		#	each ancestor before a change node could have as one of its children a monophyletic clade from this patient
+		setkey(zz, MRCA_IND, CHANGE_NODE)
+		zz	<- unique(zz)
+		zz	<- zz[, {
+					#CHANGE_NODE<- 2053; MRCA<- 1580; MRCA_IND<- 'R1_RES827_S23_L001'
+					#MRCA<- 1212; MRCA_IND<- 'R1_RES669_S20_L001'; CHANGE_NODE<- 1218
+					#	the first two potentially monophyletic clades are the children of the CHANGE_NODE
+					tmp			<- Children(ph, CHANGE_NODE)					
+					#	define path from change node to just before mrca 					
+					path		<- c(CHANGE_NODE, setdiff( Ancestors(ph,CHANGE_NODE), c(MRCA,Ancestors(ph,MRCA)) ))
+					#	monophyletic clades could break off the path ending at MRCA
+					#	the mrca's of these clades are the siblings of the path constructed above 
+					pot.clade	<- c(tmp, unlist(Siblings(ph, path)))
+					#	check if potential clades are monophyletic
+					tmp			<- sapply(pot.clade, function(x){
+								if(x<=Ntip(ph))
+									ans	<- grepl(MRCA_IND, ph$tip.label[x])
+								if(x>Ntip(ph))
+									ans	<- all(grepl(MRCA_IND, extract.clade(ph,x)$tip.label))
+								ans
+							})	
+					#	return monophyletic clades
+					list(CLADE=as.integer(pot.clade[tmp]))
+				}, by=c('MRCA_IND','CHANGE_NODE')]
+		zz[, CHANGE_NODE:=NULL]
+		setnames(zz,'MRCA_IND','IND')
+		#	merge all monophyletic clades
+		z	<- merge(z, unique(zz), all=1, by='IND', allow.cartesian=TRUE)
+	}	
+	tmp	<- z[, which(DIFF_IND==0)]
+	set(z, tmp, 'CLADE', z[tmp,MRCA])
+	#	double check CLADEs (the MONOPH_PA condition is key)
+	tmp	<- z[,{
+				if(CLADE<=Ntip(ph))
+					tmp	<- grepl(IND, ph$tip.label[CLADE])
+				if(CLADE>Ntip(ph))
+					tmp	<- all(grepl(IND, extract.clade(ph,CLADE)$tip.label))
+				list(MONOPH=tmp, MONOPH_PA=all(grepl(IND, extract.clade(ph,Ancestors(ph, CLADE, type="parent"))$tip.label)))
+			}, by=c('IND','CLADE')]
+	stopifnot(tmp[, all(MONOPH)], tmp[, !any(MONOPH_PA)])
+	z	
 }
 
-pty.stat.getLargestClade <- function( patient.subtree, tree, num.reads ) {
-	# from a 'patient.subtree' of 'tree', this function returns the largest 
-	# monophyletic subtree, as a clade object. 
-	# Clade objects can be a single tip.
-	# This function only currently works if the patient.subtree is a tree (not
-	# a clade object). This could be modified, which might simplify the main
-	# code for finding all monophyletic subclades
-	subtrees <- subtrees( patient.subtree  )
-	subtrees[[length(subtrees) + 1]] <- patient.subtree
-	subtrees.monophyletic <- sapply( subtrees, function(x) is.monophyletic(tree, tips = x$tip.label))
-	monophyletic.subtrees <- subtrees[ subtrees.monophyletic == T ]
-	
-	num.reads.largest.clade <- 0
-	if (length(monophyletic.subtrees) > 0) {
-		# if there is a monphyletic subtree
-		for(subtree in monophyletic.subtrees){
-			num.reads.sub <- 0
-			for(tip in subtree$tip.label){
-				num.reads.sub <- num.reads.sub + num.reads[tip]
-			}
-			if(num.reads.sub > num.reads.largest.clade){
-				num.reads.largest.clade <- num.reads.sub
-				largest.mononophyletic.clade <- subtree 
-				largest.mononophyletic.clade.is.a.tip <- F
-			}
-		}
-	} 
-	for(tip in patient.subtree$tip.label){
-		# this will either find the most common tip if there isn't a monophyletic
-		# subtree, or find a tip which isn't in the monophyletic subtree which is
-		# more common than that the sum of all the reads in that tree. 
-		# For that second option to work, this loop must come after the one above. 
-		num.reads.sub <- num.reads[tip]
-		if(num.reads.sub > num.reads.largest.clade){
-			num.reads.largest.clade <- num.reads.sub
-			largest.mononophyletic.clade <- tip 
-			largest.mononophyletic.clade.is.a.tip <- T
-		}
-	}
-	return(list(tree = largest.mononophyletic.clade, is.a.tip = largest.mononophyletic.clade.is.a.tip, num.reads = unname(num.reads.largest.clade)))  
-}
 
-pty.stat.calcMeanRootToTip <- function( clade, num.reads ) {
-	# Mean root-to-tip distance, weighted by the number of reads associated with 
-	# each tip. Returns 0 if the clade is a single tip. 
-	# Input is a clade object (a named list), with three items: 
-	# $is.a.tip is a logical, indicating whether the tree is a single tip of a 
-	# 'proper' tree
-	# $tree is either the tree, or the label of the tip
-	# $num.reads is the number of reads associated with the whole clade
-	# The second input is num.reads, a vector with named entries, which 
-	# returns the number of reads associated with each tip label in the tree
-	root.to.tip <- 0
-	if(clade$is.a.tip == F) {
-		for (i in 1:length(clade$tree$tip.label)) {
-			root.to.tip <- root.to.tip +
-					nodeheight(clade$tree,i) * num.reads[ clade$tree$tip.label[i] ]
-		}
-		root.to.tip <- root.to.tip/clade$num.reads
-	}
-	return( unname(root.to.tip) )
+pty.stat.monophyletic.clades.using.mxpars<- function(ph)
+{
+	phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
+	set(phb, phb[, which(REF)],'IND','REFERENCE')
+	#phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
+	#	consecutive tips of the same individual could define separate clades
+	phb[, GROUP:=cumsum(c(1,as.numeric(diff(as.numeric(factor(IND)))!=0)))]
+	#	for each potential clade, 
+	#		determine MRCA (mrca)
+	#		calculate number of other individuals in clade below MRCA (diff)
+	#		get node index of ancestor of MRCA (mrcaa)
+	z			<- phb[, {
+				#print(GROUP)
+				mrca	<- IDX		
+				diff	<- 0L
+				mrcaa	<- NA_real_
+				if(length(IDX)>1)
+				{
+					mrca	<- as.integer(getMRCA(ph, IDX))
+					tmp		<- extract.clade(ph, mrca, root.edge=1)
+					#print(tmp)
+					diff	<- length(setdiff(gsub('_read.*','',tmp$tip.label), IND))								
+				}												
+				#ancestor of MRCA
+				mrcaa	<- ph$edge[which(ph$edge[,2]==mrca),1]																
+				list(MRCA=mrca, DIFF_IND=diff, MRCA_ANC=mrcaa)							
+			}, by=c('GROUP','IND')]
+	z			<- subset(z, IND!='REFERENCE')
+	#	get max parsimony assignment for edge ending in ancestor of MRCA
+	set(z, NULL, 'MRCA_ANC_EDGE', z[, attr(ph, "INDIVIDUAL")[MRCA_ANC]])
+	set(z, NULL, 'MONOPH', 0L)
+	#	if DIFF_IND==0 and MRCA_ANC_EDGE!=IND, then we have a unique clade
+	set(z, z[, which(DIFF_IND==0L & MRCA_ANC_EDGE!=IND)], 'MONOPH', 1L)
+	#	no double counting for every individual: ignore nested clades
+	tmp			<- z[, {
+				tmp<- Descendants(ph, min(MRCA), type='all')
+				list(MRCA=MRCA, SUBCLADE= MRCA%in%tmp)
+			}, by='IND']
+	z			<- merge(z, subset(tmp, !SUBCLADE), by=c('IND','MRCA'))
+	z[, SUBCLADE:=NULL]	
+	#	for each potential clade with >=1 other individuals within, there could be several clades
+	#		trace back all ancestors between tips of other individuals and MRCA
+	#		for each such tip, construct the unique path to MRCA that is not on a previous path
+	#		find change points in max pars edge assignments along the unique paths
+	#		the idea is that this finds the breaking edges that result in monophylies
+	tmp			<- subset(z, DIFF_IND>0, c(GROUP, IND, MRCA))
+	if(nrow(tmp))
+	{
+		tmp			<- tmp[, {
+					if(MRCA<=Ntip(ph))
+						tmp	<- ph$tip.label[MRCA]
+					if(MRCA>Ntip(ph))
+						tmp	<- extract.clade(ph,MRCA)$tip.label
+					list(MRCA=MRCA, MRCA_IND=IND, BAM=tmp)	
+				}, by='GROUP']
+		zz			<- merge(tmp, subset(phb, select=c(BAM, IND, IDX)), by='BAM')
+		zz			<- subset(zz, MRCA_IND!=IND)
+		zz			<- zz[, {
+					#IDX<- c(980,910); MRCA<- 1580; IND<- 'R1_RES669_S20_L001'; MRCA_IND<- 'R1_RES827_S23_L001'
+					#IDX<- c(917); MRCA<- 2690; IND<- 'R10_105205_S83_L001'; MRCA_IND<- 'R1_RES669_S20_L001'
+					#	determine paths to MRCA from each tip
+					anc.group		<- Ancestors(ph, IDX)	
+					if(!is.list(anc.group))
+						anc.group	<- list(anc.group)
+					anc.group	<- lapply(seq_along(anc.group), function(i)  anc.group[[i]][ seq_len(which(anc.group[[i]]==MRCA[1])-1)] )							
+					#	determine unique paths until we hit a path that is already visited
+					anc.join	<- lapply(seq_along(anc.group), function(i){	unique(unlist(lapply(seq_len(i), function(j) anc.group[[j]])))	})
+					anc.join	<- c(NA,anc.join)
+					anc.group	<- lapply(seq_along(anc.group), function(i)	setdiff(anc.group[[i]],anc.join[[i]])	)
+					#	determine max parsimony assignment along unique branches
+					#	to find patient-clades within the subtree containing all patient taxa, it does not matter if branches change *between* other individuals
+					mxp.assign	<- as.character(attr(ph, "INDIVIDUAL"))
+					mxp.assign[ mxp.assign!=MRCA_IND[1] ]	<- 'OTHER'
+					tmp			<- ifelse(IND==MRCA_IND[1], IND, 'OTHER')
+					tmp			<- lapply(seq_along(anc.group), function(i)	c(tmp, mxp.assign[ anc.group[[i]] ]) )
+					#	count changes in max parsimony assignment along each branch
+					mxp.changes	<- lapply(seq_along(tmp), function(i)	sum( as.numeric(diff(as.numeric(factor(tmp[[i]])))!=0) )	)							
+					#	determine lowest node at which change occurs
+					tmp			<- lapply(seq_along(tmp), function(i){
+								tmp2<- tail(which(diff(as.numeric(factor(tmp[[i]])))!=0),1) #index of ancestor *below* which change occurs
+								if(length(tmp2))
+									tmp2<- as.integer(anc.group[[i]][tmp2])										
+								if(!length(tmp2))
+									tmp2<- NA_integer_
+								tmp2
+							})				
+					list(IDX=IDX, MRCA_IND=MRCA_IND, CHANGES_ON_UNIQUE_PATH=unlist(mxp.changes), CHANGE_NODE=unlist(tmp))
+				},by=c('GROUP','IND','MRCA')]
+		zz			<- subset(zz, CHANGES_ON_UNIQUE_PATH>0)
+		#
+		#	each ancestor before a change node could have as one of its children a monophyletic clade
+		#	
+		setkey(zz, GROUP, CHANGE_NODE)
+		zz	<- unique(zz)
+		zz	<- zz[, {
+					#CHANGE_NODE<- 2053; MRCA<- 1580; MRCA_IND<- 'R1_RES827_S23_L001'
+					#cat(CHANGE_NODE)
+					#	path from change node to just before mrca; we will be checking the sibling of these so this is why the mrca is excluded
+					path		<- c(CHANGE_NODE, setdiff( Ancestors(ph,CHANGE_NODE), c(MRCA,Ancestors(ph,MRCA)) ))
+					#	the first potentially monophyletic clade must be calculated in a different way							
+					tmp			<- ph$edge[ph$edge[,1]==CHANGE_NODE,2]
+					tmp2		<- which(as.character(attr(ph, "INDIVIDUAL"))[tmp]==MRCA_IND)
+					#	collect the potentially monophyletic clades along the path
+					pot.clade	<- c(tmp[tmp2], unlist(Siblings(ph, path)))
+					#	check if potential clades are monophyletic
+					tmp			<- sapply(pot.clade, function(x){
+								if(x<=Ntip(ph))
+									ans	<- grepl(MRCA_IND, ph$tip.label[x])
+								if(x>Ntip(ph))
+									ans	<- all(grepl(MRCA_IND, extract.clade(ph,x)$tip.label))
+								ans
+							})	
+					#	return monophyletic clades
+					list(CLADE=as.integer(pot.clade[tmp]))
+				}, by=c('GROUP','CHANGE_NODE')]
+		zz[, CHANGE_NODE:=NULL]
+		#	merge all monophyletic clades
+		z	<- merge(z, unique(zz), all=1, by='GROUP', allow.cartesian=TRUE)
+	}	
+	tmp	<- z[, which(MONOPH==1)]
+	set(z, tmp, 'CLADE', z[tmp,MRCA])
+	subset(z, select=c(IND, MRCA_ANC_EDGE, DIFF_IND, CLADE))
 }
 
 #' @export
-pty.stat.all.160208<- function(pty.ph, ptyfiles)
+pty.stat.avgnodedepth.and.counts<- function(ph, mrca, select=NA)
 {
-	references.pattern<- 'REF'
-	# For each phylotype run (PTY_RUN), each patient (IND), each window (W_FROM, W_TO):
-	#	@CF: with data.table, the df[, {}, by=BY] syntax specifies the columns BY to loop over 
-	#	- record the total number of reads 
-	#	- record the number of unique reads
-	stat.n		<- ptyfiles[, {
-				#FILE		<- subset(ptyfiles, W_FROM==241)[,FILE]
-				ph			<- pty.ph[[FILE]]
-				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
-				set(phb, phb[, which(REF)],'IND','REFERENCE')
-				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
-				phb[, list(READS_N=sum(COUNT), UREADS_N=length(COUNT)), by='IND']				
-			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-	stat.n		<- subset(stat.n, IND!='REFERENCE')
-	#	- collect MRCA of all patient clades
-	#	in ape, tips in the same patient clade have consecutive tip indices in the tree
-	#	since edges do not cross	
-	coi.div[, N:=NULL]
-	gc()
-	ptyfiles[, {
-				#FILE		<- subset(ptyfiles, W_FROM==661)[,FILE]
-				ph			<- pty.ph[[FILE]]
-				phb			<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, IND= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
-				set(phb, phb[, which(REF)],'IND','REFERENCE')
-				#	consecutive tips of the same individual could define separate clades
-				phb[, GROUP:=cumsum(c(1,as.numeric(diff(as.numeric(factor(IND)))!=0)))]
-				#	for each potential clade, 
-				#		determine MRCA 
-				#		check if clade below corresponds to same individual
-				phb[, {
-							#print(GROUP)
-							mrca	<- IDX
-							diff	<- 0L
-							if(length(IDX)>1)
-							{
-								mrca	<- as.integer(getMRCA(ph, IDX))
-								tmp		<- extract.clade(ph, mrca, root.edge=1)
-								#print(tmp)
-								diff	<- length(setdiff(gsub('_read.*','',tmp$tip.label), IND))
-							}															
-							list(MRCA=mrca, DIFF_IND=diff)							
-						}, by='GROUP']
-				
-				phm			<- phb[, list(MRCA=as.numeric(getMRCA(ph, IDX))), by='FILE_ID']
-				#	find longest branch and diversity in clade below
-				
-							#FILE_ID<- 'R3_res567_S22_L001'; MRCA<- 1213
-							#print(MRCA)
-							z		<- extract.clade(ph, MRCA, root.edge=1)
-							z		<- drop.tip(z, z$tip.label[ !grepl(FILE_ID, z$tip.label) ], root.edge=1)
-							
-				df	<- merge(df, data.table(IDX= df$IDX[which(df$FILE_ID!=FILE_ID)]), by='IDX')
-				tmp	<- c(nrow(df), df[, length(unique(FILE_ID))])
-				if(tmp[1])
-				{
-					
-					df[, GROUP:= cumsum(c(1,as.numeric(diff(IDX)>1)))]
-					df[, GROUP:= df[, as.numeric(factor(paste(FILE_ID,'-',GROUP,sep='')))]]
-					df[, GROUP:= df[, cumsum(c(1,as.numeric(diff(GROUP)>1)))]]
-					tmp[1]	<- df[, length(unique(GROUP))]					
-				}
-				
-				
-				phb[, COUNT:= as.numeric(gsub('count_','',regmatches(BAM, regexpr('count_[0-9]+',BAM))))]
-				phb[, list(READS_N=sum(COUNT), UREADS_N=length(COUNT)), by='IND']				
-			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
-	
-	
-	
-	
-	
-	#	- record whether his/her tips are monophyletic
-	#	- find the
-	# pairwise patristic distances between the tips - the 'cophenetic distances' -
-	# and characterise those distances. 
-	dummy.p.value<-0
-	
-	for (i in 1:num.ids) {
-		id <- ids[i]
-		num.leaves <- length(patient.tips[[id]])
-		num.reads<-0
-		for (tip in patient.tips[[id]]) num.reads <- num.reads + as.numeric(unlist(strsplit(tip,"count_"))[2])
-		if (num.leaves>0) {
-			monophyletic <- as.numeric(is.monophyletic(tree, patient.tips[[id]]))
-			if (num.leaves > 1) {
-				subtree <- drop.tip(phy=tree,
-						tip=tree$tip.label[!(tree$tip.label %in% patient.tips[[id]])])
-				subtree.dist.matrix <- cophenetic(subtree)
-				subtree.dist <- subtree.dist.matrix[lower.tri(subtree.dist.matrix)]
-				mean.size <- mean(subtree.dist)
-				variance <- var(subtree.dist)
-				coeff.of.var.size <- ifelse(num.leaves > 2, sqrt(variance)/mean.size, 0)
-				## Distances are not weighted for the number of reads for each tip. 
-				## Corrections are included because mean and variance of distance matrices
-				## include zeros on diagonal, but shouldn't.
-				#subtree.dist.cf <- as.vector(subtree.dist.matrix)
-				#mean.size.cf <- mean(subtree.dist.cf)/(1-1/num.leaves)
-				#variance.cf <- var(subtree.dist.cf)*(1+1/num.leaves)-mean.size.cf^2/num.leaves
-				#cat("CF mean & var: ", mean.size.cf, variance.cf, '\n')
-				#cat("CW mean & var: ", mean.size.cw, variance.cw, '\n')
-				#cat('\n')
-			} else {
-				mean.size <- NA
-				coeff.of.var.size <- NA
-			}
-			root.to.tip<-0
-			for (i in 1:length(subtree$tip.label)) root.to.tip<-root.to.tip+nodeheight(subtree,i)
-			root.to.tip<-root.to.tip/length(subtree$tip.label)
-		} else {
-			monophyletic<-NA
-			mean.size<-NA
-			coeff.of.var.size<-NA
-			root.to.tip<-NA
-		}
-		pat.stats <- rbind(pat.stats, c(id, window, num.leaves, num.reads, monophyletic,
-						mean.size, coeff.of.var.size,root.to.tip))
+	if(mrca<=Ntip(ph))
+	{
+		phb		<- data.table(	BAM=ph$tip.label[mrca],
+								IND=gsub('_read.*','',ph$tip.label[mrca]),
+								COUNT=as.numeric(gsub('count_','',regmatches(ph$tip.label[mrca], regexpr('count_[0-9]+',ph$tip.label[mrca])))),											
+								DEPTH=0	)
 	}
+	if(mrca>Ntip(ph))
+	{
+		ph		<- extract.clade(ph,mrca)
+		phb		<- data.table(	BAM=ph$tip.label,
+								IND=gsub('_read.*','',ph$tip.label),
+								COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label))))	)
+		phb[, DEPTH:=node.depth.edgelength(ph)[seq_len(Ntip(ph))]]
+	}		
+	if(!is.na(select))
+		phb		<- subset(phb, grepl(select,IND))
+	list(AVG_ROOT2TIP=phb[, sum(DEPTH*COUNT) / sum(COUNT)], READ_N=phb[, sum(COUNT)], UREAD_N=phb[, length(COUNT)])	
+}
+
+#' @export
+pty.stat.superinfections.160208<- function(pty.ph, ptyfiles, references.pattern='REF')
+{
+	
+	plot.max.clade		<- 5
+	outfile				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201/ptyr22_examl_stat.pdf'
+	#	@CF: with data.table, the df[, {}, by=BY] syntax specifies the columns BY to loop over
+	#	@CF: the return variables of a data.table block {} are either a named list, or another data.table
+	#	@CF: one difference to data.frame is that the column names are available as variable names inside the block {}
+	
+	#	For each phylotype run (PTY_RUN), each patient (IND), each window (W_FROM, W_TO):
+	#	- find the root node (CLADE) defining all monophyletic clades		
+	stat.clades	<- ptyfiles[, {
+				#FILE		<- subset(ptyfiles, W_FROM==661)[,FILE]
+				#FILE<- 'ptyr22_InWindow_481_to_540_dophy_examl.newick'
+				cat('\n',FILE)
+				ph			<- pty.ph[[FILE]]
+				pty.stat.monophyletic.clades(ph)							
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE')]
+	gc()	
+	#	For each monophyletic clade:
+	#	- calculate the mean node root-to-tip within clade, weighted by read count
+	#	- calculate the number of reads
+	#	- calculate the number of unique reads
+	tmp			<- stat.clades[, {
+				#tmp<- subset(stat.clades, W_FROM==661); FILE<- tmp[,FILE]
+				#FILE<- 'ptyr22_InWindow_661_to_720_dophy_examl.newick'; CLADE<- 2066
+				#cat('\n',FILE)
+				ph			<- pty.ph[[FILE]]
+				tmp			<- pty.stat.avgnodedepth.and.counts(ph, CLADE, select=NA)	
+				names(tmp)	<- paste(names(tmp),'_CLADE',sep='')				
+				tmp
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE','CLADE')]
+	stat.clades	<- merge(stat.clades, tmp, by=c('PTY_RUN','W_FROM','W_TO','FILE','CLADE'))
+	gc()	
+	#	For each phylotype run (PTY_RUN), each patient (IND), each window (W_FROM, W_TO):
+	#	- calculate the average root to tip distance, weighted by read count
+	#	  this requires the MRCA which can be expensive but has already been computed
+	#	- calculate the total number of reads 
+	#	- calculate the number of unique reads
+	setkey(stat.clades, PTY_RUN, W_FROM, W_TO, FILE, IND)
+	tmp			<- subset(unique(stat.clades), select=c(PTY_RUN, W_FROM, W_TO, FILE, IND, MRCA))
+	stat.ind	<- tmp[,{
+				ph			<- pty.ph[[FILE]]
+				pty.stat.avgnodedepth.and.counts(ph, MRCA, select=IND)				
+			}, by=c('PTY_RUN','W_FROM','W_TO','FILE','IND')]
+	set(stat.ind, NULL, 'UREAD_N', stat.ind[, as.numeric(UREAD_N)])
+	#	For each phylotype run (PTY_RUN), each patient (IND), each window (W_FROM, W_TO):
+	#	- calculate number of clades
+	tmp			<- stat.clades[, list(CLADE_N=as.numeric(length(CLADE))), by=c('PTY_RUN','W_FROM','W_TO','FILE','IND')]	
+	stat.ind	<- merge(stat.ind, tmp, by=c('PTY_RUN','W_FROM','W_TO','FILE','IND'))
+	#	For each monophyletic clade:
+	#	- calculate the proportion of reads in the clade
+	#	- calculate clade order by proportion
+	stat.clades	<- merge(stat.clades, subset(stat.ind, select=c(PTY_RUN, W_FROM, W_TO, FILE, IND, READ_N)), by=c('PTY_RUN','W_FROM','W_TO','FILE','IND'))	
+	stat.clades[, READ_P_CLADE:= READ_N_CLADE/READ_N]
+	stat.clades[, READ_N:= NULL]
+	stat.clades	<- stat.clades[ order(PTY_RUN, W_FROM, W_TO, FILE, IND, -READ_P_CLADE), ]	
+	tmp			<- stat.clades[, list(ORDER_CLADE= seq_along(CLADE), CLADE=CLADE), by=c('PTY_RUN','W_FROM','W_TO','FILE','IND')]
+	stat.clades	<- merge(stat.clades, tmp, by=c('PTY_RUN','W_FROM','W_TO','FILE','IND','CLADE'))
+	#
+	#	check that all reads are in one clade
+	#
+	tmp			<- stat.clades[, list(READ_N_CHECK=sum(READ_N_CLADE)), by=c('PTY_RUN','W_FROM','W_TO','FILE','IND')]	
+	tmp			<- merge(tmp, subset(stat.ind, select=c(PTY_RUN, W_FROM, W_TO, FILE, IND, READ_N)), by=c('PTY_RUN','W_FROM','W_TO','FILE','IND'))
+	stopifnot( !nrow(subset(tmp, READ_N_CHECK<READ_N))	)
+	list(stat.clades=stat.clades, stat.ind=stat.ind)
+}
+
+#' @export
+pty.stat.superinfections.160208.plot<- function(stat.clades, stat.ind, outfile, plot.max.clade=5)
+{			
+	#
+	#	print by patient
+	#
+	
+	#	@CF: To get a sub-plot for each statistic using 'facet_grid', I melt the data.table
+	#	@CF: the 'set' command looks a bit weird, but is great because it avoids creating new R objects via '<-'
+	
+	#	melt the statistics on individuals
+	stat.plot	<- melt(stat.ind, measure.vars=c('READ_N','UREAD_N','CLADE_N','AVG_ROOT2TIP'), id.vars=c('PTY_RUN','W_FROM','W_TO','FILE','IND'), value.name='V', variable.name='STAT')
+	#	melt the statistics on clades
+	tmp			<- melt(stat.clades, measure.vars=c('READ_P_CLADE','AVG_ROOT2TIP_CLADE'), id.vars=c('PTY_RUN','W_FROM','W_TO','FILE','IND','ORDER_CLADE'), value.name='V', variable.name='STAT')
+	set(tmp, NULL, 'STAT', tmp[,gsub('_CLADE','',STAT)])
+	#	select most prevalent clades and put all together
+	stat.plot	<- rbind( stat.plot, subset(tmp, ORDER_CLADE<=plot.max.clade), use.names=TRUE, fill=TRUE )
+	#	give things nice names
+	set(stat.plot, NULL, 'ORDER_CLADE', stat.plot[, as.character(ORDER_CLADE)])
+	tmp			<- stat.plot[, which(!is.na(ORDER_CLADE))]
+	set(stat.plot, tmp, 'ORDER_CLADE', stat.plot[tmp, paste('Clade',ORDER_CLADE)])
+	tmp			<- stat.plot[, sort(na.omit(unique(ORDER_CLADE)))]
+	set(stat.plot, stat.plot[, which(is.na(ORDER_CLADE))], 'ORDER_CLADE', 'Individual')
+	set(stat.plot, NULL, 'ORDER_CLADE', stat.plot[, factor(ORDER_CLADE, levels=c('Individual',tmp), labels=c('Individual',tmp))])	
+	set(stat.plot, NULL, 'STAT', stat.plot[,factor(STAT, levels=c('READ_N','UREAD_N','CLADE_N','READ_P','AVG_ROOT2TIP'), labels=c('Reads\n(#)', 'Tips\n(#)','Monophyletic\nclades\n(#)','Reads\n(%)','Root-to-tip\npatristic distance\n(mean subst/site)'))])
+	#	
+	#	setup plots per patient	
+	#
+	ps	<- lapply(stat.plot[, unique(IND)], function(x){
+				#x<- 'R1_RES669_S20_L001'
+				tmp			<- subset(stat.plot, IND==x)
+				set(tmp, NULL, 'IND', tmp[,paste('run:',PTY_RUN,', individual:',IND)])
+				col			<- c('black',rainbow_hcl(tmp[, length(unique(ORDER_CLADE))-1], start = 270, end = -30, c=100, l=50))
+				names(col)	<- tmp[, unique(ORDER_CLADE)]	
+				setkey(tmp, PTY_RUN, W_FROM, IND, ORDER_CLADE)
+				p			<- ggplot(tmp , aes(x=W_FROM, y=V, group=STAT)) +
+						geom_point(data=subset(tmp, !grepl('Reads\n(%)',STAT)), size=0.5, aes(colour=ORDER_CLADE)) +
+						geom_bar(data=subset(tmp, STAT=='Reads\n(%)'), stat='identity', aes(fill=ORDER_CLADE)) +
+						geom_line(data=subset(tmp, grepl('Root-to-tip',STAT)), aes(colour=ORDER_CLADE)) +
+						scale_colour_manual(values=col) +
+						scale_fill_manual(values=col, guide=FALSE) +
+						scale_x_continuous(breaks=seq(0,12e3,1e3), minor_breaks=seq(0,12e3,2e2), expand=c(0,0), lim=c(1,stat.plot[, max(W_TO)+1])) +
+						theme_bw() + labs(x='Genome location', y='', colour='', fill='') +
+						facet_grid(STAT~IND, scale='free_y')				
+			})
+	cat('\nPlot to',outfile)
+	pdf(file=outfile, w=9, h=9)			
+	for(p in ps)
+		print(p)					
+	dev.off()	
 }
 
 #' @export
@@ -1404,7 +1601,12 @@ pty.cmdwrap.examl<- function(pty.args)
 	
 	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
 	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
-	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]
+	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]	
+	tmp				<- data.table(OUTFILE=list.files(out.dir, pattern='.newick$'))						
+	tmp[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(OUTFILE,'_'),'[[',1)))]
+	infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1, allow.cartesian=TRUE)		
+	setkey(infiles, PTY_RUN)
+	infiles			<- subset(unique(infiles), is.na(OUTFILE))	
 	#infiles		<- subset(infiles, PTY_RUN%in%c(3, 9, 12, 15))
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
