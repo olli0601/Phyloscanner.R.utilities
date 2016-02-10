@@ -1602,7 +1602,7 @@ pty.cmdwrap.examl<- function(pty.args)
 	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
 	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]	
-	tmp				<- data.table(OUTFILE=list.files(out.dir, pattern='.newick$'))						
+	tmp				<- data.table(OUTFILE=list.files(indir, pattern='.newick$'))						
 	tmp[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(OUTFILE,'_'),'[[',1)))]
 	infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1, allow.cartesian=TRUE)		
 	setkey(infiles, PTY_RUN)
