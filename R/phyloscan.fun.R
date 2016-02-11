@@ -1620,7 +1620,8 @@ pty.cmdwrap.examl<- function(pty.args)
 	infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1, allow.cartesian=TRUE)		
 	setkey(infiles, PTY_RUN)
 	infiles			<- subset(unique(infiles), is.na(OUTFILE))	
-	infiles		<- subset(infiles, PTY_RUN%in%c(1,5,7,23,33,34,44,48))
+	infiles			<- subset(infiles, PTY_RUN%in%c(1,5,7,23,33,34,44,48))
+	print(infiles)
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
 					{
@@ -1639,6 +1640,7 @@ pty.cmdwrap.examl<- function(pty.args)
 									#FILE<- 'ptyr1_InWindow_1_to_60.fasta'
 									#READ	<- tmp$READ[which(tmp$FILE==FILE)]
 									z		<- file.path(outdir,gsub('\\.fasta','_dophy\\.fasta',FILE))
+									print(z)
 									if(!file.exists(z))
 									{
 										write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
