@@ -1628,11 +1628,13 @@ pty.cmdwrap.examl<- function(pty.args)
 						#i<- 1							
 						load(file.path(indir,infiles[i,FILE]))	#loads "pty.seq.rw" "pty.seq"    "seqd"
 						setkey(seqd, W_FROM)
-						#
 						#	select
-						#
-						if(!is.na(pty.args[['min.ureads.individual']]))	#	select individuals with x unique reads in each window
-							seqd	<- subset(seqd, UNIQUE_N>=pty.args[['min.ureads.individual']])
+						if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
+						{
+							seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=min.ureads.individual)
+							seqd[, TOTAL_N:=NULL]
+							seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
+						}
 						#	write fasta
 						pty.fa		<- seqd[, {	
 									#FILE<- 'ptyr1_InWindow_1_to_60.fasta'

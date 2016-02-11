@@ -644,18 +644,18 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
 									min.ureads.individual=20, min.ureads.candidate=NA, 
-									args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=5)								
+									args.examl="-f d -D -m GAMMA", bs.n=0, exa.n.per.run=2)								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
 		invisible(exa.cmd[,	{		
-							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
-							cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=40, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=40, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)
 							outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
@@ -680,7 +680,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972",
