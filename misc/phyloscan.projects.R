@@ -6,8 +6,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	#pty.pipeline.examl()	
-	pty.pipeline.coinfection.statistics()
+	pty.pipeline.examl()	
+	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
 	if(0)
@@ -644,7 +644,7 @@ pty.pipeline.examl<- function()
 		stop()
 	}
 	#	run ExaML without bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
@@ -680,7 +680,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972",
