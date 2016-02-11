@@ -1611,8 +1611,7 @@ project.dualinfecions.phylotypes.countbam.150120<- function()
 pty.cmdwrap.examl<- function(pty.args)
 {
 	indir					<- pty.args[['out.dir']]
-	outdir					<- indir
-	
+	outdir					<- indir	
 	stopifnot( pty.args[['exa.n.per.run']]>=0, pty.args[['bs.n']]>=0, !is.na(pty.args[['min.ureads.individual']]) | !is.na(pty.args[['min.ureads.candidate']])	)	
 	infiles		<- data.table(FILE=list.files(indir, pattern='_alignments.rda$'))
 	infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]	
@@ -1629,9 +1628,9 @@ pty.cmdwrap.examl<- function(pty.args)
 						load(file.path(indir,infiles[i,FILE]))	#loads "pty.seq.rw" "pty.seq"    "seqd"
 						setkey(seqd, W_FROM)
 						#	select
-						if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
+						if(!is.na(pty.args[['min.ureads.individual']]))	#	select individuals with x unique reads in each window
 						{
-							seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=min.ureads.individual)
+							seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=pty.args[['min.ureads.individual']])
 							seqd[, TOTAL_N:=NULL]
 							seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
 						}
