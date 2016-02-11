@@ -1631,7 +1631,7 @@ pty.cmdwrap.examl<- function(pty.args)
 						#	select
 						if(!is.na(pty.args[['min.ureads.individual']]))	#	select individuals with x unique reads in each window
 						{
-							seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=pty.args[['min.ureads.individual']])
+							seqd	<- subset(seqd, grepl('REF',FILE_ID) | UNIQUE_N>=pty.args[['min.ureads.individual']])
 							seqd[, TOTAL_N:=NULL]
 							seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
 						}
@@ -1640,7 +1640,7 @@ pty.cmdwrap.examl<- function(pty.args)
 									#FILE<- 'ptyr1_InWindow_1_to_60.fasta'
 									#READ	<- tmp$READ[which(tmp$FILE==FILE)]
 									z		<- file.path(outdir,gsub('\\.fasta','_dophy\\.fasta',FILE))
-									print(z)
+									#print(z)
 									if(!file.exists(z))
 									{
 										write.dna(pty.seq[[FILE]][READ,], file=z, format='fasta', colsep='', nbcol=-1)
