@@ -1621,7 +1621,7 @@ pty.cmdwrap.examl<- function(pty.args)
 	infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1, allow.cartesian=TRUE)		
 	setkey(infiles, PTY_RUN)
 	infiles			<- subset(unique(infiles), is.na(OUTFILE))	
-	#infiles		<- subset(infiles, PTY_RUN%in%c(3, 9, 12, 15))
+	infiles		<- subset(infiles, PTY_RUN%in%c(1,5,7,23,33,34,44,48))
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
 					{
