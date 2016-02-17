@@ -222,54 +222,7 @@ project.dualinfecions.phylotypes.mltrees.160115<- function()
 	
 	
 	
-	ptyfiles				<- merge(ptyfiles, pty.stat[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
-	
-	
-	# For each patient: record whether his/her tips are monophyletic, find the
-	# pairwise patristic distances between the tips - the 'cophenetic distances' -
-	# and characterise those distances. 
-	dummy.p.value<-0
-	
-	for (i in 1:num.ids) {
-		id <- ids[i]
-		num.leaves <- length(patient.tips[[id]])
-		num.reads<-0
-		for (tip in patient.tips[[id]]) num.reads <- num.reads + as.numeric(unlist(strsplit(tip,"count_"))[2])
-		if (num.leaves>0) {
-			monophyletic <- as.numeric(is.monophyletic(tree, patient.tips[[id]]))
-			if (num.leaves > 1) {
-				subtree <- drop.tip(phy=tree,
-						tip=tree$tip.label[!(tree$tip.label %in% patient.tips[[id]])])
-				subtree.dist.matrix <- cophenetic(subtree)
-				subtree.dist <- subtree.dist.matrix[lower.tri(subtree.dist.matrix)]
-				mean.size <- mean(subtree.dist)
-				variance <- var(subtree.dist)
-				coeff.of.var.size <- ifelse(num.leaves > 2, sqrt(variance)/mean.size, 0)
-				## Distances are not weighted for the number of reads for each tip. 
-				## Corrections are included because mean and variance of distance matrices
-				## include zeros on diagonal, but shouldn't.
-				#subtree.dist.cf <- as.vector(subtree.dist.matrix)
-				#mean.size.cf <- mean(subtree.dist.cf)/(1-1/num.leaves)
-				#variance.cf <- var(subtree.dist.cf)*(1+1/num.leaves)-mean.size.cf^2/num.leaves
-				#cat("CF mean & var: ", mean.size.cf, variance.cf, '\n')
-				#cat("CW mean & var: ", mean.size.cw, variance.cw, '\n')
-				#cat('\n')
-			} else {
-				mean.size <- NA
-				coeff.of.var.size <- NA
-			}
-			root.to.tip<-0
-			for (i in 1:length(subtree$tip.label)) root.to.tip<-root.to.tip+nodeheight(subtree,i)
-			root.to.tip<-root.to.tip/length(subtree$tip.label)
-		} else {
-			monophyletic<-NA
-			mean.size<-NA
-			coeff.of.var.size<-NA
-			root.to.tip<-NA
-		}
-		pat.stats <- rbind(pat.stats, c(id, window, num.leaves, num.reads, monophyletic,
-						mean.size, coeff.of.var.size,root.to.tip))
-	}	
+	ptyfiles				<- merge(ptyfiles, pty.stat[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')		
 }
 
 #' @export
@@ -524,6 +477,8 @@ pty.stat.monophyletic.clades<- function(ph)
 	#		find change points on these unique paths below which the subtree contains reads from the current patient
 	#		the idea is that all monophyletic clades of this patient must break off from one of these paths	
 	tmp			<- subset(z, DIFF_IND>0, c(IND, MRCA))
+	if(!nrow(tmp))
+		z[, CLADE:=NA_integer_]
 	if(nrow(tmp))
 	{
 		#	find all tips that belong to another patient than the current individual
@@ -596,14 +551,17 @@ pty.stat.monophyletic.clades<- function(ph)
 	tmp	<- z[, which(DIFF_IND==0)]
 	set(z, tmp, 'CLADE', z[tmp,MRCA])
 	#	double check CLADEs (the MONOPH_PA condition is key)
-	tmp	<- z[,{
-				if(CLADE<=Ntip(ph))
-					tmp	<- grepl(IND, ph$tip.label[CLADE])
-				if(CLADE>Ntip(ph))
-					tmp	<- all(grepl(IND, extract.clade(ph,CLADE)$tip.label))
-				list(MONOPH=tmp, MONOPH_PA=all(grepl(IND, extract.clade(ph,Ancestors(ph, CLADE, type="parent"))$tip.label)))
-			}, by=c('IND','CLADE')]
-	stopifnot(tmp[, all(MONOPH)], tmp[, !any(MONOPH_PA)])
+	if(nrow(z))
+	{
+		tmp	<- z[,{
+					if(CLADE<=Ntip(ph))
+						tmp	<- grepl(IND, ph$tip.label[CLADE])
+					if(CLADE>Ntip(ph))
+						tmp	<- all(grepl(IND, extract.clade(ph,CLADE)$tip.label))
+					list(MONOPH=tmp, MONOPH_PA=all(grepl(IND, extract.clade(ph,Ancestors(ph, CLADE, type="parent"))$tip.label)))
+				}, by=c('IND','CLADE')]
+		stopifnot(tmp[, all(MONOPH)], tmp[, !any(MONOPH_PA)])	
+	}	
 	z	
 }
 
@@ -851,6 +809,7 @@ pty.stat.superinfections.160208.plot<- function(stat.clades, stat.ind, outfile, 
 	#
 	ps	<- lapply(stat.plot[, unique(IND)], function(x){
 				#x<- 'R1_RES669_S20_L001'
+				cat('\n',x)
 				tmp			<- subset(stat.plot, IND==x)
 				set(tmp, NULL, 'IND', tmp[,paste('run:',PTY_RUN,', individual:',IND)])
 				col			<- c('black',rainbow_hcl(tmp[, length(unique(ORDER_CLADE))-1], start = 270, end = -30, c=100, l=50))
@@ -1114,7 +1073,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	#
 	ptyfiles[, IND_N:= sapply(seq_along(pty.ph), function(i)  length(unique(gsub('_read.*','',pty.ph[[i]]$tip.label)))		)]
 	#	rm trees with just one individual if no outgroup specified	
-	if(is.na(outgroup) & pty.runs[, any(FILL==1)])
+	if(is.na(outgroup) && pty.runs[, any(FILL==1)])
 	{
 		cat('\nignoring trees with only one individual (only when no root specified)', subset(ptyfiles, IND_N==1)[, paste(unique(FILE),collapse=', ')])
 		ptyfiles		<- subset(ptyfiles, IND_N>1)
@@ -1145,14 +1104,14 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}
 	#	root not specified; determine root for each run: find taxon with largest distance from BAM of selected individuals (these have FILL==0)
-	if(is.na(outgroup) & pty.runs[, any(FILL==1)])
+	if(is.na(outgroup) && pty.runs[, any(FILL==1)])
 	{
 		cat('\ndetermine root among fillers')
 		pty.root	<- pty.evaluate.tree.root.withfill(ptyfiles, pty.ph, pty.runs)
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}
 	#	root not specified; determine root for each run: 
-	if(is.na(outgroup) & pty.runs[, all(FILL==0)])
+	if(is.na(outgroup) && pty.runs[, all(FILL==0)])
 	{
 		cat('\ndetermine root among all individuals')
 		pty.root	<- pty.evaluate.tree.root.nofill(ptyfiles, pty.ph, pty.runs)
@@ -1542,7 +1501,7 @@ pty.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='',
 	#	select
 	if(!is.na(min.ureads.individual))	#	select individuals with x unique reads in each window
 	{
-		seqd	<- subset(seqd, grepl('REF',FILE_ID) || UNIQUE_N>=min.ureads.individual)
+		seqd	<- subset(seqd, grepl('REF',FILE_ID) | UNIQUE_N>=min.ureads.individual)
 		seqd[, TOTAL_N:=NULL]
 		seqd	<- merge(seqd, seqd[, list(TOTAL_N=length(READ)), by='FILE'], by='FILE')
 	}

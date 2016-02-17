@@ -83,7 +83,6 @@ hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.node
 	## travese the ph in depth first order
 	for(i in 1:length(dfs$order))
 	{
-		print(i)
 		node <- dfs$order[i]
 #print( c(node,node-ntips, is.na(clu.mem[node]), thresh.brl, dist.brl[node-ntips], dist.brl[node-ntips]<=thresh.brl, thresh.nodesupport, nodesupport[node-ntips], nodesupport[node-ntips]<thresh.nodesupport) )
 		if(	node > ntips	&&											## skip leaves
