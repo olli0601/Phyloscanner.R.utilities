@@ -268,6 +268,14 @@ pty.evaluate.tree.root.withfill<- function(ptyfiles, pty.ph, pty.runs)
 	pty.root	<- do.call('rbind',pty.root)
 	pty.root
 }
+#
+#	This function assigns edges of a tree 'ph' to individuals (with max parsimony)
+#	The data.table 'phb' contains taxon names in column 'BAM' and individual assignments in column 'FILE_ID'  
+#	The individual assignments for each edge are stored as an attribute to the phylogeny. The attribute is called 'INDIVIDUAL'.
+#	Note in ggtree, edges are identified by the node IDs in which the edges end, not the edge index in 'ph$edge'.
+#	
+#	Returns phylogeny 'ph' with attribute 'INDIVIDUAL'. The attribute is a factor, with label names corresponding
+#	to the individuals.
 pty.evaluate.tree.groupindividuals<- function(ph, phb)
 {
 	tmp				<- lapply( phb[, unique(FILE_ID)], function(x)	subset(phb, FILE_ID==x)[, BAM]	)
@@ -283,7 +291,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 {	
 	stopifnot(!is.null(pty.runs) || (is.null(pty.runs) & !is.na(outgroup)))
 	#
-	#	collect ML tree files
+	#	collect ML tree file names 
 	#
 	ptyfiles		<- data.table(FILE=list.files(indir, tree.pattern))
 	if(nchar(run.pattern))

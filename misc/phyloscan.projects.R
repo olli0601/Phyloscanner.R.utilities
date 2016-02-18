@@ -2,15 +2,16 @@ project.dual<- function()
 {	
 	CODE.HOME	<<- "/work/or105/libs/phyloscan"
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
+	#project.readlength.count.bam.150218()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
 	#pty.pipeline.examl()	
-	pty.pipeline.coinfection.statistics()
+	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
-	if(0)
+	if(1)
 	{
 		require(big.phylo)
 		cmd			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
@@ -26,7 +27,8 @@ pty.various	<- function()
 {
 	#project.scan.superinfections()
 	#project.scan.contaminants()
-	project.readlength.count.all()
+	#project.readlength.count.all()
+	project.readlength.count.bam.150218()
 }
 
 project.dual.alignments.missing<- function()
@@ -435,8 +437,9 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 	#
 	#	input args
 	#	
-	pty.gd		<- 0.2
-	pty.sel.n	<- 15
+	thresh.brl	<- 0.1
+	thresh.bs	<- 0.7			
+	pty.sel.n	<- 25
 	
 	infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
 	load(infile)	#loads sqi, sq	
@@ -444,6 +447,8 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 	outdir		<- indir
 	infile		<-  "PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2.rda"
 	load(file.path(indir,infile))	#loads "ph" "dist.brl" "ph.gdtr"  "ph.mrca"	"clustering"
+	#	select Uganda samples
+	sqi			<- subset(sqi, SITE=='UG' | SEQLOC=='LosAlamos')
 	#	add SANGER_ID
 	infile.s	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
 	si			<- as.data.table(read.csv(infile.s, stringsAsFactors=FALSE))
@@ -452,22 +457,20 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
 	tmp			<- subset(si, grepl('^PG14-UG', PANGEA_ID), c(PANGEA_ID, SANGER_ID))
 	set(tmp, NULL, 'PANGEA_ID', tmp[,gsub('-','_',PANGEA_ID)])
-	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1)	
+	#	of the duplicate PANGEA_IDs, consider only those with larger coverage	
+	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1, allow.cartesian=TRUE)
+	tmp			<- sqi[, list(SANGER_ID=SANGER_ID[which.max(COV)]), by='PANGEA_ID']
+	sqi			<- merge(sqi, tmp, by=c('PANGEA_ID','SANGER_ID'))
 	#
 	#	select closest 15 individuals
 	#
-	thresh.brl	<- 0.1
-	thresh.bs	<- 0.7	
-	pty.gd		<- 0.1
-	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")	
-	
-	clustering	<- hivc.clu.clusterbythresh(ph, thresh.brl=pty.gd, dist.brl=dist.brl, retval="all")
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph$node.label,retval="all")	
 	table(clustering$size.tips)
 	
 	pty.clu		<- subset(data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label, CLU_ID=clustering$clu.mem[seq_len(Ntip(ph))]), !is.na(CLU_ID))	
 	#	reduce to clusters containing at least one ZA sequence
 	pty.clu		<- merge(pty.clu, sqi,by='TAXA')
-	tmp			<- pty.clu[, list(ANY_NOT_INCOUNTRY= any(is.na(SITE) | SITE!='ZA'), ALL_NOT_INCOUNTRY= all(is.na(SITE) | SITE!='ZA')), by='CLU_ID']
+	tmp			<- pty.clu[, list(ANY_NOT_INCOUNTRY= any(is.na(SITE) | SITE!='UG'), ALL_NOT_INCOUNTRY= all(is.na(SITE) | SITE!='UG')), by='CLU_ID']
 	cat('\nInspecting clusters if not in-country')
 	print(tmp[, table(ANY_NOT_INCOUNTRY, ALL_NOT_INCOUNTRY)])
 	tmp			<- subset(tmp, !ALL_NOT_INCOUNTRY)
@@ -483,7 +486,7 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 	setnames(ph.gdf, c('Var1','Var2'),c('TAXA','TAXA2'))
 	tmp			<- data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label)
 	tmp			<- merge(tmp, sqi,by='TAXA')
-	tmp			<- subset(tmp, SITE=='ZA')
+	tmp			<- subset(tmp, SITE=='UG')
 	tmp[, DUMMY:=NULL]
 	ph.gdf		<- merge(ph.gdf, subset(tmp, select=TAXA), by='TAXA')
 	ph.gdf		<- merge(ph.gdf, data.table(TAXA2=tmp[,TAXA]), by='TAXA2')
@@ -493,7 +496,7 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 	setkey(pty.clu, CLU_ID)	
 	tmp			<- unique(pty.clu)
 	tmp			<- tmp[order(-CLU_N),]	
-	tx.seeds	<- c(tmp[, TAXA], setdiff(subset(sqi, SITE=='ZA')[,TAXA], tmp[, TAXA]))	
+	tx.seeds	<- c(tmp[, TAXA], setdiff(subset(sqi, SITE=='UG')[,TAXA], tmp[, TAXA]))	
 	#	not all seeds in tree (ie no consensus)
 	tx.seeds	<- intersect( tx.seeds, ph$tip.label )
 	cat('\ninitial seeds n=',length(tx.seeds))
@@ -509,25 +512,20 @@ project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
 		ph.gdf		<- subset(ph.gdf, !TAXA%in%tmp[,TAXA] & !TAXA2%in%tmp[,TAXA]) 
 		cat('\nrun',ptyr,'select n=',nrow(tmp),'remaining seeds n=',length(tx.seeds), 'remaining distances n=', nrow(ph.gdf))
 		pty.runs	<- rbind(tmp, pty.runs)
-		ptyr		<- ptyr+1L
-		
+		ptyr		<- ptyr+1L	
 	}
 	pty.runs	<- subset(pty.runs, !is.na(TAXA))
 	#pty.runs[, table(PTY_RUN)]
 	#	NOTE!!! merge last two since last v small
-	set(pty.runs, pty.runs[, which(PTY_RUN==53L)], 'PTY_RUN', 52L)
+	set(pty.runs, pty.runs[, which(PTY_RUN==146L)], 'PTY_RUN', 145L)
 	pty.runs[, FILL:=0L]
 	pty.runs[, TX_IDX:=match(pty.runs[,TAXA],ph$tip.label)]
 	pty.runs[, GD:=NULL]
 	#
-	tmp			<- subset(si, select=c(SANGER_ID, PANGEA_ID))
-	set(tmp, NULL, 'PANGEA_ID', tmp[, gsub('-','_',PANGEA_ID)])
-	setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','FILE_ID'))
-	pty.runs	<- merge(pty.runs, tmp, by='TAXA', all.x=1)
-	tmp			<- pty.runs[, which(is.na(FILE_ID))]
-	set(pty.runs, tmp,'FILE_ID', pty.runs[tmp, TAXA])
-	setkey(pty.runs, PTY_RUN)
-	pty.runs[, FILL:=0]
+	tmp			<- subset(sqi, select=c(PANGEA_ID, SANGER_ID))
+	setnames(tmp, c('PANGEA_ID','SANGER_ID'), c('TAXA','FILE_ID') )
+	pty.runs	<- merge(pty.runs, tmp, by='TAXA')	
+	setkey(pty.runs, PTY_RUN)	
 	#	
 	cat('\nNumber of clusters=', pty.runs[, length(unique(CLU_ID))])
 	cat('\nNumber of scheduled phylotype runs=', pty.runs[, max(PTY_RUN)])
@@ -948,7 +946,7 @@ pty.pipeline.fasta<- function()
 		no.trees		<- '-T'
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
-	if(0)	#coinfections on Mac
+	if(0)	#coinfections ZA on Mac
 	{
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
 		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
@@ -959,7 +957,18 @@ pty.pipeline.fasta<- function()
 		no.trees		<- '-T'
 		hpc.load		<- ""
 	}
-	if(1)	#coinfections on HPC
+	if(1)	#coinfections UG on Mac
+	{
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2_coinfrunsinput.rda") )
+		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/coinf_ptinput_UG'
+		out.dir			<- file.path(HOME,"coinf_ptoutput_150217")
+		pty.prog		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		raxml			<- 'raxml'
+		no.trees		<- '-T'
+		hpc.load		<- ""
+	}
+	if(0)	#coinfections ZA on HPC
 	{
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda") )
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
@@ -1000,11 +1009,23 @@ pty.pipeline.fasta<- function()
 		pty.c				<- subset(pty.c, PTY_RUN%in%c(24,26,2,31,34,36,38,44,46,60,69,77,70,78,8))
 	}
 	#	run 160201	window length 60 & Q1 18 & keep overhangs & alignment specified
-	if(1)
+	if(0)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 										window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 										strip.max.len=350, min.ureads.individual=20)
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
+		pty.c[1,cat(CMD)]
+		#stop()
+		#pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
+	}
+	#	run 160217	window length 250 & Q1 18 & keep overhangs & alignment specified
+	if(1)
+	{		
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=24, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=100, keep.overhangs='',
+				strip.max.len=NA, min.ureads.individual=20,
+				select=c(1))
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
 		#stop()
@@ -1327,7 +1348,43 @@ project.readlength.count.all<- function()
 	}
 }
 
-project.readlength.count.bam.150120<- function()
+project.readlength.count.bam.150218<- function()
+{
+	require(ggplot2)
+	require(data.table)
+	require(Rsamtools)		
+	#pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'	
+	pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+	outfile			<- file.path(pty.data.dir,'bam_stats_150218.rda')			
+	
+	
+	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
+	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
+	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
+	#FILE<- "14939_1_80.bam"
+	#cat('\nreading',FILE)
+	#bam<- scanBam(file.path(pty.data.dir,FILE))[[1]]	#scan entire file
+	bam.cov	<- bfiles[,{
+				cat('\nCOV reading',FILE)
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+				tmp	<- IRanges(start=z$pos, width=z$qwidth)
+				tmp <- coverage(tmp)
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+			}, by='FILE_ID']
+	#	get lengths of all reads in quality trimmed bam file
+	#z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','qual')))
+	bam.len			<- bfiles[,{
+				#FILE<- "14939_1_80.bam"
+				cat('\nLEN reading',FILE)
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth')))
+				list(QU=seq(0,320,20), CDF=ecdf(z[[1]][['qwidth']])(seq(0,320,20)))
+				#list(PR=seq(0.01,0.99,0.01), QU=quantile(z[[1]][['qwidth']], p=seq(0.01,0.99,0.01)))				
+			}, by='FILE']
+	#
+	save(bam.len, bam.cov, file= outfile)
+}
+
+project.readlength.count.bam.ZA.150120<- function()
 {
 	require(ggplot2)
 	require(data.table)

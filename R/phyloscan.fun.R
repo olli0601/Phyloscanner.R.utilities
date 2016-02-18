@@ -4,7 +4,7 @@ PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.re
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
 PR.SCAN.SUPERINF	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.superinfections.Rscript"))
 PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
-PR.ALIGNMENT.ROOT	<- "R0_CPX_AF460972_read_1_count_0"
+PR.ALIGNMENT.ROOT	<- "R0_REF_CPX_AF460972_read_1_count_0"
 EPS					<- 1e-12
 
 #' @export
@@ -93,10 +93,12 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	cmd		<- paste(cmd,'cp "',file.ref,'" "',tmpdir,'"\n',sep='')
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
-	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',paste(as.character(window.coord), collapse=' '),sep='')	
+	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
 	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)	
 	if(nchar(window.automatic))
 		cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
+	if(!nchar(window.automatic))
+		cmd	<- paste(cmd,' --window-coords ', paste(as.character(window.coord), collapse=','),sep='')
 	if(nchar(ref.file) & keep.overhangs!='--keep-overhangs')
 		cmd	<- paste(cmd,' --alignment-of-other-refs ',ref.file,sep='')	
 	if(nchar(ref.root) & keep.overhangs!='--keep-overhangs')
@@ -141,6 +143,8 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 	ptyd		<- dcast.data.table(ptyd, FILE_ID~TYPE, value.var='FILE')
 	#	merge
 	pty.runs	<- merge(pty.runs, ptyd, by='FILE_ID', all.x=1)
+	if(!is.na(pty.args[['select']]))
+		pty.runs<- subset(pty.runs, PTY_RUN%in%pty.args[['select']])
 	tmp			<- subset(pty.runs, is.na(BAM) | is.na(REF))
 	if(nrow(tmp))
 	{
@@ -1040,24 +1044,33 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		outgroup	<- NA
 		outgroup	<- "CPX_AF460972"
 	}
+	#
+	#	the first part pre-processes trees and saves them to file
+	#	the second part plots the trees
+	#	@CF: to do the plotting by hand, load the pre-processed rda file and continue with PART 2
+	#
+	#	PART 1
+	#
 	stopifnot(!is.null(pty.runs) || (is.null(pty.runs) & !is.na(outgroup)))
-	#
-	#	collect ML tree files
-	#
+	#	collect ML tree file names
 	ptyfiles		<- data.table(FILE=list.files(indir, tree.pattern))
+	#	define phylotype run ID
+	#	Just 1 if no run pattern provided
 	if(nchar(run.pattern))
 		ptyfiles[, PTY_RUN:= as.numeric(gsub(run.pattern,'',sapply(strsplit(FILE,'_'),'[[',1)))]
 	if(!nchar(run.pattern))
 		ptyfiles[, PTY_RUN:=1L]
+	#	Extract window coordinates
 	ptyfiles[, W_FROM:= as.numeric(gsub('InWindow_','',regmatches(FILE,regexpr('InWindow_[0-9]+',FILE))))] 
 	ptyfiles[, W_TO:= as.numeric(gsub('to_','',regmatches(FILE,regexpr('to_[0-9]+',FILE))))]
+	#	Select just a few files for processing; does nothing if select==''
 	ptyfiles		<- subset(ptyfiles, grepl(select,FILE))
 	setkey(ptyfiles, PTY_RUN, W_FROM)
 	cat('\nfound tree files, n=',nrow(ptyfiles))
-	#ptyfiles		<- subset(ptyfiles, W_FROM<9000)
+	#	
+	#	read raw trees in newick format from tree file
+	#	and set node labels to numeric
 	#
-	#ptyfiles[, table(PTY_RUN)]
-	#	raw trees w/o any attributes
 	pty.ph		<- lapply( seq_len(nrow(ptyfiles)), function(i)
 			{				
 				ph			<- read.tree(file.path(indir,ptyfiles[i, FILE]))
@@ -1070,9 +1083,9 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 				ph
 			})
 	names(pty.ph)<- ptyfiles[, FILE]
-	#
+	#	count number of individuals in each tree
 	ptyfiles[, IND_N:= sapply(seq_along(pty.ph), function(i)  length(unique(gsub('_read.*','',pty.ph[[i]]$tip.label)))		)]
-	#	rm trees with just one individual if no outgroup specified	
+	#	remove trees with just one individual if no outgroup specified	
 	if(is.na(outgroup) && pty.runs[, any(FILL==1)])
 	{
 		cat('\nignoring trees with only one individual (only when no root specified)', subset(ptyfiles, IND_N==1)[, paste(unique(FILE),collapse=', ')])
@@ -1084,7 +1097,9 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	#
 	#	GET ROOTS
 	#	
-	#	root specified; check if in tree
+	#	root specified by user; check if in tree; 
+	#		if in tree, then set the ROOT column; 
+	#		if not in tree, return missing 
 	if(!is.na(outgroup))
 	{
 		cat('\nroot and evaluate trees')
@@ -1100,10 +1115,12 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 						cat('\nfound >1 roots', outgroup,'in tree',FILE,', ignoring file')
 					list(ROOT=ans)
 				}, by= c('FILE','PTY_RUN')]
+		# pty.root is a data.table with run ID PTY_RUN, file name FILE, and corresponding root ROOT
 		pty.root	<- subset(pty.root, !is.na(ROOT))	
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}
 	#	root not specified; determine root for each run: find taxon with largest distance from BAM of selected individuals (these have FILL==0)
+	#	this is only for olli
 	if(is.na(outgroup) && pty.runs[, any(FILL==1)])
 	{
 		cat('\ndetermine root among fillers')
@@ -1111,6 +1128,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}
 	#	root not specified; determine root for each run: 
+	#	this is only for olli
 	if(is.na(outgroup) && pty.runs[, all(FILL==0)])
 	{
 		cat('\ndetermine root among all individuals')
@@ -1118,9 +1136,9 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		ptyfiles	<- merge(ptyfiles,pty.root, by=c('FILE','PTY_RUN'))
 	}	
 	#
-	#	trees: root, ladderize, group
+	#	pre-process trees: root, ladderize, associate edges to individuals
 	#
-	#pty.ph.cp			<- copy(pty.ph)	
+	#	pty.ph.cp			<- copy(pty.ph)	
 	#	pty.ph	<- copy(pty.ph.cp)
 	cat('\nroot, ladderize, group trees')
 	for(i in seq_along(pty.ph))
@@ -1129,17 +1147,21 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		#print(i)
 		#i<- 44
 		#i<- 5
+		#	root
 		root			<- subset(ptyfiles, FILE==names(pty.ph)[i])[, ROOT]
 		ph				<- pty.ph[[i]]
 		tmp										<- which(ph$tip.label==root)
 		ph										<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])
 		ph$node.label[ph$node.label=='Root']	<- 0
-		ph$node.label							<- as.numeric(ph$node.label)			
+		ph$node.label							<- as.numeric(ph$node.label)		
+		#	ladderize
 		ph				<- ladderize(ph)
+		#	define individuals and references
 		phb				<- data.table(IDX=seq_along(ph$tip.label), BAM=ph$tip.label, FILE_ID= gsub('_read.*','',ph$tip.label), REF=grepl(references.pattern,ph$tip.label))
 		set(phb, phb[, which(REF)],'FILE_ID','REFERENCE')
-		tmp				<- phb[, which(!grepl('_read_[0-9]+_count_[0-9]+',BAM))]
-		#	homogenize taxon labels
+		#	homogenize taxon labels: add dummy "_read_1_count_0" to reach taxon name for which the read and count bit is missing
+		#	this can only be the case for references, fail if this is not true
+		tmp				<- phb[, which(!grepl('_read_[0-9]+_count_[0-9]+',BAM))]		
 		if(length(tmp))
 		{
 			stopifnot( !nrow(subset(phb[tmp, ],!REF))	)	#incorrect taxon label
@@ -1148,6 +1170,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 			ph$tip.label	<- phb[,BAM]			
 		}
 		#	group edges by individual
+		#	@CF: if you modify the trees, you need to re-run this function
 		ph				<- pty.evaluate.tree.groupindividuals(ph, phb)
 		#	group edges by FILL
 		#tmp			<- as.numeric(gsub('ptyr','',regmatches(names(pty.ph)[i], regexpr('ptyr[0-9]+',names(pty.ph)[i]))))
@@ -1162,7 +1185,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	cat('\nsave trees to file ',tmp)
 	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))
 	#
-	#	remove newick / fasta files
+	#	clean up: remove newick / fasta files
 	#
 	if(rm.newick)
 	{
@@ -1174,29 +1197,39 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		invisible( ptyfiles[, list(SUCCESS=file.remove(file.path(indir,gsub('_examl\\.newick','\\.fasta',FILE)))), by='FILE'] )
 	}
 	#
-	#	plot full trees
+	#	PART 2
+	#	
+	#	plot the trees
+	#	@CF: try this first for the saved trees as they are. once you follow the code, try drop.tip etc. 
+	#		 Note that you will have to call 'ph<- pty.evaluate.tree.groupindividuals(ph, phb)' once more to setup the correct edge colours. See how the function is used a few lines higher up.
 	#
-	#	need node heights to determine x-axis for plotting
+	#	need node heights to determine x-axis range for plotting
 	tmp					<- ptyfiles[,{										
 				ph		<- pty.ph[[FILE]]
 				tmp		<- node.depth.edgelength(ph)[1:Ntip(ph)]
-				list(BAM=ph$tip.label, HEIGHT=tmp)
+				list(BAM=ph$tip.label, HEIGHT=tmp)	#BAM and HEIGHT are vectors
 			}, by='FILE']	
+	#	'tmp' is now a data.table containing for each tree in file FILE, all taxon names and associated node depths
+	#	now extract the max node depth for each tree in file FILE, and merge this 
+	#	as an extra column to the ptyfiles data.table
 	ptyfiles				<- merge(ptyfiles, tmp[, list(HMX= max(HEIGHT)), by='FILE'], by='FILE')
+	#	sort by run id and window, so the tree appear in order
 	setkey(ptyfiles, PTY_RUN, W_FROM)	
-	#	plot by run.pattern
+	#	for each phylotype run, produce one pdf
 	#ptyfiles			<- subset(ptyfiles, PTY_RUN==1)
 	for(ptyr in ptyfiles[, unique(PTY_RUN)])
 	{
+		#@CF: since you don t have phylotype run IDs, just set ptyr<-1
 		#ptyr<- 22
 		cat('\nplot trees with run.pattern',ptyr,'\n\n')
 		tmp			<- subset(ptyfiles, PTY_RUN==ptyr)
 		#	setup title
 		tmp[, TITLE:=paste('run',PTY_RUN,', window [',W_FROM,',',W_TO,']',sep='')]
 		setkey(tmp, W_FROM)
+		#	select trees for this pdf in 'phs'
 		phs			<- lapply(tmp[, FILE], function(x) pty.ph[[x]])
 		names(phs)	<- tmp[, TITLE] 
-		#	setup colours	
+		#	setup colours: get all individual names from all selected trees	
 		tmp2		<- setdiff(sort(unique(unlist(lapply(seq_along(phs), function(i)	levels(attr(phs[[i]],'INDIVIDUAL'))	)))),c('not characterized'))
 		if(!'REFERENCE'%in%tmp2)
 		{
@@ -1208,17 +1241,26 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 			tmp2		<- setdiff(tmp2,'REFERENCE')
 			col			<- c('grey50','black',rainbow_hcl(length(tmp2), start = 270, end = -30, c=100, l=50))
 			names(col)	<- c('not characterized','REFERENCE',tmp2)						
-		}		
+		}
+		#
 		#	setup ggtrees
+		#
+		#	this is the same as p<- ggplot... . the plot is stored in a list, and not plotted. Type print(p) to plot.
 		phps		<- lapply(seq_along(phs), function(i){
+					#	@CF just set i<-1 and then copy and paste to produce one tree for one window
 					cat('\nsetup tree ',names(phs)[i])
 					max.node.height	<- tmp[i,][, HMX]
-					ph				<- phs[[i]]					
+					ph				<- phs[[i]]			
+					#	now get the counts and some other stuff that is irrelevant for this plot. CLU will always be FALSE.
 					df			<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
 							COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))), 
 							CLU=grepl('_clu',ph$tip.label), 
 							FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
 					set(df, df[, which(grepl(references.pattern,FILE_ID))],'FILE_ID','REFERENCE')
+					#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator
+					#	the first column must be the tip names
+					#	here I use this extra info in 'df' to specify the size of the tippoints as a function of COUNT
+					#	the aes(color=INDIVIDUAL) bit looks for the INDIVIDUAL attribute on 'ph' that defines the edge colours.
 					p			<- ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
 							geom_nodepoint(size=ph$node.label/100*3) +
 							geom_tippoint(aes(size=COUNT, shape=CLU)) +
