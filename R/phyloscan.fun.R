@@ -102,9 +102,9 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 		cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
 	if(!nchar(window.automatic))
 		cmd	<- paste(cmd,' --window-coords ', paste(as.character(window.coord), collapse=','),sep='')
-	if(!is.na(file.alignments) & keep.overhangs!='--keep-overhangs')
+	if(!is.na(file.alignments))
 		cmd	<- paste(cmd,' --alignment-of-other-refs ',file.alignments,sep='')	
-	if(!is.na(root) & keep.overhangs!='--keep-overhangs')
+	if(!is.na(root))
 		cmd	<- paste(cmd,' --ref-for-rooting ',root,sep='')		
 	if(nchar(no.trees))		
 		cmd	<- paste(cmd, no.trees)	
@@ -116,7 +116,8 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 	if(!is.na(file.alignments) & keep.overhangs=='--keep-overhangs')
 	{
-		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
+		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
 		cmd	<- paste(cmd, 'for file in RefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
 	}
 	if(is.na(file.alignments) || keep.overhangs!='--keep-overhangs')

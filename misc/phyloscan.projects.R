@@ -1395,7 +1395,7 @@ pty.pipeline.fasta<- function()
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
 				alignments.root='AF460972', alignments.pairwise.to='K03455',
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=24, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
-				strip.max.len=350, min.ureads.individual=20, win=c(800,10200,60), keep.overhangs='--keep-overhangs',
+				strip.max.len=350, min.ureads.individual=NA, win=c(800,10200,60), keep.overhangs='--keep-overhangs',
 				select=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
