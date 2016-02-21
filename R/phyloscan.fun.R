@@ -164,7 +164,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 	alignments.root				<- PR.ALIGNMENT.ROOT
 	if(!is.na(pty.args[['alignments.root']]))		
 		alignments.root			<- pty.args[['alignments.root']]	
-	tmp							<- rownames(read.dna(file.alignments,format='fa'))
+	tmp							<- rownames(read.dna(alignments.file,format='fa'))
 	alignments.root				<- tmp[grepl(alignments.root,tmp)]
 	alignments.pairwise.to		<- PR.ALIGNMENT.TO
 	if(!is.na(pty.args[['alignments.pairwise.to']]))
