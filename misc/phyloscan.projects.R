@@ -51,6 +51,18 @@ project.dual.alignments.reference<- function()
 	ref				<- ref[ df[, TAXA], ]
 	rownames(ref)	<- df[,TAXA_NEW]
 	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
+	
+	file			<- '~/Dropbox (Infectious Disease)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
+	outfile			<- '~/git/phyloscan/inst/HIV1_compendium_AD_B_CPX.fasta'
+	ref				<- read.dna(file, format='fasta')
+	df				<- data.table(TAXA=rownames(ref))
+	df[,SUBTYPE:= toupper(gsub('^[0-9]+_','',regmatches(TAXA,regexpr('^[^\\.]+',TAXA))))]
+	df				<- subset(df, grepl('AF460972|GQ477441|JX140646|AF193276|AF193253',TAXA) | grepl('HXB2',TAXA) | grepl('^A1|^A2|^AD',SUBTYPE) | SUBTYPE=='D' )
+	df[,GENBANK:= regmatches(TAXA,regexpr('[^\\.]+$',TAXA))]
+	df[,TAXA_NEW:= df[,paste('REF_',SUBTYPE,'_',GENBANK,'_read_1_count_0',sep='')]]
+	ref				<- ref[ df[, TAXA], ]
+	rownames(ref)	<- df[,TAXA_NEW]
+	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
 }
 
 project.dual.alignments.160110<- function()
@@ -393,7 +405,180 @@ project.dualinfecions.phylotypes.setup.coinfections.ZA.160110<- function()
 	save(pty.runs, pty.clu, ph, dist.brl, ph.gdtr, ph.mrca, clustering, sqi, sq, file= tmp)	
 }
 
-project.dualinfecions.mltree.UG.160217<- function()
+project.dualinfecions.UG.selectsamplesbycoverage.160219<- function()
+{	
+	min.coverage	<- 600
+	min.depth		<- 500
+	infile			<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/bam_stats_150218.rda'
+	load(infile)
+	infile			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_160110/PANGEA_HIV_n5003_Imperial_v160110_GlobalAlignment.rda'
+	load(infile)	#loads sqi, sq
+	outdir			<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data'
+	#	add SANGER_ID
+	infile.s	<- "~/Dropbox (Infectious Disease)/pangea_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	si			<- as.data.table(read.csv(infile.s, stringsAsFactors=FALSE))
+	setnames(si, colnames(si), toupper(gsub('.','_',colnames(si),fixed=1))) 
+	set(si, NULL, 'PANGEA_ID', si[, gsub(' ','',PANGEA_ID)])
+	setnames(si, 'CLINICAL_GENOME_COVERAGE', 'COV')
+	tmp			<- subset(si, grepl('^PG14-UG', PANGEA_ID), c(PANGEA_ID, SANGER_ID))
+	set(tmp, NULL, 'PANGEA_ID', tmp[,gsub('-','_',PANGEA_ID)])
+	#	of the duplicate PANGEA_IDs, consider only those with larger coverage	
+	sqi			<- merge(sqi, tmp, by='PANGEA_ID', all.x=1, allow.cartesian=TRUE)
+	tmp			<- sqi[, list(SANGER_ID=SANGER_ID[which.max(COV)]), by='PANGEA_ID']
+	sqi			<- merge(sqi, tmp, by=c('PANGEA_ID','SANGER_ID'))
+	#
+	#	consider reads only from Uganda that have coverage at least 600 bp
+	#	
+	tmp			<- subset(sqi, SITE=='UG' & COV>=min.coverage, c(PANGEA_ID, SANGER_ID, COV))
+	setnames(bam.cov, c('FILE_ID','COV'), c('SANGER_ID','DEPTH'))
+	bam.cov		<- merge(bam.cov, tmp, by='SANGER_ID')
+	#	total individuals from UG: 3628
+	#	total individuals from UG with min coverage: 3074
+	#
+	#	define chunks of the genomes with more than 100, 200, 500, 1000 read depth 
+	#
+	bam.ch		<- do.call('rbind',lapply(c(100,200,500,1000), function(x)
+			{
+				bam.ch		<- subset(bam.cov, DEPTH>=x)
+				bam.ch[, POS_NEXT:= POS+REP]	
+				bam.ch		<- bam.ch[, list(POS=POS, DEPTH=DEPTH, REP=REP, CHUNK=cumsum(as.numeric(c(TRUE, POS[-1]!=POS_NEXT[-length(POS_NEXT)])))), by='SANGER_ID']
+				bam.ch		<- bam.ch[, list(POS_CH=min(POS), REP_CH=sum(REP), DEPTH_CH= sum(DEPTH*REP)/sum(REP) ), by=c('SANGER_ID','CHUNK')]
+				bam.ch[, DEPTH_MIN:=x]
+				bam.ch
+			}))
+	#
+	# select chunks with at least 300 sites and individuals with at least 600 selected sites (can be in same chunk, we just need to be able to define at least two windows)
+	#
+	bam.chs		<- subset(bam.ch, REP_CH>=300)
+	bam.chs		<- merge(bam.chs, bam.chs[, list(REP_IND=sum(REP_CH)), by=c('DEPTH_MIN','SANGER_ID')], by=c('DEPTH_MIN','SANGER_ID'))
+	bam.chs		<- subset(bam.chs, REP_IND>min.coverage)
+	#
+	# count how many individuals by the different read depth thresholds
+	#
+	bam.chs[, list(IND_SELECTED=length(unique(SANGER_ID)), COV_AVG=mean(unique(REP_IND))), by='DEPTH_MIN']
+	#   DEPTH_MIN IND_SELECTED COV_AVG
+	#1:       100         2858 4799.172
+	#2:       200         2819 4655.781
+	#3:       500         2706 4297.860
+	#4:      1000         2558 4000.289
+	# 	OK, try a minimum depth of 500. We keep 88% of individuals with at least 600bp coverage and 74% of individuals with some coverage 
+	bam.chs		<- subset(bam.chs, DEPTH_MIN==min.depth)	
+	setkey(bam.chs, POS_CH)
+	set(bam.chs, NULL, 'SANGER_ID', bam.chs[, factor(SANGER_ID, levels=unique(SANGER_ID), labels=unique(SANGER_ID))])
+	ggplot(bam.chs, aes(x=SANGER_ID, xend=SANGER_ID, y=POS_CH, yend=POS_CH+REP_CH-1L)) +
+			scale_y_continuous(expand=c(0,0),limits=c(0,10e3), breaks=seq(0,10e3,500), minor_breaks=seq(0,10e3,100)) +
+			geom_segment() + theme_bw() + labs(y='genome position', x='Patient') + coord_flip() +
+			theme(axis.text.y=element_text(size=2), axis.ticks.y=element_line(size=0.1))
+	ggsave(file=file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_selectedchunks.pdf'), w=10, h=60, limitsize = FALSE)
+	# 	OK, build two alignments of consensus sequences in two deep reed regions: 1-1700 and 1700-9000
+	bam.chs			<- merge(bam.chs, bam.chs[, {
+						z	<- which.max(POS_CH)
+						list(POS_INDMIN=min(POS_CH), POS_INDMAX=POS_CH[z]+REP_CH[z]-1L)	
+					}, by='SANGER_ID'], by='SANGER_ID')
+	tmp				<- merge(sqi, unique(subset(bam.chs, POS_INDMIN>1700, SANGER_ID)), by='SANGER_ID')[, TAXA]
+	tmp				<- c(tmp, subset(sqi, is.na(SITE))[,TAXA])
+	tmp				<- as.character(sq[tmp,2001:ncol(sq)])
+	tmp[tmp=='?']	<- '-'
+	tmp				<- as.DNAbin(tmp)
+	write.dna(tmp , format='fa', file=file.path(outdir, 'PANGEA_HIV_n5003_Imperial_v160110_UG_p15toend.fasta'))
+	tmp				<- merge(sqi, unique(subset(bam.chs, POS_INDMIN<=1700, SANGER_ID)), by='SANGER_ID')[, TAXA]
+	tmp				<- c(tmp, subset(sqi, is.na(SITE))[,TAXA])
+	tmp				<- as.character(sq[tmp,1:2000])
+	tmp[tmp=='?']	<- '-'
+	tmp				<- as.DNAbin(tmp)	
+	write.dna( tmp, format='fa', file=file.path(outdir, 'PANGEA_HIV_n5003_Imperial_v160110_UG_gag.fasta'))
+	#	run FastTree2 /Users/Oliver/git/big.phylo/inst/FastTree -nt -gtr -gamma
+	#	OK, check which individuals have coverage in which segments
+	bam.chs[, POS_INDMIN_C:= cut(POS_INDMIN, breaks=c(-Inf,50,650,2000,3900,Inf), labels=c('1','50','650','2000','3900'))]
+	bam.chs[, POS_INDMAX_C:= cut(POS_INDMAX, breaks=c(-Inf,50,650,2000,3900,Inf), labels=c('50','650','2000','3900','9000'))]
+	bam.chs[, GROUP:=paste(POS_INDMIN_C,'-',POS_INDMAX_C,sep='')]
+	setkey(bam.chs, SANGER_ID)
+	bam.inds		<- subset(unique(bam.chs), select=c(SANGER_ID, POS_INDMIN_C, POS_INDMAX_C, GROUP))
+	bam.inds[, table(POS_INDMIN_C, POS_INDMAX_C)]
+	#				POS_INDMAX_C
+	#POS_INDMIN_C   	50  650 2000 3900  9000
+	#1       			0    0  614  163   1646
+	#50     			0    0   53    5   21
+	#650     			0    0   80   32   57
+	#2000    			0    0    0    0   1
+	#3900    			0    0    0    0   34	
+	save(bam.chs, bam.inds, file=file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_selectedbycoverage_160219.rda'))
+}
+
+project.dualinfecions.UG.mltree.160219<- function()
+{	
+	#
+	#	UG consensus BEST tree on gag
+	#
+	indir		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data'	
+	infile		<- "PANGEA_HIV_n5003_Imperial_v160110_UG_gag_fasttree.newick"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
+	#	reroot at SIV		
+	tmp			<- which(grepl('AF103818',ph$tip.label))
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph 			<- ladderize( ph )
+	ph.node.bs						<- ph$node.label
+	ph.node.bs[ph.node.bs=='Root']	<- NA
+	ph.node.bs						<- as.numeric(ph.node.bs)
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs
+	ph$node.label[ph$node.label>1]	<- 1
+	#	plot just the phylogeny
+	pdf(file=file.path(indir,gsub('newick','pdf',infile)), w=20, h=120)
+	plot(ph, cex=0.2)
+	dev.off()
+	
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	thresh.brl						<- 0.07
+	thresh.bs						<- 0.75	
+	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	table(clustering$size.tips)
+	tip.color						<- rep('black',Ntip(ph))
+	tip.color[ grepl('PG14',ph$tip.label) ]	<- 'DarkRed'
+	file							<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
+	invisible(hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=100, show.tip.label=TRUE, pdf.width=30))	
+	ph.gdtr							<- cophenetic.phylo(ph)
+	ph.mrca							<- mrca(ph)
+	save(ph, dist.brl, ph.gdtr, ph.mrca, clustering, file=paste(indir,'/',gsub('\\.newick','\\.rda',infile),sep=''))
+	#
+	#
+	#
+	infile		<- "PANGEA_HIV_n5003_Imperial_v160110_UG_p15toend_fasttree.newick"
+	ph			<- read.tree( paste(indir,'/',infile,sep='') )	
+	#	reroot at SIV		
+	tmp			<- which(grepl('AF103818',ph$tip.label))
+	ph			<- reroot(ph, tmp, ph$edge.length[which(ph$edge[,2]==tmp)])	
+	ph 			<- ladderize( ph )
+	ph.node.bs						<- ph$node.label
+	ph.node.bs[ph.node.bs=='Root']	<- NA
+	ph.node.bs						<- as.numeric(ph.node.bs)
+	ph.node.bs[is.na(ph.node.bs)]	<- 0
+	ph$node.label					<- ph.node.bs
+	ph$node.label[ph$node.label>1]	<- 1
+	#	plot just the phylogeny
+	pdf(file=file.path(indir,gsub('newick','pdf',infile)), w=20, h=60)
+	plot(ph, cex=1)
+	dev.off()
+	
+	stat.fun						<- hivc.clu.min.transmission.cascade
+	#stat.fun						<- max
+	dist.brl						<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=stat.fun)
+	thresh.brl						<- 0.14
+	thresh.bs						<- 0.75	
+	clustering						<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph.node.bs,retval="all")
+	table(clustering$size.tips)
+	tip.color						<- rep('black',Ntip(ph))
+	tip.color[ grepl('PG14',ph$tip.label) ]	<- 'DarkRed'
+	file							<- paste(outdir,"/", gsub('\\.newick',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile), sep='')
+	invisible(hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=3, show.tip.label=TRUE, pdf.width=20))	
+	ph.gdtr							<- cophenetic.phylo(ph)
+	ph.mrca							<- mrca(ph)
+	save(ph, dist.brl, ph.gdtr, ph.mrca, clustering, file=paste(indir,'/',gsub('\\.newick','\\.rda',infile),sep=''))
+}
+
+project.dualinfecions.UG.mltree.160217<- function()
 {	
 	#
 	#	UG consensus BEST tree
@@ -432,7 +617,179 @@ project.dualinfecions.mltree.UG.160217<- function()
 	save(ph, dist.brl, ph.gdtr, ph.mrca, clustering, file=paste(indir,'/',gsub('\\.newick','\\.rda',infile),sep=''))
 }
 
-project.dualinfecions.phylotypes.setup.coinfections.UG.160217<- function()
+project.dualinfecions.UG.setup.windowlength<- function()
+{
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-12-50-39'
+	infiles	<- data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='300_1')
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-12-54-48'
+	infiles	<- rbind(infiles, data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='200_1'))
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-13-02-50'
+	infiles	<- rbind(infiles, data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='100_1'))
+	
+	sd		<- infiles[,{
+				#FILE<- 'AlignedReadsInWindow_800_to_1099.fasta'
+				s	<- read.dna(FILE, format='fa')
+				sd	<- data.table(TAXA=rownames(s))
+				sd[, IND:= gsub('.bam','',gsub('_read.*','',TAXA))]
+				sd[, COUNT:= as.numeric(regmatches(TAXA,regexpr('[0-9]+$',TAXA)))]	
+				sd
+			}, by=c('TYPE','FILE')]
+	sd		<- sd[, list(COUNT=sum(COUNT)), by=c('TYPE','FILE','IND')]
+	sd		<- subset(sd, !grepl('REF',IND))
+	sd[, FROM:= as.numeric(gsub('AlignedReadsInWindow_','',regmatches(FILE, regexpr('AlignedReadsInWindow_[0-9]+', FILE))))]
+	
+	ggplot(sd, aes(x=FROM, y=COUNT, colour=TYPE, group=TYPE)) + geom_step() + facet_grid(~IND)
+	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=8, limitsize = FALSE)
+}
+
+project.dualinfecions.UG.setup.coinfections.160219<- function()
+{
+	#
+	#	input args
+	#	
+	pty.sel.n		<- 25
+	indir			<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	infile.bam		<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_selectedbycoverage_160219.rda')
+	infile.gagtree	<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_gag_fasttree.rda')
+	infile.endtree	<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_p15toend_fasttree.rda')
+	sqi
+	
+	load(infile.bam)
+	load(infile.gagtree)
+	#
+	#	set groups 	
+	#
+	set(bam.inds, bam.inds[, which(GROUP=='2000-9000')],'GROUP','3900-9000')	
+	set(bam.inds, bam.inds[, which(GROUP=='50-9000')],'GROUP','1-9000')
+	set(bam.inds, bam.inds[, which(GROUP=='50-3900')],'GROUP','1-3900')
+	set(bam.inds, bam.inds[, which(GROUP=='50-2000')],'GROUP','1-2000')
+	set(bam.inds, bam.inds[, which(GROUP=='650-3900')],'GROUP','650-2000')
+	bam.inds	<- merge(bam.inds, subset(sqi, select=c(TAXA, SANGER_ID)), by='SANGER_ID')	
+	#	get distance data.table
+	ph.gdf		<- as.data.table(melt(ph.gdtr,value.name="GD"))
+	setnames(ph.gdf, c('Var1','Var2'),c('TAXA','TAXA2'))
+	tmp			<- data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label)
+	tmp			<- merge(tmp, sqi,by='TAXA')
+	tmp			<- subset(tmp, SITE=='UG')
+	tmp[, DUMMY:=NULL]
+	ph.gdf		<- merge(ph.gdf, subset(tmp, select=TAXA), by='TAXA')
+	ph.gdf		<- merge(ph.gdf, data.table(TAXA2=tmp[,TAXA]), by='TAXA2')
+	ph.gdf		<- subset(ph.gdf, TAXA!=TAXA2)
+	setkey(ph.gdf, TAXA, GD)	
+	#
+	#	select very close individuals
+	#
+	ph			<- drop.tip(ph,setdiff(which(!grepl('^PG',ph$tip.label)),which(grepl('AF103818',ph$tip.label))))
+	#	TODO the cascade clustering does NOT work
+	#dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=hivc.clu.min.transmission.cascade)
+	dist.brl	<- hivc.clu.brdist.stats(ph, eval.dist.btw="leaf", stat.fun=max)	
+	thresh.brl	<- 0.05
+	thresh.bs	<- 0.01				
+	clustering	<- hivc.clu.clusterbythresh(ph, thresh.nodesupport=thresh.bs, thresh.brl=thresh.brl, dist.brl=dist.brl, nodesupport=ph$node.label,retval="all")	
+	table(clustering$size.tips)
+	file		<- paste(gsub('\\.rda',paste('_gd',100*thresh.brl,'bs',thresh.bs*100,'\\.pdf',sep=''), infile.gagtree), sep='')
+	invisible(hivc.clu.plot(ph, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=file, pdf.scaley=100, show.tip.label=TRUE, pdf.width=30))
+	pty.clu		<- subset(data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label, CLU_ID=clustering$clu.mem[seq_len(Ntip(ph))]), !is.na(CLU_ID))
+	pty.clu[, PANGEA:= factor(grepl('^PG14',TAXA), levels=c(TRUE,FALSE),labels=c('Y','N'))]
+	pty.clu		<- merge(pty.clu, bam.inds, by='TAXA')	
+	pty.clu		<- merge(pty.clu, pty.clu[, list(CLU_N= length(TAXA)), by='CLU_ID'], by='CLU_ID')	
+	#	initialize pty.runs: for every cluster, go down ancestor path until we get a clade of at most x individuals
+	setkey(pty.clu, CLU_ID)	
+	tmp			<- unique(pty.clu)
+	tmp			<- tmp[order(-CLU_N),]		
+	pty.clu		<- tmp[, {
+				clu.a	<- Ancestors(ph, TX_IDX)
+				clu.n	<- sapply( Descendants(ph, clu.a, type="tips"), length)
+				z		<- length(clu.n[clu.n<25])
+				ans		<- NA_integer_
+				if(z>0)
+					ans	<- Descendants(ph, clu.a[z])[[1]]
+				list(IDX=ans)				
+			}, by=c('CLU_ID','TX_IDX')]
+	pty.clu[, PTY_RUN:=CLU_ID]
+	#	reduce pty.runs: keep only clades that are not contained in other clades
+	for(x in pty.clu[, unique(TX_IDX)])
+	{		
+		tmp			<- merge(pty.clu, subset(pty.clu, IDX==x, PTY_RUN), by='PTY_RUN')
+		if( all(subset(tmp, TX_IDX==x)[,IDX]%in%subset(tmp, TX_IDX!=x)[,IDX]) )
+			pty.clu		<- subset(pty.clu, TX_IDX!=x)		
+	}
+	pty.clu[, table(PTY_RUN)]
+	#	add taxa not yet included: for each taxa, determine closest runs
+	ph.gdf		<- merge(ph.gdf, data.table(TAXA=ph$tip.label, IDX=seq_along(ph$tip.label)), by='TAXA')
+	ph.gdf		<- merge(ph.gdf, subset(pty.clu, select=c(IDX, PTY_RUN)), by='IDX', all.x=1)
+	tmp			<- data.table(IDX= setdiff(seq_len(Ntip(ph)), pty.clu[, IDX]))	
+	tmp			<- tmp[, {				
+				z	<- ph$tip.label[IDX]
+				z	<- subset(ph.gdf, !is.na(PTY_RUN) & TAXA2==z)				
+				setkey(z, GD)
+				list(PTY_RUN=z[1:100,][, unique(PTY_RUN)][1:10], ORDER=1:10)				
+			}, by='IDX']	
+	tmp			<- subset(tmp, !is.na(PTY_RUN))	#this excludes the root
+	#	add taxa not yet included: determine closest run that is not yet full and add
+	for(x in tmp[, unique(IDX)])
+	{
+		z		<- merge(pty.clu, subset(tmp,IDX==x,c(PTY_RUN,ORDER)), by='PTY_RUN')
+		z		<- subset(z[, list(N=length(IDX),ORDER=ORDER[1]), by='PTY_RUN'], N<20)
+		setkey(z, ORDER)
+		#cat('\n',x,z[1,PTY_RUN])
+		pty.clu	<- rbind(pty.clu, data.table(IDX=x, PTY_RUN=z[1,PTY_RUN]), use.names=TRUE, fill=TRUE)
+	}
+	pty.clu[, table(PTY_RUN, useNA='if')]
+	#
+	#	prepare to plot coverage by current run
+	#
+	pty.runs	<- copy(pty.clu)
+	pty.runs[, TAXA:= ph$tip.label[IDX]]
+	pty.runs	<- merge(pty.runs, subset(sqi, select=c(TAXA, SANGER_ID)), by='TAXA')
+	setnames(pty.runs, 'SANGER_ID','FILE_ID')
+	save(pty.runs, file=gsub('_fasttree\\.rda','_selecthelp.rda',infile.gagtree))
+	#
+	#	OK, just merge closest groups
+	#
+	ph.gdtrn	<- dist.nodes(ph)
+	pty.clu		<- merge(pty.clu, pty.clu[, list(N=length(IDX), MRCA=getMRCA(ph, IDX)), by='PTY_RUN'], by='PTY_RUN')	
+	setkey(pty.clu, PTY_RUN)
+	pty.small	<- subset(unique(pty.clu), N<20, c(PTY_RUN, MRCA, N))
+	pty.small[, GD:=ph.gdtrn[pty.small[1, as.character(MRCA)], pty.small[, as.character(MRCA)]]]
+	pty.small[, N_NEW:= c(pty.small[1,N],pty.small[1,N]+pty.small[-1,N])]
+	pty.small	<- subset(pty.small, N_NEW<pty.sel.n)	
+	setkey(pty.small, GD)
+	while(nrow(pty.small)>1)
+	{
+		cat('\nmerge',pty.small[1,PTY_RUN],pty.small[2,PTY_RUN])
+		set(pty.clu, pty.clu[, which(PTY_RUN==pty.small$PTY_RUN[2])], 'PTY_RUN', pty.small$PTY_RUN[1])
+		set(pty.clu, pty.clu[, which(PTY_RUN%in%pty.small$PTY_RUN[1:2])], 'N', pty.small$N_NEW[2])
+		setkey(pty.clu, PTY_RUN)
+		pty.small	<- subset(unique(pty.clu), N<20, c(PTY_RUN, MRCA, N))
+		pty.small[, GD:=ph.gdtrn[pty.small[1, as.character(MRCA)], pty.small[, as.character(MRCA)]]]
+		pty.small[, N_NEW:= c(pty.small[1,N],pty.small[1,N]+pty.small[-1,N])]
+		pty.small	<- subset(pty.small, N_NEW<pty.sel.n)	
+		setkey(pty.small, GD)		
+	}
+	#	clean up
+	set(pty.clu, NULL, c('TX_IDX','N','MRCA'), NULL)
+	set(pty.clu, NULL, 'PTY_RUN', pty.clu[, as.integer(factor(as.character(PTY_RUN)))])
+	setkey(pty.clu, PTY_RUN)
+	pty.clu[, TAXA:=ph$tip.label[IDX]]
+	pty.runs	<- merge(pty.clu, subset(sqi, select=c(TAXA, SANGER_ID)), by='TAXA')
+	setnames(pty.runs, 'SANGER_ID','FILE_ID')
+	#	save
+	outfile		<- gsub('fasttree','coinfinput_160219',infile.gagtree)
+	save(pty.runs, ph, dist.brl, ph.gdtr, ph.mrca, clustering, sqi, file=outfile)	
+	#	plot runs on tree
+	phd			<- data.table(IDX=seq_along(ph$tip.label))
+	phd			<- merge(phd, pty.runs, by='IDX', all.x=1)
+	phd			<- merge(phd, subset(bam.inds, select=c(IDX, GROUP)), by='IDX', all.x=1)
+	phd[, TN:= paste(IDX,'-R',PTY_RUN,'-G',GROUP,sep='')]
+	setkey(phd, IDX)
+	tmp				<- copy(ph)
+	tmp$tip.label	<- phd[, TN]	
+	invisible(hivc.clu.plot(tmp, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=gsub('.rda','_tree.pdf',outfile), pdf.scaley=100, show.tip.label=TRUE, pdf.width=30))
+	#	..looking good!	
+}
+
+project.dualinfecions.UG.setup.coinfections.160217<- function()
 {
 	#
 	#	input args
@@ -957,9 +1314,9 @@ pty.pipeline.fasta<- function()
 		no.trees		<- '-T'
 		hpc.load		<- ""
 	}
-	if(1)	#coinfections UG on Mac
-	{
-		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2_coinfrunsinput.rda") )
+	if(0)	#coinfections UG on Mac
+	{		
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/coinf_ptinput_UG'
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150217")
@@ -967,6 +1324,17 @@ pty.pipeline.fasta<- function()
 		raxml			<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- ""
+	}
+	if(1)	#coinfections UG on HPC
+	{		
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		work.dir		<- file.path(HOME,"coinf_ptinput_UG60")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
+		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		raxml			<- 'raxml'
+		no.trees		<- '-T'
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	if(0)	#coinfections ZA on HPC
 	{
@@ -1019,13 +1387,15 @@ pty.pipeline.fasta<- function()
 		#stop()
 		#pty.c				<- subset(pty.c, PTY_RUN%in%c(3, 9, 12, 15))
 	}
-	#	run 160217	window length 250 & Q1 18 & keep overhangs & alignment specified
+	#	run 160219	window length 250 & Q1 18 & keep overhangs & alignment specified
 	if(1)
 	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=24, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=100, keep.overhangs='',
-				strip.max.len=NA, min.ureads.individual=20,
-				select=c(1))
+		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+				alignments.root='AF460972', alignments.pairwise.to='K03455',
+				window.automatic= '', merge.threshold=0, min.read.count=2, quality.trim.ends=24, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
+				strip.max.len=350, min.ureads.individual=20, win=c(800,10200,60), keep.overhangs='--keep-overhangs',
+				select=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
 		#stop()
@@ -1384,7 +1754,43 @@ project.readlength.count.bam.150218<- function()
 	save(bam.len, bam.cov, file= outfile)
 }
 
-project.readlength.count.bam.ZA.150120<- function()
+project.readlength.UG.coverage	<- function()
+{
+	infile			<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/bam_stats_150218.rda'
+	load(infile)
+	infile.input	<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2_coinfrunsinput.rda")
+	infile.input	<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp.rda"
+	infile.input	<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
+	load( infile.input )
+	
+	setkey(pty.runs, PTY_RUN, FILE_ID)
+	pty.runs		<- unique(pty.runs)
+	bam.cov			<- merge(bam.cov, pty.runs, by='FILE_ID')
+	setkey(bam.cov, PTY_RUN, FILE_ID, POS)
+	
+	ps				<- lapply(bam.cov[, unique(PTY_RUN)], function(ptyr)
+			{
+				cat('\nprocess run', ptyr)
+				tmp				<- subset(bam.cov, PTY_RUN==ptyr)
+				tmp				<- tmp[, {
+							z	<- rep(COV,REP)
+							list(COV=z, POS=seq_along(z), REF=REF[1])
+						}, by=c('FILE_ID','PTY_RUN')]
+				p	<- ggplot(tmp, aes(x=POS, y=COV, colour=FILE_ID)) + geom_step() + theme_bw() +
+						scale_y_log10() +
+						facet_grid(~PTY_RUN) +
+						labs(x='genome position\n(relative to reference)', y='read coverage', colour='patient')
+				p
+			})
+	#pdf(file=gsub('\\.rda','_coverage_UG.pdf',infile), w=12, h=5)
+	pdf(file=gsub('\\.rda','_coverage.pdf',infile.input), w=12, h=5)
+	for(i in seq_along(ps))
+		print(ps[[i]])	
+	dev.off()		
+	
+}
+
+project.readlength.ZA.count.bam.150120<- function()
 {
 	require(ggplot2)
 	require(data.table)

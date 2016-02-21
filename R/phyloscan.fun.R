@@ -4,7 +4,8 @@ PR.EVAL.EXAML		<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.re
 PR.SCAN.STATISTICS	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.statistics.Rscript"))
 PR.SCAN.SUPERINF	<- paste('Rscript', system.file(package=PR.PACKAGE, "phyloscan.scan.superinfections.Rscript"))
 PR.ALIGNMENT.FILE	<- system.file(package=PR.PACKAGE, "HIV1_compendium_C_B_CPX.fasta")
-PR.ALIGNMENT.ROOT	<- "R0_REF_CPX_AF460972_read_1_count_0"
+PR.ALIGNMENT.ROOT	<- "AF460972"
+PR.ALIGNMENT.TO		<- "K03455"
 EPS					<- 1e-12
 
 #' @export
@@ -77,7 +78,7 @@ pty.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 }
 
 #' @export
-pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='', ref.file=PR.ALIGNMENT.FILE, ref.root=PR.ALIGNMENT.ROOT, out.dir='.')
+pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='', file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
 {	
 	stopifnot(is.character(file.bam),is.character(file.ref))
 	if(!nchar(window.automatic))	stopifnot( is.numeric(window.coord), !length(window.coord)%%2)
@@ -94,15 +95,17 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
-	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)	
+	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
+	if(!is.na(align.pairwise.to))		
+		cmd	<- paste(cmd,' --pairwise-align-to ',align.pairwise.to,sep='')
 	if(nchar(window.automatic))
 		cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
 	if(!nchar(window.automatic))
 		cmd	<- paste(cmd,' --window-coords ', paste(as.character(window.coord), collapse=','),sep='')
-	if(nchar(ref.file) & keep.overhangs!='--keep-overhangs')
-		cmd	<- paste(cmd,' --alignment-of-other-refs ',ref.file,sep='')	
-	if(nchar(ref.root) & keep.overhangs!='--keep-overhangs')
-		cmd	<- paste(cmd,' --ref-for-rooting ',ref.root,sep='')
+	if(!is.na(file.alignments) & keep.overhangs!='--keep-overhangs')
+		cmd	<- paste(cmd,' --alignment-of-other-refs ',file.alignments,sep='')	
+	if(!is.na(root) & keep.overhangs!='--keep-overhangs')
+		cmd	<- paste(cmd,' --ref-for-rooting ',root,sep='')		
 	if(nchar(no.trees))		
 		cmd	<- paste(cmd, no.trees)	
 	if(nchar(keep.overhangs))
@@ -111,12 +114,12 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
 	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
-	if(nchar(ref.file) & keep.overhangs=='--keep-overhangs')
+	if(!is.na(file.alignments) & keep.overhangs=='--keep-overhangs')
 	{
-		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(ref.file,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
 		cmd	<- paste(cmd, 'for file in RefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
 	}
-	if(!nchar(ref.file) || keep.overhangs!='--keep-overhangs')
+	if(is.na(file.alignments) || keep.overhangs!='--keep-overhangs')
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')	
 	}	
@@ -130,6 +133,7 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 #' @export
 pty.cmdwrap.fasta <- function(pty.runs, pty.args) 		
 {
+	stopifnot(length(pty.args[['win']])==3)
 	#
 	#	associate BAM and REF files with each scheduled phylotype run
 	#	
@@ -152,16 +156,24 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 		stop()	#check we have all BAM files		
 	}
 	pty.runs	<- subset(pty.runs, !is.na(BAM) & !is.na(REF)) 	
-	#	determine length of each ref file
-	tmp			<- unique(subset(pty.runs, select=REF))
-	tmp			<- tmp[, list(REF_LEN=ncol(read.dna(file.path(pty.args[['data.dir']],REF), format='fasta'))), by='REF']
-	pty.runs	<- merge(pty.runs, tmp, by='REF')
 	setkey(pty.runs, PTY_RUN)
+	#	get alignments file, and root, and taxon against which bams are pairwise aligned to
+	alignments.file 			<- system.file(package="phyloscan", "HIV1_compendium_C_B_CPX.fasta")
+	if(!is.na(pty.args[['alignments.file']]))
+		alignments.file			<- pty.args[['alignments.file']]
+	alignments.root				<- PR.ALIGNMENT.ROOT
+	if(!is.na(pty.args[['alignments.root']]))		
+		alignments.root			<- pty.args[['alignments.root']]	
+	tmp							<- rownames(read.dna(file.alignments,format='fa'))
+	alignments.root				<- tmp[grepl(alignments.root,tmp)]
+	alignments.pairwise.to		<- PR.ALIGNMENT.TO
+	if(!is.na(pty.args[['alignments.pairwise.to']]))
+		alignments.pairwise.to	<- pty.args[['alignments.pairwise.to']]
+	alignments.pairwise.to		<- tmp[grepl(alignments.pairwise.to,tmp)]
 	#
 	#	write pty.run files and get pty command lines
 	#
-	pty.win		<- pty.args[['win']]
-	pty.cmd		<- pty.runs[, {
+	pty.c		<- pty.runs[, {
 				if(0)
 				{
 					PTY_RUN		<- 2
@@ -176,11 +188,11 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 				windows		<- integer(0)
 				if(!nchar(pty.args[['window.automatic']]))
 				{
-					windows		<- seq(1,by=pty.win,len=ceiling(max(REF_LEN)/pty.win))
-					windows		<- as.vector(rbind( windows,windows-1+pty.win ))									
+					windows		<- seq(pty.args[['win']][1],pty.args[['win']][2]-pty.args[['win']][3],pty.args[['win']][3])
+					windows		<- as.vector(rbind( windows,windows-1+pty.args[['win']][3] ))									
 				}
-				cmd			<- pty.cmd(	file.bam, file.ref, 
-										window.coord=windows, window.automatic=pty.args[['window.automatic']],
+				cmd			<- pty.cmd(	file.bam, file.ref, 										
+										window.coord=windows, window.automatic=pty.args[['window.automatic']], file.alignments=alignments.file, root=alignments.root, align.pairwise.to=alignments.pairwise.to,
 										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
 										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
@@ -189,7 +201,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']
-	pty.cmd
+	pty.c
 }	
 
 #' @export
