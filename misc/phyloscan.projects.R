@@ -1394,7 +1394,7 @@ pty.pipeline.fasta<- function()
 				alignments.root='AF460972', alignments.pairwise.to='K03455',
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=20, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
 				strip.max.len=350, min.ureads.individual=NA, win=c(800,9400,60), keep.overhangs='--keep-overhangs',
-				select=NA)
+				select=c(1,2,3))
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
 		#stop()

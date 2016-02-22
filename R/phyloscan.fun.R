@@ -117,7 +117,8 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	if(!is.na(file.alignments) & keep.overhangs=='--keep-overhangs')
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
-		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength'),'\ndone\n',sep='')		
+		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\tcp "$file" "${file//NoRefAlignedReads/NoRef',tmp,'_}"\ndone\n',sep='')
+		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree'),'\ndone\n',sep='')		
 		cmd	<- paste(cmd, 'for file in RefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
 	}
 	if(is.na(file.alignments) || keep.overhangs!='--keep-overhangs')
