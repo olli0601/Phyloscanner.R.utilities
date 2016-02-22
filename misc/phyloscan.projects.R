@@ -619,12 +619,8 @@ project.dualinfecions.UG.mltree.160217<- function()
 
 project.dualinfecions.UG.setup.windowlength<- function()
 {
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-12-50-39'
-	infiles	<- data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='300_1')
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-12-54-48'
-	infiles	<- rbind(infiles, data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='200_1'))
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_16-02-21-13-02-50'
-	infiles	<- rbind(infiles, data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T), TYPE='100_1'))
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/window_len'
+	infiles	<- data.table(FILE= list.files(indir, pattern='^AlignedReadsInWindow', full.names=T, recursive=T))
 	
 	sd		<- infiles[,{
 				#FILE<- 'AlignedReadsInWindow_800_to_1099.fasta'
@@ -633,13 +629,15 @@ project.dualinfecions.UG.setup.windowlength<- function()
 				sd[, IND:= gsub('.bam','',gsub('_read.*','',TAXA))]
 				sd[, COUNT:= as.numeric(regmatches(TAXA,regexpr('[0-9]+$',TAXA)))]	
 				sd
-			}, by=c('TYPE','FILE')]
-	sd		<- sd[, list(COUNT=sum(COUNT), UNIQUE=length(COUNT)), by=c('TYPE','FILE','IND')]
+			}, by=c('FILE')]
+	sd		<- sd[, list(COUNT=sum(COUNT), UNIQUE=length(COUNT)), by=c('FILE','IND')]
 	sd		<- subset(sd, !grepl('REF',IND))
+	sd[, TYPE:= gsub('window_len/','',regmatches(FILE, regexpr('window_len/[^/]+', FILE))) ]
+	set(sd, NULL, 'FILE', sd[,basename(FILE)])		
 	sd[, FROM:= as.numeric(gsub('AlignedReadsInWindow_','',regmatches(FILE, regexpr('AlignedReadsInWindow_[0-9]+', FILE))))]
 	sd		<-melt(sd, measure.vars=c('COUNT','UNIQUE'))
 	
-	ggplot(sd, aes(x=FROM, y=value, colour=TYPE, group=TYPE)) + geom_step() + facet_grid(variable~IND, scales='free_y')
+	ggplot(sd, aes(x=FROM, y=value, colour=TYPE, group=TYPE)) + geom_step() + facet_grid(variable~IND, scales='free_y') + scale_y_log10()
 	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=12, limitsize = FALSE)
 }
 
@@ -1395,7 +1393,7 @@ pty.pipeline.fasta<- function()
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
 				alignments.root='AF460972', alignments.pairwise.to='K03455',
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=24, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
-				strip.max.len=350, min.ureads.individual=NA, win=c(800,10200,60), keep.overhangs='--keep-overhangs',
+				strip.max.len=350, min.ureads.individual=NA, win=c(800,9400,60), keep.overhangs='--keep-overhangs',
 				select=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
