@@ -184,6 +184,22 @@ project.dual.alignments.151023<- function()
 }
 
 
+project.dualinfecions.dev<- function()
+{
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_UG60'
+	infiles	<- data.table(FILE=list.files(indir, pattern='fasta$'))
+	infiles[, FROM:= as.numeric(gsub('NoRefAlignedReadsInWindow_','',regmatches(FILE, regexpr('NoRefAlignedReadsInWindow_[0-9]+', FILE))))]
+	
+	tmp		<- infiles[, {
+				s	<- read.dna(file.path(indir,FILE),format='fa')
+				list(TAXA_N=nrow(s), COV=ncol(s))
+			}, by='FILE']
+	infiles	<- merge(tmp, infiles, by='FILE')
+	ggplot(infiles, aes(x=FROM, y=TAXA_N)) + geom_step()
+	ggplot(infiles, aes(x=FROM, y=COV)) + geom_step()
+}
+
+
 project.dualinfecions.copy.bam<- function()
 {
 	tmp		<- subset(si, grepl('^PG14-ZA', PANGEA_ID), c(PANGEA_ID, SANGER_ID))[, SANGER_ID]
@@ -1393,8 +1409,8 @@ pty.pipeline.fasta<- function()
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
 				alignments.root='AF460972', alignments.pairwise.to='K03455',
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=20, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
-				strip.max.len=350, min.ureads.individual=NA, win=c(800,9400,60), keep.overhangs='--keep-overhangs',
-				select=c(1,2,3))
+				strip.max.len=350, min.ureads.individual=NA, win=c(800,9400,60,3), keep.overhangs='--keep-overhangs',
+				select=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
 		#stop()
@@ -1403,7 +1419,7 @@ pty.pipeline.fasta<- function()
 	if(no.trees=='-T')
 	{
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeelab", hpc.mem="11600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
