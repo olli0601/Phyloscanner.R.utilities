@@ -1419,7 +1419,7 @@ pty.pipeline.fasta<- function()
 	if(no.trees=='-T')
 	{
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=10, hpc.q="pqeelab", hpc.mem="11600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=30, hpc.q="pqeelab", hpc.mem="11600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
