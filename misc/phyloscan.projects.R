@@ -6,8 +6,8 @@ project.dual<- function()
 	#project.readlength.count.bam.150218()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
-	pty.pipeline.fasta()
-	#pty.pipeline.examl()	
+	#pty.pipeline.fasta()
+	pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
@@ -1175,7 +1175,7 @@ pty.pipeline.examl<- function()
 		out.dir			<- file.path(HOME,"phylotypes_160119")
 		hpc.load		<- ''
 	}
-	if(1)	#coinfections on HPC
+	if(0)	#coinfections ZA on HPC
 	{			
 		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda")
 		work.dir		<- file.path(HOME,"coinf_ptinput")
@@ -1183,6 +1183,13 @@ pty.pipeline.examl<- function()
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150201")
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
 	}
+	if(1)	#coinfections UG on HPC
+	{			
+		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")		
+		work.dir		<- file.path(HOME,"coinf_ptinput_UG60")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
+	}	
 	#	get alignment rda files
 	if(0)
 	{
@@ -1218,17 +1225,17 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	run ExaML with bootstrap
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
-									min.ureads.individual=20, min.ureads.candidate=NA, 
-									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=NA)								
+									min.ureads.individual=NA, min.ureads.candidate=NA, 
+									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=NA, select=c(1,2,3))								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
 		invisible(exa.cmd[,	{		
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=140, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)					
 							#cmd		<- cmd.hpcwrapper(cmd, hpc.walltime=10, hpc.q="pqeph", hpc.mem="1800mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cat(cmd)
 							outfile		<- paste("pexa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -1236,7 +1243,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972",
@@ -1334,7 +1341,7 @@ pty.pipeline.fasta<- function()
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/coinf_ptinput_UG'
-		out.dir			<- file.path(HOME,"coinf_ptoutput_150217")
+		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
 		pty.prog		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
 		raxml			<- 'raxml'
 		no.trees		<- '-T'

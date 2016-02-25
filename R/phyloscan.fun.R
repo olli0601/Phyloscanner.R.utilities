@@ -1635,8 +1635,9 @@ pty.cmdwrap.examl<- function(pty.args)
 	tmp[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(OUTFILE,'_'),'[[',1)))]
 	infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1, allow.cartesian=TRUE)		
 	setkey(infiles, PTY_RUN)
-	infiles			<- subset(unique(infiles), is.na(OUTFILE))	
-	infiles			<- subset(infiles, PTY_RUN%in%c(1,5,7,23,33,34,44,48))
+	infiles			<- subset(unique(infiles), is.na(OUTFILE))
+	if(!any(is.na(pty.args[['select']])))
+		infiles		<- subset(infiles, PTY_RUN%in%pty.args[['select']])
 	print(infiles)
 	
 	pty.fa		<- do.call('rbind',lapply( seq_len(nrow(infiles)), function(i)
