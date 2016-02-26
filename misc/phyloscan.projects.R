@@ -1230,7 +1230,7 @@ pty.pipeline.examl<- function()
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
 									min.ureads.individual=NA, min.ureads.candidate=NA, 
-									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=1, select=c(1,2,3))								
+									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=1, select=c(4,5,6))								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
