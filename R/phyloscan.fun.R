@@ -477,7 +477,9 @@ pty.stat.monophyletic.clades<- function(ph)
 	#		determine MRCA (mrca)
 	#		calculate number of other individuals in clade below MRCA (diff)	
 	z			<- phb[, {
-				#print(GROUP)
+				#IND<- "BEE0016-1"
+				#IDX<- subset(phb, IND=="BEE0016-1")[, IDX]
+				print(IND)
 				mrca	<- IDX		
 				diff	<- 0L
 				if(length(IDX)>1)
@@ -1051,13 +1053,22 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 {	
 	if(0)
 	{
-		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
-		indir		<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201"
-		outdir		<- indir
-		pty.infile	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_ZA_examlbs500_coinfrunsinput.rda"
-		select		<- '^ptyr22_In'
-		outgroup	<- NA
-		outgroup	<- "CPX_AF460972"
+		#indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+		#indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201"
+		indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_UG60"
+		outdir				<- indir
+		pty.runs			<- NULL
+		#pty.infile			<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
+		select				<- '^ptyr1_In'
+		outgroup			<- "CPX_AF460972"
+		references.pattern	<- 'REF'
+		run.pattern			<- 'ptyr'
+		tree.pattern		<- '_dtbs10.newick$'
+		rm.newick			<- FALSE
+		rm.fasta			<- FALSE
+		plot.trees.per.page	<- 4
+		plot.w				<- 20
+		plot.h				<- 40
 	}
 	#
 	#	the first part pre-processes trees and saves them to file
@@ -1262,12 +1273,14 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		#
 		#	this is the same as p<- ggplot... . the plot is stored in a list, and not plotted. Type print(p) to plot.
 		phps		<- lapply(seq_along(phs), function(i){
+		#phps		<- lapply(1, function(i){
 					#	@CF just set i<-1 and then copy and paste to produce one tree for one window
 					cat('\nsetup tree ',names(phs)[i])
 					max.node.height	<- tmp[i,][, HMX]
+					ph.title		<- names(phs)[i]
 					ph				<- phs[[i]]			
 					#	now get the counts and some other stuff that is irrelevant for this plot. CLU will always be FALSE.
-					df			<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
+					df				<- data.table(	BAM=ph$tip.label, IDX=seq_along(ph$tip.label), 
 							COUNT= as.numeric(gsub('count_','',regmatches(ph$tip.label, regexpr('count_[0-9]+',ph$tip.label)))), 
 							CLU=grepl('_clu',ph$tip.label), 
 							FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
@@ -1275,20 +1288,8 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 					#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator
 					#	the first column must be the tip names
 					#	here I use this extra info in 'df' to specify the size of the tippoints as a function of COUNT
-					#	the aes(color=INDIVIDUAL) bit looks for the INDIVIDUAL attribute on 'ph' that defines the edge colours.
-					p			<- ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
-							geom_nodepoint(size=ph$node.label/100*3) +
-							geom_tippoint(aes(size=COUNT, shape=CLU)) +
-							#geom_point2(aes(subset=(node==42)), size=5, shape=23, fill='#068C00') +
-							#geom_point2(data=df, aes(subset=(node==IDX)), size=5, shape=23, fill=df[,COL]) +
-							#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
-							geom_tiplab(size=1.2,  hjust=-.1) +
-							scale_color_manual(values=col, guide=FALSE) +
-							scale_shape_manual(values=c(20,18), guide=FALSE) +
-							scale_size_area(guide=FALSE) +							
-							theme_tree2() +
-							theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
-							labs(x='subst/site', title=names(phs)[i])
+					#	the aes(color=INDIVIDUAL) bit looks for the INDIVIDUAL attribute on 'ph' that defines the edge colours.					
+					p				<- pty.evaluate.tree.plot.ph(ph, df, max.node.height, ph.title)
 					p
 				})	
 		names(phps)	<- names(phs)
@@ -1303,13 +1304,29 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 				print(phps[[i]])
 			dev.off()
 		}
-		#	multi-page plot
+		#	multi-page plot	not divisible by two
+		if(plot.trees.per.page>1 & plot.trees.per.page%%2==1)
+		{
+			pdf(file=file, w=plot.w, h=plot.h)		#for win=60
+			for(i in tmp)
+			{		
+				print(i)
+				grid.newpage()
+				pushViewport(viewport(layout=grid.layout(1, plot.trees.per.page)))
+				z	<- intersect(seq.int((i-1)*plot.trees.per.page+1, i*plot.trees.per.page), seq_len(length(phps)))
+				for(j in z)
+					print(phps[[j]], vp = viewport(layout.pos.row=1, layout.pos.col=(j-1)%%(plot.trees.per.page)+1))				
+			}
+			dev.off()
+		}	
+		#	multi-page plot	divisible by two
 		if(plot.trees.per.page>1)
 		{
 			stopifnot( plot.trees.per.page%%2==0 )			
 			pdf(file=file, w=plot.w, h=plot.h)		#for win=60
 			for(i in tmp)
 			{		
+				print(i)
 				grid.newpage()
 				pushViewport(viewport(layout=grid.layout(2, plot.trees.per.page/2)))
 				z	<- intersect(seq.int((i-1)*plot.trees.per.page+1, i*plot.trees.per.page), seq_len(length(phps)))
@@ -1320,6 +1337,40 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 		}					
 	}
 }	
+
+pty.evaluate.tree.plot.ph<- function(ph, df, max.node.height, ph.title)
+{
+	if(any(ph$node.label==0))
+	{
+		p			<- ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
+				geom_tippoint(aes(size=COUNT, shape=CLU)) +
+				#geom_text(aes(label=label), size=1.5,  hjust=-.1) +
+				geom_tiplab(size=1.2,  hjust=-.1) +
+				scale_color_manual(values=col, guide=FALSE) +
+				scale_shape_manual(values=c(20,18), guide=FALSE) +
+				scale_size_area(guide=FALSE) +							
+				theme_tree2() +
+				theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +
+				labs(x='subst/site', title=ph.title)
+	}	
+	if(any(ph$node.label>0))
+	{	
+		tmp						<- c(rep(0,Ntip(ph)),ph$node.label)
+		tmp[tmp<=50]			<- ''		
+		attr(ph,'NODE_LABEL')	<- tmp	
+		p						<- ggtree(ph, aes(colour=INDIVIDUAL)) %<+% df +								
+				geom_nodepoint(size=as.numeric(as.character(factor(ph$node.label>75, levels=c(FALSE,TRUE), labels=c('0','2')))), shape=23, fill='grey') +
+				geom_text2(aes(label=NODE_LABEL), colour='grey', size=1.2,  hjust=1.5, vjust=-1.5) +
+				geom_tiplab(size=1.2,  hjust=-.1) +
+				scale_colour_manual(values=col, guide=FALSE) +
+				scale_shape_manual(values=c(20,18), guide=FALSE) +
+				scale_size_area(guide=FALSE) +							
+				theme_tree2() +
+				theme(legend.position="bottom") + ggplot2::xlim(0, max.node.height*1.3) +								
+				labs(x='subst/site', title=ph.title)
+	}		
+	p
+}
 
 pty.evaluate.tree.plot.develstuff<- function()
 {

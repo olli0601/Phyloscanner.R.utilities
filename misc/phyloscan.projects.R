@@ -941,11 +941,12 @@ project.test.BEEHIVEtree<- function()
 {
 	indir				<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/beehive_test'
 	indir				<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/beehive_test/JuicyClade1_NoMerge'
+	indir				<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/beehive_test/test2'
 	pty.runs			<- NULL 
 	outdir				<- indir
 	select				<- ''
 	outgroup			<- 'HXB2'
-	references.pattern	<- 'Ref'
+	references.pattern	<- 'B\\.|C\\.'
 	run.pattern			<- ''
 	rm.newick			<- FALSE
 	rm.fasta			<- FALSE	
