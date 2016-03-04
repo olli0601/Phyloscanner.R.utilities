@@ -1226,7 +1226,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	run ExaML with bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
@@ -1244,14 +1244,15 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
-									outgroup="CPX_AF460972",
+									outgroup="CPX_AF460972", tree.pattern='_dtbs10.newick$',
+									plot.trees.per.page=11, plot.w=150, plot.h=100,
 									rm.newick=0, rm.fasta=0)										
-		infiles			<- data.table(FILE=list.files(out.dir, pattern='newick$'))						
+		infiles			<- data.table(FILE=list.files(out.dir, pattern= pty.args[['tree.pattern']]))						
 		infiles[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(FILE,'_'),'[[',1)))]		
-		tmp				<- data.table(OUTFILE=list.files(out.dir, pattern='examl.rda$'))						
+		tmp				<- data.table(OUTFILE=list.files(out.dir, pattern='_preprtr.rda$'))						
 		tmp[, PTY_RUN:= as.numeric(gsub('ptyr','',sapply(strsplit(OUTFILE,'_'),'[[',1)))]
 		infiles			<- merge(infiles, tmp, by='PTY_RUN', all.x=1)		
 		setkey(infiles, PTY_RUN)
@@ -1262,9 +1263,12 @@ pty.pipeline.examl<- function()
 																			outgroup=pty.args[['outgroup']],
 																			references.pattern=pty.args[['references.pattern']],
 																			run.pattern=pty.args[['run.pattern']],
+																			tree.pattern=pty.args[['tree.pattern']],
 																			rm.newick=pty.args[['rm.newick']],
 																			rm.fasta=pty.args[['rm.fasta']],
-																			infile=pty.infile)							
+																			plot.trees.per.page= pty.args[['plot.trees.per.page']],
+																			plot.w= pty.args[['plot.w']],
+																			plot.h= pty.args[['plot.h']]	)							
 							cat(cmd)							
 							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

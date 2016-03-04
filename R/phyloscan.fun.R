@@ -48,19 +48,27 @@ pty.cmd.scan.superinfections<- function(indir, outdir=indir, select='', referenc
 }
 
 #' @export
-pty.cmd.evaluate.examl<- function(indir, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', rm.newick=0, rm.fasta=0, infile=NA)
+pty.cmd.evaluate.examl<- function(indir, outdir=indir, select='', outgroup=NA, references.pattern='REF', run.pattern='ptyr', tree.pattern='\\.newick', rm.newick=0, rm.fasta=0, plot.trees.per.page=NA, plot.w=NA, plot.h=NA, infile=NA)
 {
 	cmd		<- paste('\n',PR.EVAL.EXAML, ' -indir=',indir, ' -rm.newick=', rm.newick, ' -rm.fasta=', rm.fasta, sep='')
 	if(!is.na(infile))
 		cmd	<- paste(cmd,' -infile=',infile,sep='')		
 	if(select!='')
 		cmd	<- paste(cmd,' -select=',select,sep='')
-	if(references.pattern!='')
+	if(!is.na(references.pattern))
 		cmd	<- paste(cmd,' -references.pattern=',references.pattern,sep='')
-	if(run.pattern!='')
+	if(!is.na(run.pattern))
 		cmd	<- paste(cmd,' -run.pattern=',run.pattern,sep='')
+	if(!is.na(tree.pattern))
+		cmd	<- paste(cmd,' -tree.pattern=',tree.pattern,sep='')	
 	if(!is.na(outgroup))
-		cmd	<- paste(cmd,' -outgroup=',outgroup,sep='')	
+		cmd	<- paste(cmd,' -outgroup=',outgroup,sep='')
+	if(!is.na(plot.trees.per.page))
+		cmd	<- paste(cmd,' -plot.trees.per.page=',plot.trees.per.page,sep='')
+	if(!is.na(plot.w))
+		cmd	<- paste(cmd,' -plot.w=',plot.w,sep='')
+	if(!is.na(plot.h))
+		cmd	<- paste(cmd,' -plot.h=',plot.h,sep='')
 	cmd	<- paste(cmd,'\n',sep='')
 	cmd
 }
@@ -1207,7 +1215,8 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	#
 	#	save trees
 	#	
-	tmp		<- ptyfiles[1, gsub(paste('.',tree.pattern,sep=''),'_preprtr.rda',gsub('_dophy','',gsub('\\.InWindow_[0-9]+_to_[0-9]+|_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
+	tmp		<- regmatches(tree.pattern,regexpr('\\.[^\\.]+$', tree.pattern)) 
+	tmp		<- ptyfiles[1, gsub(tmp,'_preprtr.rda',gsub('_dophy','',gsub('\\.InWindow_[0-9]+_to_[0-9]+|_InWindow_[0-9]+_to_[0-9]+','',FILE)))]
 	cat('\nsave trees to file ',tmp)
 	save(pty.ph, ptyfiles, file=file.path(outdir,tmp))
 	#
@@ -1285,10 +1294,6 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 							CLU=grepl('_clu',ph$tip.label), 
 							FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
 					set(df, df[, which(grepl(references.pattern,FILE_ID))],'FILE_ID','REFERENCE')
-					#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator
-					#	the first column must be the tip names
-					#	here I use this extra info in 'df' to specify the size of the tippoints as a function of COUNT
-					#	the aes(color=INDIVIDUAL) bit looks for the INDIVIDUAL attribute on 'ph' that defines the edge colours.					
 					p				<- pty.evaluate.tree.plot.ph(ph, df, max.node.height, ph.title)
 					p
 				})	
@@ -1340,6 +1345,10 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 
 pty.evaluate.tree.plot.ph<- function(ph, df, max.node.height, ph.title)
 {
+	#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator
+	#	the first column must be the tip names
+	#	here I use this extra info in 'df' to specify the size of the tippoints as a function of COUNT
+	#	the aes(color=INDIVIDUAL) bit looks for the INDIVIDUAL attribute on 'ph' that defines the edge colours.						
 	if(any(ph$node.label==0))
 	{
 		p			<- ggtree(ph, aes(color=INDIVIDUAL)) %<+% df +
