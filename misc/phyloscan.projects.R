@@ -1270,7 +1270,7 @@ pty.pipeline.examl<- function()
 																			plot.w= pty.args[['plot.w']],
 																			plot.h= pty.args[['plot.h']]	)							
 							cat(cmd)							
-							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)										
+							cmd			<- cmd.hpcwrapper(cmd, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=1, hpc.load=hpc.load)										
 							outfile		<- paste("ptye",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
