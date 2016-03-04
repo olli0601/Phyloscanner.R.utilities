@@ -1226,7 +1226,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	run ExaML with bootstrap
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
@@ -1244,7 +1244,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972", tree.pattern='_dtbs10.newick$',

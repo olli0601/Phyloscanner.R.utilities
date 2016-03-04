@@ -1294,7 +1294,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 							CLU=grepl('_clu',ph$tip.label), 
 							FILE_ID= gsub('_read.*|_clu.*','',ph$tip.label))
 					set(df, df[, which(grepl(references.pattern,FILE_ID))],'FILE_ID','REFERENCE')
-					p				<- pty.evaluate.tree.plot.ph(ph, df, max.node.height, ph.title)
+					p				<- pty.evaluate.tree.plot.ph(ph, df, col, max.node.height, ph.title)
 					p
 				})	
 		names(phps)	<- names(phs)
@@ -1343,7 +1343,7 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	}
 }	
 
-pty.evaluate.tree.plot.ph<- function(ph, df, max.node.height, ph.title)
+pty.evaluate.tree.plot.ph<- function(ph, df, col, max.node.height, ph.title)
 {
 	#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator
 	#	the first column must be the tip names
