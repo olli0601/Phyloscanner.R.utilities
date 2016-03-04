@@ -1226,12 +1226,12 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}	
 	#	run ExaML with bootstrap
-	if(0)
+	if(1)
 	{
 		pty.args		<- list(	out.dir=out.dir, work.dir=work.dir, 
 									outgroup="CPX_AF460972",
 									min.ureads.individual=NA, min.ureads.candidate=NA, 
-									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=1, select=c(4,5,6))								
+									args.examl="-f d -D -m GAMMA", bs.n=10, exa.n.per.run=1, select=c(7))								
 		exa.cmd			<- pty.cmdwrap.examl(pty.args)
 		#cat( exa.cmd[1, cat(CMD)] )		
 		#stop()
@@ -1244,7 +1244,7 @@ pty.pipeline.examl<- function()
 						}, by='RUN_ID'])	
 	}
 	#	process newick output into examl.rda files
-	if(1)
+	if(0)
 	{
 		pty.args		<- list(	out.dir=out.dir, references.pattern='REF', run.pattern='ptyr',
 									outgroup="CPX_AF460972", tree.pattern='_dtbs10.newick$',
