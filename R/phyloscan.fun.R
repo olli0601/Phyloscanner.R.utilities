@@ -1325,9 +1325,8 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 			dev.off()
 		}	
 		#	multi-page plot	divisible by two
-		if(plot.trees.per.page>1)
+		if(plot.trees.per.page>1 & plot.trees.per.page%%2==0)
 		{
-			stopifnot( plot.trees.per.page%%2==0 )			
 			pdf(file=file, w=plot.w, h=plot.h)		#for win=60
 			for(i in tmp)
 			{		
