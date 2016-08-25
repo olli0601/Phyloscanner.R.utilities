@@ -86,11 +86,15 @@ pty.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 }
 
 #' @export
-pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees='',keep.overhangs='', file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
+pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',num.bootstraps=1, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
 {	
 	stopifnot(is.character(file.bam),is.character(file.ref))
 	if(!nchar(window.automatic))	stopifnot( is.numeric(window.coord), !length(window.coord)%%2)
 	if(nchar(window.automatic))		stopifnot( !length(window.coord) )
+	keep.overhangs				<- ifelse(!is.na(keep.overhangs) & keep.overhangs, '--keep-overhangs', NA_character_)
+	no.trees					<- ifelse(!is.na(no.trees) & no.trees, '--no-trees', NA_character_)
+	num.bootstraps				<- ifelse(is.na(no.trees) & !is.na(num.bootstraps) & is.numeric(num.bootstraps) & num.bootstraps>1, as.integer(num.bootstraps), NA_integer_)
+	dont.check.duplicates		<- ifelse(!is.na(dont.check.duplicates) & dont.check.duplicates, '--dont-check-duplicates', NA_character_)
 	#	create local tmp dir
 	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
 	cmd		<- paste(cmd,"echo $CWD\n",sep='')
@@ -104,32 +108,36 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
 	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
+	if(!is.na(dont.check.duplicates))
+		cmd	<- paste(cmd,' ',dont.check.duplicates,sep='')
 	if(!is.na(align.pairwise.to))		
 		cmd	<- paste(cmd,' --pairwise-align-to ',align.pairwise.to,sep='')
 	if(nchar(window.automatic))
 		cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
 	if(!nchar(window.automatic))
-		cmd	<- paste(cmd,' --window-coords ', paste(as.character(window.coord), collapse=','),sep='')
+		cmd	<- paste(cmd,' --windows ', paste(as.character(window.coord), collapse=','),sep='')
 	if(!is.na(file.alignments))
 		cmd	<- paste(cmd,' --alignment-of-other-refs ',file.alignments,sep='')	
 	if(!is.na(root))
-		cmd	<- paste(cmd,' --ref-for-rooting ',root,sep='')		
-	if(nchar(no.trees))		
-		cmd	<- paste(cmd, no.trees)	
-	if(nchar(keep.overhangs))
+		cmd	<- paste(cmd,' --ref-for-rooting ',root,sep='')	
+	if(!is.na(no.trees))		
+		cmd	<- paste(cmd, no.trees)
+	if(!is.na(num.bootstraps))
+		cmd	<- paste(cmd, ' --num-bootstraps ', num.bootstraps, sep='')
+	if(!is.na(keep.overhangs))
 		cmd	<- paste(cmd, keep.overhangs)
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
 	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
-	cmd		<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
-	if(!is.na(file.alignments) & keep.overhangs=='--keep-overhangs')
+	#cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
+	if(!is.na(file.alignments) & !is.na(keep.overhangs))
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
 		#cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\tcp "$file" "${file//NoRefAlignedReads/NoRef',tmp,'_}"\n\tmv NoRef', tmp,'*fasta "',out.dir,'"\ndone\n',sep='')
 		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',pty.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree --retree 1'),'\ndone\n',sep='')		
 		cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
 	}
-	if(is.na(file.alignments) || keep.overhangs!='--keep-overhangs')
+	if(is.na(file.alignments) || is.na(keep.overhangs))
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')	
 	}	
@@ -186,10 +194,9 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 	pty.c		<- pty.runs[, {
 				if(0)
 				{
-					PTY_RUN		<- 2
-					BAM			<- subset(pty.runs, PTY_RUN==2)[, BAM]
-					REF			<- subset(pty.runs, PTY_RUN==2)[, REF]
-					REF_LEN		<- subset(pty.runs, PTY_RUN==2)[, REF_LEN]
+					PTY_RUN		<- z <- 5
+					BAM			<- subset(pty.runs, PTY_RUN==z)[, BAM]
+					REF			<- subset(pty.runs, PTY_RUN==z)[, REF]					
 				}
 				file.bam	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
 				file.ref	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_ref.txt',sep=''))
@@ -202,11 +209,24 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 					windows		<- windows[seq.int(1, length(windows), by=pty.args[['win']][4])]
 					windows		<- as.vector(rbind( windows,windows-1+pty.args[['win']][3] ))									
 				}
-				cmd			<- pty.cmd(	file.bam, file.ref, 										
-										window.coord=windows, window.automatic=pty.args[['window.automatic']], file.alignments=alignments.file, root=alignments.root, align.pairwise.to=alignments.pairwise.to,
-										prog=pty.args[['prog']], prog.raxml=pty.args[['raxml']], prog.mafft=pty.args[['mafft']], 
-										merge.threshold=pty.args[['merge.threshold']], min.read.count=pty.args[['min.read.count']], quality.trim.ends=pty.args[['quality.trim.ends']], min.internal.quality=pty.args[['min.internal.quality']], 
-										merge.paired.reads=pty.args[['merge.paired.reads']], no.trees=pty.args[['no.trees']], keep.overhangs=pty.args[['keep.overhangs']],
+				cmd			<- pty.cmd(	file.bam, 
+										file.ref, 										
+										window.coord=windows, 
+										window.automatic=pty.args[['window.automatic']], 
+										file.alignments=alignments.file, 
+										root=alignments.root, 
+										align.pairwise.to=alignments.pairwise.to,
+										prog=pty.args[['prog']], 
+										prog.raxml=pty.args[['raxml']], 
+										prog.mafft=pty.args[['mafft']], 
+										merge.threshold=pty.args[['merge.threshold']], 
+										min.read.count=pty.args[['min.read.count']], 
+										quality.trim.ends=pty.args[['quality.trim.ends']], 
+										min.internal.quality=pty.args[['min.internal.quality']], 
+										merge.paired.reads=pty.args[['merge.paired.reads']], 
+										no.trees=pty.args[['no.trees']], 
+										num.bootstraps=pty.args[['num.bootstraps']],
+										keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
 				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
 				#cat(cmd)

@@ -7,7 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.examl()	
+	pty.pipeline.fasta.160825()
+	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various
@@ -663,7 +664,8 @@ project.dualinfecions.UG.setup.coinfections.160219<- function()
 	#	input args
 	#	
 	pty.sel.n		<- 25
-	indir			<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	indir		 	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data"
+	outdir			<- indir
 	infile.bam		<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_selectedbycoverage_160219.rda')
 	infile.gagtree	<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_gag_fasttree.rda')
 	infile.endtree	<- file.path(outdir,'PANGEA_HIV_n5003_Imperial_v160110_UG_p15toend_fasttree.rda')
@@ -795,11 +797,16 @@ project.dualinfecions.UG.setup.coinfections.160219<- function()
 	#	plot runs on tree
 	phd			<- data.table(IDX=seq_along(ph$tip.label))
 	phd			<- merge(phd, pty.runs, by='IDX', all.x=1)
-	phd			<- merge(phd, subset(bam.inds, select=c(IDX, GROUP)), by='IDX', all.x=1)
-	phd[, TN:= paste(IDX,'-R',PTY_RUN,'-G',GROUP,sep='')]
+	phd			<- merge(phd, subset(bam.inds, select=c(TAXA, GROUP)), by='TAXA', all.x=1)
+	phd[, TN:= paste(PTY_RUN,'-CLU-',CLU_ID,'-GR-',GROUP,'-IDX-',IDX,sep='')]	
+	tmp			<- data.table(PTY_RUN=phd[, unique(PTY_RUN)])
+	tmp[, PTY_COL:= rainbow(nrow(tmp))]
+	phd			<- merge(phd, tmp, by='PTY_RUN')
 	setkey(phd, IDX)
 	tmp				<- copy(ph)
 	tmp$tip.label	<- phd[, TN]	
+	tip.color		<- phd[, PTY_COL]
+	write.tree(tmp, file=gsub('.rda','_tree.newick',outfile))
 	invisible(hivc.clu.plot(tmp, clustering[["clu.mem"]], cex.edge.incluster=3, tip.color=tip.color, file=gsub('.rda','_tree.pdf',outfile), pdf.scaley=100, show.tip.label=TRUE, pdf.width=30))
 	#	..looking good!	
 }
@@ -1301,7 +1308,7 @@ pty.pipeline.examl<- function()
 	}	
 }
 
-pty.pipeline.fasta<- function() 
+pty.pipeline.fasta.160217<- function() 
 {
 	require(big.phylo)
 	#
@@ -1407,8 +1414,8 @@ pty.pipeline.fasta<- function()
 	if(0)
 	{		
 		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
-										window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
-										strip.max.len=350, min.ureads.individual=20)
+				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
+				strip.max.len=350, min.ureads.individual=20)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
 		pty.c[1,cat(CMD)]
 		#stop()
@@ -1450,6 +1457,74 @@ pty.pipeline.fasta<- function()
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							stop()
 						}, by='PTY_RUN'])
+	}	
+}
+
+pty.pipeline.fasta.160825<- function() 
+{
+	require(big.phylo)
+	#
+	#	input args
+	#	(used function project.dualinfecions.phylotypes.setup.ZA.160110 to select bam files for one run)
+	#
+	if(0)	#coinfections UG on Mac
+	{		
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
+		out.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
+		pty.prog		<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		raxml			<- 'raxmlHPC-AVX'
+		hpc.load		<- ""
+	}
+	if(1)	#coinfections UG on HPC
+	{		
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+		work.dir		<- file.path(HOME,"Rakai_ptoutput_160825")
+		out.dir			<- file.path(HOME,"Rakai_ptoutput_160825")
+		pty.prog		<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		raxml			<- 'raxml'
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
+	}	
+	#
+	#	set up all temporary files and create bash commands
+	#	
+	if(1)
+	{
+		#	run 160825	window length 250, no overhangs
+		pty.args			<- list(	prog=pty.prog, 
+										mafft='mafft', 
+										raxml=raxml, 
+										data.dir=pty.data.dir, 
+										work.dir=work.dir, 
+										out.dir=out.dir, 
+										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+										alignments.root='AF460972', 
+										alignments.pairwise.to='K03455',
+										window.automatic= '', 
+										merge.threshold=1, 
+										min.read.count=1, 
+										quality.trim.ends=20, 
+										min.internal.quality=2, 
+										merge.paired.reads='-P', 
+										no.trees=FALSE, 
+										dont.check.duplicates=TRUE,
+										num.bootstraps=100,
+										strip.max.len=350, 
+										min.ureads.individual=NA, 
+										win=c(800,3000,250,1), 
+										keep.overhangs=FALSE, 
+										select=c(5,22,99,115))
+		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
+		#pty.c[1,cat(CMD)]		
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=60, hpc.q="pqeelab", hpc.mem="6000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cat(cmd)					
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						}, by='PTY_RUN'])		
 	}	
 }
 
