@@ -1510,7 +1510,7 @@ pty.pipeline.fasta.160825<- function()
 										merge.paired.reads='-P', 
 										no.trees=FALSE, 
 										dont.check.duplicates=TRUE,
-										num.bootstraps=100,
+										num.bootstraps=1,
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
 										win=c(800,3000,250,1), 
@@ -1519,7 +1519,7 @@ pty.pipeline.fasta.160825<- function()
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=60, hpc.q="pqeelab", hpc.mem="6000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
