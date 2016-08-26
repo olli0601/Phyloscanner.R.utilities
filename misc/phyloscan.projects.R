@@ -683,8 +683,8 @@ project.dualinfecions.UG.setup.coinfections.160219<- function()
 	set(bam.inds, bam.inds[, which(GROUP=='650-3900')],'GROUP','650-2000')
 	bam.inds	<- merge(bam.inds, subset(sqi, select=c(TAXA, SANGER_ID)), by='SANGER_ID')	
 	#	get distance data.table
-	ph.gdf		<- as.data.table(melt(ph.gdtr,value.name="GD"))
-	setnames(ph.gdf, c('Var1','Var2'),c('TAXA','TAXA2'))
+	ph.gdf		<- as.data.table(melt(ph.gdtr))
+	setnames(ph.gdf, c('X1','X2','value'),c('TAXA','TAXA2','GD'))
 	tmp			<- data.table(TX_IDX=seq_len(Ntip(ph)), TAXA= ph$tip.label)
 	tmp			<- merge(tmp, sqi,by='TAXA')
 	tmp			<- subset(tmp, SITE=='UG')
@@ -743,6 +743,7 @@ project.dualinfecions.UG.setup.coinfections.160219<- function()
 				list(PTY_RUN=z[1:100,][, unique(PTY_RUN)][1:10], ORDER=1:10)				
 			}, by='IDX']	
 	tmp			<- subset(tmp, !is.na(PTY_RUN))	#this excludes the root
+
 	#	add taxa not yet included: determine closest run that is not yet full and add
 	for(x in tmp[, unique(IDX)])
 	{
@@ -792,7 +793,7 @@ project.dualinfecions.UG.setup.coinfections.160219<- function()
 	pty.runs	<- merge(pty.clu, subset(sqi, select=c(TAXA, SANGER_ID)), by='TAXA')
 	setnames(pty.runs, 'SANGER_ID','FILE_ID')
 	#	save
-	outfile		<- gsub('fasttree','coinfinput_160219',infile.gagtree)
+	outfile		<- gsub('fasttree','coinfinput_160825',infile.gagtree)
 	save(pty.runs, ph, dist.brl, ph.gdtr, ph.mrca, clustering, sqi, file=outfile)	
 	#	plot runs on tree
 	phd			<- data.table(IDX=seq_along(ph$tip.label))
@@ -1474,18 +1475,24 @@ pty.pipeline.fasta.160825<- function()
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 		out.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
 		pty.prog		<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-		raxml			<- 'raxmlHPC-AVX'
+		pty.prog.split	<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
+		pty.prog.smry	<- 'Rscript /Users/Oliver/git/phylotypes/tools/SummaryStatistics.R'
+		raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
+		pty.select		<- c(5,22,99,115)
 		hpc.load		<- ""
 	}
 	if(1)	#coinfections UG on HPC
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
-		work.dir		<- file.path(HOME,"Rakai_ptoutput_160825")
+		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
 		out.dir			<- file.path(HOME,"Rakai_ptoutput_160825")
 		pty.prog		<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		raxml			<- 'raxml'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
+		pty.prog.split	<- paste('Rscript ',basename(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
+		pty.prog.smry	<- paste('Rscript ',basename(pty.prog),'/tools/SummaryStatistics.R',sep='')		
+		raxml			<- '"raxmlHPC-AVX -m GTRCAT"'
+		pty.select		<- NA
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
 	}	
 	#
 	#	set up all temporary files and create bash commands
@@ -1494,6 +1501,8 @@ pty.pipeline.fasta.160825<- function()
 	{
 		#	run 160825	window length 250, no overhangs
 		pty.args			<- list(	prog=pty.prog, 
+										prog.split=pty.prog.split,
+										prog.smry=pty.prog.smry,
 										mafft='mafft', 
 										raxml=raxml, 
 										data.dir=pty.data.dir, 
@@ -1506,26 +1515,57 @@ pty.pipeline.fasta.160825<- function()
 										merge.threshold=1, 
 										min.read.count=1, 
 										quality.trim.ends=20, 
-										min.internal.quality=2, 
-										merge.paired.reads='-P', 
+										min.internal.quality=20, 
+										merge.paired.reads=TRUE, 
 										no.trees=FALSE, 
-										dont.check.duplicates=TRUE,
+										dont.check.duplicates=FALSE,
 										num.bootstraps=1,
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
-										win=c(800,3000,250,1), 
+										win=c(800,9400,250,1), 
 										keep.overhangs=FALSE, 
-										select=c(5,22,99,115))
+										select=pty.select)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=20, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-						}, by='PTY_RUN'])		
-	}	
+						}, by='PTY_RUN'])
+	}
+	if(0)
+	{
+		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
+		ptyf[, FILE_OUT:= gsub('\\.tree','_',FILE_TREE)]	
+		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
+		ptyf[, {
+						cmd	<- pty.cmd.SplitPatientsToSubtrees(pty.args$prog.split, dirname(pty.args$prog), paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), FILE_TREE, FILE_OUT, pdfwidth=30, pdfrelheight=0.15)
+						cat(cmd)
+						system(cmd)
+						#stop()
+				}, by='FILE_TREE']
+		
+		sapply( ptyf[, unique(PTY_RUN)], function(pty_run)
+				{
+					file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
+					cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
+					treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
+					splitsFile		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
+					outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
+					cmd				<- pty.cmd.SummaryStatistics( 	pty.args$prog.smry, 
+							file.path(dirname(pty.args$prog),'tools'), 
+							paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+							file.patients, 
+							treeFiles, 
+							splitsFile, 
+							outputBaseName)
+					cat(cmd)
+					stop()
+					system(cmd)
+				})		
+	}
 }
 
 pty.scan.explore	<- function()

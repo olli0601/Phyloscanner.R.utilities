@@ -24,3 +24,4 @@ Depends:
 Description: scan phylogenies created along a genome for patterns
 License: GPL (>=2)
 LazyLoad: yes
+RoxygenNote: 5.0.1

@@ -86,11 +86,27 @@ pty.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 }
 
 #' @export
-pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',num.bootstraps=1, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
+pty.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFile, outputBaseName)
+{
+	paste(pr,'--scriptdir',scriptdir,'--outgroupName', outgroupName, file.patients, treeFiles, splitsFile, outputBaseName)
+}
+
+
+#' @export
+pty.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, outgroupName, infile, outBaseName, pdfwidth=30, pdfrelheight=0.15)	
+{
+	paste(pr, '--scriptdir', scriptdir, '--outgroupName', outgroupName, '--pdfwidth', pdfwidth, '--pdfrelheight', pdfrelheight, infile, outBaseName)	
+}
+	
+
+
+#' @export
+pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads=TRUE,num.bootstraps=1, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
 {	
 	stopifnot(is.character(file.bam),is.character(file.ref))
 	if(!nchar(window.automatic))	stopifnot( is.numeric(window.coord), !length(window.coord)%%2)
 	if(nchar(window.automatic))		stopifnot( !length(window.coord) )
+	merge.paired.reads			<- ifelse(!is.na(merge.paired.reads) & merge.paired.reads, '--merge-paired-reads', NA_character_)
 	keep.overhangs				<- ifelse(!is.na(keep.overhangs) & keep.overhangs, '--keep-overhangs', NA_character_)
 	no.trees					<- ifelse(!is.na(no.trees) & no.trees, '--no-trees', NA_character_)
 	num.bootstraps				<- ifelse(is.na(no.trees) & !is.na(num.bootstraps) & is.numeric(num.bootstraps) & num.bootstraps>1, as.integer(num.bootstraps), NA_integer_)
@@ -106,8 +122,10 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	cmd		<- paste(cmd,'cp "',file.ref,'" "',tmpdir,'"\n',sep='')
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
-	cmd		<- paste(cmd, prog,' ',merge.threshold,' ',min.read.count,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
-	cmd		<- paste(cmd, '-Q1', quality.trim.ends, '-Q2',min.internal.quality, merge.paired.reads)
+	cmd		<- paste(cmd, prog,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
+	cmd		<- paste(cmd, '--merging-threshold', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality)
+	if(!is.na(merge.paired.reads))
+		cmd	<- paste(cmd,' ',merge.paired.reads,sep='')	
 	if(!is.na(dont.check.duplicates))
 		cmd	<- paste(cmd,' ',dont.check.duplicates,sep='')
 	if(!is.na(align.pairwise.to))		
@@ -128,7 +146,8 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 		cmd	<- paste(cmd, keep.overhangs)
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
-	cmd		<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+	if(is.na(no.trees))
+		cmd	<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
 	#cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 	if(!is.na(file.alignments) & !is.na(keep.overhangs))
 	{
@@ -140,9 +159,10 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 	if(is.na(file.alignments) || is.na(keep.overhangs))
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')	
-	}	
-	cmd		<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')	
+	}
 	cmd		<- paste(cmd, 'mv ',tmp,'*fasta "',out.dir,'"\n',sep='')
+	if(is.na(no.trees))
+		cmd	<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')		
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
 	cmd
@@ -220,7 +240,8 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 										prog.raxml=pty.args[['raxml']], 
 										prog.mafft=pty.args[['mafft']], 
 										merge.threshold=pty.args[['merge.threshold']], 
-										min.read.count=pty.args[['min.read.count']], 
+										min.read.count=pty.args[['min.read.count']],
+										dont.check.duplicates=pty.args[['dont.check.duplicates']],
 										quality.trim.ends=pty.args[['quality.trim.ends']], 
 										min.internal.quality=pty.args[['min.internal.quality']], 
 										merge.paired.reads=pty.args[['merge.paired.reads']], 
