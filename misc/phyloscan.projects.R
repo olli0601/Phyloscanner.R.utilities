@@ -1580,7 +1580,7 @@ pty.pipeline.phyloscanner.160825<- function()
 		#
 		#	submit
 		#
-		invisible(pty.c[,	{					
+		invisible(cmds[,	{					
 						cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
 						#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 						cat(cmd)					
