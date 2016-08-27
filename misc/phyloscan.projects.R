@@ -1487,8 +1487,8 @@ pty.pipeline.phyloscanner.160825<- function()
 		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
 		out.dir			<- file.path(HOME,"Rakai_ptoutput_160825")
 		pty.prog		<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		pty.prog.split	<- paste('Rscript ',basename(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
-		pty.prog.smry	<- paste('Rscript ',basename(pty.prog),'/tools/SummaryStatistics.R',sep='')		
+		pty.prog.split	<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
+		pty.prog.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')		
 		raxml			<- '"raxmlHPC-AVX -m GTRCAT"'
 		pty.select		<- NA
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
