@@ -249,7 +249,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 										num.bootstraps=pty.args[['num.bootstraps']],
 										keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
-				cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
+				#cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
 			},by='PTY_RUN']

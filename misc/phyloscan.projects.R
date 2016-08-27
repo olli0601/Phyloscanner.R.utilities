@@ -1461,13 +1461,12 @@ pty.pipeline.fasta.160217<- function()
 	}	
 }
 
-pty.pipeline.fasta.160825<- function() 
+pty.pipeline.phyloscanner.160825<- function() 
 {
 	require(big.phylo)
 	#
-	#	input args
-	#	(used function project.dualinfecions.phylotypes.setup.ZA.160110 to select bam files for one run)
-	#
+	#	INPUT ARGS PLATFORM
+	#	
 	if(0)	#coinfections UG on Mac
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
@@ -1495,11 +1494,11 @@ pty.pipeline.fasta.160825<- function()
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
 	}	
 	#
-	#	set up all temporary files and create bash commands
+	#	INPUT ARGS THIS RUN
 	#	
 	if(1)
 	{
-		#	run 160825	window length 250, no overhangs
+		#	run 160825:	window length 250, no overhangs, no bootstrap
 		pty.args			<- list(	prog=pty.prog, 
 										prog.split=pty.prog.split,
 										prog.smry=pty.prog.smry,
@@ -1525,30 +1524,45 @@ pty.pipeline.fasta.160825<- function()
 										win=c(800,9400,250,1), 
 										keep.overhangs=FALSE, 
 										select=pty.select)
+	}
+	#
+	#	RUN PHYLOSCANNER
+	#
+	if(0)
+	{
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
 							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 						}, by='PTY_RUN'])
+		quit('no')
 	}
-	if(0)
+	#
+	#	GET TREES AND SUMMARIES
+	#	
+	if(1)
 	{
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
 		ptyf[, FILE_OUT:= gsub('\\.tree','_',FILE_TREE)]	
 		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
-		ptyf[, {
-						cmd	<- pty.cmd.SplitPatientsToSubtrees(pty.args$prog.split, dirname(pty.args$prog), paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), FILE_TREE, FILE_OUT, pdfwidth=30, pdfrelheight=0.15)
-						cat(cmd)
-						system(cmd)
-						#stop()
-				}, by='FILE_TREE']
-		
-		sapply( ptyf[, unique(PTY_RUN)], function(pty_run)
-				{
+		#
+		#	get bash commands to plot trees and calculate splits for each phylotype run
+		#
+		cmds	<- ptyf[, {
+						cmd	<- pty.cmd.SplitPatientsToSubtrees(pty.args$prog.split, file.path(dirname(pty.args$prog),'tools'), paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), FILE_TREE, FILE_OUT, pdfwidth=30, pdfrelheight=0.15)
+						list(CMD=cmd)					
+				}, by=c('PTY_RUN','FILE_TREE')]
+		cmds	<- cmds[, list(CMD=paste(CMD, sep='', collapse='\n')), by='PTY_RUN']
+		#
+		#	add bash command to calculate patient stats
+		#
+		cmds	<- cmds[, {
+					#pty_run				<- 115
+					pty_run			<- PTY_RUN
 					file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
 					cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
 					treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
@@ -1561,10 +1575,19 @@ pty.pipeline.fasta.160825<- function()
 							treeFiles, 
 							splitsFile, 
 							outputBaseName)
-					cat(cmd)
-					stop()
-					system(cmd)
-				})		
+					list(CMD= paste(CMD, cmd, sep='\n'))
+				}, by='PTY_RUN']
+		#
+		#	submit
+		#
+		invisible(pty.c[,	{					
+						cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+						#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+						cat(cmd)					
+						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+					}, by='PTY_RUN'])
+		quit('no')
 	}
 }
 
