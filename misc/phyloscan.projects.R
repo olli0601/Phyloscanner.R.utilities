@@ -1470,28 +1470,32 @@ pty.pipeline.phyloscanner.160825<- function()
 	if(0)	#coinfections UG on Mac
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
-		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
-		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
-		out.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
-		pty.prog		<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-		pty.prog.split	<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
-		pty.prog.smry	<- 'Rscript /Users/Oliver/git/phylotypes/tools/SummaryStatistics.R'
-		raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
-		pty.select		<- c(5,22,99,115)
-		hpc.load		<- ""
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
+		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
+		pty.prog			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		pty.prog.split		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
+		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
+		pty.prog.smry		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SummaryStatistics.R'
+		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')
+		raxml				<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
+		pty.select			<- c(5,22,99,115)
+		hpc.load			<- ""
 	}
 	if(1)	#coinfections UG on HPC
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
-		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
-		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
-		out.dir			<- file.path(HOME,"Rakai_ptoutput_160825")
-		pty.prog		<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		pty.prog.split	<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
-		pty.prog.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')		
-		raxml			<- '"raxmlHPC-AVX -m GTRCAT"'
-		pty.select		<- NA
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
+		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160825")
+		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		pty.prog.split		<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
+		pty.prog.smry		<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')
+		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
+		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')
+		raxml				<- '"raxmlHPC-AVX -m GTRCAT"'
+		pty.select			<- NA
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
 	}	
 	#
 	#	INPUT ARGS THIS RUN
@@ -1502,6 +1506,8 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.args			<- list(	prog=pty.prog, 
 										prog.split=pty.prog.split,
 										prog.smry=pty.prog.smry,
+										prog.lkltrm=pty.prog.lkltrm,
+										prog.lklsmry=pty.prog.lkl.smry,
 										mafft='mafft', 
 										raxml=raxml, 
 										data.dir=pty.data.dir, 
@@ -1544,7 +1550,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	GET TREES AND SUMMARIES
 	#	
-	if(1)
+	if(0)
 	{
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
 		ptyf[, FILE_OUT:= gsub('\\.tree','_',FILE_TREE)]	
@@ -1569,12 +1575,12 @@ pty.pipeline.phyloscanner.160825<- function()
 					splitsFile		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
 					outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
 					cmd				<- pty.cmd.SummaryStatistics( 	pty.args$prog.smry, 
-							file.path(dirname(pty.args$prog),'tools'), 
-							paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-							file.patients, 
-							treeFiles, 
-							splitsFile, 
-							outputBaseName)
+																	file.path(dirname(pty.args$prog),'tools'), 
+																	paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+																	file.patients, 
+																	treeFiles, 
+																	splitsFile, 
+																	outputBaseName)
 					list(CMD= paste(CMD, cmd, sep='\n'))
 				}, by='PTY_RUN']
 		#
@@ -1589,6 +1595,75 @@ pty.pipeline.phyloscanner.160825<- function()
 						stop()
 					}, by='PTY_RUN'])
 		quit('no')
+	}
+	if(1)
+	{
+		#
+		#	run likely.transmissions and likely.transmissions.summary
+		#
+		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
+		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
+		setkey(ptyf, FILE_PTY_RUN)
+		ptyf	<- unique(ptyf)
+		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_PTY_RUN,regexpr('ptyr[0-9]+', FILE_PTY_RUN)))]
+		cmds	<- ptyf[, {
+					cmd		<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
+															FILE_PTY_RUN, 
+															FILE_PTY_RUN, 
+															FILE_PTY_RUN, 
+															root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+															zeroLengthTipsCount=FALSE, 
+															dual.inf.thr=NA,
+															romeroSeverson=TRUE)
+					tmp	<- pty.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
+																paste(FILE_PTY_RUN,'patients.txt',sep=''),
+																paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
+																FILE_PTY_RUN, 
+																paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
+																min.threshold=1, 
+																allow.splits=TRUE)
+					cmd	<- paste(cmd, tmp, sep='\n')									
+					list(CMD=cmd)
+				}, by='PTY_RUN']	
+		#
+		#	submit
+		#
+		invisible(cmds[,	{					
+								cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+								#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+								cat(cmd)					
+								outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+								cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+								stop()
+						}, by='PTY_RUN'])
+		quit('no')
+	}
+	if(0)
+	{
+		#
+		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
+		ptyf[, FILE_OUT:= gsub('\\.tree','_lkl.csv',FILE_TREE)]	
+		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
+		ptyf[, WINDOW_FROM:= as.integer(gsub('InWindow_','',regmatches(FILE_TREE, regexpr('InWindow_[0-9]+', FILE_TREE))))]
+		ptyf[, WINDOW_TO:= as.integer(gsub('InWindow_[0-9]+_to_','',regmatches(FILE_TREE, regexpr('InWindow_[0-9]+_to_[0-9]+', FILE_TREE))))]
+		#	add splits files
+		tmp		<- data.table(FILE_SPLITS=list.files(pty.args$out.dir, pattern='_subtrees_r.csv$', full.names=TRUE))
+		tmp[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_SPLITS,regexpr('ptyr[0-9]+', FILE_SPLITS)))]
+		tmp[, WINDOW_FROM:= as.integer(gsub('InWindow_','',regmatches(FILE_SPLITS, regexpr('InWindow_[0-9]+', FILE_SPLITS))))]
+		tmp[, WINDOW_TO:= as.integer(gsub('InWindow_[0-9]+_to_','',regmatches(FILE_SPLITS, regexpr('InWindow_[0-9]+_to_[0-9]+', FILE_SPLITS))))]
+		#
+		ptyf	<- merge(ptyf, tmp, by=c('PTY_RUN', 'WINDOW_FROM', 'WINDOW_TO'))
+		
+		ptyf[, {
+					cmd			<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), FILE_TREE, FILE_SPLITS, FILE_OUT, 
+													root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+													zeroLengthTipsCount=FALSE, 
+													dual.inf.thr=NA,
+													romeroSeverson=TRUE)
+					cat(cmd)
+					system(cmd)
+					stop()	
+				}, by=c('PTY_RUN', 'WINDOW_FROM', 'WINDOW_TO')]		
 	}
 }
 

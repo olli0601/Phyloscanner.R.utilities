@@ -98,7 +98,27 @@ pty.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, outgroupName, infile, 
 	paste(pr, '--scriptdir', scriptdir, '--outgroupName', outgroupName, '--pdfwidth', pdfwidth, '--pdfrelheight', pdfrelheight, infile, outBaseName)	
 }
 	
+#' @export
+pty.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, root.name=NA, zeroLengthTipsCount=FALSE, romeroSeverson=FALSE, dual.inf.thr=NA)
+{
+	cmd<- paste(pr, file.tree, file.splits, file.out,'--scriptdir', scriptdir, '--outgroupName',root.name)
+	if(!is.na(dual.inf.thr))
+		cmd	<- paste(cmd, '--dualInfectionThreshold', dual.inf.thr)
+	if(zeroLengthTipsCount)
+		cmd	<- paste(cmd, '--zeroLengthTipsCount')
+	if(romeroSeverson)
+		cmd	<- paste(cmd, '--romeroSeverson')
+	cmd
+}
 
+#' @export
+pty.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, min.threshold=1, allow.splits=FALSE)
+{
+	cmd<- paste(pr, file.patients, file.lkl, file.out,'--scriptdir', scriptdir, '--summaryFile', file.summary, '--minThreshold', min.threshold)
+	if(allow.splits)
+		cmd	<- paste(cmd, '--allowSplits')	
+	cmd
+}
 
 #' @export
 pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads=TRUE,num.bootstraps=1, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
