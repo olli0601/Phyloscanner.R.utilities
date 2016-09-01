@@ -1461,6 +1461,29 @@ pty.pipeline.fasta.160217<- function()
 	}	
 }
 
+pty.process.160901<- function()
+{
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)	#coinfections UG on Mac
+	{				
+		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
+		out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'		
+		pty.select			<- c(5,22,99,115)
+	}
+	#	read all likely transmissions in indir
+	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
+	save.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda'
+	plot.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.pdf'
+	prefix.run		<- 'ptyr'
+	regexpr.lklsu	<- '_trmStats.csv$'
+	regexpr.patient	<- '^[0-9]+_[0-9]+_[0-9]+'
+	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)
+		
+
+}
+
 pty.pipeline.phyloscanner.160825<- function() 
 {
 	require(big.phylo)
