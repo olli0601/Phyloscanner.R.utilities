@@ -1503,20 +1503,23 @@ pty.pipeline.phyloscanner.160825<- function()
 		raxml				<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
 		pty.select			<- c(5,22,99,115)
 		hpc.load			<- ""
+		hpc.nproc			<- 1
 	}
 	if(1)	#coinfections UG on HPC
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 8
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
 		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.prog.split		<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
 		pty.prog.smry		<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')
 		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
-		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')
-		raxml				<- '"raxmlHPC-AVX -m GTRCAT"'
+		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')		
+		raxml				<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
 		pty.select			<- NA
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		pty.select			<- c(22,62,49,85,72)		
 	}	
 	#
 	#	INPUT ARGS THIS RUN
@@ -1631,12 +1634,13 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=40, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							stop()
+							#stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}
