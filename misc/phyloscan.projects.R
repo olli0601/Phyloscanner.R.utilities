@@ -1555,7 +1555,7 @@ pty.pipeline.phyloscanner.160825<- function()
 										keep.overhangs=FALSE, 
 										select=pty.select)
 	}
-	if(0)
+	if(1)
 	{
 		#	run 160902_w250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
 		#					no overhangs, bootstrap=10
@@ -1589,7 +1589,7 @@ pty.pipeline.phyloscanner.160825<- function()
 										keep.overhangs=FALSE, 
 										select=pty.select)
 	}
-	if(1)
+	if(0)
 	{
 		#	run 160902_w220:	window length 200, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=10
@@ -1636,6 +1636,7 @@ pty.pipeline.phyloscanner.160825<- function()
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}
