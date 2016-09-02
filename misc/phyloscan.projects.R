@@ -1516,7 +1516,7 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')
 		raxml				<- '"raxmlHPC-AVX -m GTRCAT"'
 		pty.select			<- NA
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7.271 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 	}	
 	#
 	#	INPUT ARGS THIS RUN
