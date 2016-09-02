@@ -1479,9 +1479,7 @@ pty.process.160901<- function()
 	prefix.run		<- 'ptyr'
 	regexpr.lklsu	<- '_trmStats.csv$'
 	regexpr.patient	<- '^[0-9]+_[0-9]+_[0-9]+'
-	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)
-		
-
+	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)		
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -1496,6 +1494,7 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
+		#out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
 		pty.prog			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
 		pty.prog.split		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
 		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
@@ -1509,8 +1508,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
-		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_160825")
+		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
 		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.prog.split		<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
 		pty.prog.smry		<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')
@@ -1523,9 +1521,11 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	INPUT ARGS THIS RUN
 	#	
-	if(1)
+	if(0)
 	{
-		#	run 160825:	window length 250, no overhangs, no bootstrap
+		#	run 160825:	window length 250, min internal 2, trim ends 20, merge.threshold 1
+		#				no overhangs, no bootstrap
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160825")
 		pty.args			<- list(	prog=pty.prog, 
 										prog.split=pty.prog.split,
 										prog.smry=pty.prog.smry,
@@ -1543,11 +1543,46 @@ pty.pipeline.phyloscanner.160825<- function()
 										merge.threshold=1, 
 										min.read.count=1, 
 										quality.trim.ends=20, 
-										min.internal.quality=20, 
+										min.internal.quality=2, 
 										merge.paired.reads=TRUE, 
 										no.trees=FALSE, 
 										dont.check.duplicates=FALSE,
 										num.bootstraps=1,
+										all.bootstrap.trees=TRUE,
+										strip.max.len=350, 
+										min.ureads.individual=NA, 
+										win=c(800,9400,250,1), 
+										keep.overhangs=FALSE, 
+										select=pty.select)
+	}
+	if(1)
+	{
+		#	run 160902_250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
+		#					no overhangs, bootstrap=10
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w250")		
+		pty.args			<- list(	prog=pty.prog, 
+										prog.split=pty.prog.split,
+										prog.smry=pty.prog.smry,
+										prog.lkltrm=pty.prog.lkltrm,
+										prog.lklsmry=pty.prog.lkl.smry,
+										mafft='mafft', 
+										raxml=raxml, 
+										data.dir=pty.data.dir, 
+										work.dir=work.dir, 
+										out.dir=out.dir, 
+										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+										alignments.root='AF460972', 
+										alignments.pairwise.to='K03455',
+										window.automatic= '', 
+										merge.threshold=0, 
+										min.read.count=1, 
+										quality.trim.ends=23, 
+										min.internal.quality=23, 
+										merge.paired.reads=TRUE, 
+										no.trees=FALSE, 
+										dont.check.duplicates=FALSE,
+										num.bootstraps=10,
+										all.bootstrap.trees=TRUE,
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
 										win=c(800,9400,250,1), 
@@ -1557,7 +1592,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(0)
+	if(1)
 	{
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
@@ -1586,6 +1621,10 @@ pty.pipeline.phyloscanner.160825<- function()
 						list(CMD=cmd)					
 				}, by=c('PTY_RUN','FILE_TREE')]
 		cmds	<- cmds[, list(CMD=paste(CMD, sep='', collapse='\n')), by='PTY_RUN']
+		cmd			<- paste(cmds[, CMD], collapse='\n')
+		outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+		
 		#
 		#	add bash command to calculate patient stats
 		#
@@ -1619,7 +1658,7 @@ pty.pipeline.phyloscanner.160825<- function()
 					}, by='PTY_RUN'])
 		quit('no')
 	}
-	if(1)
+	if(0)
 	{
 		#
 		#	run likely.transmissions and likely.transmissions.summary

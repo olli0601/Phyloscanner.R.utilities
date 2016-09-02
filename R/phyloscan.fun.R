@@ -95,7 +95,7 @@ pty.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients,
 #' @export
 pty.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, outgroupName, infile, outBaseName, pdfwidth=30, pdfrelheight=0.15)	
 {
-	paste(pr, '--scriptdir', scriptdir, '--outgroupName', outgroupName, '--pdfwidth', pdfwidth, '--pdfrelheight', pdfrelheight, infile, outBaseName)	
+	paste(pr, ' --scriptdir "', scriptdir, '" --outgroupName ', outgroupName, ' --pdfwidth ', pdfwidth, ' --pdfrelheight ', pdfrelheight, ' "', infile, '" "', outBaseName,'"', sep='')	
 }
 	
 #' @export
@@ -121,9 +121,9 @@ pty.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file
 }
 
 #' @export
-pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads=TRUE,num.bootstraps=1, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
+pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic='', prog=PROG.PTY, prog.raxml='raxmlHPC-AVX', prog.mafft='mafft', merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads=TRUE, num.bootstraps=1, all.bootstrap.trees=TRUE, no.trees=FALSE,keep.overhangs=FALSE, dont.check.duplicates=FALSE, file.alignments=NA, root=NA, align.pairwise.to=NA, out.dir='.')
 {	
-	stopifnot(is.character(file.bam),is.character(file.ref))
+	stopifnot(is.character(file.bam),is.character(file.ref),is.logical(all.bootstrap.trees))
 	if(!nchar(window.automatic))	stopifnot( is.numeric(window.coord), !length(window.coord)%%2)
 	if(nchar(window.automatic))		stopifnot( !length(window.coord) )
 	merge.paired.reads			<- ifelse(!is.na(merge.paired.reads) & merge.paired.reads, '--merge-paired-reads', NA_character_)
@@ -166,8 +166,10 @@ pty.cmd<- function(file.bam, file.ref, window.coord=integer(0), window.automatic
 		cmd	<- paste(cmd, keep.overhangs)
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
 	tmp		<- gsub('_bam.txt','',basename(file.bam))	
-	if(is.na(no.trees))
-		cmd	<- paste(cmd, 'for file in RAxML_bestTree\\.*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+	if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
+		cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+	if(is.na(no.trees) & !is.na(num.bootstraps) & !all.bootstrap.trees)
+		cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/',tmp,'_}"\ndone\n',sep='')	
 	#cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 	if(!is.na(file.alignments) & !is.na(keep.overhangs))
 	{
@@ -267,6 +269,7 @@ pty.cmdwrap.fasta <- function(pty.runs, pty.args)
 										merge.paired.reads=pty.args[['merge.paired.reads']], 
 										no.trees=pty.args[['no.trees']], 
 										num.bootstraps=pty.args[['num.bootstraps']],
+										all.bootstrap.trees=pty.args[['all.bootstrap.trees']],
 										keep.overhangs=pty.args[['keep.overhangs']],
 										out.dir=pty.args[['out.dir']])
 				#cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
@@ -597,7 +600,6 @@ phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=c('anc_12','anc_21','sib','int','disconnected'), labels=c('from 1 to 2','from 2 to 1','1, 2 are siblings','1, 2 are intermingled','1, 2 are disconnected'))])
 		ggplot(tmp, aes(x=LABEL, y=WIN_OF_TYPE, fill=TYPE)) +
 				geom_bar(stat='identity', position='stack') +
-				#scale_x_continuous(expand=c(0,0)) +
 				coord_flip() +
 				labs(x='', y='number of read windows', fill='topology of clades from reads\nbetween patient pairs') +
 				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are siblings'="#ABDDA4",'1, 2 are intermingled'="#3288BD",'1, 2 are disconnected'='grey50')) +
