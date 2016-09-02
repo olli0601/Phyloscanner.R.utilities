@@ -1555,9 +1555,9 @@ pty.pipeline.phyloscanner.160825<- function()
 										keep.overhangs=FALSE, 
 										select=pty.select)
 	}
-	if(1)
+	if(0)
 	{
-		#	run 160902_250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
+		#	run 160902_w250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
 		#					no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w250")		
 		pty.args			<- list(	prog=pty.prog, 
@@ -1588,6 +1588,40 @@ pty.pipeline.phyloscanner.160825<- function()
 										win=c(800,9400,250,1), 
 										keep.overhangs=FALSE, 
 										select=pty.select)
+	}
+	if(1)
+	{
+		#	run 160902_w220:	window length 200, min internal 23, trim ends 23, merge.threshold 0
+		#						no overhangs, bootstrap=10
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w220")		
+		pty.args			<- list(	prog=pty.prog, 
+				prog.split=pty.prog.split,
+				prog.smry=pty.prog.smry,
+				prog.lkltrm=pty.prog.lkltrm,
+				prog.lklsmry=pty.prog.lkl.smry,
+				mafft='mafft', 
+				raxml=raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+				alignments.root='AF460972', 
+				alignments.pairwise.to='K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=10,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,220,1), 
+				keep.overhangs=FALSE, 
+				select=pty.select)
 	}
 	#
 	#	RUN PHYLOSCANNER
