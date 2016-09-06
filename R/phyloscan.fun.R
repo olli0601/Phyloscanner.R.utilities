@@ -93,9 +93,20 @@ pty.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients,
 
 
 #' @export
-pty.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, outgroupName, infile, outBaseName, pdfwidth=30, pdfrelheight=0.15)	
+pty.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, outputFileIdentifier=NA, outgroupName=NA, pdfwidth=30, pdfrelheight=0.15)	
 {
-	paste(pr, ' --scriptdir "', scriptdir, '" --outgroupName ', outgroupName, ' --pdfwidth ', pdfwidth, ' --pdfrelheight ', pdfrelheight, ' "', infile, '" "', outBaseName,'"', sep='')	
+	cmd	<- paste(pr, ' "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
+	if(!is.na(outputdir))
+		cmd	<- paste(cmd, ' --outputdir "', outputdir,'"', sep='')	
+	if(!is.na(outputFileIdentifier))
+		cmd	<- paste(cmd, ' --outputfileid "', outputFileIdentifier, '"', sep='')
+	if(!is.na(outgroupName))
+		cmd	<- paste(cmd, ' --outgroupName ', outgroupName, sep='')
+	if(!is.na(pdfwidth))
+		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
+	if(!is.na(pdfrelheight))
+		cmd	<- paste(cmd, ' --pdfrelheight ', pdfrelheight, sep='')
+	cmd	
 }
 	
 #' @export
@@ -520,6 +531,57 @@ pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,
 }
 
 #' @export
+#' @import data.table grid ggtree
+#' @title Plot all short read phylogenies including two individuals
+#' @description This function plots short read phylogenies and highlights the clades of two individuals in red and blue.  
+#' @param phs List of trees in ape format
+#' @param dfs data.table with mandatory column 'IDX' and optional column 'TITLE'. IDX is the index of all phylogenies in 'phs' that are to be plotted. TITLE is a title for each sub-plot, for example specifying a window.
+#' @param id1	Regular expression that identifies the first individual, to be plotted in red.  
+#' @param id2	Regular expression that identifies the first individual, to be plotted in blue.
+#' @param pdf.h	Height of the pdf file in inches.
+#' @param pdf.rw Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.   
+#' @param plot.file If not missing, the phylogenies will be printed to file.	
+#' @return List of ggtree objects, ready for printing.
+phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10)
+{
+	require(grid)
+	phps	<- lapply(seq_len(nrow(dfs)), function(i){
+				ph.title	<- NULL
+				if('TITLE'%in%colnames(dfs))
+					ph.title	<- dfs[i, TITLE]										
+				ph			<- phs[[ dfs[i, IDX] ]]
+				col			<- rep('grey50', length(attr(ph, "INDIVIDUAL"))) 
+				col[ grepl(id1, attr(ph, "INDIVIDUAL")) ]	<- 'red'
+				col[ grepl(id2, attr(ph, "INDIVIDUAL")) ]	<- 'blue'
+				attr(ph, 'COLOUR')	<- col								
+				#						
+				p 			<- ggtree(ph, aes(color=I(COLOUR))) +
+						geom_point2(shape = 16, size=3, aes(subset=NODE_SHAPES)) +
+						scale_fill_hue(na.value="black") +								
+						theme(legend.position="none") +
+						geom_tiplab(aes(col=I(COLOUR))) +
+						theme_tree2() +
+						theme(legend.position="bottom") + 
+						labs(x='subst/site', title=ph.title)						
+				p
+			})
+	#
+	#	single page plot
+	#		
+	if(!is.na(plot.file))					
+	{
+		cat('Plotting to file',plot.file,'...\n')
+		pdf(file=plot.file, w=pdf.rw*length(phps), h=pdf.h)
+		grid.newpage()
+		pushViewport(viewport(layout=grid.layout(1, length(phps))))
+		for(i in seq_along(phps))
+			print(phps[[i]], vp = viewport(layout.pos.row=1, layout.pos.col=i))
+		dev.off()
+	}
+	phps	
+}
+
+#' @export
 #' @import data.table ggplot2
 #' @title Read likely transmissions summary files into a data.table
 #' @description This function reads likely transmissions summary files from the phyloscanner toolkit. 
@@ -529,9 +591,19 @@ pty.stat.withinhost.diversity<- function(ph, coi.div.probs=c(0.02,0.25,0.5,0.75,
 #' @param regexpr.patient Regular expression that identifies individuals of interest that are reported in the likely transmissions summary files.	
 #' @param save.file If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.   
 #' @param plot.file If not missing, types of evidence of transmission are plotted to this file	
+#' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @return Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL, SCORE 
-phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA)
+phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE)
 {
+	if(!is.na(save.file) & resume)
+	{
+		options(show.error.messages = FALSE)		
+		tmp		<- try(suppressWarnings(load(save.file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(tmp, "try-error"))
+			return(df)
+	}
+	
 	cat('\nReading from directory', in.dir,'...\n')
 	dfr	<- data.table(FILE_TRSU= list.files(in.dir, pattern=regexpr.lklsu, full.names=TRUE))
 	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TRSU,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TRSU))))]
@@ -608,6 +680,78 @@ phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 		ggsave(plot.file, w=10, h=0.15*nrow(unique(df)), limitsize = FALSE)
 	}
 	subset(df, select=c(PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, WIN_TOTAL, PTY_RUN, SCORE))
+}
+
+
+#' @export
+#' @import data.table ape
+#' @title Read short read trees
+#' @description This function reads short read trees that are generated with the phyloscanner toolkit. 
+#' @param in.dir Full path name to likely transmissions summary files
+#' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
+#' @param regexpr.trees Regular expression that identifies tree summary files in the directory. By default, this is 'Subtrees_r_.*\\.rda$' or 'Subtrees_c_.*\\.rda$' from the phyloscanner toolkit.
+#' @param prefix.wfrom Character string to identify the start of a short read window. After the prefix, an integer number is expected. For example, if prefix.wfrom='Window_', then 'Window_800_to_1100' has start coordinate 800.
+#' @param prefix.wto Character string to identify the end of a short read window. After the prefix, an integer number is expected. For example, if prefix.wto='Window_[0-9]+_to_', then 'Window_800_to_1100' has end coordinate 1100.
+#' @param save.file If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.
+#' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
+#' @param zip If TRUE and save.file is not missing, the function zips and removes trees and tree pdfs that match the regular expression for trees.     
+#' @return list of named trees in ape format. 
+phsc.trees.read<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
+{
+	if(!is.na(save.file) & resume)
+	{
+		options(show.error.messages = FALSE)		
+		tmp		<- try(suppressWarnings(load(save.file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(tmp, "try-error"))
+		{
+			cat('\nLoaded from file', save.file,'...\n')
+			ans	<- list(phs=phs, dfr=dfr)
+			return(ans)
+		}			
+	}
+		
+	cat('\nReading from directory', in.dir,'...\n')	
+	dfr	<- data.table(FILE_TR= list.files(in.dir, pattern=regexpr.trees, full.names=TRUE))
+	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TR,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TR))))]	
+	dfr[, W_FROM:= as.integer(gsub(prefix.wfrom,'',regmatches(FILE_TR,regexpr(paste(prefix.wfrom,'[0-9]+',sep=''), FILE_TR))))]
+	dfr[, W_TO:= as.integer(gsub(prefix.wto,'',regmatches(FILE_TR,regexpr(paste(prefix.wto,'[0-9]+',sep=''), FILE_TR))))]	
+	setkey(dfr, PTY_RUN, W_FROM, W_TO)
+	dfr[, IDX:= seq_len(nrow(dfr))]
+	cat('\nFound tree summary files, n=', nrow(dfr),'...\n')	
+	phs	<- lapply(seq_len(nrow(dfr)), function(i){				 
+				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
+				load(dfr[i,FILE_TR])
+				tree				
+			})
+	names(phs)	<- dfr[, paste(PTY_RUN,'_',W_FROM,'_',W_TO,sep='')]
+	if(!is.na(save.file))
+	{
+		cat('\nSave to file', save.file,'...\n')
+		save(phs, dfr, file=save.file)
+	}
+	if(zip & !is.na(save.file))
+	{
+		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
+		if(nrow(tmp))
+		{
+			zip( paste(gsub('\\.rda','',save.file),'_treepdfs.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
+			invisible( file.remove( tmp[, FILE_TREE] ) )			
+		}
+		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern='tree$', full.names=TRUE))
+		if(nrow(tmp))
+		{
+			zip( paste(gsub('\\.rda','',save.file),'_trees.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
+			invisible( file.remove( tmp[, FILE_TREE] ) )			
+		}
+		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern='fasta$', full.names=TRUE))
+		if(nrow(tmp))
+		{
+			zip( paste(gsub('\\.rda','',save.file),'_fastas.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
+			invisible( file.remove( tmp[, FILE_TREE] ) )	
+		}				
+	}
+	list(phs=phs, dfr=dfr)
 }
 
 #' @export

@@ -1479,7 +1479,15 @@ pty.process.160901<- function()
 	prefix.run		<- 'ptyr'
 	regexpr.lklsu	<- '_trmStats.csv$'
 	regexpr.patient	<- '^[0-9]+_[0-9]+_[0-9]+'
-	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)		
+	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)
+	
+	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
+	save.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'
+	regexpr.trees	<- 'subtrees_r.rda$'
+	#regexpr.trees	<- 'Subtrees_r_.*\\.rda$'
+	tmp				<- phsc.trees.read(in.dir, prefix.run='ptyr', regexpr.trees=regexpr.trees, prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
+	phs				<- tmp$phs
+	stat.phs		<- tmp$dfr
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -1494,6 +1502,7 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
+		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
 		#out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
 		pty.prog			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
 		pty.prog.split		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
@@ -1519,7 +1528,8 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')		
 		raxml				<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
 		pty.select			<- NA
-		pty.select			<- c(22,62,49,85,72)		
+		pty.select			<- c(22,62,49,85,72)
+		pty.select			<- c(3,84,96)
 	}	
 	#
 	#	INPUT ARGS THIS RUN
@@ -1684,40 +1694,70 @@ pty.pipeline.phyloscanner.160825<- function()
 	if(0)
 	{
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
-		ptyf[, FILE_OUT:= gsub('\\.tree','_',FILE_TREE)]	
+		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
+		setkey(ptyf, FILE_PTY_RUN)
+		ptyf	<- unique(ptyf)
 		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
+		ptyf[, FILE_TREE:=NULL]
 		#
-		#	get bash commands to plot trees and calculate splits for each phylotype run
+		#	
 		#
-		cmds	<- ptyf[, {
-						cmd	<- pty.cmd.SplitPatientsToSubtrees(pty.args$prog.split, file.path(dirname(pty.args$prog),'tools'), paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), FILE_TREE, FILE_OUT, pdfwidth=30, pdfrelheight=0.15)
+		cmds	<- ptyf[, {	
+						#
+						#	get bash commands to plot trees and calculate splits for each phylotype run
+						#						
+						cmd	<- pty.cmd.SplitPatientsToSubtrees(	pty.args$prog.split, 
+																file.path(dirname(pty.args$prog),'tools'),
+																FILE_PTY_RUN,
+																outputdir=dirname(FILE_PTY_RUN),																													
+																outgroupName=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+																pdfwidth=30, pdfrelheight=0.15)
+						#
+						#	add bash command to calculate patient stats
+						#						
+						pty_run			<- PTY_RUN
+						file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
+						cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
+						treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
+						splitsFile		<- file.path(pty.args$out.dir, paste('Subtrees_r_','ptyr',pty_run,'_InWindow_',sep=''))
+						outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
+						tmp				<- pty.cmd.SummaryStatistics( 	pty.args$prog.smry, 
+																		file.path(dirname(pty.args$prog),'tools'), 
+																		paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+																		file.patients, 
+																		treeFiles, 
+																		splitsFile, 
+																		outputBaseName)
+						cmd				<- paste(cmd, tmp, sep='\n')
+						#
+						#	add bash command to get likely.transmissions 
+						#
+						tmp		<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
+																FILE_PTY_RUN, 
+																file.path(dirname(FILE_PTY_RUN),paste('Subtrees_r_',basename(FILE_PTY_RUN),sep='')), 
+																FILE_PTY_RUN, 
+																root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+																zeroLengthTipsCount=FALSE, 
+																dual.inf.thr=NA,
+																romeroSeverson=TRUE)
+						cmd		<- paste(cmd, tmp, sep='\n')
+						#
+						#	add bash command to get likely.transmissions.summary
+						#						
+						tmp	<- pty.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
+																	paste(FILE_PTY_RUN,'patients.txt',sep=''),
+																	paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
+																	FILE_PTY_RUN, 
+																	paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
+																	min.threshold=1, 
+																	allow.splits=TRUE)
+						cmd	<- paste(cmd, tmp, sep='\n')	
 						list(CMD=cmd)					
-				}, by=c('PTY_RUN','FILE_TREE')]
-		cmds	<- cmds[, list(CMD=paste(CMD, sep='', collapse='\n')), by='PTY_RUN']
+				}, by=c('PTY_RUN')]
+		#
 		cmd			<- paste(cmds[, CMD], collapse='\n')
 		outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-		
-		#
-		#	add bash command to calculate patient stats
-		#
-		cmds	<- cmds[, {
-					#pty_run				<- 115
-					pty_run			<- PTY_RUN
-					file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
-					cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
-					treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
-					splitsFile		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
-					outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
-					cmd				<- pty.cmd.SummaryStatistics( 	pty.args$prog.smry, 
-																	file.path(dirname(pty.args$prog),'tools'), 
-																	paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-																	file.patients, 
-																	treeFiles, 
-																	splitsFile, 
-																	outputBaseName)
-					list(CMD= paste(CMD, cmd, sep='\n'))
-				}, by='PTY_RUN']
 		#
 		#	submit
 		#
@@ -1730,76 +1770,7 @@ pty.pipeline.phyloscanner.160825<- function()
 						stop()
 					}, by='PTY_RUN'])
 		quit('no')
-	}
-	if(0)
-	{
-		#
-		#	run likely.transmissions and likely.transmissions.summary
-		#
-		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
-		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
-		setkey(ptyf, FILE_PTY_RUN)
-		ptyf	<- unique(ptyf)
-		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_PTY_RUN,regexpr('ptyr[0-9]+', FILE_PTY_RUN)))]
-		cmds	<- ptyf[, {
-					cmd		<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
-															FILE_PTY_RUN, 
-															FILE_PTY_RUN, 
-															FILE_PTY_RUN, 
-															root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-															zeroLengthTipsCount=FALSE, 
-															dual.inf.thr=NA,
-															romeroSeverson=TRUE)
-					tmp	<- pty.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
-																paste(FILE_PTY_RUN,'patients.txt',sep=''),
-																paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
-																FILE_PTY_RUN, 
-																paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
-																min.threshold=1, 
-																allow.splits=TRUE)
-					cmd	<- paste(cmd, tmp, sep='\n')									
-					list(CMD=cmd)
-				}, by='PTY_RUN']	
-		#
-		#	submit
-		#
-		invisible(cmds[,	{					
-								cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
-								#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-								cat(cmd)					
-								outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-								cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-								stop()
-						}, by='PTY_RUN'])
-		quit('no')
-	}
-	if(0)
-	{
-		#
-		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
-		ptyf[, FILE_OUT:= gsub('\\.tree','_lkl.csv',FILE_TREE)]	
-		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
-		ptyf[, WINDOW_FROM:= as.integer(gsub('InWindow_','',regmatches(FILE_TREE, regexpr('InWindow_[0-9]+', FILE_TREE))))]
-		ptyf[, WINDOW_TO:= as.integer(gsub('InWindow_[0-9]+_to_','',regmatches(FILE_TREE, regexpr('InWindow_[0-9]+_to_[0-9]+', FILE_TREE))))]
-		#	add splits files
-		tmp		<- data.table(FILE_SPLITS=list.files(pty.args$out.dir, pattern='_subtrees_r.csv$', full.names=TRUE))
-		tmp[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_SPLITS,regexpr('ptyr[0-9]+', FILE_SPLITS)))]
-		tmp[, WINDOW_FROM:= as.integer(gsub('InWindow_','',regmatches(FILE_SPLITS, regexpr('InWindow_[0-9]+', FILE_SPLITS))))]
-		tmp[, WINDOW_TO:= as.integer(gsub('InWindow_[0-9]+_to_','',regmatches(FILE_SPLITS, regexpr('InWindow_[0-9]+_to_[0-9]+', FILE_SPLITS))))]
-		#
-		ptyf	<- merge(ptyf, tmp, by=c('PTY_RUN', 'WINDOW_FROM', 'WINDOW_TO'))
-		
-		ptyf[, {
-					cmd			<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), FILE_TREE, FILE_SPLITS, FILE_OUT, 
-													root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-													zeroLengthTipsCount=FALSE, 
-													dual.inf.thr=NA,
-													romeroSeverson=TRUE)
-					cat(cmd)
-					system(cmd)
-					stop()	
-				}, by=c('PTY_RUN', 'WINDOW_FROM', 'WINDOW_TO')]		
-	}
+	}	
 }
 
 pty.scan.explore	<- function()
