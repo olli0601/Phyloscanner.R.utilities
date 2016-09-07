@@ -1519,7 +1519,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
 						stop()
-					}, by='PTY_RUN'])
+					}, by='DIR'])
 	quit('no')	
 }
 
@@ -1627,7 +1627,7 @@ pty.pipeline.phyloscanner.160825<- function()
 										merge.paired.reads=TRUE, 
 										no.trees=FALSE, 
 										dont.check.duplicates=FALSE,
-										num.bootstraps=10,
+										num.bootstraps=1,#NOTE
 										all.bootstrap.trees=TRUE,
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
@@ -1661,7 +1661,7 @@ pty.pipeline.phyloscanner.160825<- function()
 				merge.paired.reads=TRUE, 
 				no.trees=FALSE, 
 				dont.check.duplicates=FALSE,
-				num.bootstraps=10,
+				num.bootstraps=1,#NOTE
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
@@ -1695,7 +1695,7 @@ pty.pipeline.phyloscanner.160825<- function()
 				merge.paired.reads=TRUE, 
 				no.trees=FALSE, 
 				dont.check.duplicates=FALSE,
-				num.bootstraps=10,
+				num.bootstraps=1,#NOTE
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
