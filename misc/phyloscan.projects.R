@@ -1504,7 +1504,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 		hpc.load		<- "module load R/3.2.0"
 		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
 		ptyf			<- data.table(DIR= c(	# '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done',
-												'/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220_done',
+												# '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220_done',
 												'/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200_done'))
 		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]		
 	}
@@ -1522,7 +1522,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 						cat(cmd)					
 						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(work.dir, outfile, cmd)
-						stop()
+						#stop()
 					}, by='DIR'])
 	quit('no')	
 }
