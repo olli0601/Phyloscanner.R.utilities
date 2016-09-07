@@ -7,8 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	#pty.pipeline.phyloscanner.160825()
-	pty.pipeline.compress.phyloscanner.output()
+	pty.pipeline.phyloscanner.160825()
+	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
@@ -1528,6 +1528,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 pty.pipeline.phyloscanner.160825<- function() 
 {
 	require(big.phylo)
+	require(phyloscan)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -1708,7 +1709,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(0)
+	if(1)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
@@ -1726,7 +1727,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	GET TREES AND SUMMARIES
 	#	
-	if(1)
+	if(0)
 	{		
 		pty.args$out.dir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
