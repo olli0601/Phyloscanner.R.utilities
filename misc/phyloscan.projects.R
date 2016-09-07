@@ -1554,7 +1554,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 8
+		hpc.nproc			<- 1
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
 		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
