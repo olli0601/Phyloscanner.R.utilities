@@ -7,7 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.phyloscanner.160825()
+	#pty.pipeline.phyloscanner.160825()
+	pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
@@ -1474,33 +1475,52 @@ pty.process.160901<- function()
 	}
 	
 	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-	save.file.base	<- 'RCCS_run160825_'
+	save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_'
+	
 	in.dir			<- '~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
-	out.dir			<- in.dir
-	save.file.base	<- 'RCCS_run160902_w250_'
+	save.file.base	<- '~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250/RCCS_run160902_w250_'
 	
 	#	TODO: deal with bootstraps
+	phsc.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=FALSE, zip=FALSE)
+	phsc.cmd.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=FALSE, zip=FALSE)
+}
+
+pty.pipeline.compress.phyloscanner.output<- function()
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(0)	#dev on Mac
+	{
+		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
+		ptyf			<- data.table(DIR= c('~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'))
+		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]				
+	}
+	if(1)	#HPC
+	{
+		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
+		ptyf			<- data.table(DIR= c('/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'))
+		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]		
+	}
 	
-	
+	cmds	<- ptyf[, {
+					cmd	<- phsc.cmd.read.processed.phyloscanner.output.in.directory(DIR, SAVE_FILE_BASE, resume=FALSE, zip=TRUE)
+					list(CMD=cmd)
+			}, by='DIR']
 	#
-	#	read all likely transmissions in indir (these are files ending in _trmStats.csv)
+	#	submit
 	#
-	save.file		<- file.path(out.dir, paste(save.file.base,'trmStats.rda',sep=''))
-	plot.file		<- gsub('\\.rda','\\.pdf',save.file)
-	stat.lkltrm		<- phsc.read.likelytransmissions(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=TRUE, zip=FALSE)
-	#
-	#	read trees
-	#
-	save.file		<- file.path(out.dir, paste(save.file.base,'trees.rda',sep=''))
-	tmp				<- phsc.read.trees(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
-	phs				<- tmp$phs
-	stat.phs		<- tmp$dfr
-	#
-	#	read subtrees files and save (must be run after phsc.read.trees!)
-	#
-	save.file		<- file.path(out.dir, paste(save.file.base,'subtrees_r.rda',sep=''))
-	stat.subtrees	<- phsc.read.subtrees(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
-	
+	invisible(cmds[,	{					
+						cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+						#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+						cat(cmd)					
+						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						cmd.hpccaller(work.dir, outfile, cmd)
+						stop()
+					}, by='PTY_RUN'])
+	quit('no')	
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -1688,7 +1708,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	if(0)
 	{
-		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
@@ -1705,7 +1725,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#	GET TREES AND SUMMARIES
 	#	
 	if(1)
-	{
+	{		
 		pty.args$out.dir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
 		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
@@ -1714,61 +1734,9 @@ pty.pipeline.phyloscanner.160825<- function()
 		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
 		ptyf[, FILE_TREE:=NULL]
 		#
-		#	
+		#	create commands to process phyloscanner output	
 		#
-		cmds	<- ptyf[, {	
-						#
-						#	get bash commands to plot trees and calculate splits for each phylotype run
-						#						
-						cmd	<- pty.cmd.SplitPatientsToSubtrees(	pty.args$prog.split, 
-																file.path(dirname(pty.args$prog),'tools'),
-																FILE_PTY_RUN,
-																outputdir=dirname(FILE_PTY_RUN),																													
-																outgroupName=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-																pdfwidth=30, pdfrelheight=0.15)
-						#
-						#	add bash command to calculate patient stats
-						#						
-						pty_run			<- PTY_RUN
-						file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
-						cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
-						treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
-						splitsFile		<- file.path(pty.args$out.dir, paste('Subtrees_r_','ptyr',pty_run,'_InWindow_',sep=''))
-						outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
-						tmp				<- pty.cmd.SummaryStatistics( 	pty.args$prog.smry, 
-																		file.path(dirname(pty.args$prog),'tools'), 
-																		paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-																		file.patients, 
-																		treeFiles, 
-																		treeFiles,
-																		splitsFile, 
-																		outputBaseName)
-						cmd				<- paste(cmd, tmp, sep='\n')
-						#
-						#	add bash command to get likely.transmissions 
-						#
-						tmp		<- pty.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
-																FILE_PTY_RUN, 
-																file.path(dirname(FILE_PTY_RUN),paste('Subtrees_r_',basename(FILE_PTY_RUN),sep='')), 
-																FILE_PTY_RUN, 
-																root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-																zeroLengthTipsCount=FALSE, 
-																dual.inf.thr=NA,
-																romeroSeverson=TRUE)
-						cmd		<- paste(cmd, tmp, sep='\n')
-						#
-						#	add bash command to get likely.transmissions.summary
-						#						
-						tmp	<- pty.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
-																	paste(FILE_PTY_RUN,'patients.txt',sep=''),
-																	paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
-																	FILE_PTY_RUN, 
-																	paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
-																	min.threshold=1, 
-																	allow.splits=TRUE)
-						cmd	<- paste(cmd, tmp, sep='\n')	
-						list(CMD=cmd)					
-				}, by=c('PTY_RUN')]
+		cmds	<- phsc.cmd.process.phyloscanner.output.in.directory(ptyf, pty.args)
 		#
 		#	submit
 		#
@@ -1778,7 +1746,7 @@ pty.pipeline.phyloscanner.160825<- function()
 						cat(cmd)					
 						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-						stop()
+						#stop()
 					}, by='PTY_RUN'])
 		quit('no')
 	}	

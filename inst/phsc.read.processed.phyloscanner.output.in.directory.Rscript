@@ -1,0 +1,25 @@
+#!/usr/bin/env Rscript
+
+###############################################################################
+#	read input arguments
+###############################################################################
+require(argparse)
+arg_parser = ArgumentParser(description="Read processed phyloscanner output.")
+arg_parser$add_argument("-i", "--in.dir", action="store", help="Full path name to processed phyloscanner output")
+arg_parser$add_argument("-o", "--save.file.base", action="store", help="Output will be stored to files that start with 'save.file.base'.")
+arg_parser$add_argument("-re", "--resume", action="store_true", default=FALSE, help="If TRUE, the function does not process existing rda files.")
+arg_parser$add_argument("-zi", "--zip", action="store_true", default=FALSE, help="If TRUE, the function zips processed phyloscanner output, and then deletes the zipped, processed phyloscanner output files.")
+args 			<- arg_parser$parse_args()
+in.dir 			<- args$in.dir
+save.file.base	<- args$save.file.base
+resume 			<- args$resume
+zip 			<- args$zip
+if(1)
+{
+	cat('\n',in.dir,save.file.base,resume,zip)
+}
+###############################################################################
+#	run script
+###############################################################################
+library(phyloscan)
+invisible(phsc.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=resume, zip=zip))
