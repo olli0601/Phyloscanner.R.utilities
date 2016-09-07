@@ -1472,22 +1472,35 @@ pty.process.160901<- function()
 		out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'		
 		pty.select			<- c(5,22,99,115)
 	}
-	#	read all likely transmissions in indir
-	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-	save.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda'
-	plot.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.pdf'
-	prefix.run		<- 'ptyr'
-	regexpr.lklsu	<- '_trmStats.csv$'
-	regexpr.patient	<- '^[0-9]+_[0-9]+_[0-9]+'
-	stat.lkltrm		<- phsc.likelytransmissions.read(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file)
 	
 	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-	save.file		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'
-	regexpr.trees	<- 'subtrees_r.rda$'
-	#regexpr.trees	<- 'Subtrees_r_.*\\.rda$'
-	tmp				<- phsc.trees.read(in.dir, prefix.run='ptyr', regexpr.trees=regexpr.trees, prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
+	save.file.base	<- 'RCCS_run160825_'
+	in.dir			<- '~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
+	out.dir			<- in.dir
+	save.file.base	<- 'RCCS_run160902_w250_'
+	
+	#	TODO: deal with bootstraps
+	
+	
+	#
+	#	read all likely transmissions in indir (these are files ending in _trmStats.csv)
+	#
+	save.file		<- file.path(out.dir, paste(save.file.base,'trmStats.rda',sep=''))
+	plot.file		<- gsub('\\.rda','\\.pdf',save.file)
+	stat.lkltrm		<- phsc.read.likelytransmissions(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=TRUE, zip=FALSE)
+	#
+	#	read trees
+	#
+	save.file		<- file.path(out.dir, paste(save.file.base,'trees.rda',sep=''))
+	tmp				<- phsc.read.trees(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
 	phs				<- tmp$phs
 	stat.phs		<- tmp$dfr
+	#
+	#	read subtrees files and save (must be run after phsc.read.trees!)
+	#
+	save.file		<- file.path(out.dir, paste(save.file.base,'subtrees_r.rda',sep=''))
+	stat.subtrees	<- phsc.read.subtrees(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=TRUE, zip=TRUE)
+	
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -1673,7 +1686,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(1)
+	if(0)
 	{
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
@@ -1691,8 +1704,9 @@ pty.pipeline.phyloscanner.160825<- function()
 	#
 	#	GET TREES AND SUMMARIES
 	#	
-	if(0)
+	if(1)
 	{
+		pty.args$out.dir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'
 		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
 		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
 		setkey(ptyf, FILE_PTY_RUN)
@@ -1726,6 +1740,7 @@ pty.pipeline.phyloscanner.160825<- function()
 																		paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
 																		file.patients, 
 																		treeFiles, 
+																		treeFiles,
 																		splitsFile, 
 																		outputBaseName)
 						cmd				<- paste(cmd, tmp, sep='\n')
@@ -1754,10 +1769,6 @@ pty.pipeline.phyloscanner.160825<- function()
 						cmd	<- paste(cmd, tmp, sep='\n')	
 						list(CMD=cmd)					
 				}, by=c('PTY_RUN')]
-		#
-		cmd			<- paste(cmds[, CMD], collapse='\n')
-		outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-		cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 		#
 		#	submit
 		#

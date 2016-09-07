@@ -86,9 +86,9 @@ pty.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 }
 
 #' @export
-pty.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFile, outputBaseName)
+pty.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, fastaFile, splitsFile, outputBaseName)
 {
-	paste(pr,'--scriptdir',scriptdir,'--outgroupName', outgroupName, file.patients, treeFiles, splitsFile, outputBaseName)
+	paste(pr,'--scriptdir',scriptdir,'--outgroupName', outgroupName, file.patients, treeFiles, fastaFile, splitsFile, outputBaseName)
 }
 
 
@@ -593,7 +593,7 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 #' @param plot.file If not missing, types of evidence of transmission are plotted to this file	
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @return Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL, SCORE 
-phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE)
+phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -657,13 +657,31 @@ phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 	setkey(df, PAIR_ID)
 	#	if save.file, zip summaries, delete individual files and save rda
 	if(!is.na(save.file))
-	{
-		save(df, file=save.file)		
-		zip( paste(gsub('\\.rda','',save.file),'.zip',sep=''), dfr[, FILE_TRSU], flags = "-FSr9XTj")
-		invisible( file.remove( dfr[, FILE_TRSU] ) )
+	{		
+		save(df, file=save.file)				
+	}	
+	if(zip & !is.na(save.file))
+	{		
+		tmp	<- copy(dfr)
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE_TRSU, flags = "-ur9XTj")), by='FILE_TRSU'] )
+			invisible( file.remove( dfr[, FILE_TRSU] ) )
+		}
+		tmp	<- data.table(FILE= list.files(in.dir, pattern='_LikelyTransmissions.csv$', full.names=TRUE))
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_LikelyTransmissions.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( file.remove( tmp[, FILE] ) )			
+		}
 	}	
 	if(!is.na(plot.file))
 	{		
+		cat('\nPlot to file', plot.file,'...\n')
 		setkey(df, ID1, ID2)
 		tmp	<- unique(df)
 		tmp	<- tmp[order(-PAIR_ID),]
@@ -682,6 +700,76 @@ phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 	subset(df, select=c(PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, WIN_TOTAL, PTY_RUN, SCORE))
 }
 
+#' @export
+#' @import data.table ape
+#' @title Read subtree information
+#' @description This function reads the subtree information that is generated with the phyloscanner toolkit. 
+#' @param in.dir Full path name to subtree files
+#' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
+#' @param regexpr.subtrees Regular expression that identifies subtree files in the directory. By default, this is 'Subtrees_r_.*\\.rda$' or 'Subtrees_c_.*\\.rda$' from the phyloscanner toolkit.
+#' @param prefix.wfrom Character string to identify the start of a short read window. After the prefix, an integer number is expected. For example, if prefix.wfrom='Window_', then 'Window_800_to_1100' has start coordinate 800.
+#' @param prefix.wto Character string to identify the end of a short read window. After the prefix, an integer number is expected. For example, if prefix.wto='Window_[0-9]+_to_', then 'Window_800_to_1100' has end coordinate 1100.
+#' @param save.file If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.
+#' @param resume If TRUE and save.file is not missing, the function loads and returns subtree info stored in save.file.
+#' @param zip If TRUE and save.file is not missing, the function zips and removes subtree files that match the regular expression for subtrees.     
+#' @return data.table with columns PTY_RUN W_FROM W_TO orig.patients patient.splits tip.names. 
+phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
+{
+	if(!is.na(save.file) & resume)
+	{
+		options(show.error.messages = FALSE)		
+		tmp		<- try(suppressWarnings(load(save.file)))
+		options(show.error.messages = TRUE)
+		if(!inherits(tmp, "try-error"))
+		{
+			cat('\nLoaded from file', save.file,'...\n')			
+			return(rs.subtrees)
+		}			
+	}
+	
+	cat('\nReading from directory', in.dir,'...\n')	
+	dfr	<- data.table(FILE_TR= list.files(in.dir, pattern=regexpr.subtrees, full.names=TRUE))
+	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TR,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TR))))]	
+	dfr[, W_FROM:= as.integer(gsub(prefix.wfrom,'',regmatches(FILE_TR,regexpr(paste(prefix.wfrom,'[0-9]+',sep=''), FILE_TR))))]
+	dfr[, W_TO:= as.integer(gsub(prefix.wto,'',regmatches(FILE_TR,regexpr(paste(prefix.wto,'[0-9]+',sep=''), FILE_TR))))]	
+	setkey(dfr, PTY_RUN, W_FROM, W_TO)	
+	cat('\nFound tree summary files, n=', nrow(dfr),'...\n')	
+	rs.subtrees	<- lapply(seq_len(nrow(dfr)), function(i){				 
+				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
+				load(dfr[i,FILE_TR])	
+				rs.subtrees	<- as.data.table(rs.subtrees)
+				rs.subtrees[, PTY_RUN:= dfr[i, PTY_RUN]]
+				rs.subtrees[, W_FROM:= dfr[i, W_FROM]]
+				rs.subtrees[, W_TO:= dfr[i, W_TO]]
+				rs.subtrees
+			})
+	rs.subtrees	<- do.call('rbind', rs.subtrees)	
+	if(!is.na(save.file))
+	{
+		cat('\nSave to file', save.file,'...\n')
+		save(rs.subtrees, file=save.file)
+	}
+	if(zip & !is.na(save.file))
+	{
+		tmp	<- copy(dfr)		
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_rda.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE_TR, flags = "-ur9XTj")), by='FILE_TR'] )
+			invisible( file.remove( tmp[, FILE_TR] ) )			
+		}
+		tmp	<- data.table(FILE= list.files(in.dir, pattern=gsub('\\.rda','\\.csv',regexpr.subtrees), full.names=TRUE))		
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_csv.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( file.remove( tmp[, FILE] ) )			
+		}						
+	}
+	rs.subtrees
+}
 
 #' @export
 #' @import data.table ape
@@ -696,7 +784,7 @@ phsc.likelytransmissions.read<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @param zip If TRUE and save.file is not missing, the function zips and removes trees and tree pdfs that match the regular expression for trees.     
 #' @return list of named trees in ape format. 
-phsc.trees.read<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -732,23 +820,29 @@ phsc.trees.read<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_
 	}
 	if(zip & !is.na(save.file))
 	{
-		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(in.dir, pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
 		if(nrow(tmp))
 		{
-			zip( paste(gsub('\\.rda','',save.file),'_treepdfs.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
-			invisible( file.remove( tmp[, FILE_TREE] ) )			
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_pdf.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern='tree$', full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(in.dir, pattern='tree$', full.names=TRUE))
 		if(nrow(tmp))
 		{
-			zip( paste(gsub('\\.rda','',save.file),'_trees.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
-			invisible( file.remove( tmp[, FILE_TREE] ) )			
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_newick.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE_TREE= list.files(in.dir, pattern='fasta$', full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(in.dir, pattern='fasta$', full.names=TRUE))
 		if(nrow(tmp))
 		{
-			zip( paste(gsub('\\.rda','',save.file),'_fastas.zip',sep=''), tmp[, FILE_TREE], flags = "-FSr9XTj")
-			invisible( file.remove( tmp[, FILE_TREE] ) )	
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_fasta.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( file.remove( tmp[, FILE] ) )	
 		}				
 	}
 	list(phs=phs, dfr=dfr)
