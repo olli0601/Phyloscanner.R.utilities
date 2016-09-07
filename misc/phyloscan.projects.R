@@ -7,8 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.phyloscanner.160825()
-	#pty.pipeline.compress.phyloscanner.output()
+	#pty.pipeline.phyloscanner.160825()
+	pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
@@ -1503,7 +1503,9 @@ pty.pipeline.compress.phyloscanner.output<- function()
 	{
 		hpc.load		<- "module load R/3.2.0"
 		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
-		ptyf			<- data.table(DIR= c('/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'))
+		ptyf			<- data.table(DIR= c(	# '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done',
+												'/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220_done',
+												'/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200_done'))
 		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]		
 	}
 	
