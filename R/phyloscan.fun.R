@@ -24,7 +24,11 @@ phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients
 #' @export
 phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(in.dir, save.file.base, resume=FALSE, zip=FALSE, pr=PR.read.processed.phyloscanner.output.in.directory)	
 {
-	cmd	<- paste(pr,'--in.dir',in.dir,'--save.file.base',save.file.base,'--resume',as.integer(resume),'--zip',as.integer(zip))
+	cmd	<- paste(pr,'--in.dir',in.dir,'--save.file.base',save.file.base)
+	if(resume)
+		cmd	<- paste(cmd,'--resume')
+	if(zip)
+		cmd	<- paste(cmd,'--zip')
 	cmd
 }
 
