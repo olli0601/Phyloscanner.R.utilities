@@ -1494,12 +1494,14 @@ pty.pipeline.compress.phyloscanner.output<- function()
 	#	
 	if(0)	#dev on Mac
 	{
+		hpc.load		<- ""
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 		ptyf			<- data.table(DIR= c('~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'))
 		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]				
 	}
 	if(1)	#HPC
 	{
+		hpc.load		<- "module load R/3.2.0"
 		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
 		ptyf			<- data.table(DIR= c('/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'))
 		ptyf[, SAVE_FILE_BASE:= file.path(DIR, ptyf[, paste(gsub('_done','',gsub('Rakai_ptoutput','RCCS', basename(DIR))),'_',sep='')])]		
