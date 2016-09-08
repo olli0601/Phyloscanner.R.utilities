@@ -142,7 +142,7 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, window.coord=integer(0)
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',run.id,'_}"\ndone\n',sep='')	
 	}
 	#	run phyloscanner tools and compress output
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(pty.args, tmpdir, file.bam), sep='\n')
+	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(prog, tmpdir, file.bam, root), sep='\n')
 	#
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir,'"\n',sep='')	
 	#	zip up everything else
@@ -248,21 +248,20 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 #' @import data.table
 #' @title Generate bash commands to process phyloscanner output
 #' @description This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit   
-#' @param pty.args phyloscanner input arguments that were used to obtain phyloscanner output. 
 #' @param tmp.dir Directory with phyloscanner output.
-#' @param file.bam File name of the file that contains the list of bam files. 
-#' @return data.table with one column CMD that contains the bash commands.
-phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.args, tmp.dir, file.bam)
+#' @param file.bam File name of the file that contains the list of bam files.
+#' @param root.name Name of root taxon. 
+#' @return character string of bash commands.
+phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.prog, tmp.dir, file.bam, root.name)
 {
 	#run.id		<- 'ptyr5'; tmp.dir		<- '$CWD/pty_16-09-08-07-32-26'; file.bam	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput/ptyr5_bam.txt'
 			
 	#	define variables	
-	pty.tools.dir		<- file.path(dirname(pty.args$prog),'tools')
+	pty.tools.dir		<- file.path(dirname(pty.prog),'tools')
 	pty.prog.split		<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
 	pty.prog.smry		<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
 	pty.prog.lkltrm		<- paste('Rscript ',file.path(pty.tools.dir,'LikelyTransmissions.R'),sep='')	
-	pty.prog.lkl.smry	<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')
-	root.name			<- paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep='')
+	pty.prog.lkl.smry	<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
 	run.id				<- gsub('_bam.txt','',basename(file.bam))
 	run.id_				<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)	
 	#
