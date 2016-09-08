@@ -8,6 +8,63 @@ PR.ALIGNMENT.ROOT	<- "AF460972"
 PR.ALIGNMENT.TO		<- "K03455"
 EPS					<- 1e-12
 
+phsc.cmd.process.phyloscanner.output.in.directory.old<- function(ptyf, pty.args)
+{
+	cmds	<- ptyf[, {	
+				#
+				#	get bash commands to plot trees and calculate splits for each phylotype run
+				#						
+				cmd	<- phsc.cmd.SplitPatientsToSubtrees(	pty.args$prog.split, 
+						file.path(dirname(pty.args$prog),'tools'),
+						FILE_PTY_RUN,
+						outputdir=dirname(FILE_PTY_RUN),																													
+						outgroupName=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+						pdfwidth=30, pdfrelheight=0.15)
+				#
+				#	add bash command to calculate patient stats
+				#						
+				pty_run			<- PTY_RUN
+				file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
+				cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
+				treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
+				splitsFile		<- file.path(pty.args$out.dir, paste('Subtrees_r_','ptyr',pty_run,'_InWindow_',sep=''))
+				outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
+				tmp				<- phsc.cmd.SummaryStatistics( 	pty.args$prog.smry, 
+						file.path(dirname(pty.args$prog),'tools'), 
+						paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+						file.patients, 
+						treeFiles, 
+						treeFiles,
+						splitsFile, 
+						outputBaseName)
+				cmd				<- paste(cmd, tmp, sep='\n')
+				#
+				#	add bash command to get likely.transmissions 
+				#
+				tmp		<- phsc.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
+						FILE_PTY_RUN, 
+						file.path(dirname(FILE_PTY_RUN),paste('Subtrees_r_',basename(FILE_PTY_RUN),sep='')), 
+						FILE_PTY_RUN, 
+						root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
+						zeroLengthTipsCount=FALSE, 
+						dual.inf.thr=NA,
+						romeroSeverson=TRUE)
+				cmd		<- paste(cmd, tmp, sep='\n')
+				#
+				#	add bash command to get likely.transmissions.summary
+				#						
+				tmp	<- phsc.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
+						paste(FILE_PTY_RUN,'patients.txt',sep=''),
+						paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
+						FILE_PTY_RUN, 
+						paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
+						min.threshold=1, 
+						allow.splits=TRUE)
+				cmd	<- paste(cmd, tmp, sep='\n')	
+				list(CMD=cmd)					
+			}, by=c('PTY_RUN')]
+	cmds
+}
 
 pty.cmd.evaluate.fasta<- function(indir, outdir=indir, strip.max.len=Inf, select='', min.ureads.individual=NA)
 {

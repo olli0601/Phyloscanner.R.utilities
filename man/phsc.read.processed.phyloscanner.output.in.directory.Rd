@@ -4,13 +4,20 @@
 \alias{phsc.read.processed.phyloscanner.output.in.directory}
 \title{Read processed phyloscanner output}
 \usage{
-phsc.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base,
-  resume = FALSE, zip = FALSE)
+phsc.read.processed.phyloscanner.output.in.directory(prefix.infiles,
+  save.file.base, read.likelytransmissions = TRUE, read.trees = TRUE,
+  read.subtrees = TRUE, resume = FALSE, zip = FALSE)
 }
 \arguments{
-\item{in.dir}{Full path name to processed phyloscanner output}
+\item{prefix.infiles}{Full path name to processed phyloscanner output}
 
 \item{save.file.base}{Output will be stored to files that start with 'save.file.base'.}
+
+\item{read.likelytransmissions}{If TRUE, read and process likely transmissions}
+
+\item{read.trees}{If TRUE, read and process trees}
+
+\item{read.subtrees}{If TRUE, read and process subtree files}
 
 \item{resume}{If TRUE, the function does not process existing rda files.}
 

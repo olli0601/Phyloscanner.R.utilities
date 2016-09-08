@@ -7,8 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	#pty.pipeline.phyloscanner.160825()
-	pty.pipeline.compress.phyloscanner.output()
+	pty.pipeline.phyloscanner.160825()
+	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
@@ -1543,10 +1543,6 @@ pty.pipeline.phyloscanner.160825<- function()
 		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
 		#out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
 		pty.prog			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-		pty.prog.split		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SplitPatientsToSubtrees.R'
-		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
-		pty.prog.smry		<- 'Rscript /Users/Oliver/git/phylotypes/tools/SummaryStatistics.R'
-		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')
 		raxml				<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
 		pty.select			<- c(5,22,99,115)
 		hpc.load			<- ""
@@ -1560,14 +1556,10 @@ pty.pipeline.phyloscanner.160825<- function()
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
 		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		pty.prog.split		<- paste('Rscript ',dirname(pty.prog),'/tools/SplitPatientsToSubtrees.R',sep='')
-		pty.prog.smry		<- paste('Rscript ',dirname(pty.prog),'/tools/SummaryStatistics.R',sep='')
-		pty.prog.lkltrm		<- paste('Rscript ',dirname(pty.prog),'/tools/LikelyTransmissions.R',sep='')
-		pty.prog.lkl.smry	<- paste('Rscript ',dirname(pty.prog),'/tools/TransmissionSummary.R',sep='')		
 		raxml				<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
 		pty.select			<- NA
 		pty.select			<- c(22,62,49,85,72)
-		pty.select			<- c(3,84,96)
+		#pty.select			<- c(3,84,96)
 	}	
 	#
 	#	INPUT ARGS THIS RUN
@@ -1578,10 +1570,6 @@ pty.pipeline.phyloscanner.160825<- function()
 		#				no overhangs, no bootstrap
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160825")
 		pty.args			<- list(	prog=pty.prog, 
-										prog.split=pty.prog.split,
-										prog.smry=pty.prog.smry,
-										prog.lkltrm=pty.prog.lkltrm,
-										prog.lklsmry=pty.prog.lkl.smry,
 										mafft='mafft', 
 										raxml=raxml, 
 										data.dir=pty.data.dir, 
@@ -1608,14 +1596,70 @@ pty.pipeline.phyloscanner.160825<- function()
 	}
 	if(0)
 	{
+		#	run 160902_w280:	window length 280, min internal 23, trim ends 23, merge.threshold 0
+		#						no overhangs, bootstrap=1
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w280")		
+		pty.args			<- list(	prog=pty.prog, 
+				mafft='mafft', 
+				raxml=raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+				alignments.root='AF460972', 
+				alignments.pairwise.to='K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,280,1), 
+				keep.overhangs=FALSE, 
+				select=pty.select)
+	}
+	if(1)
+	{
+		#	run 160902_w270:	window length 270, min internal 23, trim ends 23, merge.threshold 0
+		#						no overhangs, bootstrap=1
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w270")		
+		pty.args			<- list(	prog=pty.prog, 
+				mafft='mafft', 
+				raxml=raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
+				alignments.root='AF460972', 
+				alignments.pairwise.to='K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,270,1), 
+				keep.overhangs=FALSE, 
+				select=pty.select)
+	}
+	if(0)
+	{
 		#	run 160902_w250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
 		#					no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w250")		
 		pty.args			<- list(	prog=pty.prog, 
-										prog.split=pty.prog.split,
-										prog.smry=pty.prog.smry,
-										prog.lkltrm=pty.prog.lkltrm,
-										prog.lklsmry=pty.prog.lkl.smry,
 										mafft='mafft', 
 										raxml=raxml, 
 										data.dir=pty.data.dir, 
@@ -1646,10 +1690,6 @@ pty.pipeline.phyloscanner.160825<- function()
 		#						no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w220")		
 		pty.args			<- list(	prog=pty.prog, 
-				prog.split=pty.prog.split,
-				prog.smry=pty.prog.smry,
-				prog.lkltrm=pty.prog.lkltrm,
-				prog.lklsmry=pty.prog.lkl.smry,
 				mafft='mafft', 
 				raxml=raxml, 
 				data.dir=pty.data.dir, 
@@ -1674,16 +1714,12 @@ pty.pipeline.phyloscanner.160825<- function()
 				keep.overhangs=FALSE, 
 				select=pty.select)
 	}
-	if(1)
+	if(0)
 	{
 		#	run 160902_w200:	window length 200, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w200")		
 		pty.args			<- list(	prog=pty.prog, 
-				prog.split=pty.prog.split,
-				prog.smry=pty.prog.smry,
-				prog.lkltrm=pty.prog.lkltrm,
-				prog.lklsmry=pty.prog.lkl.smry,
 				mafft='mafft', 
 				raxml=raxml, 
 				data.dir=pty.data.dir, 
@@ -1724,35 +1760,6 @@ pty.pipeline.phyloscanner.160825<- function()
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							#stop()
 						}, by='PTY_RUN'])
-		quit('no')
-	}
-	#
-	#	GET TREES AND SUMMARIES
-	#	
-	if(0)
-	{		
-		pty.args$out.dir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done'
-		ptyf	<- data.table(FILE_TREE=list.files(pty.args$out.dir, pattern='tree$', full.names=TRUE))
-		ptyf[, FILE_PTY_RUN:= gsub('InWindow.*','',FILE_TREE)]
-		setkey(ptyf, FILE_PTY_RUN)
-		ptyf	<- unique(ptyf)
-		ptyf[, PTY_RUN:= gsub('ptyr','',regmatches(FILE_TREE,regexpr('ptyr[0-9]+', FILE_TREE)))]
-		ptyf[, FILE_TREE:=NULL]
-		#
-		#	create commands to process phyloscanner output	
-		#
-		cmds	<- phsc.cmd.process.phyloscanner.output.in.directory(ptyf, pty.args)
-		#
-		#	submit
-		#
-		invisible(cmds[,	{					
-						cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
-						#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-						cat(cmd)					
-						outfile		<- paste("pty", paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-						cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-						#stop()
-					}, by='PTY_RUN'])
 		quit('no')
 	}	
 }

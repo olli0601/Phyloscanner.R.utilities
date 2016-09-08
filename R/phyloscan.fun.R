@@ -15,16 +15,22 @@ phsc.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 }
 
 #' @export
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, fastaFile, splitsFile, outputBaseName)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, fastaFiles, splitsFiles, outputBaseName)
 {
-	paste(pr,'--scriptdir',scriptdir,'--outgroupName', outgroupName, file.patients, treeFiles, fastaFile, splitsFile, outputBaseName)
+	paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',fastaFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')
 }
 
 
 #' @export
-phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(in.dir, save.file.base, resume=FALSE, zip=FALSE, pr=PR.read.processed.phyloscanner.output.in.directory)	
+phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, save.file.base, read.likelytransmissions=TRUE, read.trees=TRUE, read.subtrees=TRUE, resume=FALSE, zip=FALSE, pr=PR.read.processed.phyloscanner.output.in.directory)	
 {
-	cmd	<- paste(pr,'--in.dir',in.dir,'--save.file.base',save.file.base)
+	cmd	<- paste(pr,' --prefix.infiles "',prefix.infiles,'" --save.file.base "',save.file.base,'"',sep='')
+	if(read.likelytransmissions)
+		cmd	<- paste(cmd, '--read.likelytransmissions')
+	if(read.trees)
+		cmd	<- paste(cmd, '--read.trees')
+	if(read.subtrees)
+		cmd	<- paste(cmd, '--read.subtrees')	
 	if(resume)
 		cmd	<- paste(cmd,'--resume')
 	if(zip)
@@ -52,7 +58,7 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 #' @export
 phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, root.name=NA, zeroLengthTipsCount=FALSE, romeroSeverson=FALSE, dual.inf.thr=NA)
 {
-	cmd<- paste(pr, file.tree, file.splits, file.out,'--scriptdir', scriptdir, '--outgroupName',root.name)
+	cmd<- paste(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir, ' --outgroupName ',root.name, sep='')
 	if(!is.na(dual.inf.thr))
 		cmd	<- paste(cmd, '--dualInfectionThreshold', dual.inf.thr)
 	if(zeroLengthTipsCount)
@@ -65,9 +71,9 @@ phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, f
 #' @export
 phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, min.threshold=1, allow.splits=FALSE)
 {
-	cmd<- paste(pr, file.patients, file.lkl, file.out,'--scriptdir', scriptdir, '--summaryFile', file.summary, '--minThreshold', min.threshold)
+	cmd<- paste(pr, ' "',file.patients, '" "', file.lkl, '" "', file.out,'" --scriptdir ', scriptdir, ' --summaryFile "', file.summary, '" --minThreshold ', min.threshold, sep='')
 	if(allow.splits)
-		cmd	<- paste(cmd, '--allowSplits')	
+		cmd	<- paste(cmd, ' --allowSplits')	
 	cmd
 }
 
@@ -118,26 +124,30 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, window.coord=integer(0)
 	if(!is.na(keep.overhangs))
 		cmd	<- paste(cmd, keep.overhangs)
 	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
-	tmp		<- gsub('_bam.txt','',basename(file.bam))	
+	run.id	<- gsub('_bam.txt','',basename(file.bam))	
 	if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
-		cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',tmp,'_}"\ndone\n',sep='')
+		cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',run.id,'_}"\ndone\n',sep='')
 	if(is.na(no.trees) & !is.na(num.bootstraps) & !all.bootstrap.trees)
-		cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/',tmp,'_}"\ndone\n',sep='')	
+		cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/',run.id,'_}"\ndone\n',sep='')	
 	#cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 	if(!is.na(file.alignments) & !is.na(keep.overhangs))
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
-		#cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\tcp "$file" "${file//NoRefAlignedReads/NoRef',tmp,'_}"\n\tmv NoRef', tmp,'*fasta "',out.dir,'"\ndone\n',sep='')
+		#cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\tcp "$file" "${file//NoRefAlignedReads/NoRef',run.id,'_}"\n\tmv NoRef', run.id,'*fasta "',out.dir,'"\ndone\n',sep='')
 		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',phsc.cmd.mafft.add(file.alignments,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree --retree 1'),'\ndone\n',sep='')		
-		cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',tmp,'_}"\ndone\n',sep='')		
+		cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')		
 	}
 	if(is.na(file.alignments) || is.na(keep.overhangs))
 	{
-		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',tmp,'_}"\ndone\n',sep='')	
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',run.id,'_}"\ndone\n',sep='')	
 	}
-	cmd		<- paste(cmd, 'mv ',tmp,'*fasta "',out.dir,'"\n',sep='')
-	if(is.na(no.trees))
-		cmd	<- paste(cmd, 'mv ',tmp,'*tree "',out.dir,'"\n',sep='')		
+	#	run phyloscanner tools and compress output
+	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(pty.args, tmpdir, file.bam), sep='\n')
+	#
+	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir,'"\n',sep='')	
+	#	zip up everything else
+	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
+	cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
 	cmd
@@ -237,97 +247,127 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 #' @export
 #' @import data.table
 #' @title Generate bash commands to process phyloscanner output
-#' @description This function generates bash commands that combine the various Rscript in the phyloscanner toolkit  
-#' @param ptyf data.table with columns PTY_RUN and FILE_PTY_RUN. PTY_RUN is an id given to a single phyloscanner run. FILE_PTY_RUN is a file base name that identifies phyloscanner output from that phyloscanner run. 
-#' @param pty.args phyloscanner input arguments that were used to obtain the phyloscanner output listed in 'ptyf'.
+#' @description This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit   
+#' @param pty.args phyloscanner input arguments that were used to obtain phyloscanner output. 
+#' @param tmp.dir Directory with phyloscanner output.
+#' @param file.bam File name of the file that contains the list of bam files. 
 #' @return data.table with one column CMD that contains the bash commands.
-phsc.cmd.process.phyloscanner.output.in.directory<- function(ptyf, pty.args)
+phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.args, tmp.dir, file.bam)
 {
-	cmds	<- ptyf[, {	
-				#
-				#	get bash commands to plot trees and calculate splits for each phylotype run
-				#						
-				cmd	<- phsc.cmd.SplitPatientsToSubtrees(	pty.args$prog.split, 
-						file.path(dirname(pty.args$prog),'tools'),
-						FILE_PTY_RUN,
-						outputdir=dirname(FILE_PTY_RUN),																													
-						outgroupName=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-						pdfwidth=30, pdfrelheight=0.15)
-				#
-				#	add bash command to calculate patient stats
-				#						
-				pty_run			<- PTY_RUN
-				file.patients	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_patients.txt',sep=''))
-				cat(subset(pty.runs, PTY_RUN==pty_run)[, paste(FILE_ID,'.bam',sep='')], sep='\n', file= file.patients)
-				treeFiles		<- file.path(pty.args$out.dir, paste('ptyr',pty_run,'_InWindow_',sep=''))
-				splitsFile		<- file.path(pty.args$out.dir, paste('Subtrees_r_','ptyr',pty_run,'_InWindow_',sep=''))
-				outputBaseName	<- file.path(pty.args$out.dir, paste('ptyr',pty_run,sep=''))
-				tmp				<- phsc.cmd.SummaryStatistics( 	pty.args$prog.smry, 
-						file.path(dirname(pty.args$prog),'tools'), 
-						paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-						file.patients, 
-						treeFiles, 
-						treeFiles,
-						splitsFile, 
-						outputBaseName)
-				cmd				<- paste(cmd, tmp, sep='\n')
-				#
-				#	add bash command to get likely.transmissions 
-				#
-				tmp		<- phsc.cmd.LikelyTransmissions(	pty.args$prog.lkltrm, file.path(dirname(pty.args$prog),'tools'), 
-						FILE_PTY_RUN, 
-						file.path(dirname(FILE_PTY_RUN),paste('Subtrees_r_',basename(FILE_PTY_RUN),sep='')), 
-						FILE_PTY_RUN, 
-						root.name=paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep=''), 
-						zeroLengthTipsCount=FALSE, 
-						dual.inf.thr=NA,
-						romeroSeverson=TRUE)
-				cmd		<- paste(cmd, tmp, sep='\n')
-				#
-				#	add bash command to get likely.transmissions.summary
-				#						
-				tmp	<- phsc.cmd.LikelyTransmissionsSummary(	pty.args$prog.lklsmry, file.path(dirname(pty.args$prog),'tools'),
-						paste(FILE_PTY_RUN,'patients.txt',sep=''),
-						paste(FILE_PTY_RUN,'patStatsFull.csv',sep=''),
-						FILE_PTY_RUN, 
-						paste(FILE_PTY_RUN,'trmStats.csv',sep=''),
-						min.threshold=1, 
-						allow.splits=TRUE)
-				cmd	<- paste(cmd, tmp, sep='\n')	
-				list(CMD=cmd)					
-			}, by=c('PTY_RUN')]
-	cmds
+	#run.id		<- 'ptyr5'; tmp.dir		<- '$CWD/pty_16-09-08-07-32-26'; file.bam	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput/ptyr5_bam.txt'
+			
+	#	define variables	
+	pty.tools.dir		<- file.path(dirname(pty.args$prog),'tools')
+	pty.prog.split		<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
+	pty.prog.smry		<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
+	pty.prog.lkltrm		<- paste('Rscript ',file.path(pty.tools.dir,'LikelyTransmissions.R'),sep='')	
+	pty.prog.lkl.smry	<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')
+	root.name			<- paste('REF_CPX_',pty.args$alignments.root,'_read_1_count_0',sep='')
+	run.id				<- gsub('_bam.txt','',basename(file.bam))
+	run.id_				<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)	
+	#
+	#	bash command to plot trees and calculate splits
+	#							
+	cmd				<- phsc.cmd.SplitPatientsToSubtrees(	pty.prog.split,
+															pty.tools.dir,
+															file.path(tmp.dir,run.id_),
+															outputdir=tmp.dir,																													
+															outgroupName=root.name, 
+															pdfwidth=30, pdfrelheight=0.15)
+	file.patients	<- paste(run.id_,'patients.txt',sep='')	
+	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" "',file.path(tmp.dir,file.patients),'"', sep='')
+	#
+	#	bash command to calculate patient stats
+	#							
+	tmp				<- phsc.cmd.SummaryStatistics( 	pty.prog.smry, 
+													pty.tools.dir, 
+													root.name, 
+													file.path(tmp.dir, file.patients), 
+													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')),
+													file.path(tmp.dir, paste('Subtrees_r_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)))
+	cmd				<- paste(cmd, tmp, sep='\n')
+	#
+	#	bash command to get likely.transmissions 
+	#
+	tmp		<- phsc.cmd.LikelyTransmissions(	pty.prog.lkltrm, 
+												pty.tools.dir, 
+												file.path(tmp.dir,run.id_), 
+												file.path(tmp.dir,paste('Subtrees_r_',run.id_,sep='')), 
+												file.path(tmp.dir,run.id_),
+												root.name=root.name, 
+												zeroLengthTipsCount=FALSE, 
+												dual.inf.thr=NA,
+												romeroSeverson=TRUE)
+	cmd		<- paste(cmd, tmp, sep='\n')
+	#
+	#	add bash command to get likely.transmissions.summary
+	#						
+	tmp	<- phsc.cmd.LikelyTransmissionsSummary(	pty.prog.lkl.smry, 
+												pty.tools.dir,
+												file.path(tmp.dir, file.patients),												
+												file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
+												file.path(tmp.dir, run.id_), 
+												file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
+												min.threshold=1, 
+												allow.splits=TRUE)
+	cmd	<- paste(cmd, tmp, sep='\n')
+	#
+	#	add bash command to compress phyloscanner output
+	#							
+	tmp	<- phsc.cmd.read.processed.phyloscanner.output.in.directory(file.path(tmp.dir, run.id_), 
+																	file.path(tmp.dir, run.id_), 
+																	read.likelytransmissions=FALSE, 
+																	read.trees=TRUE, 
+																	read.subtrees=TRUE, 
+																	resume=FALSE, 
+																	zip=TRUE)
+	cmd	<- paste(cmd, tmp, sep='\n')
+	cmd
 }
 
 #' @export
 #' @title Read processed phyloscanner output
 #' @description This function creates R data.tables from processed phyloscanner output, for further data analysis in R.
-#' @param in.dir Full path name to processed phyloscanner output
+#' @param prefix.infiles Full path name to processed phyloscanner output
 #' @param save.file.base Output will be stored to files that start with 'save.file.base'.
+#' @param read.likelytransmissions If TRUE, read and process likely transmissions 
+#' @param read.trees If TRUE, read and process trees
+#' @param read.subtrees If TRUE, read and process subtree files
 #' @param resume If TRUE, the function does not process existing rda files.
 #' @param zip If TRUE, the function zips processed phyloscanner output, and then deletes the zipped, processed phyloscanner output files.     
 #' @return Nothing, rda objects written to file.
-phsc.read.processed.phyloscanner.output.in.directory<- function(in.dir, save.file.base, resume=FALSE, zip=FALSE)
+phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, save.file.base, read.likelytransmissions=TRUE, read.trees=TRUE, read.subtrees=TRUE, resume=FALSE, zip=FALSE)
 {
 	#
 	#	read all likely transmissions in indir (these are files ending in _trmStats.csv)
 	#
-	save.file		<- paste(save.file.base,'trmStats.rda',sep='')
-	plot.file		<- gsub('\\.rda','\\.pdf',save.file)
-	stat.lkltrm		<- phsc.read.likelytransmissions(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)
-	stat.lkltrm		<- NULL
+	if(read.likelytransmissions)
+	{
+		save.file		<- paste(save.file.base,'trmStats.rda',sep='')
+		plot.file		<- gsub('\\.rda','\\.pdf',save.file)
+		stat.lkltrm		<- phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)
+		stat.lkltrm		<- NULL		
+	}
 	#
 	#	read trees
 	#
-	save.file		<- paste(save.file.base,'trees.rda',sep='')
-	tmp				<- phsc.read.trees(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
-	tmp				<- NULL
+	if(read.trees)
+	{
+		save.file		<- paste(save.file.base,'trees.rda',sep='')
+		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		tmp				<- NULL		
+	}
 	#
 	#	read subtrees files and save (must be run after phsc.read.trees!)
 	#
-	save.file		<- paste(save.file.base,'subtrees_r.rda',sep='')
-	stat.subtrees	<- phsc.read.subtrees(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
-	stat.subtrees	<- NULL	
+	if(read.subtrees)
+	{
+		save.file		<- paste(save.file.base,'subtrees_r.rda',sep='')
+		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		stat.subtrees	<- NULL				
+	}
 	NULL
 }
 
@@ -386,7 +426,7 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 #' @import data.table ggplot2
 #' @title Read likely transmissions summary files into a data.table
 #' @description This function reads likely transmissions summary files from the phyloscanner toolkit. 
-#' @param in.dir Full path name to likely transmissions summary files
+#' @param prefix.infiles Full path name identifying likely transmissions summary files
 #' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
 #' @param regexpr.lklsu Regular expression that identifies likely transmissions summary files in the directory.  
 #' @param regexpr.patient Regular expression that identifies individuals of interest that are reported in the likely transmissions summary files.	
@@ -394,7 +434,7 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 #' @param plot.file If not missing, types of evidence of transmission are plotted to this file	
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @return Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL, SCORE 
-phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -403,10 +443,9 @@ phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 		options(show.error.messages = TRUE)
 		if(!inherits(tmp, "try-error"))
 			return(df)
-	}
-	
-	cat('\nReading from directory', in.dir,'...\n')
-	dfr	<- data.table(FILE_TRSU= list.files(in.dir, pattern=regexpr.lklsu, full.names=TRUE))
+	}		
+	cat('\nReading files starting', prefix.infiles,'...\n')
+	dfr	<- data.table(FILE_TRSU= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles), '.*', regexpr.lklsu, sep=''), full.names=TRUE))
 	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TRSU,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TRSU))))]
 	setkey(dfr, PTY_RUN)
 	cat('\nFound likely transmission summary files, n=', nrow(dfr),'...\n')	
@@ -471,7 +510,7 @@ phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 			invisible( tmp[, list(RTN= zip( tmp2, FILE_TRSU, flags = "-ur9XTj")), by='FILE_TRSU'] )
 			invisible( file.remove( dfr[, FILE_TRSU] ) )
 		}
-		tmp	<- data.table(FILE= list.files(in.dir, pattern='_LikelyTransmissions.csv$', full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*_LikelyTransmissions.csv$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_LikelyTransmissions.zip',sep='')
@@ -505,7 +544,7 @@ phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 #' @import data.table ape
 #' @title Read subtree information
 #' @description This function reads the subtree information that is generated with the phyloscanner toolkit. 
-#' @param in.dir Full path name to subtree files
+#' @param prefix.infiles Full path name that identifies subtree files
 #' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
 #' @param regexpr.subtrees Regular expression that identifies subtree files in the directory. By default, this is 'Subtrees_r_.*\\.rda$' or 'Subtrees_c_.*\\.rda$' from the phyloscanner toolkit.
 #' @param prefix.wfrom Character string to identify the start of a short read window. After the prefix, an integer number is expected. For example, if prefix.wfrom='Window_', then 'Window_800_to_1100' has start coordinate 800.
@@ -514,7 +553,7 @@ phsc.read.likelytransmissions<- function(in.dir, prefix.run='ptyr', regexpr.lkls
 #' @param resume If TRUE and save.file is not missing, the function loads and returns subtree info stored in save.file.
 #' @param zip If TRUE and save.file is not missing, the function zips and removes subtree files that match the regular expression for subtrees.     
 #' @return data.table with columns PTY_RUN W_FROM W_TO orig.patients patient.splits tip.names. 
-phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.subtrees<- function(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -528,8 +567,9 @@ phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtr
 		}			
 	}
 	
-	cat('\nReading from directory', in.dir,'...\n')	
-	dfr	<- data.table(FILE_TR= list.files(in.dir, pattern=regexpr.subtrees, full.names=TRUE))
+	cat('\nReading tree summary files starting', prefix.infiles,'...\n')	
+	dfr	<- data.table(FILE_TR= list.files(dirname(prefix.infiles), pattern=regexpr.subtrees, full.names=TRUE))
+	dfr	<- subset(dfr, grepl(basename(prefix.infiles), basename(FILE_TR), fixed=1))
 	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TR,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TR))))]	
 	dfr[, W_FROM:= as.integer(gsub(prefix.wfrom,'',regmatches(FILE_TR,regexpr(paste(prefix.wfrom,'[0-9]+',sep=''), FILE_TR))))]
 	dfr[, W_TO:= as.integer(gsub(prefix.wto,'',regmatches(FILE_TR,regexpr(paste(prefix.wto,'[0-9]+',sep=''), FILE_TR))))]	
@@ -560,7 +600,8 @@ phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtr
 			invisible( tmp[, list(RTN= zip( tmp2, FILE_TR, flags = "-ur9XTj")), by='FILE_TR'] )
 			invisible( file.remove( tmp[, FILE_TR] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(in.dir, pattern=gsub('\\.rda','\\.csv',regexpr.subtrees), full.names=TRUE))		
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=gsub('\\.rda','\\.csv',regexpr.subtrees), full.names=TRUE))
+		tmp	<- subset(tmp, grepl(basename(prefix.infiles), basename(FILE), fixed=1))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_csv.zip',sep='')
@@ -576,7 +617,7 @@ phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtr
 #' @import data.table ape
 #' @title Read short read trees
 #' @description This function reads short read trees that are generated with the phyloscanner toolkit. 
-#' @param in.dir Full path name to likely transmissions summary files
+#' @param prefix.infiles Full path name identifying likely transmissions summary files
 #' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
 #' @param regexpr.trees Regular expression that identifies tree summary files in the directory. By default, this is 'Subtrees_r_.*\\.rda$' or 'Subtrees_c_.*\\.rda$' from the phyloscanner toolkit.
 #' @param prefix.wfrom Character string to identify the start of a short read window. After the prefix, an integer number is expected. For example, if prefix.wfrom='Window_', then 'Window_800_to_1100' has start coordinate 800.
@@ -585,7 +626,7 @@ phsc.read.subtrees<- function(in.dir, prefix.run='ptyr', regexpr.subtrees='Subtr
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @param zip If TRUE and save.file is not missing, the function zips and removes trees and tree pdfs that match the regular expression for trees.     
 #' @return list of named trees in ape format. 
-phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -600,8 +641,9 @@ phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_
 		}			
 	}
 		
-	cat('\nReading from directory', in.dir,'...\n')	
-	dfr	<- data.table(FILE_TR= list.files(in.dir, pattern=regexpr.trees, full.names=TRUE))
+	cat('\nReading tree summary files starting', prefix.infiles,'...\n')	
+	dfr	<- data.table(FILE_TR= list.files(dirname(prefix.infiles), pattern=regexpr.trees, full.names=TRUE))
+	dfr	<- subset(dfr, grepl(basename(prefix.infiles), basename(FILE_TR),fixed=1))
 	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TR,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TR))))]	
 	dfr[, W_FROM:= as.integer(gsub(prefix.wfrom,'',regmatches(FILE_TR,regexpr(paste(prefix.wfrom,'[0-9]+',sep=''), FILE_TR))))]
 	dfr[, W_TO:= as.integer(gsub(prefix.wto,'',regmatches(FILE_TR,regexpr(paste(prefix.wto,'[0-9]+',sep=''), FILE_TR))))]	
@@ -621,7 +663,8 @@ phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_
 	}
 	if(zip & !is.na(save.file))
 	{
-		tmp	<- data.table(FILE= list.files(in.dir, pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
+		tmp	<- subset(tmp, grepl(basename(prefix.infiles), basename(FILE),fixed=1))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_pdf.zip',sep='')
@@ -629,7 +672,7 @@ phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(in.dir, pattern='tree$', full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*tree$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_newick.zip',sep='')
@@ -637,7 +680,7 @@ phsc.read.trees<- function(in.dir, prefix.run='ptyr', regexpr.trees='Subtrees_r_
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(in.dir, pattern='fasta$', full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_fasta.zip',sep='')

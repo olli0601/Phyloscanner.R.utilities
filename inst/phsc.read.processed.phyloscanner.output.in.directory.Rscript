@@ -5,21 +5,27 @@
 ###############################################################################
 require(argparse)
 arg_parser = ArgumentParser(description="Read processed phyloscanner output.")
-arg_parser$add_argument("-i", "--in.dir", action="store", help="Full path name to processed phyloscanner output")
+arg_parser$add_argument("-i", "--prefix.infiles", action="store", help="Full path name to processed phyloscanner output")
 arg_parser$add_argument("-o", "--save.file.base", action="store", help="Output will be stored to files that start with 'save.file.base'.")
+arg_parser$add_argument("-rl", "--read.likelytransmissions", action="store_true", default=FALSE, help="If TRUE, read and process likely transmissions.")
+arg_parser$add_argument("-rt", "--read.trees", action="store_true", default=FALSE, help="If TRUE, read and process trees.")
+arg_parser$add_argument("-rs", "--read.subtrees", action="store_true", default=FALSE, help="If TRUE, read and process subtree files.")
 arg_parser$add_argument("-re", "--resume", action="store_true", default=FALSE, help="If TRUE, the function does not process existing rda files.")
 arg_parser$add_argument("-zi", "--zip", action="store_true", default=FALSE, help="If TRUE, the function zips processed phyloscanner output, and then deletes the zipped, processed phyloscanner output files.")
-args 			<- arg_parser$parse_args()
-in.dir 			<- args$in.dir
-save.file.base	<- args$save.file.base
-resume 			<- args$resume
-zip 			<- args$zip
+args 					<- arg_parser$parse_args()
+prefix.infiles 			<- args$prefix.infiles
+save.file.base			<- args$save.file.base
+read.likelytransmissions<- args$read.likelytransmissions
+read.trees				<- args$read.trees
+read.subtrees			<- args$read.subtrees
+resume 					<- args$resume
+zip 					<- args$zip
 if(1)
 {
-	cat('\n',in.dir,save.file.base,resume,zip)
+	cat('\n',prefix.infiles,save.file.base,resume,zip)
 }
 ###############################################################################
 #	run script
 ###############################################################################
 library(phyloscan)
-invisible(phsc.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=resume, zip=zip))
+invisible(phsc.read.processed.phyloscanner.output.in.directory(prefix.infiles, save.file.base, read.likelytransmissions=read.likelytransmissions, read.trees=read.trees, read.subtrees=read.subtrees, resume=resume, zip=zip))

@@ -4,13 +4,13 @@
 \alias{phsc.read.subtrees}
 \title{Read subtree information}
 \usage{
-phsc.read.subtrees(in.dir, prefix.run = "ptyr",
+phsc.read.subtrees(prefix.infiles, prefix.run = "ptyr",
   regexpr.subtrees = "Subtrees_r_.*\\\\.rda$", prefix.wfrom = "Window_",
   prefix.wto = "Window_[0-9]+_to_", save.file = NA, resume = FALSE,
   zip = FALSE)
 }
 \arguments{
-\item{in.dir}{Full path name to subtree files}
+\item{prefix.infiles}{Full path name that identifies subtree files}
 
 \item{prefix.run}{Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.}
 

@@ -4,13 +4,13 @@
 \alias{phsc.read.likelytransmissions}
 \title{Read likely transmissions summary files into a data.table}
 \usage{
-phsc.read.likelytransmissions(in.dir, prefix.run = "ptyr",
+phsc.read.likelytransmissions(prefix.infiles, prefix.run = "ptyr",
   regexpr.lklsu = "_trmStats.csv$",
   regexpr.patient = "^[0-9]+_[0-9]+_[0-9]+", save.file = NA,
   plot.file = NA, resume = FALSE, zip = FALSE)
 }
 \arguments{
-\item{in.dir}{Full path name to likely transmissions summary files}
+\item{prefix.infiles}{Full path name identifying likely transmissions summary files}
 
 \item{prefix.run}{Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.}
 
