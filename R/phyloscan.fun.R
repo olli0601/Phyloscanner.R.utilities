@@ -346,7 +346,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	{
 		save.file		<- paste(save.file.base,'trmStats.rda',sep='')
 		plot.file		<- gsub('\\.rda','\\.pdf',save.file)
-		stat.lkltrm		<- phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)
+		stat.lkltrm		<- phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)
 		stat.lkltrm		<- NULL		
 	}
 	#
@@ -433,7 +433,7 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 #' @param plot.file If not missing, types of evidence of transmission are plotted to this file	
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @return Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL, SCORE 
-phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='_trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
