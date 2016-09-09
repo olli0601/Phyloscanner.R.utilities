@@ -274,7 +274,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.prog, tmp.dir, 
 															outgroupName=root.name, 
 															pdfwidth=30, pdfrelheight=0.15)
 	file.patients	<- paste(run.id_,'patients.txt',sep='')	
-	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" "',file.path(tmp.dir,file.patients),'"', sep='')
+	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')
 	#
 	#	bash command to calculate patient stats
 	#							
@@ -288,7 +288,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.prog, tmp.dir, 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)))
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
-	#	bash command to get likely.transmissions 
+	#	bash command to get likely transmissions 
 	#
 	tmp		<- phsc.cmd.LikelyTransmissions(	pty.prog.lkltrm, 
 												pty.tools.dir, 
@@ -301,7 +301,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.prog, tmp.dir, 
 												romeroSeverson=TRUE)
 	cmd		<- paste(cmd, tmp, sep='\n')
 	#
-	#	add bash command to get likely.transmissions.summary
+	#	add bash command to get likely transmissions summary
 	#						
 	tmp	<- phsc.cmd.LikelyTransmissionsSummary(	pty.prog.lkl.smry, 
 												pty.tools.dir,
@@ -317,7 +317,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(pty.prog, tmp.dir, 
 	#							
 	tmp	<- phsc.cmd.read.processed.phyloscanner.output.in.directory(file.path(tmp.dir, run.id_), 
 																	file.path(tmp.dir, run.id_), 
-																	read.likelytransmissions=FALSE, 
+																	read.likelytransmissions=TRUE, 
 																	read.trees=TRUE, 
 																	read.subtrees=TRUE, 
 																	resume=FALSE, 
