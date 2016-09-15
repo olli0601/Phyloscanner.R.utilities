@@ -5,7 +5,7 @@
 \title{Read likely transmissions summary files into a data.table}
 \usage{
 phsc.read.likelytransmissions(prefix.infiles, prefix.run = "ptyr",
-  regexpr.lklsu = "_trmStats.csv$",
+  regexpr.lklsu = "trmStats.csv$",
   regexpr.patient = "^[0-9]+_[0-9]+_[0-9]+", save.file = NA,
   plot.file = NA, resume = FALSE, zip = FALSE)
 }

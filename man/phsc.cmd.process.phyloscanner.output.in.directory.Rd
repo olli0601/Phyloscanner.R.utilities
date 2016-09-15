@@ -4,20 +4,17 @@
 \alias{phsc.cmd.process.phyloscanner.output.in.directory}
 \title{Generate bash commands to process phyloscanner output}
 \usage{
-phsc.cmd.process.phyloscanner.output.in.directory(pty.args, run.id, tmp.dir,
-  file.bam)
+phsc.cmd.process.phyloscanner.output.in.directory(tmp.dir, file.bam, pty.args)
 }
 \arguments{
-\item{pty.args}{phyloscanner input arguments that were used to obtain phyloscanner output.}
-
-\item{run.id}{Character string that identifies phyloscanner output.}
-
 \item{tmp.dir}{Directory with phyloscanner output.}
 
 \item{file.bam}{File name of the file that contains the list of bam files.}
+
+\item{pty.args}{List of phyloscanner input variables.}
 }
 \value{
-data.table with one column CMD that contains the bash commands.
+character string of bash commands.
 }
 \description{
 This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit

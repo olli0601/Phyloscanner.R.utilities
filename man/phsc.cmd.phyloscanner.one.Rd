@@ -4,14 +4,14 @@
 \alias{phsc.cmd.phyloscanner.one}
 \title{Generate bash command for a single phyloscanner run}
 \usage{
-phsc.cmd.phyloscanner.one(file.bam, file.ref, window.coord = integer(0),
-  window.automatic = "", prog = PROG.PTY, prog.raxml = "raxmlHPC-AVX",
-  prog.mafft = "mafft", merge.threshold = 1, min.read.count = 2,
-  quality.trim.ends = 30, min.internal.quality = 2,
-  merge.paired.reads = TRUE, num.bootstraps = 1,
-  all.bootstrap.trees = TRUE, no.trees = FALSE, keep.overhangs = FALSE,
-  dont.check.duplicates = FALSE, file.alignments = NA, root = NA,
-  align.pairwise.to = NA, out.dir = ".")
+phsc.cmd.phyloscanner.one(file.bam, file.ref, pty.args)
+}
+\arguments{
+\item{file.bam}{File name of the file that contains the list of bam files.}
+
+\item{file.ref}{File name of the file that contains the list of reference files.}
+
+\item{pty.args}{List of phyloscanner input variables.}
 }
 \description{
 This function generates bash commands for a single phyloscanner run, that can be called via 'system' in R, or written to file to run on a UNIX system.

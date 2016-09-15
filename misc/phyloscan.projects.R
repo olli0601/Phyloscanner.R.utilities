@@ -1323,8 +1323,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
 		out.dir				<- file.path(HOME,"phylotypes")
-		pty.prog			<- '/Users/Oliver/git/phylotypes/phylotypes.py'
-		raxml				<- 'raxmlHPC-AVX'
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		prog.raxml			<- 'raxmlHPC-AVX'
 		no.trees			<- '-T'
 		
 	}	
@@ -1334,8 +1334,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		work.dir		<- file.path(HOME,"ptyruns")
 		out.dir			<- file.path(HOME,"phylotypes")
-		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
+		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
@@ -1345,8 +1345,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/ptyruns'
 		out.dir			<- file.path(HOME,"phylotypes")
-		pty.prog		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
+		prog.pty		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- ""
 	}
@@ -1356,8 +1356,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 		work.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/coinf_ptinput_UG'
 		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
-		pty.prog		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
+		prog.pty		<- '/Users/Oliver/git/phylotypes/phylotypes.py'
+		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- ""
 	}
@@ -1367,8 +1367,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		work.dir		<- file.path(HOME,"coinf_ptinput_UG60")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
-		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
+		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
@@ -1378,8 +1378,8 @@ pty.pipeline.fasta.160217<- function()
 		pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 		work.dir		<- file.path(HOME,"coinf_ptinput")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150201")
-		pty.prog		<- '/work/or105/libs/phylotypes/phylotypes.py'
-		raxml			<- 'raxml'
+		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
+		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
 		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
@@ -1389,7 +1389,7 @@ pty.pipeline.fasta.160217<- function()
 	#	run 160115	window length 300
 	if(0)
 	{
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+		pty.args			<- list(	prog.pty=prog.pty, prog.mafft='mafft', prog.raxml=prog.raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 				merge.threshold=1, min.read.count=2, quality.trim.ends=30, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=300, keep.overhangs='',
 				strip.max.len=350, min.ureads.individual=NA)		
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)		
@@ -1397,7 +1397,7 @@ pty.pipeline.fasta.160217<- function()
 	#	run 160118	window length 60 & Q1 18 & keep overhangs
 	if(0)
 	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+		pty.args			<- list(	prog.pty=prog.pty, prog.mafft='mafft', prog.raxml=prog.raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 				merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 				strip.max.len=350, min.ureads.individual=20)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)	
@@ -1406,7 +1406,7 @@ pty.pipeline.fasta.160217<- function()
 	#	run 160119	window length 60 & Q1 18 & keep overhangs & merge.threshold=3
 	if(0)
 	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+		pty.args			<- list(	prog.pty=prog.pty, prog.mafft='mafft', prog.raxml=prog.raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 				merge.threshold=3, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 				strip.max.len=350, min.ureads.individual=NA)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
@@ -1415,7 +1415,7 @@ pty.pipeline.fasta.160217<- function()
 	#	run 160201	window length 60 & Q1 18 & keep overhangs & alignment specified
 	if(0)
 	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
+		pty.args			<- list(	prog.pty=prog.pty, prog.mafft='mafft', prog.raxml=prog.raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir,
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=18, min.internal.quality=2, merge.paired.reads='-P',no.trees=no.trees, win=60, keep.overhangs='--keep-overhangs',
 				strip.max.len=350, min.ureads.individual=20)
 		pty.c				<- pty.cmdwrap.fasta(pty.runs, pty.args)
@@ -1426,9 +1426,9 @@ pty.pipeline.fasta.160217<- function()
 	#	run 160219	window length 250 & Q1 18 & keep overhangs & alignment specified
 	if(1)
 	{		
-		pty.args			<- list(	prog=pty.prog, mafft='mafft', raxml=raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir, 
+		pty.args			<- list(	prog.pty=prog.pty, prog.mafft='mafft', prog.raxml=prog.raxml, data.dir=pty.data.dir, work.dir=work.dir, out.dir=out.dir, 
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-				alignments.root='AF460972', alignments.pairwise.to='K03455',
+				alignments.root='REF_CPX_AF460972_read_1_count_0', alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 				window.automatic= '', merge.threshold=1, min.read.count=2, quality.trim.ends=20, min.internal.quality=2, merge.paired.reads='-P', no.trees=no.trees, 
 				strip.max.len=350, min.ureads.individual=NA, win=c(800,9400,60,3), keep.overhangs='--keep-overhangs',
 				select=NA)
@@ -1467,22 +1467,54 @@ pty.process.160901<- function()
 	#
 	#	INPUT ARGS PLATFORM
 	#	
-	if(1)	#coinfections UG on Mac
+	if(1)	#UG on Mac
 	{				
-		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-		out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'		
-		pty.select			<- c(5,22,99,115)
+		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270'
+		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_'
+		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280'
+		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_'
 	}
-	
-	in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-	save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_'
-	
-	in.dir			<- '~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
-	save.file.base	<- '~/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250/RCCS_run160902_w250_'
-	
-	#	TODO: deal with bootstraps
-	phsc.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=FALSE, zip=FALSE)
-	phsc.cmd.read.processed.phyloscanner.output.in.directory(in.dir, save.file.base, resume=FALSE, zip=FALSE)
+	#	read trees
+	ptyr	<- data.table(FILE=list.files(in.dir, pattern='trees.rda', full.names=TRUE))	
+	phs		<- lapply(seq_len(nrow(ptyr)), function(i)
+			{
+				load(ptyr[i, FILE])
+				phs
+			})
+	phs		<- do.call(c, phs)
+	#	read tree info
+	dfr		<- lapply(seq_len(nrow(ptyr)), function(i)
+			{
+				load(ptyr[i, FILE])
+				dfr
+			})
+	dfr		<- do.call('rbind', dfr)
+	dfr[, IDX:=seq_len(nrow(dfr))]
+	#	save to file
+	cat('\nwrite to file', paste(save.file.base, 'trees.rda', sep=''))
+	save(phs, dfr, file=paste(save.file.base, 'trees.rda', sep=''))
+	#	read transmission stats
+	ptyr	<- data.table(FILE=list.files(in.dir, pattern='trmStats.rda', full.names=TRUE))
+	df		<- lapply(seq_len(nrow(ptyr)), function(i)
+			{
+				load(ptyr[i, FILE])
+				df
+			})
+	df		<- do.call('rbind', df)
+	#	set pair id
+	set(df, NULL, c('SCORE','PAIR_ID'), NULL)
+	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])), by=c('ID1','ID2')]
+	df	<- merge(df, tmp, by=c('ID1','ID2'))
+	#	give every pair an ID
+	setkey(df, ID1, ID2)
+	tmp	<- unique(df)
+	tmp	<- tmp[order(-SCORE),]
+	tmp[, PAIR_ID:= seq_len(nrow(tmp))]
+	df	<- merge(df, subset(tmp, select=c(ID1,ID2,PAIR_ID)), by=c('ID1','ID2'))
+	setkey(df, PAIR_ID)
+	#	save to file
+	cat('\nwrite to file', paste(save.file.base, 'trmStats.rda', sep=''))
+	save(df, file=paste(save.file.base, 'trmStats.rda', sep=''))		
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -1527,6 +1559,57 @@ pty.pipeline.compress.phyloscanner.output<- function()
 	quit('no')	
 }
 
+pty.pipeline.phyloscanner.test<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+	work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
+	out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/test_ptoutput'	
+	prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+	prog.raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
+	pty.select			<- c(22)
+	hpc.load			<- ""
+	hpc.nproc			<- 1
+	#
+	#	INPUT ARGS TEST RUN
+	#	
+	pty.args			<- list(	prog.pty=prog.pty, 
+									prog.mafft='mafft', 
+									prog.raxml=prog.raxml, 
+									data.dir=pty.data.dir, 
+									work.dir=work.dir, 
+									out.dir=out.dir, 
+									alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
+									alignments.root='REF_CPX_AF460972', 
+									alignments.pairwise.to='REF_B_K03455',
+									window.automatic= '', 
+									merge.threshold=1, 
+									min.read.count=1, 
+									quality.trim.ends=20, 
+									min.internal.quality=2, 
+									merge.paired.reads=TRUE, 
+									no.trees=FALSE, 
+									dont.check.duplicates=FALSE,
+									num.bootstraps=1,
+									all.bootstrap.trees=TRUE,
+									strip.max.len=350, 
+									min.ureads.individual=NA, 
+									win=c(2500,3000,125,250), 
+									keep.overhangs=FALSE, 
+									duplicated.raw.threshold=3,
+									duplicated.ratio.threshold=1/200,
+									select=pty.select)
+							
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
+		pty.c[1,cat(CMD)]		
+		
+}
+
 pty.pipeline.phyloscanner.160825<- function() 
 {
 	require(big.phylo)
@@ -1542,8 +1625,8 @@ pty.pipeline.phyloscanner.160825<- function()
 		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput'
 		out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptoutput_160902_w250'
 		#out.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825'
-		pty.prog			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-		raxml				<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		prog.raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
 		pty.select			<- c(5,22,99,115)
 		hpc.load			<- ""
 		hpc.nproc			<- 1
@@ -1555,8 +1638,8 @@ pty.pipeline.phyloscanner.160825<- function()
 		hpc.nproc			<- 1
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
-		pty.prog			<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		raxml				<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
 		pty.select			<- NA
 		pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
@@ -1569,15 +1652,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160825:	window length 250, min internal 2, trim ends 20, merge.threshold 1
 		#				no overhangs, no bootstrap
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160825")
-		pty.args			<- list(	prog=pty.prog, 
-										mafft='mafft', 
-										raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+										prog.mafft='mafft', 
+										prog.raxml=prog.raxml, 
 										data.dir=pty.data.dir, 
 										work.dir=work.dir, 
 										out.dir=out.dir, 
 										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-										alignments.root='AF460972', 
-										alignments.pairwise.to='K03455',
+										alignments.root='REF_CPX_AF460972_read_1_count_0', 
+										alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 										window.automatic= '', 
 										merge.threshold=1, 
 										min.read.count=1, 
@@ -1599,15 +1682,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160902_w280:	window length 280, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=1
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w280")		
-		pty.args			<- list(	prog=pty.prog, 
-				mafft='mafft', 
-				raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
 				data.dir=pty.data.dir, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-				alignments.root='AF460972', 
-				alignments.pairwise.to='K03455',
+				alignments.root='REF_CPX_AF460972_read_1_count_0', 
+				alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 				window.automatic= '', 
 				merge.threshold=0, 
 				min.read.count=1, 
@@ -1629,15 +1712,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160902_w270:	window length 270, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=1
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w270")		
-		pty.args			<- list(	prog=pty.prog, 
-				mafft='mafft', 
-				raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
 				data.dir=pty.data.dir, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-				alignments.root='AF460972', 
-				alignments.pairwise.to='K03455',
+				alignments.root='REF_CPX_AF460972_read_1_count_0', 
+				alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 				window.automatic= '', 
 				merge.threshold=0, 
 				min.read.count=1, 
@@ -1659,15 +1742,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160902_w250:	window length 250, min internal 23, trim ends 23, merge.threshold 0
 		#					no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w250")		
-		pty.args			<- list(	prog=pty.prog, 
-										mafft='mafft', 
-										raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+										prog.mafft='mafft', 
+										prog.raxml=prog.raxml, 
 										data.dir=pty.data.dir, 
 										work.dir=work.dir, 
 										out.dir=out.dir, 
 										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-										alignments.root='AF460972', 
-										alignments.pairwise.to='K03455',
+										alignments.root='REF_CPX_AF460972_read_1_count_0', 
+										alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 										window.automatic= '', 
 										merge.threshold=0, 
 										min.read.count=1, 
@@ -1689,15 +1772,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160902_w220:	window length 220, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w220")		
-		pty.args			<- list(	prog=pty.prog, 
-				mafft='mafft', 
-				raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
 				data.dir=pty.data.dir, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-				alignments.root='AF460972', 
-				alignments.pairwise.to='K03455',
+				alignments.root='REF_CPX_AF460972_read_1_count_0', 
+				alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 				window.automatic= '', 
 				merge.threshold=0, 
 				min.read.count=1, 
@@ -1719,15 +1802,15 @@ pty.pipeline.phyloscanner.160825<- function()
 		#	run 160902_w200:	window length 200, min internal 23, trim ends 23, merge.threshold 0
 		#						no overhangs, bootstrap=10
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160902_w200")		
-		pty.args			<- list(	prog=pty.prog, 
-				mafft='mafft', 
-				raxml=raxml, 
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
 				data.dir=pty.data.dir, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
 				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX.fasta"),
-				alignments.root='AF460972', 
-				alignments.pairwise.to='K03455',
+				alignments.root='REF_CPX_AF460972_read_1_count_0', 
+				alignments.pairwise.to='REF_B_K03455_read_1_count_0',
 				window.automatic= '', 
 				merge.threshold=0, 
 				min.read.count=1, 
@@ -1744,6 +1827,77 @@ pty.pipeline.phyloscanner.160825<- function()
 				keep.overhangs=FALSE, 
 				select=pty.select)
 	}
+	#
+	#	RUN PHYLOSCANNER
+	#
+	if(1)
+	{
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
+		#pty.c[1,cat(CMD)]		
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cat(cmd)					
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							#stop()
+						}, by='PTY_RUN'])
+		quit('no')
+	}	
+}
+
+pty.pipeline.phyloscanner.160915.couples<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)	#coinfections UG on HPC
+	{		
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 4
+		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")		
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
+		pty.select			<- NA
+		#pty.select			<- c(22,62,49,85,72)
+		#pty.select			<- c(3,84,96)
+	}	
+	#
+	#	INPUT ARGS THIS RUN
+	#	
+	if(1)
+	{
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,27,270), 
+				keep.overhangs=FALSE, 
+				select=pty.select)
+	}	
 	#
 	#	RUN PHYLOSCANNER
 	#
