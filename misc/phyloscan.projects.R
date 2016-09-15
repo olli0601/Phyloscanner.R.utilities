@@ -1865,7 +1865,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
-		pty.select			<- NA
+		pty.select			<- c(3)
 		#pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
 	}	
