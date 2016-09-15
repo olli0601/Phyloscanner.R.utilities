@@ -7,7 +7,8 @@ project.dual<- function()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
-	pty.pipeline.phyloscanner.160825()
+	#pty.pipeline.phyloscanner.160825()
+	pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
@@ -1854,13 +1855,14 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 	#
 	#	INPUT ARGS PLATFORM
 	#	
-	if(1)	#coinfections UG on HPC
+	if(1)
 	{		
-		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 4
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
-		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")		
+		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
 		pty.select			<- NA
@@ -1868,11 +1870,10 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		#pty.select			<- c(3,84,96)
 	}	
 	#
-	#	INPUT ARGS THIS RUN
+	#	INPUT ARGS PHYLOSCANNER RUN
 	#	
 	if(1)
-	{
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
+	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
 				prog.raxml=prog.raxml, 
@@ -1896,6 +1897,8 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 				min.ureads.individual=NA, 
 				win=c(800,9400,27,270), 
 				keep.overhangs=FALSE, 
+				duplicated.raw.threshold=3,
+				duplicated.ratio.threshold=1/200,				
 				select=pty.select)
 	}	
 	#
@@ -1906,7 +1909,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=800, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
