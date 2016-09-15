@@ -1859,13 +1859,14 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 	{		
 		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 4
+		hpc.nproc			<- 8
+		hpc.mem				<- "11900mb"
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
-		pty.select			<- c(3)
+		pty.select			<- 1:10
 		#pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
 	}	
@@ -1895,7 +1896,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
-				win=c(800,9400,27,270), 
+				win=c(800,9400,25,250), 
 				keep.overhangs=FALSE, 
 				duplicated.raw.threshold=3,
 				duplicated.ratio.threshold=1/200,				
@@ -1909,7 +1910,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=800, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=800, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
@@ -2249,14 +2250,15 @@ project.readlength.count.bam.150218<- function()
 	save(bam.len, bam.cov, file= outfile)
 }
 
-project.readlength.UG.coverage	<- function()
+pty.pipeline.runs.coverage	<- function()
 {
-	infile			<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/bam_stats_150218.rda'
-	load(infile)
-	infile.input	<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2_coinfrunsinput.rda")
-	infile.input	<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp.rda"
-	infile.input	<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
-	load( infile.input )
+	infile.bam		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/readlengths/bam_stats_150218.rda'
+	load(infile.bam)
+	infile.runs		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_NoQ_fast2_coinfrunsinput.rda")
+	infile.runs		<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp.rda"
+	infile.runs		<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
+	infile.runs		<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda"
+	load( infile.runs )
 	
 	setkey(pty.runs, PTY_RUN, FILE_ID)
 	pty.runs		<- unique(pty.runs)
@@ -2278,11 +2280,13 @@ project.readlength.UG.coverage	<- function()
 				p
 			})
 	#pdf(file=gsub('\\.rda','_coverage_UG.pdf',infile), w=12, h=5)
-	pdf(file=gsub('\\.rda','_coverage.pdf',infile.input), w=12, h=5)
+	pdf(file=gsub('\\.rda','_vertical_read_coverage.pdf',infile.runs), w=12, h=5)
 	for(i in seq_along(ps))
 		print(ps[[i]])	
 	dev.off()		
 	
+	#bam.min	<- subset(bam.cov, POS>10 & POS<8000)[, list(MC= min(COV)), by='FILE_ID']
+	#setkey(bam.min, MC)
 }
 
 project.readlength.ZA.count.bam.150120<- function()
