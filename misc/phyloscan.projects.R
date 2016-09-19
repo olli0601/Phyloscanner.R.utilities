@@ -1857,16 +1857,16 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 	#	
 	if(1)
 	{		
-		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
+		load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 8
+		hpc.nproc			<- 4
 		hpc.mem				<- "11900mb"
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
-		pty.select			<- 1:10
+		pty.select			<- 3
 		#pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
 	}	
@@ -1876,31 +1876,31 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 	if(1)
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
-				prog.mafft='mafft', 
-				prog.raxml=prog.raxml, 
-				data.dir=pty.data.dir, 
-				work.dir=work.dir, 
-				out.dir=out.dir, 
-				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
-				alignments.root='REF_CPX_AF460972', 
-				alignments.pairwise.to='REF_B_K03455',
-				window.automatic= '', 
-				merge.threshold=0, 
-				min.read.count=1, 
-				quality.trim.ends=23, 
-				min.internal.quality=23, 
-				merge.paired.reads=TRUE, 
-				no.trees=FALSE, 
-				dont.check.duplicates=FALSE,
-				num.bootstraps=1,
-				all.bootstrap.trees=TRUE,
-				strip.max.len=350, 
-				min.ureads.individual=NA, 
-				win=c(800,9400,25,250), 
-				keep.overhangs=FALSE, 
-				duplicated.raw.threshold=3,
-				duplicated.ratio.threshold=1/200,				
-				select=pty.select)
+										prog.mafft='mafft', 
+										prog.raxml=prog.raxml, 
+										data.dir=pty.data.dir, 
+										work.dir=work.dir, 
+										out.dir=out.dir, 
+										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+										alignments.root='REF_CPX_AF460972', 
+										alignments.pairwise.to='REF_B_K03455',
+										window.automatic= '', 
+										merge.threshold=0, 
+										min.read.count=1, 
+										quality.trim.ends=23, 
+										min.internal.quality=23, 
+										merge.paired.reads=TRUE, 
+										no.trees=FALSE, 
+										dont.check.duplicates=FALSE,
+										num.bootstraps=1,
+										all.bootstrap.trees=TRUE,
+										strip.max.len=350, 
+										min.ureads.individual=NA, 
+										win=c(800,9400,25,250), 
+										keep.overhangs=FALSE, 
+										duplicated.raw.threshold=3,
+										duplicated.ratio.threshold=1/200,				
+										select=pty.select)
 	}	
 	#
 	#	RUN PHYLOSCANNER
