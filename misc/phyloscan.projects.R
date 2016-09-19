@@ -1474,7 +1474,10 @@ pty.process.160901<- function()
 		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_'
 		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280'
 		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_'
+		in.dir				<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270'
+		save.file.base	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160919_w270_'
 	}
+	
 	#	read trees
 	ptyr	<- data.table(FILE=list.files(in.dir, pattern='trees.rda', full.names=TRUE))	
 	phs		<- lapply(seq_len(nrow(ptyr)), function(i)
@@ -1494,10 +1497,41 @@ pty.process.160901<- function()
 	#	save to file
 	cat('\nwrite to file', paste(save.file.base, 'trees.rda', sep=''))
 	save(phs, dfr, file=paste(save.file.base, 'trees.rda', sep=''))
+	#
 	#	read transmission stats
+	#
 	ptyr	<- data.table(FILE=list.files(in.dir, pattern='trmStats.rda', full.names=TRUE))
 	df		<- lapply(seq_len(nrow(ptyr)), function(i)
 			{
+				load(ptyr[i, FILE])
+				df
+			})
+	df		<- do.call('rbind', df)
+	#	set pair id
+	set(df, NULL, c('SCORE','PAIR_ID'), NULL)
+	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])), by=c('ID1','ID2','PTY_RUN')]
+	df	<- merge(df, tmp, by=c('ID1','ID2','PTY_RUN'))
+	#	give every pair an ID
+	setkey(df, ID1, ID2)
+	tmp	<- unique(df)
+	tmp	<- tmp[order(-SCORE),]
+	tmp[, PAIR_ID:= seq_len(nrow(tmp))]
+	setkey(df, ID1, ID2,PTY_RUN)
+	tmp2<- unique(df)
+	tmp	<- merge(tmp2, subset(tmp, select=c(ID1,ID2,PAIR_ID)), by=c('ID1','ID2'))
+	tmp	<- tmp[, list(PAIR_ID= paste(PAIR_ID,'-',seq_along(PAIR_ID),sep=''), PTY_RUN=PTY_RUN), by=c('ID1','ID2')]	
+	df	<- merge(df, tmp, by=c('ID1','ID2', 'PTY_RUN'))	
+	setkey(df, PAIR_ID)
+	#	save to file
+	cat('\nwrite to file', paste(save.file.base, 'trmStats.rda', sep=''))
+	save(df, file=paste(save.file.base, 'trmStats.rda', sep=''))
+	#
+	#	read full transmission stats
+	#
+	ptyr	<- data.table(FILE=list.files(in.dir, pattern='_patStatsFull.csv', full.names=TRUE))
+	df		<- lapply(seq_len(nrow(ptyr)), function(i)
+			{
+				as.data.table(read.csv('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_patStatsFull.csv'))
 				load(ptyr[i, FILE])
 				df
 			})
@@ -1515,7 +1549,7 @@ pty.process.160901<- function()
 	setkey(df, PAIR_ID)
 	#	save to file
 	cat('\nwrite to file', paste(save.file.base, 'trmStats.rda', sep=''))
-	save(df, file=paste(save.file.base, 'trmStats.rda', sep=''))		
+	save(df, file=paste(save.file.base, 'trmStats.rda', sep=''))
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -1607,8 +1641,7 @@ pty.pipeline.phyloscanner.test<- function()
 									select=pty.select)
 							
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
-		pty.c[1,cat(CMD)]		
-		
+		pty.c[1,cat(CMD)]				
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -1861,13 +1894,13 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 4
-		hpc.mem				<- "11900mb"
+		hpc.mem				<- "5900mb"
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
-		pty.select			<- 1:10
+		pty.select			<- 11:122
 		#pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
 	}	
@@ -1911,7 +1944,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=800, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=71, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					

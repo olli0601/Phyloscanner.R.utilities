@@ -396,17 +396,26 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 #' @param id1	Regular expression that identifies the first individual, to be plotted in red.  
 #' @param id2	Regular expression that identifies the first individual, to be plotted in blue.
 #' @param pdf.h	Height of the pdf file in inches.
-#' @param pdf.rw Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.   
+#' @param pdf.rw Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.
+#' @param pdf.ntrees Number of trees per pdf.
+#' @param pdf.title.size Size of pdf title in inches.
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
-phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10)
+phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
 	require(grid)
-	phps	<- lapply(seq_len(nrow(dfs)), function(i){
+	#	determine which phylogenies contain both individuals
+	tmp		<- copy(dfs)
+	tmp		<- merge(tmp, tmp[, {
+				ph	<- phs[[ IDX ]]
+				list(HAS_BOTH_IND= any(grepl(id1, attr(ph, "INDIVIDUAL"))) & any(grepl(id2, attr(ph, "INDIVIDUAL"))))  				
+			}, by='IDX'], by='IDX')
+	tmp		<- subset(tmp, HAS_BOTH_IND)
+	phps	<- lapply(seq_len(nrow(tmp)), function(i){
 				ph.title	<- NULL
-				if('TITLE'%in%colnames(dfs))
-					ph.title	<- dfs[i, TITLE]										
-				ph			<- phs[[ dfs[i, IDX] ]]
+				if('TITLE'%in%colnames(tmp))
+					ph.title	<- tmp[i, TITLE]										
+				ph			<- phs[[ tmp[i, IDX] ]]
 				col			<- rep('grey50', length(attr(ph, "INDIVIDUAL"))) 
 				col[ grepl(id1, attr(ph, "INDIVIDUAL")) ]	<- 'red'
 				col[ grepl(id2, attr(ph, "INDIVIDUAL")) ]	<- 'blue'
@@ -418,7 +427,8 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 						theme(legend.position="none") +
 						geom_tiplab(aes(col=I(COLOUR))) +
 						theme_tree2() +
-						theme(legend.position="bottom") + 
+						theme(legend.position="bottom", plot.title = element_text(size=pdf.title.size)) + 
+						ggplot2::xlim(0, max(node.depth.edgelength(ph)[1:Ntip(ph)])*1.3) +
 						labs(x='subst/site', title=ph.title)						
 				p
 			})
@@ -427,13 +437,31 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 	#		
 	if(!is.na(plot.file))					
 	{
-		cat('Plotting to file',plot.file,'...\n')
-		pdf(file=plot.file, w=pdf.rw*length(phps), h=pdf.h)
-		grid.newpage()
-		pushViewport(viewport(layout=grid.layout(1, length(phps))))
-		for(i in seq_along(phps))
-			print(phps[[i]], vp = viewport(layout.pos.row=1, layout.pos.col=i))
-		dev.off()
+		if(length(phps)<=pdf.ntrees)
+		{
+			cat('Plotting to file', plot.file,'...\n')
+			pdf(file=plot.file, w=pdf.rw*length(phps), h=pdf.h)
+			grid.newpage()
+			pushViewport(viewport(layout=grid.layout(1, length(phps))))
+			for(i in seq_along(phps))
+				print(phps[[i]], vp = viewport(layout.pos.row=1, layout.pos.col=i))
+			dev.off()
+		}
+		if(length(phps)>pdf.ntrees)
+		{
+			pi	<- data.table(IDX=seq_along(phps))
+			pi[, PLOT:= ceiling(IDX/pdf.ntrees)]
+			pi[, PLOT_IDX:= (IDX-1)%%pdf.ntrees+1]
+			pi[,{
+						cat('Plotting to file', gsub('\\.pdf',paste('_plot',PLOT,'\\.pdf',sep=''),plot.file),'...\n')
+						pdf(file=gsub('\\.pdf',paste('_plot',PLOT,'\\.pdf',sep=''),plot.file), w=pdf.rw*pdf.ntrees, h=pdf.h)
+						grid.newpage()
+						pushViewport(viewport(layout=grid.layout(1, pdf.ntrees)))
+						for(i in seq_along(IDX))
+							print(phps[[IDX[i]]], vp = viewport(layout.pos.row=1, layout.pos.col=PLOT_IDX[i]))
+						dev.off()
+					}, by='PLOT']
+		}
 	}
 	phps	
 }
