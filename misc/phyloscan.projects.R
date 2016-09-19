@@ -1857,7 +1857,8 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 	#	
 	if(1)
 	{		
-		load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+		#load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 4
 		hpc.mem				<- "11900mb"
@@ -1866,7 +1867,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
-		pty.select			<- 3
+		pty.select			<- 1:10
 		#pty.select			<- c(22,62,49,85,72)
 		#pty.select			<- c(3,84,96)
 	}	
