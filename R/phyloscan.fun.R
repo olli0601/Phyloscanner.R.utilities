@@ -325,7 +325,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
 															file.path(tmp.dir, run.id_), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
-															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.csv',sep='')),
+															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
 															allow.splits=TRUE)
 	cmd				<- paste(cmd, tmp, sep='\n')
