@@ -190,7 +190,6 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',pty.args$out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')		
-	cat(cmd)
 	cmd
 }
 
