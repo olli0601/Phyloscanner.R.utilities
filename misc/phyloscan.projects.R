@@ -1981,8 +1981,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160930_couples_w270_rerun")
-		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
-		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
+		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
 	#
 	#	INPUT ARGS PHYLOSCANNER RUN
@@ -2025,8 +2025,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		setkey(pty.c, PTY_RUN)
 		pty.c	<- pty.c[, {
-					#prefix.infiles<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_'
-					prefix.infiles	<- gsub('_bam.txt','',FILE_BAM)
+					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 					list(CMD=cmd)
 				}, by='PTY_RUN']		
