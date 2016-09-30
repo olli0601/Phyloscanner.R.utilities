@@ -5,7 +5,7 @@
 \title{Plot all short read phylogenies including two individuals}
 \usage{
 phsc.plot.selected.pairs(phs, dfs, id1, id2, plot.file = NA, pdf.h = 50,
-  pdf.rw = 10)
+  pdf.rw = 10, pdf.ntrees = 20, pdf.title.size = 40)
 }
 \arguments{
 \item{phs}{List of trees in ape format}
@@ -21,6 +21,10 @@ phsc.plot.selected.pairs(phs, dfs, id1, id2, plot.file = NA, pdf.h = 50,
 \item{pdf.h}{Height of the pdf file in inches.}
 
 \item{pdf.rw}{Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.}
+
+\item{pdf.ntrees}{Number of trees per pdf.}
+
+\item{pdf.title.size}{Size of pdf title in inches.}
 }
 \value{
 List of ggtree objects, ready for printing.

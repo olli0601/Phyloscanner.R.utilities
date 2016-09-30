@@ -1,4 +1,3 @@
-#' @export
 hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="leaf", stat.fun=max)
 {
 	require(ape)
@@ -21,7 +20,6 @@ hivc.clu.brdist.stats.subtree<- function(node, tree, distmat, eval.dist.btw="lea
 }
 ######################################################################################
 #' Compute a statistic of patristic distances for each subtree in the tree
-#' @export
 #' @import igraph geiger ape phytools
 hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.fun=max)
 {
@@ -40,7 +38,6 @@ hivc.clu.brdist.stats<- function(tree, distmat=NULL, eval.dist.btw="leaf", stat.
 }
 ######################################################################################
 #' @useDynLib phyloscan
-#' @export
 hivc.clu.min.transmission.cascade<- function(brlmat)
 {
 	if(is.matrix(brlmat))
@@ -50,7 +47,6 @@ hivc.clu.min.transmission.cascade<- function(brlmat)
 	ans		
 }
 ######################################################################################
-#' @export
 hivc.clu.clusterbythresh<- function(ph,thresh.brl=NULL,dist.brl=NULL,thresh.nodesupport=NULL,nodesupport=NULL,retval="all")
 {
 	require(ape)

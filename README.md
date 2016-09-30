@@ -1,2 +1,2 @@
 # phyloscan
-scan phylogenies created along a genome for patterns
+additional functions for the phyloscanner toolkit
