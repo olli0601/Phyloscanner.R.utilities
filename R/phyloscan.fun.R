@@ -666,12 +666,13 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 		tmp	<- tmp[order(-PAIR_ID),]
 		tmp[, LABEL:= factor(PAIR_ID, levels=PAIR_ID, labels=paste('Pair',PAIR_ID, ' (', ID1,'<->', ID2,')',sep=''))]
 		tmp	<- merge(subset(tmp, select=c(PAIR_ID, LABEL)), df, by='PAIR_ID')
-		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=c('anc_12','anc_21','sib','int','disconnected'), labels=c('from 1 to 2','from 2 to 1','1, 2 are siblings','1, 2 are intermingled','1, 2 are disconnected'))])
+		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('anc_12','anc_21','cher','int','unint','disconnected'), 
+													labels=c('from 1 to 2','from 2 to 1','1, 2 are a cherry','1, 2 are intermingled','1, 2 are unint','1, 2 are disconnected'))])
 		ggplot(tmp, aes(x=LABEL, y=WIN_OF_TYPE, fill=TYPE)) +
 				geom_bar(stat='identity', position='stack') +
 				coord_flip() +
 				labs(x='', y='number of read windows', fill='topology of clades from reads\nbetween patient pairs') +
-				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are siblings'="#ABDDA4",'1, 2 are intermingled'="#3288BD",'1, 2 are disconnected'='grey50')) +
+				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are a cherry'="#ABDDA4",'1, 2 are intermingled'="#3288BD", '1, 2 are unint'='grey70', '1, 2 are disconnected'='grey50')) +
 				theme_bw() + theme(legend.position='bottom') +
 				guides(fill=guide_legend(ncol=2))
 		ggsave(plot.file, w=10, h=0.15*nrow(unique(df)), limitsize = FALSE)

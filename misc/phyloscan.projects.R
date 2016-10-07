@@ -1464,6 +1464,27 @@ pty.pipeline.fasta.160217<- function()
 	}	
 }
 
+pty.check.assignments.161005<- function()
+{
+	#	load all read trees
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/160930/RCCS_160930_w270_phscout.rda")
+	#	load per window assignments
+	load("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160930_couples_w270_rerun/ptyr1_trmStatsPerWindow.rda")	
+	dt	<- subset(window.table, select=c(pat.1, pat.2, W_FROM, W_TO, type))
+	dt[, PTY_RUN:=1]
+	setnames(dt, c('pat.1','pat.2','type'), c('IND1','IND2','TYPE'))
+	#	check on read trees which windows have both individuals
+	dt	<- merge(dt, dtrees, by=c('PTY_RUN','W_FROM','W_TO'))
+	dt[, FILE_TR:=NULL]	
+	tmp	<- dt[, list(HAS_BOTH_IND=	any(grepl(IND1, phs[[IDX]][['tip.label']], fixed=1)) & 
+									any(grepl(IND2, phs[[IDX]][['tip.label']], fixed=1))), by=c('PTY_RUN','W_FROM','W_TO','IND1','IND2')]
+	dt	<- merge(dt, subset(tmp, HAS_BOTH_IND, select=c('PTY_RUN','W_FROM','W_TO','IND1','IND2')), by=c('PTY_RUN','W_FROM','W_TO','IND1','IND2'))
+	set(dt, dt[, which(is.na(TYPE))], 'TYPE', 'disconnected')
+	#	now check pair
+	dtp	<- subset(dt, IND1=='15861_1_13.bam' & IND2=='15861_1_18.bam')
+	write.csv(dtp, row.names=FALSE, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/160930/RCCS_160919_w270-phsc-serodiscpairs-M->F-M-A035225-F-A058111-1845_trmassignments.csv")
+}
+
 pty.process.160901<- function()
 {
 	#
@@ -1477,6 +1498,8 @@ pty.process.160901<- function()
 		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_phscout.rda'
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160919_w270_phscout.rda'
+		in.dir			<- '~/duke/tmp/Rakai_ptoutput_160930_couples_w270_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160930_w270_phscout.rda'
 	}
 	
 	tmp	<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
@@ -1559,11 +1582,12 @@ pty.pipeline.phyloscanner.test<- function()
 	#	INPUT ARGS PLATFORM
 	#	
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+	setnames(pty.runs, 'FILE_ID', 'IND_ID')
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 	work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 	out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/test_ptoutput'	
 	prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-	prog.raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1"'
+	prog.raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1 -p 42"'
 	pty.select			<- c(22)
 	hpc.load			<- ""
 	hpc.nproc			<- 1
@@ -1591,7 +1615,7 @@ pty.pipeline.phyloscanner.test<- function()
 									all.bootstrap.trees=TRUE,
 									strip.max.len=350, 
 									min.ureads.individual=NA, 
-									win=c(2500,3000,125,250), 
+									win=c(2500,3000,250,250), 
 									keep.overhangs=FALSE, 
 									duplicated.raw.threshold=3,
 									duplicated.ratio.threshold=1/200,
@@ -1980,7 +2004,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_160930_couples_w270_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
