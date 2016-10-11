@@ -128,7 +128,7 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	dtrms	<- do.call('rbind', dtrms)
 	#	set pair id
 	set(dtrms, NULL, c('SCORE','PAIR_ID'), NULL)
-	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])), by=c('ID1','ID2','PTY_RUN')]
 	dtrms	<- merge(dtrms, tmp, by=c('ID1','ID2','PTY_RUN'))
 	#	give every pair an ID
 	setkey(dtrms, ID1, ID2)
@@ -597,8 +597,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 	df	<- do.call('rbind',df)
 	cat('Found likely transmission entries, n=', nrow(df),'...\n')
 	setnames(df, colnames(df), gsub('\\.','_',toupper(colnames(df))))
-	setnames(df, 'WINDOWS', 'WIN_OF_TYPE')
-	df[, WIN_TOTAL:= as.integer(gsub('/','',regmatches(FRACTION,regexpr('/[0-9]+', FRACTION))))]
+	setnames(df, c('WINDOWS','DENOMINATOR'), c('WIN_OF_TYPE','WIN_TOTAL'))	
 	#	reduce to patients that match regexpr.patient
 	df	<- subset(df, grepl(regexpr.patient, PAT_1) & grepl(regexpr.patient, PAT_2)) 
 	cat('Found likely transmission entries for individuals that meet regexpr, n=', nrow(df),'...\n')	
@@ -606,26 +605,26 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 	df[, ID2:= regmatches(PAT_2,regexpr(regexpr.patient, PAT_2))]
 	#	reduce from ordered pairs (p1,p2) where order indicates transmission to 
 	#		pairs (p1,p2) where the TYPE variable indicates if trm is from p1->p2 or vice versa	
-	set(df, df[, which(TYPE=='anc')], 'TYPE', 'anc_12')
+	set(df, df[, which(TYPE=='trans')], 'TYPE', 'trans_12')
 	tmp	<- copy(df)
 	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
-	set(tmp, tmp[, which(TYPE=='anc_12')], 'TYPE', 'anc_21')
+	set(tmp, tmp[, which(TYPE=='trans_12')], 'TYPE', 'trans_21')
 	df	<- rbind(df, tmp)
 	#	we have now doubled the data set to (p1,p2) and (p2,p1). 
 	#	Can now simply get unique non-ordered pairs by p1<p2, and the new TYPE variable indicates directionality:
 	df	<- subset(df, ID1<ID2)
 	setkey(df, ID1, ID2)
 	cat('Found pairs, n=', nrow(unique(df)),'...\n')
-	cat('Found pairs with ancestral relationships, n=', nrow(unique(subset(df, TYPE=='anc_12' | TYPE=='anc_21'))),'...\n')
+	cat('Found pairs with ancestral relationships, n=', nrow(unique(subset(df, TYPE=='trans_12' | TYPE=='trans_21'))),'...\n')
 	#	check total transmissions
-	tmp	<- df[, list(OK= sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])==TOTAL_TRANS[1]), by=c('ID1','ID2')]
+	tmp	<- df[, list(OK= sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])==TOTAL_TRANS[1]), by=c('ID1','ID2')]
 	stopifnot( nrow(subset(tmp, !OK))==0 )
 	set(df, NULL, c('PAT_1','PAT_2','TOTAL_TRANS','FRACTION'), NULL)
 	#	determine number of unresolved windows and add as type
 	tmp	<- df[, list(WIN_OF_TYPE=WIN_TOTAL[1]-sum(WIN_OF_TYPE), TYPE='disconnected', PTY_RUN=PTY_RUN[1], WIN_TOTAL=WIN_TOTAL[1]), by=c('ID1','ID2')]
-	df	<- rbind(tmp, df, use.names=TRUE)
-	#	to plot, set overall 'score' to number of windows with anc_12 or anc_21
-	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])), by=c('ID1','ID2')]
+	df	<- rbind(df, subset(tmp, WIN_OF_TYPE>0), use.names=TRUE)
+	#	to plot, set overall 'score' to number of windows with trans_12 or trans_21
+	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])), by=c('ID1','ID2')]
 	df	<- merge(df, tmp, by=c('ID1','ID2'))
 	#	give every pair an ID
 	setkey(df, ID1, ID2)
@@ -666,7 +665,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 		tmp	<- tmp[order(-PAIR_ID),]
 		tmp[, LABEL:= factor(PAIR_ID, levels=PAIR_ID, labels=paste('Pair',PAIR_ID, ' (', ID1,'<->', ID2,')',sep=''))]
 		tmp	<- merge(subset(tmp, select=c(PAIR_ID, LABEL)), df, by='PAIR_ID')
-		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('anc_12','anc_21','cher','int','unint','disconnected'), 
+		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('trans_12','trans_21','cher','int','unint','disconnected'), 
 													labels=c('from 1 to 2','from 2 to 1','1, 2 are a cherry','1, 2 are intermingled','1, 2 are unint','1, 2 are disconnected'))])
 		ggplot(tmp, aes(x=LABEL, y=WIN_OF_TYPE, fill=TYPE)) +
 				geom_bar(stat='identity', position='stack') +

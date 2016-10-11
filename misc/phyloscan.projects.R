@@ -1500,6 +1500,9 @@ pty.process.160901<- function()
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160919_w270_phscout.rda'
 		in.dir			<- '~/duke/tmp/Rakai_ptoutput_160930_couples_w270_rerun'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160930_w270_phscout.rda'
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161007_couples_w270_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161007_w270_phscout.rda'
+		
 	}
 	
 	tmp	<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
@@ -1884,7 +1887,7 @@ pty.pipeline.phyloscanner.160915.example<- function()
 	#	define phyloscanner arguments
 	pty.args			<- list(	prog.pty=prog.pty, 
 			prog.mafft='mafft', 
-			prog.raxml='"raxmlHPC-AVX -m GTRCAT"', 
+			prog.raxml='"raxmlHPC-AVX -m GTRCAT -p 42"', 
 			data.dir=pty.data.dir, 
 			work.dir=work.dir, 
 			out.dir=out.dir, 
@@ -1932,7 +1935,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
-		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,'"',sep='')) 
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,' -p 42"',sep='')) 
 		#pty.select			<- 11:122
 		pty.select			<- c(11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 37, 38, 39, 40, 42, 43, 44, 45, 48, 49, 51, 52, 53, 56, 58, 59, 60, 61, 62, 63, 64, 66, 70, 71, 72, 73, 76, 77, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89, 90, 91, 93, 94, 95, 96, 97, 98, 100, 101, 102, 103, 104, 105, 106, 107, 109, 110, 111, 113, 116, 117, 120, 121)
 		#pty.select			<- c(22,62,49,85,72)
@@ -2061,7 +2064,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							stop()
+							#stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
