@@ -402,7 +402,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	if(1)	# OLD CODE (as long as we work with prev generated zip files) TODO: swith off
 	{
-		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
+		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone\n',sep='')	
 	}	
 	#
 	#	bash command to make blacklists from DuplicateReadCounts for each window
