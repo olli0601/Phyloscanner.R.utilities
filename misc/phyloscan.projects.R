@@ -1622,6 +1622,9 @@ pty.pipeline.phyloscanner.test<- function()
 									keep.overhangs=FALSE, 
 									duplicated.raw.threshold=3,
 									duplicated.ratio.threshold=1/200,
+									rogue.dropProportion=0.01,
+									rogue.longestBranchLength=0.1,
+									dwns.maxReadsPerPatient=200,
 									select=pty.select)
 							
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
@@ -2007,7 +2010,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2017,31 +2021,34 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 	if(1)
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
-				prog.mafft=NA, 
-				prog.raxml=NA, 
-				data.dir=NA, 
-				work.dir=work.dir, 
-				out.dir=out.dir, 
-				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
-				alignments.root='REF_CPX_AF460972', 
-				alignments.pairwise.to='REF_B_K03455',
-				window.automatic= '', 
-				merge.threshold=0, 
-				min.read.count=1, 
-				quality.trim.ends=23, 
-				min.internal.quality=23, 
-				merge.paired.reads=TRUE, 
-				no.trees=FALSE, 
-				dont.check.duplicates=FALSE,
-				num.bootstraps=1,
-				all.bootstrap.trees=TRUE,
-				strip.max.len=350, 
-				min.ureads.individual=NA, 
-				win=c(800,9400,25,250), 
-				keep.overhangs=FALSE, 
-				duplicated.raw.threshold=3,
-				duplicated.ratio.threshold=1/200,				
-				select=NA)
+										prog.mafft=NA, 
+										prog.raxml=NA, 
+										data.dir=NA, 
+										work.dir=work.dir, 
+										out.dir=out.dir, 
+										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+										alignments.root='REF_CPX_AF460972', 
+										alignments.pairwise.to='REF_B_K03455',
+										window.automatic= '', 
+										merge.threshold=0, 
+										min.read.count=1, 
+										quality.trim.ends=23, 
+										min.internal.quality=23, 
+										merge.paired.reads=TRUE, 
+										no.trees=FALSE, 
+										dont.check.duplicates=FALSE,
+										num.bootstraps=1,
+										all.bootstrap.trees=TRUE,
+										strip.max.len=350, 
+										min.ureads.individual=NA, 
+										win=c(800,9400,25,250), 
+										keep.overhangs=FALSE, 
+										duplicated.raw.threshold=3,
+										duplicated.ratio.threshold=1/200,	
+										rogue.dropProportion=0.01,
+										rogue.longestBranchLength=0.1,
+										dwns.maxReadsPerPatient=200,				
+										select=NA)
 	}	
 	#
 	#	RUN PHYLOSCANNER RESUME
@@ -2064,7 +2071,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							#stop()
+							stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	

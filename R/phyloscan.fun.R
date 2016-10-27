@@ -21,6 +21,28 @@ phsc.cmd.make.read.blacklist<- function(pr, inputFileName, outputFileName, rawTh
 	cmd
 }
 
+phsc.cmd.make.rogue.blacklist<- function(pr, scriptdir, inputTreeFileName, outputFileName, longestBranchLength=0.1, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+{
+	cmd	<- paste(pr, ' --scriptdir ',scriptdir, dropProportion, longestBranchLength, inputTreeFileName, outputFileName)
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+	if(!is.na(outgroupName))
+		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
+	if(!is.na(blackListFileName))
+		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	cmd
+}
+
+phsc.cmd.make.downsample.blacklist<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+{
+	cmd	<- paste(pr, ' --scriptdir ',scriptdir, maxReadsPerPatient, inputTreeFileName, outputFileName)
+	if(!is.na(outgroupName))
+		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
+	if(!is.na(blackListFileName))
+		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	cmd
+}
+
 
 phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, fastaFiles, splitsFiles, outputBaseName, blacklistFiles=NA)
 {
@@ -169,7 +191,7 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	file.bam<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*bam.txt',sep=''), full.names=TRUE)
 	stopifnot(length(file.bam)==1)	
 	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*otherstuff.zip',sep=''), full.names=TRUE)
+	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.zip',sep=''), full.names=TRUE)
 	stopifnot(length(tmp)==1)
 	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
 	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
@@ -277,12 +299,14 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',run.id,'_}"\ndone\n',sep='')	
 	}
+	#	move Duplicate Read Counts
+	cmd		<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id,'_DuplicateReadCounts_}"\ndone',sep='')
 	#	run phyloscanner tools and compress output
 	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.bam, pty.args), sep='\n')
 	#
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir,'"\n',sep='')	
 	#	zip up everything else
-	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
+	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
 	cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
@@ -351,9 +375,14 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty					<- pty.args[['prog.pty']]
 	root.name					<- pty.args[['alignments.root']]
 	duplicated.raw.threshold	<- pty.args[['duplicated.raw.threshold']]
-	duplicated.ratio.threshold	<- pty.args[['duplicated.ratio.threshold']]					
+	duplicated.ratio.threshold	<- pty.args[['duplicated.ratio.threshold']]	
+	rogue.dropProportion		<- pty.args[['rogue.dropProportion']]
+	rogue.longestBranchLength	<- pty.args[['rogue.longestBranchLength']]	
+	dwns.maxReadsPerPatient		<- pty.args[['dwns.maxReadsPerPatient']]	
 	pty.tools.dir				<- file.path(dirname(prog.pty),'tools')
-	prog.pty.rblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
+	prog.pty.readblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
+	prog.pty.rogueblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklist.R'),sep='')
+	prog.pty.downsample			<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
 	prog.pty.split				<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
 	prog.pty.smry				<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
 	prog.pty.lkltrm				<- paste('Rscript ',file.path(pty.tools.dir,'LikelyTransmissions.R'),sep='')	
@@ -364,15 +393,52 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	cmd					<- ''
 	#
-	#	bash command to make blacklists for each window
+	#	bash command to make blacklists from DuplicateReadCounts for each window
 	#
 	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold))
 	{
-		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\t',sep='')
-		tmp				<- phsc.cmd.make.read.blacklist(prog.pty.rblacklist, '"$file"', paste('"${file//DuplicateReadCountsProcessed/',run.id_,'blacklist}"',sep=''), duplicated.raw.threshold, duplicated.ratio.threshold, tipRegex=NA)
+		cmd				<- paste(cmd, 'for file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
+		tmp				<- phsc.cmd.make.read.blacklist(prog.pty.readblacklist, '"$file"', paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), duplicated.raw.threshold, duplicated.ratio.threshold, tipRegex=NA)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}	
+	#
+	#	bash command to make blacklists of rogue taxa for each window
+	#
+	if(!is.na(rogue.dropProportion) | !is.na(rogue.longestBranchLength))
+	{
+		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
+		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+		tmp				<- phsc.cmd.make.rogue.blacklist(	prog.pty.rogueblacklist, 
+															pty.tools.dir, 
+															'"$file"', 
+															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
+															longestBranchLength=rogue.longestBranchLength, 
+															dropProportion=rogue.dropProportion, 
+															blackListFileName=tmp, 
+															outgroupName=root.name, 
+															tipRegex=NA)				
+		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
+	}
+	#
+	#	bash command to downsample tips (add to blacklist)
+	#
+	if(!is.na(dwns.maxReadsPerPatient))
+	{
+		tmp				<- phsc.cmd.make.downsample.blacklist(	prog.pty.downsample, 
+																pty.tools.dir, 
+																file.path(tmp.dir,run.id_),																
+																file.path(tmp.dir,paste(run.id_,'blacklistdwns_',sep='')), 
+																maxReadsPerPatient=dwns.maxReadsPerPatient, 
+																blackListFileName=file.path(tmp.dir,paste(run.id_,'blacklist_',sep='')), 
+																outgroupName=root.name, 
+																tipRegex=NA)
+		cmd				<- paste(cmd, tmp, sep='\n')												
+		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
+		cmd				<- paste(cmd, 'mv "$file" "${file//blacklistdwns/blacklist}"\ndone',sep='')		
+	}
 	#
 	#	bash command to plot trees and calculate splits
 	#							
@@ -645,7 +711,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE_TRSU, flags = "-ur9XTj")), by='FILE_TRSU'] )
+			invisible( tmp[, list(RTN= zip( tmp2, FILE_TRSU, flags = "-ur9XTjq")), by='FILE_TRSU'] )
 			invisible( file.remove( dfr[, FILE_TRSU] ) )
 		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*_LikelyTransmissions.csv$',sep=''), full.names=TRUE))
@@ -653,7 +719,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_LikelyTransmissions.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
 	}	
@@ -735,7 +801,7 @@ phsc.read.subtrees<- function(prefix.infiles, prefix.run='ptyr', regexpr.subtree
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_rda.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE_TR, flags = "-ur9XTj")), by='FILE_TR'] )
+			invisible( tmp[, list(RTN= zip( tmp2, FILE_TR, flags = "-ur9XTjq")), by='FILE_TR'] )
 			invisible( file.remove( tmp[, FILE_TR] ) )			
 		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=gsub('\\.rda','\\.csv',regexpr.subtrees), full.names=TRUE))
@@ -744,7 +810,7 @@ phsc.read.subtrees<- function(prefix.infiles, prefix.run='ptyr', regexpr.subtree
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_csv.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}						
 	}
@@ -806,7 +872,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_pdf.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*tree$',sep=''), full.names=TRUE))
@@ -814,7 +880,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_newick.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta$',sep=''), full.names=TRUE))
@@ -822,15 +888,23 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_fasta.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )	
-		}				
+		}	
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.*csv$',sep=''), full.names=TRUE))
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_DuplicateReadCounts.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
+			invisible( file.remove( tmp[, FILE] ) )			
+		}		
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*blacklist.*csv$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_blacklist.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*collapsed\\.csv$',sep=''), full.names=TRUE))
@@ -838,7 +912,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_collapsed.zip',sep='')
 			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTj")), by='FILE'] )			
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}		
 	}
