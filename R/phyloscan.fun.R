@@ -191,7 +191,14 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	file.bam<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*bam.txt',sep=''), full.names=TRUE)
 	stopifnot(length(file.bam)==1)	
 	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.zip',sep=''), full.names=TRUE)
+	if(1)	#OLD CODE (as long as we work with prev generated zip files)
+	{
+		tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*otherstuff.zip',sep=''), full.names=TRUE)	
+	}	
+	if(0)	#NEW CODE TODO 
+	{
+		tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.zip',sep=''), full.names=TRUE)	
+	}
 	stopifnot(length(tmp)==1)
 	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
 	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
@@ -392,6 +399,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	blacklistFiles				<- NA_character_	
 	#
 	cmd					<- ''
+	#
+	if(1)	# OLD CODE (as long as we work with prev generated zip files) TODO: swith off
+	{
+		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
+	}	
 	#
 	#	bash command to make blacklists from DuplicateReadCounts for each window
 	#
