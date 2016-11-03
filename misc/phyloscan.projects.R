@@ -1501,38 +1501,15 @@ pty.process.160901<- function()
 		in.dir			<- '~/duke/tmp/Rakai_ptoutput_160930_couples_w270_rerun'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160930_w270_phscout.rda'
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161007_couples_w270_rerun'
-		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161007_w270_phscout.rda'
-		
-	}
-	
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161007_w270_phscout.rda'		
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d20_phscout.rda'
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d50_phscout.rda'
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d200_phscout.rda'	
+	}	
 	tmp	<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
-		
-
-	#
-	#	read full transmission stats
-	#
-	ptyr	<- data.table(FILE=list.files(in.dir, pattern='_patStatsFull.csv', full.names=TRUE))
-	df		<- lapply(seq_len(nrow(ptyr)), function(i)
-			{
-				as.data.table(read.csv('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_patStatsFull.csv'))
-				load(ptyr[i, FILE])
-				df
-			})
-	df		<- do.call('rbind', df)
-	#	set pair id
-	set(df, NULL, c('SCORE','PAIR_ID'), NULL)
-	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='anc_12'|TYPE=='anc_21'])), by=c('ID1','ID2')]
-	df	<- merge(df, tmp, by=c('ID1','ID2'))
-	#	give every pair an ID
-	setkey(df, ID1, ID2)
-	tmp	<- unique(df)
-	tmp	<- tmp[order(-SCORE),]
-	tmp[, PAIR_ID:= seq_len(nrow(tmp))]
-	df	<- merge(df, subset(tmp, select=c(ID1,ID2,PAIR_ID)), by=c('ID1','ID2'))
-	setkey(df, PAIR_ID)
-	#	save to file
-	cat('\nwrite to file', paste(save.file.base, 'trmStats.rda', sep=''))
-	save(df, file=paste(save.file.base, 'trmStats.rda', sep=''))
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -2011,7 +1988,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_d200_r004_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2046,7 +2023,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
 										rogue.dropProportion=0.01,
-										rogue.longestBranchLength=0.1,
+										rogue.longestBranchLength=0.04,
 										dwns.maxReadsPerPatient=200,				
 										select=NA)
 	}	
