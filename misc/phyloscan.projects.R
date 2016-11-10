@@ -1490,7 +1490,7 @@ pty.process.160901<- function()
 	#
 	#	INPUT ARGS PLATFORM
 	#	
-	if(1)	#UG on Mac
+	if(0)	#UG on Mac
 	{				
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270'
 		save.file.base	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_phscout.rda'
@@ -1507,9 +1507,31 @@ pty.process.160901<- function()
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d50_phscout.rda'
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun'
-		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d200_phscout.rda'	
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d200_phscout.rda'
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_r004_rerun'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161027_w270_d50_r004_phscout.rda'
+		tmp				<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
 	}	
-	tmp	<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
+	
+	#	161107
+	if(1)
+	{
+		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161107_w270'
+		#for(opt in c('d20_r004_rerun','d50_r004_rerun','d200_r004_rerun'))
+		#for(opt in c('d20_r004_rerun'))
+		for(opt in c('d50_r004_rerun'))
+		{
+			#for(trmw.min.reads in c(1, 20, 30, 40, 50, 100))
+			for(trmw.min.reads in c(20, 30, 40))
+			{
+				tmp.in		<- paste(in.dir, opt, sep='_')
+				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt), '_mr', trmw.min.reads, '_phscout.rda', sep='')
+				cat('\n',tmp.in,' -> ',tmp.out)
+				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads))		
+			}
+		}
+	}	
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -1982,12 +2004,13 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 	#	
 	if(1)
 	{		
+		#HOME<<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
-		#out.dir				<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
+		#out.dir			<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_d200_r004_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
@@ -1995,7 +2018,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 	#
 	#	INPUT ARGS PHYLOSCANNER RUN
 	#	
-	if(1)
+	if(1) 
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 										prog.mafft=NA, 
@@ -2034,17 +2057,20 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
+		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
+		#pty.c	<- subset(pty.c, PTY_RUN==12)
 		setkey(pty.c, PTY_RUN)
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#cat('\n',FILE_BAM)
 					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 					list(CMD=cmd)
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
