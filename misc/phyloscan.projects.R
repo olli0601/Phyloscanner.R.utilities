@@ -2011,7 +2011,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
 		#out.dir			<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_d20_r004_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_d50_r004_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2047,7 +2047,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										duplicated.ratio.threshold=1/200,	
 										rogue.dropProportion=0.01,
 										rogue.longestBranchLength=0.04,
-										dwns.maxReadsPerPatient=20,				
+										dwns.maxReadsPerPatient=50,				
 										select=NA)
 	}	
 	#
@@ -2059,6 +2059,10 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
 		#pty.c	<- subset(pty.c, PTY_RUN==12)
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
 		setkey(pty.c, PTY_RUN)
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
