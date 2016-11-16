@@ -2013,7 +2013,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161116_couples_w270_d50_r004_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161116_couples_w270_d50_p001_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
