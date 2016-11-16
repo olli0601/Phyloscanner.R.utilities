@@ -21,9 +21,21 @@ phsc.cmd.make.read.blacklist<- function(pr, inputFileName, outputFileName, rawTh
 	cmd
 }
 
-phsc.cmd.make.rogue.blacklist<- function(pr, scriptdir, inputTreeFileName, outputFileName, longestBranchLength=0.1, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+phsc.cmd.make.rogue.geneticdistance.blacklist<- function(pr, scriptdir, inputTreeFileName, outputFileName, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
 {
 	cmd	<- paste(pr, ' --scriptdir ',scriptdir, dropProportion, longestBranchLength, inputTreeFileName, outputFileName)
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+	if(!is.na(outgroupName))
+		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
+	if(!is.na(blackListFileName))
+		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	cmd
+}
+
+phsc.cmd.make.rogue.extremeprob.blacklist<- function(pr, scriptdir, inputTreeFileName, outputFileName, probThreshold=0.001, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+{
+	cmd	<- paste(pr, ' --scriptdir ',scriptdir, dropProportion, probThreshold, longestBranchLength, inputTreeFileName, outputFileName)
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, '--tipRegex', tipRegex)
 	if(!is.na(outgroupName))
@@ -122,7 +134,7 @@ phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, fil
 #' 	  'dtrees' is a data.table that provides info on each short read tree. Columns are 'PTY_RUN' (phyloscanner run id), 'W_FROM' (start of window), 'W_TO' (end of window), 'IDX' (index of tree in phs).
 #' 	  'dtrms' is a data.table that provides info on transmission assignments. Columns are 'PTY_RUN' (phyloscanner run id), 'ID1' (identifier of first individual), 'ID2' (identifier of second individual), 'TYPE' (window assignment), 
 #'	  'WIN_OF_TYPE' (number of windows with that assignment), 'WIN_TOTAL' (Number of windows where reads from both individuals are present), 'PAIR_ID' (unique ID of each combination of PTY_RUN,ID1, ID2)
-phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=100)
+phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=1, trmw.min.tips=1)
 {
 	#	read trees
 	cat('\nread trees')
@@ -157,13 +169,16 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	setnames(dwin, c('pat.1','pat.2','pat.1_leaves','pat.2_leaves','pat.1_reads','pat.2_reads'),c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
+	set(dwin, NULL, 'PATRISTIC_DIST', dwin[, as.numeric(PATRISTIC_DIST)])
 	#
 	#	build transmission summary stats based on selection criteria
-	#	TODO remove next line after bugfix
-	setnames(dwin, c('ID1_L','ID1_R','ID2_L','ID2_R'), c('ID1_R','ID1_L','ID2_R','ID2_L'))
-	cat('\nreduce transmission window stats to windows with at least',trmw.min.reads,'reads')
-	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads)
-	cat('\ntotal number of windows with trm assignments is',nrow(dwin))
+	#	
+	cat('\nreduce transmission window stats to windows with at least',trmw.min.reads,'reads and at least',trmw.min.tips,'tips')
+	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
+	cat('\ntotal number of windows with trm assignments is',nrow(dwin))	
+	#	look at cherries
+	#tmp	<- subset(dwin, TYPE=='cher')	
+	#ggplot(tmp, aes(x=PATRISTIC_DIST)) + geom_histogram(binwidth=0.005)
 	#	
 	#	summarise transmission stats
 	#	
@@ -405,11 +420,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	duplicated.raw.threshold	<- pty.args[['duplicated.raw.threshold']]
 	duplicated.ratio.threshold	<- pty.args[['duplicated.ratio.threshold']]	
 	rogue.dropProportion		<- pty.args[['rogue.dropProportion']]
-	rogue.longestBranchLength	<- pty.args[['rogue.longestBranchLength']]	
+	rogue.longestBranchLength	<- pty.args[['rogue.longestBranchLength']]
+	rogue.probThreshold			<- pty.args[['rogue.probThreshold']]
 	dwns.maxReadsPerPatient		<- pty.args[['dwns.maxReadsPerPatient']]	
 	pty.tools.dir				<- file.path(dirname(prog.pty),'tools')
 	prog.pty.readblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
 	prog.pty.rogueblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklist.R'),sep='')
+	prog.pty.roguewblacklist	<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklistWeibull.R'),sep='')
 	prog.pty.downsample			<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
 	prog.pty.split				<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
 	prog.pty.smry				<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
@@ -436,17 +453,38 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}	
 	#
-	#	bash command to make blacklists of rogue taxa for each window
+	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
 	#
-	if(!is.na(rogue.dropProportion) | !is.na(rogue.longestBranchLength))
+	if(!is.na(rogue.dropProportion) & !is.na(rogue.longestBranchLength) & !is.numeric(rogue.probThreshold))
 	{
 		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
 		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
-		tmp				<- phsc.cmd.make.rogue.blacklist(	prog.pty.rogueblacklist, 
+		tmp				<- phsc.cmd.make.rogue.geneticdistance.blacklist(	prog.pty.rogueblacklist, 
 															pty.tools.dir, 
 															'"$file"', 
 															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
+															longestBranchLength=rogue.longestBranchLength, 
+															dropProportion=rogue.dropProportion, 
+															blackListFileName=tmp, 
+															outgroupName=root.name, 
+															tipRegex=NA)				
+		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
+	}
+	#
+	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
+	#
+	if(!is.na(rogue.dropProportion) & !is.na(rogue.longestBranchLength) & is.numeric(rogue.probThreshold))
+	{
+		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
+		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+		tmp				<- phsc.cmd.make.rogue.extremeprob.blacklist(	prog.pty.roguewblacklist, 
+															pty.tools.dir, 
+															'"$file"', 
+															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
+															probThreshold=rogue.probThreshold,
 															longestBranchLength=rogue.longestBranchLength, 
 															dropProportion=rogue.dropProportion, 
 															blackListFileName=tmp, 
@@ -598,7 +636,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 #' @return List of ggtree objects, ready for printing.
 phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
-	require(grid)
+	suppressMessages(require(grid))
 	#	determine which phylogenies contain both individuals
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {

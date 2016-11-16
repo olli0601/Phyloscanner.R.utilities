@@ -1517,18 +1517,19 @@ pty.process.160901<- function()
 	if(1)
 	{
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270'
-		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161107_w270'
-		#for(opt in c('d20_r004_rerun','d50_r004_rerun','d200_r004_rerun'))
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161110_w270'		
 		#for(opt in c('d20_r004_rerun'))
-		for(opt in c('d50_r004_rerun'))
+		#for(opt in c('d50_r004_rerun'))
+		for(opt in c('d20_r004_rerun','d50_r004_rerun','d200_r004_rerun'))
 		{
 			#for(trmw.min.reads in c(1, 20, 30, 40, 50, 100))
-			for(trmw.min.reads in c(20, 30, 40))
+			for(trmw.min.reads in c(1, 20, 30, 40, 50, 100))
 			{
+				tmp.min.tips<- ifelse(trmw.min.reads==1, 1, 2)
 				tmp.in		<- paste(in.dir, opt, sep='_')
-				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt), '_mr', trmw.min.reads, '_phscout.rda', sep='')
+				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', tmp.min.tips, '_phscout.rda', sep='')
 				cat('\n',tmp.in,' -> ',tmp.out)
-				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads))		
+				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=tmp.min.tips))		
 			}
 		}
 	}	
@@ -1583,6 +1584,7 @@ pty.pipeline.phyloscanner.test<- function()
 	#
 	#	INPUT ARGS PLATFORM
 	#	
+	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
 	setnames(pty.runs, 'FILE_ID', 'IND_ID')
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
@@ -1622,7 +1624,8 @@ pty.pipeline.phyloscanner.test<- function()
 									duplicated.raw.threshold=3,
 									duplicated.ratio.threshold=1/200,
 									rogue.dropProportion=0.01,
-									rogue.longestBranchLength=0.1,
+									rogue.longestBranchLength=0.04,
+									rogue.probThreshold=0.001,
 									dwns.maxReadsPerPatient=200,
 									select=pty.select)
 							
@@ -2009,9 +2012,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
-		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")
-		#out.dir			<- file.path(HOME,"Rakai_ptoutput_161007_couples_w270_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161027_couples_w270_d50_r004_rerun")
+		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161116_couples_w270_d50_r004_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2046,7 +2048,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
 										rogue.dropProportion=0.01,
-										rogue.longestBranchLength=0.04,
+										rogue.longestBranchLength=0.05,
+										rogue.probThreshold=0.001,
 										dwns.maxReadsPerPatient=50,				
 										select=NA)
 	}	
