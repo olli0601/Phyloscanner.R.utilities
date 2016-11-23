@@ -81,9 +81,9 @@ phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infil
 	cmd
 }
 
-phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, sankhoff.k=NA, pdfwidth=30, pdfrelheight=0.15)	
 {
-	cmd	<- paste(pr, ' "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
+	cmd	<- paste(pr, ' --inputFile "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklist "', blacklistFiles,'"', sep='')
 	if(!is.na(outputdir))
@@ -92,6 +92,8 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 		cmd	<- paste(cmd, ' --outputfileid "', outputFileIdentifier, '"', sep='')
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, ' --outgroupName ', outgroupName, sep='')
+	if(!is.na(sankhoff.k))
+		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')	
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -99,15 +101,9 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 	
-phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, root.name=NA, zeroLengthTipsCount=FALSE, romeroSeverson=FALSE, dual.inf.thr=NA)
+phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out)
 {
-	cmd<- paste(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir, ' --outgroupName ',root.name, sep='')
-	if(!is.na(dual.inf.thr))
-		cmd	<- paste(cmd, '--dualInfectionThreshold', dual.inf.thr)
-	if(zeroLengthTipsCount)
-		cmd	<- paste(cmd, '--zeroLengthTipsCount')
-	if(romeroSeverson)
-		cmd	<- paste(cmd, '--romeroSeverson')
+	cmd<- paste(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir, sep='')
 	cmd
 }
 
@@ -417,6 +413,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#	define variables
 	prog.pty					<- pty.args[['prog.pty']]
 	root.name					<- pty.args[['alignments.root']]
+	splits.sankhoff.k			<- pty.args[['splits.sankhoff.k']]
 	duplicated.raw.threshold	<- pty.args[['duplicated.raw.threshold']]
 	duplicated.ratio.threshold	<- pty.args[['duplicated.ratio.threshold']]	
 	rogue.dropProportion		<- pty.args[['rogue.dropProportion']]
@@ -518,7 +515,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															file.path(tmp.dir,run.id_),
 															blacklistFiles=blacklistFiles,
 															outputdir=tmp.dir,																													
-															outgroupName=root.name, 															
+															outgroupName=root.name,
+															sankhoff.k=splits.sankhoff.k,
 															pdfwidth=30, pdfrelheight=0.15)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	file.patients	<- paste(run.id_,'patients.txt',sep='')	
@@ -542,13 +540,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
 														pty.tools.dir, 
-														file.path(tmp.dir,run.id_), 
+														file.path(tmp.dir,paste('ProcessedTree_r_',run.id_,sep='')), 
 														file.path(tmp.dir,paste('Subtrees_r_',run.id_,sep='')), 
-														file.path(tmp.dir,run.id_),
-														root.name=root.name, 
-														zeroLengthTipsCount=FALSE, 
-														dual.inf.thr=NA,
-														romeroSeverson=TRUE)
+														file.path(tmp.dir,run.id_))
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	add bash command to get likely transmissions summary
@@ -946,7 +940,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*tree$',sep=''), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*tree$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_newick.zip',sep='')
@@ -954,7 +948,15 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta$',sep=''), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste('^ProcessedTree_.*',basename(prefix.infiles),'.*tree$',sep=''), full.names=TRUE))
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_processed_nexus.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
+			invisible( file.remove( tmp[, FILE] ) )			
+		}		
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*fasta$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_fasta.zip',sep='')
@@ -962,7 +964,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )	
 		}	
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.*csv$',sep=''), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*DuplicateReadCounts.*csv$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_DuplicateReadCounts.zip',sep='')
