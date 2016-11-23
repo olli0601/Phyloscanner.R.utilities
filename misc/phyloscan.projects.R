@@ -2045,7 +2045,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
 										win=c(800,9400,25,250), 
-										keep.overhangs=FALSE, 
+										keep.overhangs=FALSE,										
+										splits.sankhoff.k=35,
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
 										rogue.dropProportion=0.01,
@@ -2077,9 +2078,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
