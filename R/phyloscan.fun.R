@@ -427,7 +427,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty.downsample			<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
 	prog.pty.split				<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
 	prog.pty.smry				<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
-	prog.pty.lkltrm				<- paste('Rscript ',file.path(pty.tools.dir,'LikelyTransmissions.R'),sep='')	
+	prog.pty.lkltrm				<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationships.R'),sep='')	
 	prog.pty.lkl.smry			<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
 	run.id						<- gsub('_bam.txt','',basename(file.bam))
 	run.id_						<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
@@ -551,7 +551,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															pty.tools.dir,
 															file.path(tmp.dir, file.patients),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
-															file.path(tmp.dir, run.id_), 
+															file.path(tmp.dir, paste('ProcessedTree_r_',run.id_,sep='')), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 

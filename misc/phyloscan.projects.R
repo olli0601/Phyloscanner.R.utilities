@@ -2014,7 +2014,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161116_couples_w270_d50_p001_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2078,9 +2078,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
