@@ -130,7 +130,7 @@ phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, fil
 #' 	  'dtrees' is a data.table that provides info on each short read tree. Columns are 'PTY_RUN' (phyloscanner run id), 'W_FROM' (start of window), 'W_TO' (end of window), 'IDX' (index of tree in phs).
 #' 	  'dtrms' is a data.table that provides info on transmission assignments. Columns are 'PTY_RUN' (phyloscanner run id), 'ID1' (identifier of first individual), 'ID2' (identifier of second individual), 'TYPE' (window assignment), 
 #'	  'WIN_OF_TYPE' (number of windows with that assignment), 'WIN_TOTAL' (Number of windows where reads from both individuals are present), 'PAIR_ID' (unique ID of each combination of PTY_RUN,ID1, ID2)
-phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=1, trmw.min.tips=1)
+phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=1, trmw.min.tips=1, trmw.close.brl=Inf, trmw.distant.brl=Inf)
 {
 	#	read trees
 	cat('\nread trees')
@@ -165,16 +165,45 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	setnames(dwin, c('pat.1','pat.2','pat.1_leaves','pat.2_leaves','pat.1_reads','pat.2_reads'),c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
-	set(dwin, NULL, 'PATRISTIC_DIST', dwin[, as.numeric(PATRISTIC_DIST)])
+	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
 	#
 	#	build transmission summary stats based on selection criteria
 	#	
 	cat('\nreduce transmission window stats to windows with at least',trmw.min.reads,'reads and at least',trmw.min.tips,'tips')
 	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
-	cat('\ntotal number of windows with trm assignments is',nrow(dwin))	
+	cat('\ntotal number of windows with trm assignments is',nrow(dwin))		
+	set(dwin, dwin[, which(TYPE=='trans_12')], 'TYPE', 'anc_12')
+	set(dwin, dwin[, which(TYPE=='trans_21')], 'TYPE', 'anc_21')
+	#
+	#	make assignments: 	close_anc_12, close_anc_21, close_cher_unint, 
+	#						anc_12, anc_21, cherry, unint, int, disconnected
+	#
+	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
+	{
+		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
+		tmp		<- dwin[, which(TYPE=="anc_12" & PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close anc_12, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', 'close_anc_12')
+		tmp		<- dwin[, which(TYPE=="anc_21" & PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close anc_21, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', 'close_anc_21')
+		tmp		<- dwin[, which(TYPE=="cher" & PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close cherry, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', 'close_cher_unint')
+		tmp		<- dwin[, which(TYPE=="unint" & PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close unint, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', 'close_cher_unint')
+	}
+	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
+	{
+		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
+		tmp		<- dwin[, which(TYPE!="disconnected" & !is.na(PATRISTIC_DISTANCE) & PATRISTIC_DISTANCE>=trmw.distant.brl)]
+		cat('\nFound distant not disconnected, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', 'disconnected')		
+	}
 	#	look at cherries
 	#tmp	<- subset(dwin, TYPE=='cher')	
-	#ggplot(tmp, aes(x=PATRISTIC_DIST)) + geom_histogram(binwidth=0.005)
+	#ggplot(tmp, aes(x=PATRISTIC_DISTANCE)) + geom_histogram(binwidth=0.005)
 	#	
 	#	summarise transmission stats
 	#	
@@ -182,7 +211,7 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	tmp		<- dtrms[, list(WIN_TOTAL=sum(WIN_OF_TYPE)), by=c('PTY_RUN','ID1','ID2')]
 	dtrms	<- merge(dtrms, tmp, by=c('PTY_RUN','ID1','ID2'))
 	#	set pair id	
-	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[grepl('close|anc',TYPE)])), by=c('ID1','ID2','PTY_RUN')]
 	dtrms	<- merge(dtrms, tmp, by=c('ID1','ID2','PTY_RUN'))
 	#	give every pair an ID
 	setkey(dtrms, ID1, ID2)
@@ -590,8 +619,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	{
 		save.file		<- paste(save.file.base,'trmStats.rda',sep='')
 		plot.file		<- gsub('\\.rda','\\.pdf',save.file)
-		stat.lkltrm		<- phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)
-		stat.lkltrm		<- NULL		
+		phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)				
 	}
 	#
 	#	read trees
@@ -719,56 +747,6 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 	dfr[, PTY_RUN:= as.integer(gsub(prefix.run,'',regmatches(FILE_TRSU,regexpr(paste(prefix.run,'[0-9]+',sep=''), FILE_TRSU))))]
 	setkey(dfr, PTY_RUN)
 	cat('\nFound likely transmission summary files, n=', nrow(dfr),'...\n')	
-	df	<- lapply(seq_len(nrow(dfr)), function(i){				 
-				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_trmStats.csv'				
-				z	<- as.data.table(read.csv(dfr[i,FILE_TRSU], stringsAsFactors=FALSE))
-				z[, PTY_RUN:= dfr[i, PTY_RUN]]
-				z
-			})
-	df	<- do.call('rbind',df)
-	cat('Found likely transmission entries, n=', nrow(df),'...\n')
-	setnames(df, colnames(df), gsub('\\.','_',toupper(colnames(df))))
-	setnames(df, c('WINDOWS','DENOMINATOR'), c('WIN_OF_TYPE','WIN_TOTAL'))	
-	#	reduce to patients that match regexpr.patient
-	df	<- subset(df, grepl(regexpr.patient, PAT_1) & grepl(regexpr.patient, PAT_2)) 
-	cat('Found likely transmission entries for individuals that meet regexpr, n=', nrow(df),'...\n')	
-	df[, ID1:= regmatches(PAT_1,regexpr(regexpr.patient, PAT_1))]
-	df[, ID2:= regmatches(PAT_2,regexpr(regexpr.patient, PAT_2))]
-	#	reduce from ordered pairs (p1,p2) where order indicates transmission to 
-	#		pairs (p1,p2) where the TYPE variable indicates if trm is from p1->p2 or vice versa	
-	set(df, df[, which(TYPE=='trans')], 'TYPE', 'trans_12')
-	tmp	<- copy(df)
-	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
-	set(tmp, tmp[, which(TYPE=='trans_12')], 'TYPE', 'trans_21')
-	df	<- rbind(df, tmp)
-	#	we have now doubled the data set to (p1,p2) and (p2,p1). 
-	#	Can now simply get unique non-ordered pairs by p1<p2, and the new TYPE variable indicates directionality:
-	df	<- subset(df, ID1<ID2)
-	setkey(df, ID1, ID2)
-	cat('Found pairs, n=', nrow(unique(df)),'...\n')
-	cat('Found pairs with ancestral relationships, n=', nrow(unique(subset(df, TYPE=='trans_12' | TYPE=='trans_21'))),'...\n')
-	#	check total transmissions
-	tmp	<- df[, list(OK= sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])==TOTAL_TRANS[1]), by=c('ID1','ID2')]
-	stopifnot( nrow(subset(tmp, !OK))==0 )
-	set(df, NULL, c('PAT_1','PAT_2','TOTAL_TRANS','FRACTION'), NULL)
-	#	determine number of unresolved windows and add as type
-	tmp	<- df[, list(WIN_OF_TYPE=WIN_TOTAL[1]-sum(WIN_OF_TYPE), TYPE='disconnected', PTY_RUN=PTY_RUN[1], WIN_TOTAL=WIN_TOTAL[1]), by=c('ID1','ID2')]
-	df	<- rbind(df, subset(tmp, WIN_OF_TYPE>0), use.names=TRUE)
-	#	to plot, set overall 'score' to number of windows with trans_12 or trans_21
-	tmp	<- df[, list(SCORE=sum(WIN_OF_TYPE[TYPE=='trans_12'|TYPE=='trans_21'])), by=c('ID1','ID2')]
-	df	<- merge(df, tmp, by=c('ID1','ID2'))
-	#	give every pair an ID
-	setkey(df, ID1, ID2)
-	tmp	<- unique(df)
-	tmp	<- tmp[order(-SCORE),]
-	tmp[, PAIR_ID:= seq_len(nrow(tmp))]
-	df	<- merge(df, subset(tmp, select=c(ID1,ID2,PAIR_ID)), by=c('ID1','ID2'))
-	setkey(df, PAIR_ID)
-	#	if save.file, zip summaries, delete individual files and save rda
-	if(!is.na(save.file))
-	{		
-		save(df, file=save.file)				
-	}	
 	if(zip & !is.na(save.file))
 	{		
 		tmp	<- copy(dfr)
@@ -788,7 +766,8 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
 	}	
-	if(!is.na(plot.file))
+	#	could still do the plotting using the per window assignments
+	if(0 & !is.na(plot.file))
 	{		
 		cat('\nPlot to file', plot.file,'...\n')
 		setkey(df, ID1, ID2)
@@ -796,18 +775,17 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 		tmp	<- tmp[order(-PAIR_ID),]
 		tmp[, LABEL:= factor(PAIR_ID, levels=PAIR_ID, labels=paste('Pair',PAIR_ID, ' (', ID1,'<->', ID2,')',sep=''))]
 		tmp	<- merge(subset(tmp, select=c(PAIR_ID, LABEL)), df, by='PAIR_ID')
-		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('trans_12','trans_21','cher','int','unint','disconnected'), 
-													labels=c('from 1 to 2','from 2 to 1','1, 2 are a cherry','1, 2 are intermingled','1, 2 are unint','1, 2 are disconnected'))])
+		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('anc_12','anc_21','sibling','int','unint','disconnected'), 
+													labels=c('from 1 to 2','from 2 to 1','1, 2 are siblings','1, 2 are intermingled','1, 2 are unint','1, 2 are disconnected'))])
 		ggplot(tmp, aes(x=LABEL, y=WIN_OF_TYPE, fill=TYPE)) +
 				geom_bar(stat='identity', position='stack') +
 				coord_flip() +
 				labs(x='', y='number of read windows', fill='topology of clades from reads\nbetween patient pairs') +
-				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are a cherry'="#ABDDA4",'1, 2 are intermingled'="#3288BD", '1, 2 are unint'='grey70', '1, 2 are disconnected'='grey50')) +
+				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are siblings'="#ABDDA4",'1, 2 are intermingled'="#3288BD", '1, 2 are unint'='grey70', '1, 2 are disconnected'='grey50')) +
 				theme_bw() + theme(legend.position='bottom') +
 				guides(fill=guide_legend(ncol=2))
 		ggsave(plot.file, w=10, h=0.15*nrow(unique(df)), limitsize = FALSE)
-	}
-	subset(df, select=c(PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, WIN_TOTAL, PTY_RUN, SCORE))
+	}	
 }
 
 #' @import data.table ape
@@ -1010,8 +988,8 @@ phsc.get.assignments.by.window.for.couple<- function(id1, id2, infiles)
 				setnames(df, c('pat.1','pat.2','type'), c('ID1','ID2','TYPE'))
 				set(df, NULL, 'SOURCE_FILE', NULL)
 				set(df, df[, which(is.na(TYPE))], 'TYPE', 'disconnected')
-				set(df, df[, which(ID1==id1 & TYPE=='trans')], 'TYPE', 'trans_12')
-				set(df, df[, which(ID1==id2 & TYPE=='trans')], 'TYPE', 'trans_21')
+				set(df, df[, which(ID1==id1 & TYPE=='anc')], 'TYPE', 'anc_12')
+				set(df, df[, which(ID1==id2 & TYPE=='anc')], 'TYPE', 'anc_21')
 				set(df, NULL, 'ID1', id1)
 				set(df, NULL, 'ID2', id2)
 				df

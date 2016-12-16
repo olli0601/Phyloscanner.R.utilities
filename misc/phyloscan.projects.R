@@ -1514,13 +1514,13 @@ pty.process.160901<- function()
 	}	
 	
 	#	161107
-	if(1)
+	if(0)
 	{
 		in.dir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_161110_w270'		
 		#for(opt in c('d20_r004_rerun'))
-		#for(opt in c('d50_r004_rerun'))
-		for(opt in c('d20_r004_rerun','d50_r004_rerun','d200_r004_rerun'))
+		#for(opt in c('d20_r004_rerun','d50_r004_rerun','d200_r004_rerun'))
+		for(opt in c('d50_p001_rerun'))		
 		{
 			#for(trmw.min.reads in c(1, 20, 30, 40, 50, 100))
 			for(trmw.min.reads in c(1, 20, 30, 40, 50, 100))
@@ -1532,7 +1532,25 @@ pty.process.160901<- function()
 				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=tmp.min.tips))		
 			}
 		}
-	}	
+	}
+	#	161213
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270'
+		for(opt in c('d50_p001_rerun'))		
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.01, 0.02, 0.04, 100, 101))				
+				{
+					trmw.min.tips		<- ifelse(trmw.min.reads==1, 1, 2)
+					trmw.distant.brl	<- ifelse(trmw.close.brl>=101, Inf, 0.07)
+					trmw.close.brl		<- ifelse(trmw.close.brl>=100, Inf, trmw.close.brl)					
+					tmp.in		<- paste(infile.base, opt, sep='_')
+					tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+					cat('\n',tmp.in,' -> ',tmp.out)
+					invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+				}		
+	}
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
