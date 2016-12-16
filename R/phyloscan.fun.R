@@ -456,8 +456,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty.downsample			<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
 	prog.pty.split				<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
 	prog.pty.smry				<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
-	prog.pty.lkltrm				<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationships.R'),sep='')	
-	prog.pty.lkl.smry			<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
+	prog.pty.lkltrm				<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationshipsExperimental.R'),sep='')	
+	prog.pty.lkl.smry			<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummaryExperimental.R'),sep='')	
 	run.id						<- gsub('_bam.txt','',basename(file.bam))
 	run.id_						<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles				<- NA_character_	
