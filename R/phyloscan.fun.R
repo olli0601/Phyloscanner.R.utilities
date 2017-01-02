@@ -158,68 +158,120 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	dwin		<- lapply(seq_len(nrow(ptyr)), function(i)
 			{
 				load(ptyr[i, FILE])
-				dp[, PTY_RUN:= ptyr[i,PTY_RUN]]
-				dp
+				tt[, PTY_RUN:= ptyr[i,PTY_RUN]]
+				tt
 			})
 	dwin	<- do.call('rbind', dwin)
-	setnames(dwin, c('pat.1','pat.2','pat.1_leaves','pat.2_leaves','pat.1_reads','pat.2_reads'),c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R'))
+	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_LEAVES','PAT.2_LEAVES','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'),
+					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
-	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
+	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])	
 	#
 	#	build transmission summary stats based on selection criteria
 	#	
 	cat('\nreduce transmission window stats to windows with at least',trmw.min.reads,'reads and at least',trmw.min.tips,'tips')
 	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
 	cat('\ntotal number of windows with trm assignments is',nrow(dwin))		
-	set(dwin, dwin[, which(TYPE=='trans_12')], 'TYPE', 'anc_12')
-	set(dwin, dwin[, which(TYPE=='trans_21')], 'TYPE', 'anc_21')
 	#
-	#	make assignments: 	close_anc_12, close_anc_21, close_cher_unint, 
-	#						anc_12, anc_21, cherry, unint, int, disconnected
+	#	merge assignments (keeping as much detail as needed for full interpretation)
+	#
+	dwin[, TYPE_RAW:= TYPE]
+	#	chains with no intermediate
+	tmp		<- dwin[, which(TYPE=="anc_12" & CONTIGUOUS)]
+	cat('\nFound contiguous anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & CONTIGUOUS)]
+	cat('\nFound contiguous multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
+	#	chains with no intermediate
+	tmp		<- dwin[, which(TYPE=="anc_21" & CONTIGUOUS)]
+	cat('\nFound contiguous anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & CONTIGUOUS)]
+	cat('\nFound contiguous multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')	
+	#
+	#	chains with intermediate
+	tmp		<- dwin[, which(TYPE=="anc_12" & !CONTIGUOUS)]
+	cat('\nFound discontiguous anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !CONTIGUOUS)]
+	cat('\nFound discontiguous multi_anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
+	#	chains with intermediate
+	tmp		<- dwin[, which(TYPE=="anc_21" & !CONTIGUOUS)]
+	cat('\nFound discontiguous anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !CONTIGUOUS)]
+	cat('\nFound discontiguous multi_anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
+	#
+	#	intermingled with no intermediate
+	tmp		<- dwin[, which(TYPE=="conflict" & CONTIGUOUS)]
+	cat('\nFound contiguous conflict, n=', length(tmp),'--> intermingled with no intermediate')
+	set(dwin, tmp, 'TYPE', 'intermingled_nointermediate')
+	#	intermingled with intermediate
+	tmp		<- dwin[, which(TYPE=="conflict" & !CONTIGUOUS)]
+	cat('\nFound not contiguous conflict, n=', length(tmp),'--> intermingled with intermediate')
+	set(dwin, tmp, 'TYPE', 'intermingled_withintermediate')
+	#
+	#	other	
+	tmp		<- dwin[, which(CONTIGUOUS & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound contiguous with no paths, n=', length(tmp),'--> other')
+	set(dwin, tmp, 'TYPE', 'other')
+	tmp		<- dwin[, which(!CONTIGUOUS & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound discontiguous with no assignment, n=', length(tmp),'--> other')
+	set(dwin, tmp, 'TYPE', 'other')
+	#	check
+	stopifnot( !nrow(subset(dwin, TYPE=='none'))	)
+	#
+	#	merge assignments (short for pairs)
+	#
+	dwin[, TYPE_PAIR:= TYPE]
+	cat('\nBuilding TYPE_PAIR')
+	tmp		<- dwin[, which(grepl('nointermediate', TYPE_PAIR))]
+	cat('\nFound pairs, n=', length(tmp),'--> pair')
+	set(dwin, tmp, 'TYPE_PAIR', 'pair')
+	tmp		<- dwin[, which(grepl('withintermediate', TYPE_PAIR))]
+	cat('\nFound individuals with intermediates, n=', length(tmp),'--> withintermediate')
+	set(dwin, tmp, 'TYPE_PAIR', 'withintermediate')
+	tmp		<- dwin[, which(grepl('other', TYPE_PAIR))]
+	cat('\nFound other relationships, n=', length(tmp),'--> other')
+	set(dwin, tmp, 'TYPE_PAIR', 'other')
+	#
+	#	add distance as second dimension
 	#
 	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
 	{
 		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
-		tmp		<- dwin[, which(TYPE=="anc_12" & PATRISTIC_DISTANCE<trmw.close.brl)]
-		cat('\nFound close anc_12, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', 'close_anc_12')
-		tmp		<- dwin[, which(TYPE=="anc_21" & PATRISTIC_DISTANCE<trmw.close.brl)]
-		cat('\nFound close anc_21, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', 'close_anc_21')
-		tmp		<- dwin[, which(TYPE=="cher" & PATRISTIC_DISTANCE<trmw.close.brl)]
-		cat('\nFound close cherry, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', 'close_cher_unint')
-		tmp		<- dwin[, which(TYPE=="unint" & PATRISTIC_DISTANCE<trmw.close.brl)]
-		cat('\nFound close unint, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', 'close_cher_unint')
+		tmp		<- dwin[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_close')])
+		set(dwin, tmp, 'TYPE_PAIR', dwin[tmp, paste0(TYPE_PAIR,'_close')])
 	}
 	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
 	{
 		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
-		tmp		<- dwin[, which(TYPE!="disconnected" & !is.na(PATRISTIC_DISTANCE) & PATRISTIC_DISTANCE>=trmw.distant.brl)]
-		cat('\nFound distant not disconnected, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', 'disconnected')		
+		tmp		<- dwin[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
+		cat('\nFound distant, n=', length(tmp))
+		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_distant')])
+		set(dwin, tmp, 'TYPE_PAIR', dwin[tmp, paste0(TYPE_PAIR,'_distant')])
 	}
-	#	look at cherries
-	#tmp	<- subset(dwin, TYPE=='cher')	
-	#ggplot(tmp, aes(x=PATRISTIC_DISTANCE)) + geom_histogram(binwidth=0.005)
 	#	
 	#	summarise transmission stats
 	#	
-	dtrms	<- dwin[, list(WIN_OF_TYPE=length(W_FROM), ID1_R=ID1_R[1], ID1_L=ID1_L[1], ID2_R=ID2_R[1], ID2_L=ID2_L[1]), by=c('PTY_RUN','ID1','ID2','TYPE')]
+	dtrms	<- dwin[, list(WIN_OF_TYPE=length(W_FROM), ID1_R=ID1_R[1], ID1_L=ID1_L[1], ID2_R=ID2_R[1], ID2_L=ID2_L[1]), by=c('PTY_RUN','ID1','ID2','TYPE','TYPE_PAIR')]
 	tmp		<- dtrms[, list(WIN_TOTAL=sum(WIN_OF_TYPE)), by=c('PTY_RUN','ID1','ID2')]
 	dtrms	<- merge(dtrms, tmp, by=c('PTY_RUN','ID1','ID2'))
 	#	set pair id	
-	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[grepl('close|anc',TYPE)])), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- dtrms[, list(SCORE=sum(WIN_OF_TYPE[grepl('close|chain_12_nointermediate|chain_21_nointermediate|intermingled_nointermediate',TYPE)])), by=c('ID1','ID2','PTY_RUN')]
 	dtrms	<- merge(dtrms, tmp, by=c('ID1','ID2','PTY_RUN'))
 	#	give every pair an ID
-	setkey(dtrms, ID1, ID2)
-	tmp		<- unique(dtrms)
+	tmp		<- unique(dtrms, by=c('ID1','ID2'))
 	tmp		<- tmp[order(-SCORE),]
-	tmp[, PAIR_ID:= seq_len(nrow(tmp))]
-	setkey(dtrms, ID1, ID2,PTY_RUN)
-	tmp2	<- unique(dtrms)
+	tmp[, PAIR_ID:= seq_len(nrow(tmp))]	
+	tmp2	<- unique(dtrms, by=c('ID1','ID2','PTY_RUN'))
 	tmp		<- merge(tmp2, subset(tmp, select=c(ID1,ID2,PAIR_ID)), by=c('ID1','ID2'))
 	tmp		<- tmp[, list(PAIR_ID= paste(PAIR_ID,'-',seq_along(PAIR_ID),sep=''), PTY_RUN=PTY_RUN), by=c('ID1','ID2')]	
 	dtrms	<- merge(dtrms, tmp, by=c('ID1','ID2', 'PTY_RUN'))	
