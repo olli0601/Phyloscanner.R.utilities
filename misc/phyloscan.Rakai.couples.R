@@ -213,7 +213,12 @@ RakaiCouples.setup.phyloscan.runs<- function()
 	ans			<- rbind(ans, as.data.table(expand.grid(TAXA='PG14-UG501310-S03314', FILE_ID='15777_1_5', PARTNER='Other', COUPID='Other', PTY_RUN=ans[, sort(unique(PTY_RUN))])))
 	setkey(ans, PTY_RUN, TAXA)
 	pty.runs	<- copy(ans)
-	save(pty.runs, file=file.path('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples','Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns_2dummy.rda'))		
+	save(pty.runs, file=file.path('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples','Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns_2dummy.rda'))
+}
+
+RakaiCouples.setup.phyloscan.runs.info<- function()
+{
+	
 }
 ######################################################################################
 ######################################################################################
@@ -1850,7 +1855,7 @@ RakaiCouples.process.couples.161219<- function()
 						save(dwin, file=gsub('phscout.rda','trmwout.rda',FILE))				
 					}, by=c('RUN','DIR','FILE')])
 	#		
-	#	load transmission summary assignments		
+	#	save transmission summary assignments		
 	#		
 	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
@@ -1861,7 +1866,7 @@ RakaiCouples.process.couples.161219<- function()
 			}, by=c('DIR','FILE')]
 	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments.rda')
 	#		
-	#	load transmission window assignments		
+	#	save transmission window assignments		
 	#		
 	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
@@ -1871,6 +1876,166 @@ RakaiCouples.process.couples.161219<- function()
 				dwin
 			}, by=c('DIR','FILE')]
 	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+}
+
+RakaiAll.preprocess.pairs.170120<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	#	get epi info
+	tmp		<- RakaiCirc.epi.get.info()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#	add sequence dates to rd
+	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, DATE)),by='PID')
+	setnames(tmp, 'DATE','SEQDATE')
+	rd		<- merge(rd, tmp, by='PID',all.x=1)
+	#	focus on those with PANGEA seqs
+	rd		<- subset(rd, !is.na(PID))
+	#	focus on clinical data and location data closest to time of diagnosis
+	tmp		<- rd[, list(VISIT= VISIT[which.min(DATE-FIRSTPOSDATE)]), by='RID']
+	ri		<- subset(merge(unique(rd, by=c('RID','VISIT')), tmp, by=c('RID','VISIT')), select=c(RID, VISIT, DATE, BIRTHDATE, RELIGION, REGION, COMM_NUM, HH_NUM, SEX, LASTNEGDATE, FIRSTPOSDATE, RECENTCD4, RECENTCD4DATE, RECENTVL, RECENTVLDATE, ARVSTARTDATE))
+	#	add all PANGEA sequences
+	ri		<- merge(ri, unique(subset(rd, select=c(RID, PID, SEQDATE))), by='RID')
+	#	focus on behaviour data closest to time of diagnosis
+	tmp		<- unique(subset(ri, select=c(RID, VISIT)))
+	tmp		<- subset(merge(rh, tmp, by=c('RID','VISIT')), select=c(RID, VISIT, SEXYEAR, EVERSEX, CIRC, OCCUP1, OCCUP2, SEXP1YR, SEXP1OUT, SEXPEVER, SEXC))
+	ri		<- merge(ri, tmp, by=c('RID','VISIT'))
+	setnames(ri, 'DATE', 'VISIT_DATE')
+	#	add community types to rd	
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774		
+	tmp		<- data.table(	COMM_NUM=	c("1","2","3","4","5","6","7","8","16","18","19","22","23","24","25","29","33","34","36","38","40","51","54","55", "56","57","58","59","62","74","77","81","89","94","95","103","106","107","108","109","120","177", "370","391","401","451", "602", "754", "760", "770","771","772","773","774","776"),
+							COMM_TYPE=	c("T","A","A","T","A","A","A","A", "T", "A", "A", "T", "A", "T", "A", "A", "T", "A", "A", "F", "A", "T", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",  "A","A",   "A",  "T",  "A",  "A",  "A",  "A",   "A",  "A", "A",  "A",    "A",  "A",    "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	ri		<- merge(ri, tmp, by='COMM_NUM')
+	
+	pty.runs[, PID:= gsub('-S[0-9]+$','',TAXA)]
+	stopifnot( !length(setdiff(pty.runs[, sort(unique(PID))], ri[, sort(unique(PID))])) )
+	
+	#
+	#	for each run: save trm assignments for couples
+	#
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_phscout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
+	infiles	<- subset(infiles, grepl('d50_p001_mr20_mt1_cl2_d5',RUN))
+	invisible(infiles[, {
+						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						cat('\n',FILE)
+						load(FILE)	#loads phs dtrms dtrees dwin
+						#
+						#	extract couples transmissions summary
+						#
+						#	check
+						tmp		<- dtrms[, list(CH=WIN_TOTAL-sum(WIN_OF_TYPE)), by=c('PTY_RUN','ID1','ID2')]
+						stopifnot( tmp[, all(CH==0)] )
+						#	keep association between TYPE and TYPE_PAIR
+						dtypes	<- unique(subset(dtrms, select=c(TYPE, TYPE_PAIR)))
+						set(dtypes, NULL, 'TYPE', dtypes[, gsub('12','mf',TYPE)])						
+						set(dtypes, NULL, 'TYPE', dtypes[, gsub('21','fm',TYPE)])						
+						#	add zeros
+						tmp		<- dcast.data.table(dtrms, PAIR_ID~TYPE, value.var='WIN_OF_TYPE')
+						for(x in setdiff(colnames(tmp),'PAIR_ID'))
+							set(tmp, which(is.na(tmp[[x]])), x, 0)						
+						tmp		<- melt.data.table(tmp, id.vars='PAIR_ID', value.name='WIN_OF_TYPE', variable.name='TYPE')								
+						dtrms	<- merge(unique(subset(dtrms, select=c(PAIR_ID, ID1, ID2, ID1_R, ID1_L, ID2_R, ID2_L, PTY_RUN, WIN_TOTAL, SCORE)), by=c('ID1','ID2','PTY_RUN')), tmp, by='PAIR_ID')
+						#	double the likely pairs (preserving the inferred direction), 
+						#	making it easier to select male / female covariates below
+						tmp		<- copy(dtrms)
+						setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))						
+						set(tmp, NULL, 'TYPE', tmp[, gsub('12','XX33XX',TYPE)])						
+						set(tmp, NULL, 'TYPE', tmp[, gsub('21','12',TYPE)])
+						set(tmp, NULL, 'TYPE', tmp[, gsub('XX33XX','21',TYPE)])						
+						dtrms	<- rbind(tmp, dtrms)
+						#	add PANGEAIDs
+						tmp		<- unique(subset(pty.runs, select=c(FILE_ID,TAXA)))
+						setnames(tmp, c('FILE_ID','TAXA'), c('ID1','MALE_TAXA'))
+						dtrms	<- merge(dtrms, tmp, by='ID1')
+						setnames(tmp, c('ID1','MALE_TAXA'), c('ID2','FEMALE_TAXA'))
+						dtrms	<- merge(dtrms, tmp, by='ID2')
+						dtrms[, MALE_PID:= gsub('-S[0-9]+$','',MALE_TAXA)]
+						dtrms[, FEMALE_PID:= gsub('-S[0-9]+$','',FEMALE_TAXA)]
+						#	merge with rd
+						tmp		<- copy(ri)            
+						setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))	
+						dtrms	<- merge(dtrms, tmp, by='MALE_PID')
+						setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+						dtrms	<- merge(dtrms, tmp, by='FEMALE_PID')						
+						#	reduce likely pairs to male-1 and female-2
+						dtrms	<- subset(dtrms, MALE_SEX=='M' & FEMALE_SEX=='F')
+						set(dtrms, NULL, 'TYPE', dtrms[, gsub('12','mf',TYPE)])						
+						set(dtrms, NULL, 'TYPE', dtrms[, gsub('21','fm',TYPE)])
+						set(dtrms, NULL, 'TYPE', dtrms[, as.character(TYPE)])
+						setnames(dtrms, colnames(dtrms), gsub('ID1','MALE_SANGER_ID',colnames(dtrms)))
+						setnames(dtrms, colnames(dtrms), gsub('ID2','FEMALE_SANGER_ID',colnames(dtrms)))
+						#	
+						dtrms[, WIN_OF_TYPE_P:=WIN_OF_TYPE/WIN_TOTAL]
+						set(dtrms, NULL, 'RUN', RUN)
+						dtrms	<- merge(dtrms, dtypes, by='TYPE')
+						save(dtrms, file=gsub('phscout.rda','allpairs_trmsout.rda',FILE))
+						#
+						#	extract couples transmissions assignments per window
+						#
+						#	double the likely pairs (preserving the inferred direction), so that all get matched with the pairs in rp
+						tmp		<- copy(dwin)
+						setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+						set(tmp, NULL, 'TYPE', tmp[, gsub('12','XX33XX',TYPE)])						
+						set(tmp, NULL, 'TYPE', tmp[, gsub('21','12',TYPE)])
+						set(tmp, NULL, 'TYPE', tmp[, gsub('XX33XX','21',TYPE)])						
+						dwin	<- rbind(tmp, dwin)
+						#	add PANGEAIDs
+						tmp		<- unique(subset(pty.runs, select=c(FILE_ID,TAXA)))
+						setnames(tmp, c('FILE_ID','TAXA'), c('ID1','MALE_TAXA'))
+						dwin	<- merge(dwin, tmp, by='ID1')
+						setnames(tmp, c('ID1','MALE_TAXA'), c('ID2','FEMALE_TAXA'))
+						dwin	<- merge(dwin, tmp, by='ID2')
+						dwin[, MALE_PID:= gsub('-S[0-9]+$','',MALE_TAXA)]
+						dwin[, FEMALE_PID:= gsub('-S[0-9]+$','',FEMALE_TAXA)]
+						#	merge with rd
+						tmp		<- copy(ri)            
+						setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))	
+						dwin	<- merge(dwin, tmp, by='MALE_PID')
+						setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+						dwin	<- merge(dwin, tmp, by='FEMALE_PID')						
+						#	reduce likely pairs to male-1 and female-2
+						dwin	<- subset(dwin, MALE_SEX=='M' & FEMALE_SEX=='F')
+						set(dwin, NULL, 'TYPE', dwin[, gsub('12','mf',TYPE)])						
+						set(dwin, NULL, 'TYPE', dwin[, gsub('21','fm',TYPE)])
+						set(dwin, NULL, 'TYPE', dwin[, as.character(TYPE)])
+						setnames(dwin, colnames(dwin), gsub('ID1','MALE_SANGER_ID',colnames(dwin)))
+						setnames(dwin, colnames(dwin), gsub('ID2','FEMALE_SANGER_ID',colnames(dwin)))
+						set(dwin, NULL, 'RUN', RUN)
+						save(dwin, file=gsub('phscout.rda','allpairs_trmwout.rda',FILE))				
+					}, by=c('RUN','DIR','FILE')])
+	#		
+	#	save transmission summary assignments		
+	#		
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmsout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_allpairs_trmsout.rda','',basename(FILE))]					
+	rps		<- infiles[, {
+				load(FILE)
+				dtrms
+			}, by=c('DIR','FILE')]
+	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments_allpairs.rda')
+	#		
+	#	save transmission window assignments		
+	#		
+	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles[, DIR:= dirname(FILE)]
+	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]					
+	rpw		<- infiles[, {
+				load(FILE)
+				dwin
+			}, by=c('DIR','FILE')]
+	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 }
 
 RakaiCouples.analyze.couples.161107.trmw<- function()
@@ -2863,6 +3028,10 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	#							evidence for extra-couple transmission comes from ancestral/intermingled OR short patristic distance	
 	#
 	#	TYPE_PAIR_DI			3 distance states
+	#
+	#
+	#	TYPE_DIR_TO				3 topological direction states
+	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
 	#							
 	rpw[, TYPE_PAIR_TO:= 'other']
 	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','pair','pair_distant'))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
@@ -2876,8 +3045,16 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair','pair_distant'))], 'TYPE_PAIR_TODI2x2', 'not close ancestral/\nintermingled')
 	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('withintermediate_close','other_close'))], 'TYPE_PAIR_TODI2x2', 'close other')	
 	tmp[, TYPE_PD_MEAN:= cut(PD_MEAN, breaks=c(1e-12,0.02,0.05,2), labels=c('close','ambiguous','distant'))]				
-	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
-	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])	
+	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	rpw[, TYPE_DIR_TO3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'intermingled')		
+	rpw[, TYPE_DIR_TODI3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')				
+	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])
 	#	define effectively independent number of windows
 	#	select only W_FROM that are > W_TO	
 	tmp		<- rpw[, {
@@ -2893,8 +3070,9 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	tmp[, OVERLAP:= 0L]
 	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','W_FROM','W_TO','RUN'), all.x=1 )
 	set(rpw, rpw[, which(is.na(OVERLAP))], 'OVERLAP', 1L)		
-	rpw		<- melt(rpw, measure.vars=c('TYPE_PD_MEAN','TYPE_PAIR_TO','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3'), variable.name='GROUP', value.name='TYPE')
+	rpw		<- melt(rpw, measure.vars=c('TYPE_PD_MEAN','TYPE_PAIR_TO','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
 	set(rpw, NULL, 'TYPE', rpw[,gsub('_',' ', TYPE)])	
+	rpw		<- subset(rpw, !is.na(TYPE))
 	#
 	#	for each pair count windows by TYPE_PAIR_DI (k)
 	#
@@ -2932,6 +3110,10 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	set(rplkl, rplkl[, which(GROUP=='TYPE_PD_MEAN' & K==0)], c('POSTERIOR_MEAN'), 0)
 	set(rplkl, rplkl[, which(GROUP=='TYPE_PD_MEAN' & K>0)], c('POSTERIOR_MEAN'), 1)
 	set(rplkl, rplkl[, which(GROUP=='TYPE_PD_MEAN')], c('KEFF','DIR_PO','DIR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA','POSTERIOR_QL','POSTERIOR_QU','POSTERIOR_IL','POSTERIOR_IU'), NA_real_)
+	
+	#	save
+	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	
 	#
 	#	make table by TYPE of effective counts,  posterior probs,	alpha/beta
 	#	as on blackboard
@@ -3234,11 +3416,1154 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	print(p2+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
 	grid.draw(p3)
 	dev.off()	
-	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')	
+		
 }
 
-RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
+RakaiAll.analyze.pairs.170120.distances<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ape)
+	
+	#
+	#	quick info on how many couples are close in consensus tree
+	#
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	
+	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	#	get epi info
+	tmp		<- RakaiCirc.epi.get.info()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#	add sequence dates to rd
+	rd		<- unique(subset(rd, !is.na(PID), select=c("RID","PID","SEX","REGION", "COMM_NUM", "HH_NUM","BIRTHDATE","LASTNEGVIS","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","RELIGION")), by='PID')
+	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, DATE)),by='PID')
+	setnames(tmp, 'DATE','SEQDATE')
+	rd		<- merge(rd, tmp, by='PID',all.x=1)
+	#	add community types to rd
+	tmp		<- data.table(	COMM_NUM=	c("1","2","3","4","5","6","7","8","16","18","19","22","23","24","25","29","33","34","36","38","40","51","54","55", "56","57","58","59","62","74","77","81","89","94","95","103","106","107","108","109","120","177", "370","391","401","451", "602", "754", "760", "770","771","772","773","774","776"),
+							COMM_TYPE=	c("T","A","A","T","A","A","A","A", "T", "A", "A", "T", "A", "T", "A", "A", "T", "A", "A", "F", "A", "T", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",  "A","A",   "A",  "T",  "A",  "A",  "A",  "A",   "A",  "A", "A",  "A",    "A",  "A",    "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	rd		<- merge(rd, tmp, by='COMM_NUM')
+	
+	#	load patristic distance matrix
+	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	load(infile)
+	#	prepare patristic distance data.table
+	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
+	setnames(ph.gdtr, 'value', 'PD')
+	ph.gdtr	<- subset(ph.gdtr, TAXA1!=TAXA2)
+	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
+	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
+	#	load genetic distance matrix with overlap
+	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	load(infile)	#loads sq.gd
+	setnames(sq.gd, 'PD', 'GD')
+	#	load selected phyloscanner runs
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	#	for each run construct all pairings that were evaluated
+	ptc			<- lapply(pty.runs[, unique(PTY_RUN)], function(pty_run)
+			{
+				#pty_run<- 1
+				z			<- subset(pty.runs, PTY_RUN==pty_run)[, TAXA]
+				tmp			<- subset(sq.gd, TAXA1%in%z & TAXA2%in%z)	# this is symmetric
+				tmp[, PTY_RUN:=pty_run]				
+				tmp2		<- subset(ph.gdtr, TAXA1%in%z & TAXA2%in%z)
+				tmp			<- merge(tmp, tmp2, by=c('TAXA1','TAXA2'), all.x=1)
+				tmp				
+			})
+	ptc			<- do.call('rbind',ptc)
+	ptc[, MALE_PID:= gsub('-S[0-9]+','',TAXA1)]
+	ptc[, FEMALE_PID:= gsub('-S[0-9]+','',TAXA2)]
+	ptcc		<- copy(ptc)
+	#	merge with Rakai IDs and make sure male is first
+	tmp			<- subset(rd, select=c(PID, RID, SEX))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	ptc			<- merge(ptc, tmp, by='MALE_PID')
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	ptc			<- merge(ptc, tmp, by='FEMALE_PID')
+	ptc			<- subset(ptc, MALE_SEX=='M' & FEMALE_SEX=='F')
+	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
+	#	merge with couples	
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	tmp			<- unique(subset(rp, select=c(MALE_RID,FEMALE_RID,COUPID,COUP_SC)))
+	ptc			<- merge(ptc, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	ptc[, GD_DI:= cut(GD, breaks=c(-Inf,0.035,0.07,Inf), labels=c('close','unclear','distant'))]
+	ptc			<- subset(ptc, !is.na(GD_DI))
+	
+	unique(ptc,by=c('FEMALE_RID','MALE_RID'))[, table(!is.na(COUPID))]
+	unique(subset(ptc, GD<0.035),by=c('FEMALE_RID','MALE_RID'))[, table(!is.na(COUPID))]	# 4052
+	unique(subset(ptc, GD>0.07),by=c('FEMALE_RID','MALE_RID'))[, table(!is.na(COUPID))]		# 2369
+	
+	#subset(ptc, !is.na())
+	
+	#
+	#	compare to those with sufficient PANGEA data for phyloscanner
+	#
+	
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	rc		<- copy(rp)
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	
+	#	select: distant, close, unclear from phyloscanner distances
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.5)		
+	rpd[, PHSC_DI:='distant']
+	tmp		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.5)		
+	tmp[, PHSC_DI:='close']
+	rpd		<- rbind(rpd, tmp)
+	tmp		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & (TYPE=='distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)<=0.5) | (TYPE=='close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)<=0.5))		
+	tmp[, PHSC_DI:='unclear']
+	tmp		<- unique(tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
+	rpd		<- rbind(rpd, tmp)
+	rpd		<- merge(rpd, unique(subset(rpw, select=c('FEMALE_RID','MALE_RID','FEMALE_PID','MALE_PID','MALE_SANGER_ID','FEMALE_SANGER_ID'))), by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'))	
+	rpd		<- unique(subset(rpd, select=c('FEMALE_RID','MALE_RID','FEMALE_PID','MALE_PID','PHSC_DI')))
+	
+	#	merge distances 
+	rpd		<- merge(ptc, rpd, by=c('FEMALE_RID','MALE_RID','FEMALE_PID','MALE_PID'), all.x=1)	
+	rpd		<- unique(rpd,by=c('FEMALE_RID','MALE_RID'))
+	#	merge communities
+	tmp		<- unique(subset(rd, select=c(RID, COMM_NUM, COMM_TYPE)), by='RID')
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	rpd		<- merge(rpd, tmp, by='MALE_RID')
+	setnames(tmp, colnames(tmp), gsub('MALE_','FEMALE_',colnames(tmp)))
+	rpd		<- merge(rpd, tmp, by='FEMALE_RID')
+	
+	subset(rpd, !is.na(COUP_SC))[, table(MALE_COMM_TYPE, FEMALE_COMM_TYPE)]
+	#MALE_COMM_TYPE agrarian fisherfolk trading
+    #	agrarian         66          0       0
+    #	fisherfolk        3        231       0
+    #	trading           0          0       6
+
+	subset(rpd, !is.na(COUP_SC) & !is.na(PHSC_DI))[, table(MALE_COMM_TYPE, FEMALE_COMM_TYPE)]
+	#MALE_COMM_TYPE agrarian fisherfolk trading
+    #agrarian         54          0       0
+    #fisherfolk        3        155       0
+    #trading           0          0       4
+	
+	rpd[, list(INCOUPLE=any(!is.na(COUP_SC))), by='FEMALE_RID'][,table(INCOUPLE)]
+	#	FALSE  TRUE 
+  	#	123   301 
+	rpd[, list(INCOUPLE=any(!is.na(COUP_SC))), by='MALE_RID'][,table(INCOUPLE)]
+	#	FALSE  TRUE 
+	#	   63   298
+	rpd[, list(INCOUPLE=any(!is.na(COUP_SC))), by='FEMALE_RID'][,table(INCOUPLE)]
+	#	FALSE  TRUE 
+	#	123   301 
+	rpd[, list(INCOUPLE=any(!is.na(COUP_SC))), by='MALE_RID'][,table(INCOUPLE)]
+	#	FALSE  TRUE 
+	#	   63   298
+
+	rpd[, table(GD_DI, PHSC_DI, useNA='if')]
+	#         PHSC_DI
+	#GD_DI     	  close distant unclear <NA>
+  	#close     		194       2      17 3830
+  	#unclear    	 18      31      57 1969
+  	#distant     	  5    1293      87  982
+	subset(rpd, !is.na(COUP_SC))[, table(GD_DI, PHSC_DI, useNA='if')]
+	#			PHSC_DI
+	#GD_DI     close distant unclear   <NA>
+	#close       122       1       6   49
+	#unclear       8       2       1   21
+	#distant       0      72       4   20
+
+	#
+	#	double check NA's
+	#
+	tmp		<- phsc.combine.phyloscanner.output('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270_d50_p001_rerun')
+	dwin	<- tmp$dwin
+	tmp		<- subset(pty.runs, select=c('TAXA','FILE_ID','PTY_RUN'))
+	setnames(tmp, c('TAXA','FILE_ID'), c('TAXA1','ID1'))
+	dwin	<- merge(dwin, unique(tmp), by=c('ID1','PTY_RUN'))	#something does not quite match here
+	setnames(tmp, c('TAXA1','ID1'), c('TAXA2','ID2') )
+	dwin	<- merge(dwin, unique(tmp), by=c('ID2','PTY_RUN'))	#something does not quite match here
+	
+	rpch	<- subset(rpd, is.na(PHSC_DI), select=c('FEMALE_RID','MALE_RID','TAXA1','TAXA2','PTY_RUN'))
+	tmp		<- copy(rpch)
+	setnames(tmp, c('FEMALE_RID','MALE_RID','TAXA1','TAXA2','PTY_RUN'), c('MALE_RID','FEMALE_RID','TAXA2','TAXA1','PTY_RUN'))
+	rpch	<- rbind(rpch, tmp)	
+	rpch	<- merge(rpch, dwin, by=c('TAXA1','TAXA2','PTY_RUN'))
+	
+	tmp		<- rpch[, list(MXMIN_R= max(pmin(ID1_R, ID2_R))), by=c('FEMALE_RID','MALE_RID','TAXA1','TAXA2','PTY_RUN')]
+	
+	unique(merge(rpch, dwin, by=c('TAXA1','TAXA2','PTY_RUN')), by=c('TAXA1','TAXA2','PTY_RUN'))
+	unique(rpch, by=c('TAXA1','TAXA2','PTY_RUN'))
+	
+
+	subset(rpd, !is.na(COUP_SC) & is.na(PHSC_DI) & GD_DI=='close')
+
+	
+	
+}
+
+RakaiAll.analyze.pairs.170120.comparedirection<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	rc		<- copy(rp)
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	
+	#	make pair data table
+	rp		<- copy(rpw)
+	set(rp, NULL, c('DIR','FILE','PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]	
+	#	add PAIR_TYPE
+	tmp		<- unique(subset(rc, select=c(COUPID, MALE_HH_NUM, FEMALE_HH_NUM, COUP_SC, PAIR_TYPE)))	
+	setnames(tmp, 'COUP_SC', 'COUP_TYPE')
+	rp	<- merge(rp, tmp, by=c('COUPID','MALE_HH_NUM','FEMALE_HH_NUM'),all.x=1)
+	set(rp, rp[, which(is.na(PAIR_TYPE))], 'PAIR_TYPE', 'not registered as couple')
+	
+	#	add RCCS IDs COUPLE_TYPE PAIR_TYPE COUPID
+	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID, COUP_TYPE, PAIR_TYPE))
+	rplkl	<- merge(tmp, rplkl, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	
+	#
+	#	compare distance / distance + topology
+	#	results: 	with TYPE_PAIR_TODI3 pairs in close transmission chains end up in unlinked 
+	#				contiguous cannot be interpreted as 'A->C->B' it can also be 'A->B/C' or 'A->B and A->C'
+	confint	<- 0.5
+	unique(subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint), by='COUPID')
+	#	193 -- not sure why I get 191 below???
+	unique(subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint), by='COUPID')
+	
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='close')
+	tmp		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close')
+	rpd		<- rbind(rpd, tmp)
+	rpd[, SELECT_P50:= as.character(factor(pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	set(rpd, NULL, c('COUPID','COUP_TYPE','RUN','PAIR_TYPE'), NULL)
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID','MALE_RID','FEMALE_RID'))
+	rpd		<- dcast.data.table(rpd, COUPID+COUP_TYPE+LABEL+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID+MALE_RID+FEMALE_RID~GROUP, value.var='SELECT_P50')
+	
+	unique(subset(rpd, !is.na(COUP_TYPE)), by='COUPID')[, table(TYPE_PAIR_DI, TYPE_PAIR_TODI3)]
+	#            TYPE_PAIR_TODI3
+	#TYPE_PAIR_DI   N   Y
+    #       N  		85   0
+    #       Y   	5    126
+	unique(rpd, by='COUPID')[, table(TYPE_PAIR_DI, TYPE_PAIR_TODI3)]
+	#            TYPE_PAIR_TODI3
+	#TYPE_PAIR_DI    N    Y
+    #       N 	  1519    0
+    #       Y       32    191
+
+	tmp		<- subset(rpd, TYPE_PAIR_DI=='Y' & TYPE_PAIR_TODI3=='N')
+	unique(tmp, by=c('MALE_RID','FEMALE_RID'))
+}
+	
+	
+RakaiAll.analyze.pairs.170120.direction<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	rc		<- copy(rp)
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	
+	#	make pair data table
+	rp		<- copy(rpw)
+	set(rp, NULL, c('DIR','FILE','PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]	
+	#	add PAIR_TYPE
+	tmp		<- unique(subset(rc, select=c(COUPID, MALE_HH_NUM, FEMALE_HH_NUM, COUP_SC, PAIR_TYPE)))	
+	setnames(tmp, 'COUP_SC', 'COUP_TYPE')
+	rp	<- merge(rp, tmp, by=c('COUPID','MALE_HH_NUM','FEMALE_HH_NUM'),all.x=1)
+	set(rp, rp[, which(is.na(PAIR_TYPE))], 'PAIR_TYPE', 'not registered as couple')
+
+	#
+	#	basic info on selection
+	#
+	if(0)
+	{
+		tmp		<- unique(rp, by='COUPID')
+		tmp[, c(length(unique(MALE_RID)),length(unique(FEMALE_RID)))]
+		subset(tmp, PAIR_TYPE=='cohabiting couple')[, c(length(unique(MALE_RID)),length(unique(FEMALE_RID)))]
+		subset(tmp, !is.na(COUP_TYPE))[, c(length(unique(MALE_RID)),length(unique(FEMALE_RID)),length(unique(COUPID)))]		
+	}
+
+	#	add RCCS IDs COUPLE_TYPE PAIR_TYPE COUPID
+	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID, COUP_TYPE, PAIR_TYPE))
+	rplkl	<- merge(tmp, rplkl, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#	select first couples for whom transmission cannot be excluded 
+	#	no intermediate\n and close > 50%
+	confidence.cut	<- 0.5
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)		
+	tmp		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID))
+	tmp		<- merge(tmp, rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	rmf		<- subset(tmp, GROUP%in%c('TYPE_DIR_TODI3') & TYPE=='mf' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	rfm		<- subset(tmp, GROUP%in%c('TYPE_DIR_TODI3') & TYPE=='fm' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	rex		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	
+	cat('\ncouples with phyloscanner assessment, n=',nrow(unique(rplkl, by='COUPID')))
+	cat('\ncouples for whom transmission cannot be excluded, n=',nrow(unique(rpd, by='COUPID')))
+	cat('\ncouples with evidence M->F, n=',nrow(unique(rmf, by='COUPID')))
+	cat('\ncouples with evidence F->M, n=',nrow(unique(rfm, by='COUPID')))
+	cat('\ncouples for whom transmission can be excluded, n=',nrow(unique(rex, by='COUPID')))
+	#	couples with phyloscanner assessment					1742	
+	#	for whom transmission can be excluded 					1414	(81.2%)
+	#	ambiguous												135		(7.7%)
+	#	no intermediate and close								193		(11%)	
+	#	of those we cannot determine likely direction for		60		(31%)
+	#	with evidence for M->F 									80		(60%)
+	#	with evidence for F->M									53 		(39%)
+	
+	unique(rpd, by='COUPID')[, table(PAIR_TYPE)]
+	#	   not always cohabiting 	not registered as couple        stable cohabiting 
+    #                          4                          67                      122 
+
+	rmf		<- merge(unique(subset(rmf, select=COUPID)), unique(rp, by='COUPID'),by='COUPID')
+	rmf[, PHSC_DIR:='m->f']
+	rfm		<- merge(unique(subset(rfm, select=COUPID)), unique(rp, by='COUPID'),by='COUPID')
+	rfm[, PHSC_DIR:='f->m']
+	rtr		<- rbind(rmf, rfm)
+	
+	rtr[, AGEDIFF:= MALE_BIRTHDATE-FEMALE_BIRTHDATE]
+	rtr[, AVGAGE:= (MALE_BIRTHDATE+FEMALE_BIRTHDATE)/2]
+	
+	rtr2	<- copy(rmf)
+	setnames(rtr2,colnames(rtr2),gsub('FEMALE','REC',colnames(rtr2)))
+	setnames(rtr2,colnames(rtr2),gsub('MALE','TR',colnames(rtr2)))
+	tmp		<- copy(rfm)
+	setnames(tmp,colnames(tmp),gsub('FEMALE','TR',colnames(tmp)))
+	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
+	rtr2	<- rbind(rtr2,tmp)
+	#
+	#	who infects whom matrix
+	#
+	tmp		<- rtr2[,list(N=length(unique(COUPID))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
+	ggplot(tmp, aes(x=factor(REC_COMM_TYPE),y=factor(TR_COMM_TYPE))) + 
+			geom_point(aes(size=N), colour='grey80') +
+			geom_text(aes(label=N), nudge_x=0, nudge_y=0, size=3, colour='black') +			
+			theme_bw() + 
+			scale_size(range = c(5, 50)) +
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
+			guides(size='none')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_direction-numbers-commtype.pdf',sep='')), w=4, h=4)
+	
+	rtr2[, table(TR_COMM_TYPE,REC_COMM_TYPE)]
+	#				 REC_COMM_TYPE
+	#			     agrarian fisherfolk trading
+	#TR_COMM_TYPE 
+	#agrarian         36          3       1
+	#fisherfolk        1         90       0
+	#trading           0          0       2
+	tmp		<- rtr2[,list(N=length(unique(COUPID))), by=c('TR_COMM_NUM','REC_COMM_NUM')]
+	ggplot(tmp, aes(x=factor(REC_COMM_NUM),y=factor(TR_COMM_NUM))) + 
+			geom_point(aes(size=N), colour='grey80') +
+			geom_text(aes(label=N), size=3, colour='black') +
+			scale_size(range = c(1, 20)) +
+			theme_bw() + 
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
+			guides(size='none')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_direction-numbers-commnum.pdf',sep='')), w=6, h=6)
+	
+	#
+	#	did any transmitter start ART before the recipient was diagnosed?
+	#
+	subset(rtr2, TR_ARVSTARTDATE<REC_FIRSTPOSDATE)	
+	#	F026858:J104288 --> 
+
+	subset(rtr2, (TR_FIRSTPOSDATE+.5)<REC_FIRSTPOSDATE)	
+
+	#
+	#	Does the primary occupation differ between transmitters / recipients? 
+	#
+	ggplot(subset(rtr, FEMALE_COMM_TYPE!='trading'), aes(x=PHSC_DIR, fill=FEMALE_OCCUP1)) + 
+			geom_bar(position='fill') + 
+			facet_grid(~FEMALE_COMM_TYPE) +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			scale_fill_brewer(palette='Set3') +
+			theme_bw() + theme() +
+			labs(x='\ninferred direction of transmission', y='female partner\n', fill='occupation\nfemale partner\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_occupationfemales.pdf',sep='')), w=6, h=8)
+
+	colourCount	<- length(unique(rtr$MALE_OCCUP1))
+	getPalette	<- colorRampPalette(brewer.pal(11, "Set3"))	
+	ggplot(subset(rtr, MALE_COMM_TYPE!='trading'), aes(x=PHSC_DIR, fill=MALE_OCCUP1)) + 
+			geom_bar(position='fill') + 
+			facet_grid(~MALE_COMM_TYPE) +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			scale_fill_manual(values=getPalette(colourCount)) +
+			#scale_fill_brewer(palette='Set3') +
+			#scale_fill_distiller(palette='Set3') +
+			theme_bw() + theme() +
+			labs(x='\ninferred direction of transmission', y='male partner\n', fill='occupation\nmale partner\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_occupationmales.pdf',sep='')), w=8, h=8)
+	
+	subset(rtr, MALE_COMM_TYPE=='fisherfolk' & PHSC_DIR=='m->f')[, table(MALE_OCCUP1)]
+	binconf(41,52)
+	#
+	#	housework significantly associated with being a female recipient?
+	#
+	tmp	<- subset(rtr, FEMALE_COMM_TYPE=='fisherfolk')
+	tmp[, HOUSEWORK:= factor(grepl('Housework',FEMALE_OCCUP1), levels=c(TRUE,FALSE), labels=c('Y','N'))]
+	chisq_test(factor(PHSC_DIR) ~ HOUSEWORK, data=tmp, distribution="exact")
+	#	chi-squared = 1.2911, p-value = 0.2774
+
+	
+	#
+	#	do recipients / transmitters report other partners?
+	#	
+
+	ggplot(subset(rtr, PAIR_TYPE=='stable cohabiting' & FEMALE_COMM_TYPE!='trading'), aes(x=PHSC_DIR, fill=FEMALE_SEXC)) + 
+			geom_bar(position='fill') + 
+			facet_grid(~FEMALE_COMM_TYPE) +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			scale_fill_brewer(palette='Set2') +
+			theme_bw() + theme() +
+			labs(x='\ninferred direction of transmission', y='female partner\n', fill='self-reported relationships\nfemale partner\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_relationshiptypefemales.pdf',sep='')), w=6, h=8)
+
+	ggplot(subset(rtr, PAIR_TYPE=='stable cohabiting' & MALE_COMM_TYPE!='trading'), aes(x=PHSC_DIR, fill=MALE_SEXC)) + 
+			geom_bar(position='fill') + 
+			facet_grid(~MALE_COMM_TYPE) +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			scale_fill_brewer(palette='Set2') +
+			theme_bw() + theme() +
+			labs(x='\ninferred direction of transmission', y='male partner\n', fill='self-reported relationships\nmale partner\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_relationshiptypemales.pdf',sep='')), w=6, h=8)
+	
+	#
+	#	is there a difference in male->female transmission by community type?
+	#	results: no	- but it seems there could be a difference between stable/casual couples
+	#
+	subset(rtr, MALE_COMM_TYPE==FEMALE_COMM_TYPE)[, {
+				z	<- binconf( length(which(PHSC_DIR=='m->f')), length(PHSC_DIR) )				
+				list(K=length(which(PHSC_DIR=='m->f')), N=length(PHSC_DIR), P=z[1], QL=z[2], QU=z[3])
+			}, by='MALE_COMM_TYPE']	
+	#	MALE_COMM_TYPE  K  N         P        QL        QU
+	#1:       agrarian 24 36 0.6666667 0.5033400 0.7978538
+	#2:     fisherfolk 52 90 0.5777778 0.4746119 0.6745759
+	#3:        trading  2  2 1.0000000 0.3423802 1.0000000
+	
+	#
+	#	is there a difference in male->female transmission by couple type?
+	#	results: no	
+	#			 but I still find this interesting!
+	rtr[, {
+				z	<- binconf( length(which(PHSC_DIR=='m->f')), length(PHSC_DIR) )				
+				list(K=length(which(PHSC_DIR=='m->f')), N=length(PHSC_DIR), P=z[1], QL=z[2], QU=z[3])
+			}, by='PAIR_TYPE']	
+	#			PAIR_TYPE  K  N         P        QL        QU
+	#1: cohabiting couple 56 87 0.6436782 0.5389320 0.7362727
+	#2:            casual 24 46 0.5217391 0.3813741 0.6587531	
+	chisq_test(factor(PHSC_DIR) ~ factor(PAIR_TYPE), data=rtr, distribution="exact")
+	#	chi-squared = 1.8666, p-value = 0.1953
+
+
+	#	are transmitters younger in fisherfolk sites?
+	#	results: no
+	tmp		<- subset(rtr2, TR_COMM_TYPE!='trading')
+	ggplot(tmp, aes(x=TR_COMM_TYPE, y=TR_BIRTHDATE)) + geom_boxplot()
+	independence_test(TR_BIRTHDATE~factor(TR_COMM_TYPE), data=tmp, distribution = "exact")
+	#Z = -1.4964, p-value = 0.1351
+	summary(rq(TR_BIRTHDATE~TR_COMM_TYPE, tau=.5, data=tmp, method='fn'), se='nid')
+
+	#
+	#	is there a difference in age gap between male->female transmission / female->male transmission ?
+	#	results: no
+	#
+	ggplot(rtr, aes(x=PHSC_DIR, y=AGEDIFF)) + geom_boxplot()	
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE), select=c(PHSC_DIR,AGEDIFF))
+	set(tmp, NULL, 'PHSC_DIR', tmp[, as.integer(as.character(factor(PHSC_DIR, levels=c('f->m','m->f'), labels=c('0','1'))))])
+	summary(gamlss(data=tmp, PHSC_DIR~AGEDIFF, family=LO))
+	summary(gamlss(data=tmp, AGEDIFF~PHSC_DIR))
+	#				Estimate Std. Error t value Pr(>|t|)    
+	#(Intercept)  0.626998   0.071579   8.759 1.98e-13 ***
+	#AGEDIFF     -0.002135   0.008422  -0.254      0.8    
+	tmp		<- subset(rtr, MALE_COMM_TYPE!='trading' & MALE_COMM_TYPE==FEMALE_COMM_TYPE)
+	ggplot(tmp, aes(x=PHSC_DIR, y=AGEDIFF)) + 
+			geom_boxplot() + 
+			facet_grid(~MALE_COMM_TYPE)	+
+			theme_bw() + labs(x='\nestimated direction of transmission', y='age difference male-female\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_direction-agegap-commtype.pdf',sep='')), w=4, h=6)
+
+
+
+	#
+	#	are couples overall younger in male->female transmission ?
+	#	results: no
+	ggplot(rtr, aes(x=PHSC_DIR, y=AVGAGE)) + geom_boxplot()
+	tmp		<- subset(rtr, !is.na(AVGAGE), select=c(PHSC_DIR,AVGAGE))
+	summary(rq(AVGAGE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	
+	
+	#
+	#	are female transmitters younger than female recipients ?
+	#	results: yes but not significant if all couples are considered
+	#			 yes and signficant if fairly old couples are excluded (female age < 40)
+	#			 yes, especially in fisherfolk sites!
+	ggplot(subset(rtr, FEMALE_COMM_TYPE!='trading'), aes(x=PHSC_DIR, y=FEMALE_BIRTHDATE)) + geom_boxplot() + facet_grid(~FEMALE_COMM_TYPE)
+	ggplot(subset(rtr,FEMALE_BIRTHDATE>1975), aes(x=PHSC_DIR, y=FEMALE_BIRTHDATE)) + geom_boxplot()	
+	#	the female birthdate distribution among m->f is asymmetric 
+	#	the female birthdate distribution has outliers in f->m
+	#	try median
+	tmp		<- subset(rtr, !is.na(FEMALE_BIRTHDATE), select=c(PHSC_DIR,FEMALE_BIRTHDATE))
+	summary(rq(FEMALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#	             Value      Std. Error t value    Pr(>|t|)  
+	#             Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1986.37500    0.84098 2361.97122    0.00000
+	#PHSC_DIRm->f   -1.74100    1.20906   -1.43996    0.15228	
+	tmp		<- subset(rtr, !is.na(FEMALE_BIRTHDATE) & FEMALE_BIRTHDATE>1975, select=c(PHSC_DIR,FEMALE_BIRTHDATE))
+	summary(rq(FEMALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#             	Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1986.91500    0.70542 2816.64130    0.00000
+	#PHSC_DIRm->f   -2.19252    1.03707   -2.11415    0.03652
+	
+	
+	#
+	#	are male transmitters younger than male recipients ?
+	#	results: overall, male transmitter tend to be older than male recipients but this is not significant 
+	#			 in agrarian, male transmitters tend to be younger than male recipients, but this is not significant
+	tmp		<- subset(rtr, MALE_COMM_TYPE!='trading' & MALE_COMM_TYPE==FEMALE_COMM_TYPE)
+	tmp		<- melt(tmp, measure.vars=c('MALE_BIRTHDATE','FEMALE_BIRTHDATE'))
+	set(tmp, NULL, 'variable', tmp[, as.character(factor(variable, levels=c('MALE_BIRTHDATE','FEMALE_BIRTHDATE'), labels=c('male partner','female partner')))])
+	ggplot(tmp, aes(x=PHSC_DIR, y=value)) + 
+			geom_boxplot() + 
+			facet_grid(~MALE_COMM_TYPE+variable) +
+			theme_bw() + labs(x='\nestimated direction of transmission', y='birth date\n')
+	ggsave(file=file.path(dir, paste(run,'-phsc-directionpairs_direction-age-commtype.pdf',sep='')), w=6, h=6)
+	
+	
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE), select=c(PHSC_DIR,MALE_COMM_TYPE,MALE_BIRTHDATE))
+	summary(rq(MALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#				Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1981.35600    1.61670 1225.55813    0.00000
+	#PHSC_DIRm->f   -0.60556    1.84886   -0.32753    0.74381
+	summary(rq(MALE_BIRTHDATE~PHSC_DIR, tau=.5, data=subset(tmp,MALE_COMM_TYPE=='agrarian'), method='fn'), se='nid')
+	#				Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1977.30100    3.97448  497.49959    0.00000
+	#PHSC_DIRm->f    3.03691    4.39768    0.69057    0.49414
+
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE) & FEMALE_BIRTHDATE>1975 & MALE_BIRTHDATE>1975, select=c(PHSC_DIR,MALE_BIRTHDATE))
+	summary(rq(MALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#	
+
+}
+	
+RakaiAll.addposteriors.pairs.170120<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	#
+	rpw[, table(RUN, useNA='if')]
+	#	define plotting order: largest number of trm assignments	
+	tmp		<- rpw[, list( WIN_TR=length(which(grepl('close|anc',TYPE_DIR_TODI7x3))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	tmp		<- tmp[order(-WIN_TR),]
+	tmp[, PLOT_ID:=seq_len(nrow(tmp))]	
+	#	make pair data table
+	rp		<- copy(rpw)
+	set(rp, NULL, c('PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]
+	#	define label
+	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	setkey(tmp, PLOT_ID)
+	tmp[, LABEL_SH:= factor(PLOT_ID, levels=PLOT_ID, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))]
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp		<- subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL, LABEL_SH))
+	rpw		<- merge(tmp, rpw, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#	define min/max reads
+	tmp		<- rpw[, list(	ID_R_MIN=min(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R),
+							ID_R_MAX=max(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R)), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM')]
+	rpw		<- merge(rpw, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM'))
+	#
+	#	define topo/distance types of phylogenetic relationship between pairs
+	#
+	#	given the bimodal distribution of patristic distances from phyloscanner
+	#	I ususally consider 3 distance states: close, neither close nor distant, distant
+	#
+	#	TYPE_DIR_TODI7x3		7 topology states (this is the "basic topological characterization" on Slack that I derive from Matthew's output) 
+	#							chain_12_nointermediate, chain_12_withintermediate, chain_21_nointermediate, chain_21_withintermediate, intermingled_nointermediate, intermingled_withintermediate, other  
+	#							times 
+	#							3 distance states
+	#
+	#	TYPE_PAIR_TODI3x3		3 topology states
+	#							pair (chain_XX_nointermediate+intermingled_nointermediate), withintermediate (XX_withintermediate), other
+	#							times 
+	#							3 distance states
+	#
+	#	TYPE_PAIR_TODI2x2		2 topology states
+	#							ancestral/intermingled, other
+	#							times 
+	#							2 distance states (close, not close)
+	#
+	#	TYPE_PAIR_TODI3			non-factorial design that combines distant or withintermediate, and close or ancestral/intermingled
+	#							the idea here is that 
+	#							evidence for extra-couple transmission comes from large patristic distance OR intermediates	
+	#							evidence for extra-couple transmission comes from ancestral/intermingled OR short patristic distance	
+	#
+	#	TYPE_PAIR_DI			3 distance states
+	#
+	#
+	#	TYPE_DIR_TO3			3 topological direction states
+	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
+	#							Rest: intermingled -> NA.
+	#
+	#	TYPE_DIR_TODI3			3 topological direction states if close.  
+	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
+	#							Rest: intermingled / distant / intermediate distance -> NA.
+	#
+	#	TYPE_CHAIN_TODI2		2 topological states if close.  
+	#							chain	(xxx_withintermediate_close); pair	(xxx_nointermediate_close, other)
+	#							Rest: distant / intermediate distance -> NA.
+	rpw[, TYPE_PAIR_TO:= 'other']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','pair','pair_distant'))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
+	rpw[, TYPE_PAIR_TODI3:= 'with intermediate\nor distant']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','other_close'))], 'TYPE_PAIR_TODI3', 'no intermediate\n and close')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair','other'))], 'TYPE_PAIR_TODI3', 'no intermediate\n but not close')
+	rpw[, TYPE_PAIR_DI:= cut(PATRISTIC_DISTANCE, breaks=c(1e-12,0.02,0.05,2), labels=c('close','intermediate\ndistance','distant'))] 	
+	rpw[, TYPE_PAIR_TODI2x2:= 'not close other']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close'))], 'TYPE_PAIR_TODI2x2', 'close ancestral/\nintermingled')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair','pair_distant'))], 'TYPE_PAIR_TODI2x2', 'not close ancestral/\nintermingled')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('withintermediate_close','other_close'))], 'TYPE_PAIR_TODI2x2', 'close other')	
+	rpw[, TYPE_DIR_TO3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'intermingled')		
+	rpw[, TYPE_DIR_TODI3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	rpw[, TYPE_CHAIN_TODI2:= NA_character_]
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])
+	#	define effectively independent number of windows
+	#	select only W_FROM that are > W_TO	
+	tmp		<- rpw[, {
+				z		<- 1
+				repeat
+				{
+					zz		<- which(W_FROM>max(W_TO[z]))[1]
+					if(length(zz)==0 | is.na(zz))	break
+					z		<- c(z, zz)			
+				}
+				list(W_FROM=W_FROM[z], W_TO=W_TO[z])
+			}, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN')]
+	tmp[, OVERLAP:= 0L]
+	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','W_FROM','W_TO','RUN'), all.x=1 )
+	set(rpw, rpw[, which(is.na(OVERLAP))], 'OVERLAP', 1L)		
+	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_CHAIN_TODI2','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
+	set(rpw, NULL, 'TYPE', rpw[,gsub('_',' ', TYPE)])	
+	rpw		<- subset(rpw, !is.na(TYPE))
+	#
+	#	for each pair count windows by TYPE_PAIR_DI (k)
+	#
+	rplkl	<- rpw[, list(K=length(W_FROM)), by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH','GROUP','TYPE')]	
+	rplkl	<- dcast.data.table(rplkl, RUN+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID+LABEL+LABEL_SH~GROUP+TYPE, value.var='K')
+	for(x in setdiff(colnames(rplkl),c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH','GROUP')))
+		set(rplkl, which(is.na(rplkl[[x]])), x, 0L)	
+	for(x in colnames(rplkl)[grepl('TYPE_PD_MEAN',colnames(rplkl))])
+		set(rplkl, which(rplkl[[x]]>0), x, 1L)	
+	rplkl	<- melt(rplkl, id.vars=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH'), variable.name='GROUP', value.name='K')
+	rplkl[, TYPE:= gsub('.*_([^_]+)$','\\1',GROUP)]
+	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])	
+	#	for each pair count total windows (n) and effective windows (neff)	
+	tmp		<- rpw[, list(N=length(W_FROM), NEFF=sum(1-OVERLAP)), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN','GROUP')]
+	rplkl	<- merge(rplkl, tmp, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN','GROUP'))
+	#	define effective number of windows of type
+	rplkl[, KEFF:= K/N*NEFF]	
+	#
+	#	add prior (equal probabilities to all types), posterior, and marginal probabilities
+	#
+	rplkl[, DIR_PRIOR:= 0.1]
+	rplkl[, DIR_PO:= DIR_PRIOR+KEFF]
+	tmp		<- rplkl[, {
+				alpha	<- DIR_PO
+				beta	<- sum(DIR_PO)-DIR_PO				
+				list(	TYPE=TYPE, 
+						POSTERIOR_ALPHA=alpha, 
+						POSTERIOR_BETA=beta)	
+			}, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN','GROUP')]
+	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','TYPE'))
+	#	save
+	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	
+	#
+	#	prepare colours
+	#	
+	cols.type	<- list()
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("chain fm\nno intermediate\nclose","chain fm\nno intermediate","chain fm\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PiYG')[c(1,2,4)]),
+					data.table(	TYPE= c("chain mf\nno intermediate\nclose","chain mf\nno intermediate","chain mf\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("intermingled\nno intermediate\nclose","intermingled\nno intermediate","intermingled\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PRGn')[c(1,2,4)]),
+					data.table(	TYPE= c("chain fm\nwith intermediate\nclose","chain fm\nwith intermediate","chain fm\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'BrBG'))[c(3,4,5)]),
+					data.table(	TYPE= c("chain mf\nwith intermediate\nclose","chain mf\nwith intermediate","chain mf\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
+					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("pair close","pair","pair distant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("withintermediate close","withintermediate","withintermediate distant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3x3']]	<- tmp2	
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c('close ancestral/\nintermingled', 'not close ancestral/\nintermingled'),
+							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
+					data.table(	TYPE= c('close other','not close other'),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI2x2']]	<- tmp2	
+	tmp2		<- data.table(	TYPE= c("no intermediate\n and close", "no intermediate\n but not close", "with intermediate\nor distant"),
+			COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("close", "intermediate\ndistance", "distant"),
+			COLS= c(rev(brewer.pal(11, 'RdBu'))[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_DI']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("ancestral/\nintermingled", "other"),
+			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TO']]	<- tmp2	
+	#
+	#	make detailed plots for each pair
+	#		topology assignments across genome
+	#		distances across genome
+	#		number of windows of certain type
+	#		estimated posterior probabilities on unknown phylogenetic relationship
+	#
+	groups		<- c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI3','TYPE_PAIR_DI')
+	group		<- c('TYPE_DIR_TODI7x3')
+	
+	widths	<- unit(c(4, 6), "null")
+	heights	<- unit(c(2, 3.5, 4, 5), "null")
+	height	<- 9
+	if(group%in%c('TYPE_DIR_TODI7x3'))
+	{
+		widths	<- unit(c(4, 6), "null")
+		heights	<- unit(c(2, 3.5, 4, 15), "null")
+		height	<- 17
+	}		
+	if(group%in%c('TYPE_PAIR_TODI2x2'))
+	{
+		heights	<- unit(c(2, 3.5, 4, 3.75), "null")
+		height	<- 8
+	}
+	if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI'))
+	{
+		heights	<- unit(c(2, 3.5, 4, 3.5), "null")
+		height	<- 7
+	}
+	pdf(file=file.path(dir, paste(run,'-phsc-relationships_allpairs','_',group,'.pdf',sep='')), w=10, h=height)	
+	plot.tmp	<- unique(subset(rplkl, GROUP==group, c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','LABEL')), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	setkey(plot.tmp, LABEL)		
+	for(i in seq_len(nrow(plot.tmp)))
+	{
+		#pty_run	<- 38; id1		<- '16016_1_4'; id2		<- '15105_1_35'
+		pty_run	<- plot.tmp[i, PTY_RUN]; id1		<- plot.tmp[i, FEMALE_SANGER_ID]; id2		<- plot.tmp[i, MALE_SANGER_ID]		
+		tmp		<- subset(rpw, PTY_RUN==pty_run & GROUP==group & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p1		<- ggplot(tmp, aes(x=W_FROM)) +			
+				geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
+				geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
+				labs(x='', y='number of reads', fill='phylogenetic\nrelationship\n', colour='phylogenetic\nrelationship\n') +
+				scale_fill_manual(values=cols.type[[group]]) +
+				scale_colour_manual(values=cols.type[[group]]) +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw[, min(W_FROM)], rpw[, max(W_FROM)])) +
+				scale_y_log10(breaks=c(10,100,1000,1e4,1e5)) +
+				theme_bw() + theme(legend.position='left') +			
+				guides(fill=FALSE, colour=FALSE)
+		p2		<- ggplot(tmp, aes(x=W_FROM, y=PATRISTIC_DISTANCE)) +
+				geom_point(size=1) +					
+				labs(x='window start\n\n', y='patristic distance') +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw[, min(W_FROM)], rpw[, max(W_FROM)])) +
+				scale_y_log10(labels=percent, limits=c(0.001, 0.7), expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+				theme_bw() + theme(legend.position='left')
+		tmp		<- subset(rplkl, GROUP==group & PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p3		<- ggplot(tmp, aes(x=TYPE, y=KEFF, fill=TYPE)) + geom_bar(stat='identity') +
+				scale_fill_manual(values=cols.type[[group]]) +
+				theme_bw() + theme(legend.position='bottom') +
+				coord_flip() + guides(fill=FALSE) +			
+				labs(x='', y='\nnon-overlapping windows\n(number)', fill='phylogenetic\nrelationship\n')
+		p4		<- ggplot(tmp, aes(x=TYPE, 	middle=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+											ymin=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+											ymax=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+											lower=qbeta(0.25, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+											upper=qbeta(0.75, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+											fill=TYPE)) + 
+				geom_boxplot(stat='identity') +
+				scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), limits=c(0,1), expand=c(0,0)) +
+				scale_fill_manual(values=cols.type[[group]]) +
+				theme_bw() + theme(legend.position='right', legend.margin=margin(0, .1, 0, 1, "cm")) +
+				coord_flip() + guides(fill=guide_legend(ncol=1)) +
+				labs(x='', y='\nposterior probability\n', fill='phylogenetic\nrelationship\n')				
+		grid.newpage()
+		pushViewport(viewport(layout = grid.layout(4, 2, heights=heights, widths=widths)))   
+		grid.text(tmp[1,LABEL], gp=gpar(fontsize=10), vp=viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+		print(p1, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:2))
+		print(p2, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:2))         
+		print(p3, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+		print(p4, vp = viewport(layout.pos.row = 4, layout.pos.col = 2))
+	}
+	dev.off()	
+	
+}
+
+RakaiAll.addposteriors.pairs.170201<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	#
+	rpw[, table(RUN, useNA='if')]
+	#	define plotting order: largest number of trm assignments	
+	tmp		<- rpw[, list( WIN_TR=length(which(grepl('close|anc',TYPE_DIR_TODI7x3))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
+	tmp		<- tmp[order(-WIN_TR),]
+	tmp[, PLOT_ID:=seq_len(nrow(tmp))]	
+	#	make pair data table
+	rp		<- copy(rpw)
+	set(rp, NULL, c('PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]
+	#	define label
+	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	setkey(tmp, PLOT_ID)
+	tmp[, LABEL_SH:= factor(PLOT_ID, levels=PLOT_ID, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))]
+	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
+							'\n<->', 
+							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+							'\n',sep=''))]
+	tmp		<- subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL, LABEL_SH))
+	rpw		<- merge(tmp, rpw, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#	define min/max reads
+	tmp		<- rpw[, list(	ID_R_MIN=min(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R),
+					ID_R_MAX=max(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R)), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM')]
+	rpw		<- merge(rpw, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM'))
+	#
+	#	define topo/distance types of phylogenetic relationship between pairs
+	#
+	#	given the bimodal distribution of patristic distances from phyloscanner
+	#	I ususally consider 3 distance states: close, neither close nor distant, distant
+	#
+	#	TYPE_DIR_TODI7x3		7 topology states (this is the "basic topological characterization" on Slack that I derive from Matthew's output) 
+	#							chain_12_nointermediate, chain_12_withintermediate, chain_21_nointermediate, chain_21_withintermediate, intermingled_nointermediate, intermingled_withintermediate, other  
+	#							times 
+	#							3 distance states
+	#
+	#	TYPE_PAIR_TODI3x3		3 topology states
+	#							pair (chain_XX_nointermediate+intermingled_nointermediate), withintermediate (XX_withintermediate), other
+	#							times 
+	#							3 distance states
+	#
+	#	TYPE_PAIR_TODI2x2		2 topology states
+	#							ancestral/intermingled, other
+	#							times 
+	#							2 distance states (close, not close)
+	#
+	#	TYPE_PAIR_TODI3			non-factorial design that combines distant or withintermediate, and close or ancestral/intermingled
+	#							the idea here is that 
+	#							evidence for extra-couple transmission comes from large patristic distance OR intermediates	
+	#							evidence for extra-couple transmission comes from ancestral/intermingled OR short patristic distance	
+	#
+	#	TYPE_PAIR_DI			3 distance states
+	#
+	#
+	#	TYPE_DIR_TO3			3 topological direction states
+	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
+	#							Rest: intermingled -> NA.
+	#
+	#	TYPE_DIR_TODI3			3 topological direction states if close.  
+	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
+	#							Rest: intermingled / distant / intermediate distance -> NA.
+	#
+	#	TYPE_CHAIN_TODI2		2 topological states if close.  
+	#							chain	(xxx_withintermediate_close); pair	(xxx_nointermediate_close, other)
+	#							Rest: distant / intermediate distance -> NA.
+	rpw[, TYPE_PAIR_TO:= 'other']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','pair','pair_distant'))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
+	rpw[, TYPE_PAIR_TODI3:= 'with intermediate\nor distant']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','other_close'))], 'TYPE_PAIR_TODI3', 'no intermediate\n and close')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair','other'))], 'TYPE_PAIR_TODI3', 'no intermediate\n but not close')
+	rpw[, TYPE_PAIR_DI:= cut(PATRISTIC_DISTANCE, breaks=c(1e-12,0.02,0.05,2), labels=c('close','intermediate\ndistance','distant'))] 	
+	rpw[, TYPE_PAIR_TODI2x2:= 'not close other']
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close'))], 'TYPE_PAIR_TODI2x2', 'close ancestral/\nintermingled')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair','pair_distant'))], 'TYPE_PAIR_TODI2x2', 'not close ancestral/\nintermingled')
+	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('withintermediate_close','other_close'))], 'TYPE_PAIR_TODI2x2', 'close other')	
+	rpw[, TYPE_DIR_TO3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TO3', 'intermingled')		
+	rpw[, TYPE_DIR_TODI3:= NA_character_]
+	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
+	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	rpw[, TYPE_CHAIN_TODI2:= NA_character_]
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])
+	#
+	#	identify chunks of contiguous windows
+	#	
+	setkey(rpw, RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM)
+	rpw.slide	<- rpw[, {
+				ans	<- NA_integer_
+				tmp	<- diff(W_FROM)
+				if(length(tmp))
+					ans	<- min(tmp)
+				list(W_SLIDE=ans)
+			}, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN')][, min(na.omit(W_SLIDE))]
+	#	melt because chunks are dependent on topology types: if there are NAs, then the chunks may change
+	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_CHAIN_TODI2','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
+	set(rpw, NULL, 'TYPE', rpw[,gsub('_',' ', TYPE)])	
+	rpw		<- subset(rpw, !is.na(TYPE))			
+	#	define chunks
+	setkey(rpw, RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, GROUP, W_FROM)
+	tmp		<- rpw[, {
+				tmp<- as.integer( c(TRUE,(W_FROM[-length(W_FROM)]+rpw.slide)!=W_FROM[-1]) )
+				list(W_FROM=W_FROM, W_TO=W_TO, CHUNK=cumsum(tmp))
+			}, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN','GROUP')]
+	rpw		<- merge(rpw,tmp,by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN','W_FROM','W_TO','GROUP'))
+	#	define chunk length in terms of non-overlapping windows	& number of windows in chunk
+	tmp		<- rpw[, {
+				list(W_FROM=W_FROM, W_TO=W_TO, CHUNK_L=(max(W_TO+1L)-min(W_FROM))/(W_TO[1]+1L-W_FROM[1]), CHUNK_N=length(W_FROM))
+			}, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','CHUNK')]
+	rpw		<- merge(rpw,tmp,by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN','GROUP','CHUNK','W_FROM','W_TO'))	
+	#	for each chunk, count: windows by type and effective length of chunk
+	#	then sum chunks
+	rplkl	<- rpw[, list(	K= length(W_FROM), KEFF= length(W_FROM)/CHUNK_N[1] * CHUNK_L[1]), by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','CHUNK','LABEL','LABEL_SH','GROUP','TYPE')]	
+	rplkl	<- rplkl[, list(STAT=c('K','KEFF'), V=c(sum(K),sum(KEFF))), by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH','GROUP','TYPE')]	
+	#	add zeros
+	rplkl	<- dcast.data.table(rplkl, RUN+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID+LABEL+LABEL_SH~GROUP+TYPE+STAT, value.var='V')
+	for(x in setdiff(colnames(rplkl),c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH','GROUP')))
+		set(rplkl, which(is.na(rplkl[[x]])), x, 0L)	
+	for(x in colnames(rplkl)[grepl('TYPE_PD_MEAN',colnames(rplkl))])
+		set(rplkl, which(rplkl[[x]]>0), x, 1L)	
+	rplkl	<- melt(rplkl, id.vars=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL','LABEL_SH'), variable.name='GROUP', value.name='V')
+	rplkl[, STAT:= gsub('.*_([^_]+)$','\\1',GROUP)]
+	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])	
+	rplkl[, TYPE:= gsub('.*_([^_]+)$','\\1',GROUP)]
+	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])	
+	rplkl	<- dcast.data.table(rplkl, RUN+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID+LABEL+LABEL_SH+GROUP+TYPE~STAT, value.var='V')	
+	#	calculate N and NEFF
+	tmp		<- rplkl[, list(N= sum(K), NEFF= sum(KEFF)), by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP')]	
+	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP'))
+	#	add parameters for marginal posterior probabilities (alpha, beta)
+	par.prior	<- 0.1	
+	tmp		<- rplkl[, list(	TYPE=TYPE, POSTERIOR_ALPHA=KEFF+par.prior, POSTERIOR_BETA=sum(KEFF+par.prior)-(KEFF+par.prior))	, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP')]
+	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','TYPE'))
+	#	save
+	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	#
+	#	prepare colours
+	#	
+	cols.type	<- list()
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("chain fm\nno intermediate\nclose","chain fm\nno intermediate","chain fm\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PiYG')[c(1,2,4)]),
+					data.table(	TYPE= c("chain mf\nno intermediate\nclose","chain mf\nno intermediate","chain mf\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("intermingled\nno intermediate\nclose","intermingled\nno intermediate","intermingled\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PRGn')[c(1,2,4)]),
+					data.table(	TYPE= c("chain fm\nwith intermediate\nclose","chain fm\nwith intermediate","chain fm\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'BrBG'))[c(3,4,5)]),
+					data.table(	TYPE= c("chain mf\nwith intermediate\nclose","chain mf\nwith intermediate","chain mf\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
+					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("pair close","pair","pair distant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("withintermediate close","withintermediate","withintermediate distant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3x3']]	<- tmp2	
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c('close ancestral/\nintermingled', 'not close ancestral/\nintermingled'),
+							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
+					data.table(	TYPE= c('close other','not close other'),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI2x2']]	<- tmp2	
+	tmp2		<- data.table(	TYPE= c("no intermediate\n and close", "no intermediate\n but not close", "with intermediate\nor distant"),
+			COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("close", "intermediate\ndistance", "distant"),
+			COLS= c(rev(brewer.pal(11, 'RdBu'))[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_DI']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("ancestral/\nintermingled", "other"),
+			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TO']]	<- tmp2	
+	#
+	#	make detailed plots for each pair
+	#		topology assignments across genome
+	#		distances across genome
+	#		number of windows of certain type
+	#		estimated posterior probabilities on unknown phylogenetic relationship
+	#
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+
+	groups		<- c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI3','TYPE_PAIR_DI')
+	group		<- c('TYPE_DIR_TODI7x3')
+	
+	widths	<- unit(c(4, 6), "null")
+	heights	<- unit(c(2, 3.5, 4, 5), "null")
+	height	<- 9
+	if(group%in%c('TYPE_DIR_TODI7x3'))
+	{
+		widths	<- unit(c(4, 6), "null")
+		heights	<- unit(c(2, 3.5, 4, 15), "null")
+		height	<- 17
+	}		
+	if(group%in%c('TYPE_PAIR_TODI2x2'))
+	{
+		heights	<- unit(c(2, 3.5, 4, 3.75), "null")
+		height	<- 8
+	}
+	if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI'))
+	{
+		heights	<- unit(c(2, 3.5, 4, 3.5), "null")
+		height	<- 7
+	}
+	pdf(file=file.path(dir, paste(run,'-phsc-relationships_allpairs','_',group,'.pdf',sep='')), w=10, h=height)	
+	plot.tmp	<- unique(subset(rplkl, GROUP==group, c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','LABEL')), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	setkey(plot.tmp, LABEL)		
+	for(i in seq_len(nrow(plot.tmp)))
+	{
+		#pty_run	<- 38; id1		<- '16016_1_4'; id2		<- '15105_1_35'
+		pty_run	<- plot.tmp[i, PTY_RUN]; id1		<- plot.tmp[i, FEMALE_SANGER_ID]; id2		<- plot.tmp[i, MALE_SANGER_ID]		
+		tmp		<- subset(rpw, PTY_RUN==pty_run & GROUP==group & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p1		<- ggplot(tmp, aes(x=W_FROM)) +			
+				geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
+				geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
+				labs(x='', y='number of reads', fill='phylogenetic\nrelationship\n', colour='phylogenetic\nrelationship\n') +
+				scale_fill_manual(values=cols.type[[group]]) +
+				scale_colour_manual(values=cols.type[[group]]) +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw[, min(W_FROM)], rpw[, max(W_FROM)])) +
+				scale_y_log10(breaks=c(10,100,1000,1e4,1e5)) +
+				theme_bw() + theme(legend.position='left') +			
+				guides(fill=FALSE, colour=FALSE)
+		p2		<- ggplot(tmp, aes(x=W_FROM, y=PATRISTIC_DISTANCE)) +
+				geom_point(size=1) +					
+				labs(x='window start\n\n', y='patristic distance') +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw[, min(W_FROM)], rpw[, max(W_FROM)])) +
+				scale_y_log10(labels=percent, limits=c(0.001, 0.7), expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+				theme_bw() + theme(legend.position='left')
+		tmp		<- subset(rplkl, GROUP==group & PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p3		<- ggplot(tmp, aes(x=TYPE, y=KEFF, fill=TYPE)) + geom_bar(stat='identity') +
+				scale_fill_manual(values=cols.type[[group]]) +
+				theme_bw() + theme(legend.position='bottom') +
+				coord_flip() + guides(fill=FALSE) +			
+				labs(x='', y='\nnon-overlapping windows\n(number)', fill='phylogenetic\nrelationship\n')
+		p4		<- ggplot(tmp, aes(x=TYPE, 	middle=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								ymin=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								ymax=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								lower=qbeta(0.25, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								upper=qbeta(0.75, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								fill=TYPE)) + 
+				geom_boxplot(stat='identity') +
+				scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), limits=c(0,1), expand=c(0,0)) +
+				scale_fill_manual(values=cols.type[[group]]) +
+				theme_bw() + theme(legend.position='right', legend.margin=margin(0, .1, 0, 1, "cm")) +
+				coord_flip() + guides(fill=guide_legend(ncol=1)) +
+				labs(x='', y='\nposterior probability\n', fill='phylogenetic\nrelationship\n')				
+		grid.newpage()
+		pushViewport(viewport(layout = grid.layout(4, 2, heights=heights, widths=widths)))   
+		grid.text(tmp[1,LABEL], gp=gpar(fontsize=10), vp=viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+		print(p1, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:2))
+		print(p2, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:2))         
+		print(p3, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+		print(p4, vp = viewport(layout.pos.row = 4, layout.pos.col = 2))
+	}
+	dev.off()	
+	
+}
+
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.age<- function()
 {
 	require(data.table)
 	require(scales)
@@ -3248,7 +4573,8 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 	require(RColorBrewer)	
 	require(coin)
 	require(Hmisc)
-	# load pty.run
+	require(gamlss)
+	# load pty.runs
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
@@ -3260,11 +4586,21 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	# add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+			COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
 	#
-	#	select couples
-	#	TODO: would be good to have all Rakai couples in rp in this function, so we know what we are doing
-	#			there are 486	
-	#	TODO: no LABEL for couples without PANGEA data
+	#	select couples	
 	#
 	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant')	
 	#	make central selection: post prob of extra-couple trm > 50%
@@ -3275,33 +4611,341 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 	set(rpd, rpd[, which(is.na(SELECT_P50))], 'SELECT_P50', 'No_PANGEA_data')
 	set(rpd, rpd[, which(is.na(SELECT_P80))], 'SELECT_P80', 'No_PANGEA_data')
 	#
-	unique(rpd, by='COUPID')[, table(SELECT_P50)]
-	#	308 couples, 211 with PANGEA data, 73 with strong evidence for extra-couple trm 
+	#	among cohabiting couples: age at diagnosis vs extra-couple transmission
 	#
-	#	cohabitation and extra-couple transmission
+	#	results:
+	#	the men are substantially younger in extra-transmission couples		
+	#	this is not the case for women (if anything they are older in extra-transmission couples)
+	tmp		<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp[, MALE_FIRSTPOSDATE_AGE:= MALE_FIRSTPOSDATE-MALE_BIRTHDATE]
+	tmp[, FEMALE_FIRSTPOSDATE_AGE:= FEMALE_FIRSTPOSDATE-FEMALE_BIRTHDATE]
+	tmp		<- merge(tmp, tmp[, list(	MALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, 
+							FEMALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE,
+							BOTHPOS_AVGAGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-(FEMALE_BIRTHDATE+FEMALE_BIRTHDATE)/2), by='COUPID'], by='COUPID')	
+	tmp[, FIRSTPOSDATE_AGE_MFDIFF:= MALE_BIRTHDATE-FEMALE_BIRTHDATE]
+	tmp2	<- melt(tmp, measure.vars=c('MALE_FIRSTPOSDATE_AGE','FEMALE_FIRSTPOSDATE_AGE'))
+	set(tmp2, NULL,'variable', tmp2[,factor(variable, 	levels=c('MALE_FIRSTPOSDATE_AGE','FEMALE_FIRSTPOSDATE_AGE'),labels=c('male partner','female partner'))])
+	set(tmp2, NULL,'SELECT_P50', tmp2[, factor(SELECT_P50, levels=c('Y','N'), labels=c('Yes','No'))])
+	ggplot(tmp2, aes(x=SELECT_P50, y=value, fill=variable, alpha=SELECT_P50)) + geom_boxplot(outlier.shape=NA) +			
+			theme_bw() + labs(x='\nphylogenetically unlinked virus among +/+ couples\n(posterior probability >50% with confidence >80%)', y='age at diagnosis\n') +
+			scale_y_continuous(breaks=seq(10,80,5)) +
+			scale_fill_brewer(palette='Set1') +
+			scale_alpha_manual(values=c('Yes'=1, 'No'=0.5)) +
+			facet_grid(~variable) +
+			guides(fill='none', alpha='none')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_by_agepartners.pdf')), w=4, h=6)
 	#
-	unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM), by='COUPID')[, table(SELECT_P50)]
-	binconf(64,199)
-	# 291 couples cohabitate
-	# 64 / 199 (32%) with PANGEA data extra-couple trms (at least)
-	# conf int:	0.2606181-0.3893548
-	unique(subset(rpd, MALE_HH_NUM!=FEMALE_HH_NUM), by='COUPID')[, table(SELECT_P50)]	
-	# 17 couples do not cohabitate in same household
-	# 9 / 12 (75%) with PANGEA data extra couple trms
-	# conf int: 0.4676947-0.9110583
-	unique(subset(rpd, MALE_COMM_NUM!=FEMALE_COMM_NUM), by='COUPID')	
-	# 3 couples do not live in same community
-	# 2/3 extra couple trms
-	unique(subset(rpd, MALE_REGION!=FEMALE_REGION), by='COUPID')		
-	# 1 couples does not live in same region
-	# 1/1 extra couple trms
+	ggplot(subset(tmp2, COUP_SC%in%c('seroinc','M->F','F->M')), aes(x=SELECT_P50, y=value, fill=variable, alpha=SELECT_P50)) + geom_boxplot(outlier.shape=NA) +			
+			theme_bw() + labs(x='\nextra-couple trm among incident / initially discordant couples\n(posterior probability >50% with confidence >80%)', y='age at diagnosis\n') +
+			scale_y_continuous(breaks=seq(10,80,5)) +
+			scale_fill_brewer(palette='Set1') +
+			scale_alpha_manual(values=c('Yes'=1, 'No'=0.5)) +
+			facet_grid(~variable) +
+			guides(fill='none', alpha='none')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_agepartners.pdf')), w=4, h=6)	
 	#
-	#	cohabitation / extra-couple transmission significant ?
+	#	age difference versus unlinked virus
+	#
+	#	results: no difference in age differences between male/female in linked/unlinked couples
+	tmp2	<- subset(tmp, !is.na(FEMALE_FIRSTPOSDATE_AGE) & !is.na(MALE_FIRSTPOSDATE_AGE))
+	tmp2[, COUP_SC2:= '+/+ at enrollment']
+	set(tmp2, tmp2[, which(COUP_SC%in%c('seroinc','M->F','F->M'))], 'COUP_SC2', '-/-, -/+, +/- at enrollment')
+	set(tmp2, NULL,'SELECT_P50', tmp2[, factor(SELECT_P50, levels=c('Y','N'), labels=c('Yes','No'))])
+	ggplot(tmp2, aes(x=SELECT_P50, y=FIRSTPOSDATE_AGE_MFDIFF, fill=SELECT_P50)) + 
+			geom_boxplot(outlier.shape=NA) +
+			scale_fill_brewer(palette='PRGn') +
+			scale_alpha_manual(values=c('Yes'=1, 'No'=0.5)) +			
+			scale_y_continuous(breaks=seq(-80,80,5),limits=c(-10,25), expand=c(0,0)) +
+			labs(x='\nphylogenetically unlinked virus among male and female partner\n(posterior probability >50% with confidence >80%)', y='age difference\n(years)\n') +
+			facet_grid(~COUP_SC2) +
+			theme_bw() + guides(fill='none')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_agedifferencepartners.pdf')), w=4, h=6)
 	#	
-	rpd[, COHABITATE:= as.character(factor(MALE_HH_NUM==FEMALE_HH_NUM, levels=c(TRUE,FALSE),labels=c('Y','N')))]
-	chisq_test(factor(SELECT_P50) ~ factor(COHABITATE), data=subset(rpd, SELECT_P50%in%c('Y','N')), distribution="exact")
-	# p-value = 0.001212
+	#	among -/- -/+ +/- couples, BOTH the male and female partners are younger in unlinked couples
+	tmp2	<- subset(tmp, !is.na(FEMALE_FIRSTPOSDATE_AGE) & !is.na(MALE_FIRSTPOSDATE_AGE))
+	tmp2[, COUP_SC2:= '+/+ at enrollment']
+	set(tmp2, tmp2[, which(COUP_SC%in%c('seroinc','M->F','F->M'))], 'COUP_SC2', '-/-, -/+, +/- at enrollment')
+	set(tmp2, NULL,'SELECT_P50', tmp2[, factor(SELECT_P50, levels=c('Y','N'), labels=c('Yes','No'))])		
+	tmp2	<- melt(tmp2, measure.vars=c('MALE_BIRTHDATE','FEMALE_BIRTHDATE'))
+	set(tmp2, NULL, 'variable', tmp2[, factor(variable, levels=c('MALE_BIRTHDATE','FEMALE_BIRTHDATE'), labels=c('male','female'))])
+	ggplot(tmp2, aes(x=SELECT_P50, y=value, fill=SELECT_P50)) +
+			geom_boxplot(outlier.shape=NA) +
+			scale_fill_brewer(palette='PRGn') +
+			facet_grid(COUP_SC2~variable) +
+			theme_bw() + guides(fill='none') +
+			labs(x='\nphylogenetically unlinked virus among male and female partner\n(posterior probability >50% with confidence >80%)', y='birth date')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_birthdate.pdf')), w=6, h=6)
+	#
+	#	age when both partners are positive
+	#
+	tmp2	<- subset(tmp, !is.na(FEMALE_FIRSTPOSDATE_AGE) & !is.na(MALE_FIRSTPOSDATE_AGE))
+	tmp2[, COUP_SC2:= '+/+ at enrollment']
+	set(tmp2, tmp2[, which(COUP_SC%in%c('seroinc','M->F','F->M'))], 'COUP_SC2', '-/-, -/+, +/- at enrollment')
+	set(tmp2, NULL,'SELECT_P50', tmp2[, factor(SELECT_P50, levels=c('Y','N'), labels=c('Yes','No'))])	
+	tmp2	<- melt(tmp2, measure.vars=c('MALE_BOTHPOS_AGE','FEMALE_BOTHPOS_AGE'))
+	set(tmp2, NULL, 'variable', tmp2[, factor(variable, levels=c('MALE_BOTHPOS_AGE','FEMALE_BOTHPOS_AGE'), labels=c('male','female'))])
+	ggplot(tmp2, aes(x=SELECT_P50, y=value, fill=SELECT_P50)) +
+			geom_boxplot(outlier.shape=NA) +
+			scale_fill_brewer(palette='PRGn') +
+			facet_grid(COUP_SC2~variable) +
+			theme_bw() + guides(fill='none') +
+			labs(	x='\nphylogenetically unlinked virus among male and female partner\n(posterior probability >50% with confidence >80%)', 
+					y='age at time both partners were first positive')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_agebothpos.pdf')), w=6, h=6)
+	#
+	#	average age when both partners are positive
+	#
+	tmp2	<- subset(tmp, !is.na(FEMALE_FIRSTPOSDATE_AGE) & !is.na(MALE_FIRSTPOSDATE_AGE))
+	tmp2[, COUP_SC2:= '+/+ at enrollment']
+	set(tmp2, tmp2[, which(COUP_SC%in%c('seroinc','M->F','F->M'))], 'COUP_SC2', '-/-, -/+, +/- at enrollment')
+	set(tmp2, NULL,'SELECT_P50', tmp2[, factor(SELECT_P50, levels=c('Y','N'), labels=c('Yes','No'))])	
+	ggplot(tmp2, aes(x=SELECT_P50, y=BOTHPOS_AVGAGE, fill=SELECT_P50)) +
+			geom_boxplot(outlier.shape=NA) +
+			scale_fill_brewer(palette='PRGn') +
+			facet_grid(~COUP_SC2) +
+			theme_bw() + guides(fill='none') +
+			labs(	x='\nphylogenetically unlinked virus among male and female partner\n(posterior probability >50% with confidence >80%)', 
+					y='average age of both partners at time both partners were first positive')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_avgagebothpos.pdf')), w=4, h=6)
+	#
+	#	regression model
+	#
+	#	none significant in multivariable analysis
+	tmp		<- unique(subset(rpd, 	MALE_HH_NUM==FEMALE_HH_NUM & 
+							COUP_SC%in%c('seroinc','M->F','F->M') &
+							!is.na(FEMALE_BIRTHDATE) & !is.na(MALE_BIRTHDATE) & 
+							SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp[, MALE_FIRSTPOSDATE_AGE:= MALE_FIRSTPOSDATE-MALE_BIRTHDATE]
+	tmp[, FEMALE_FIRSTPOSDATE_AGE:= FEMALE_FIRSTPOSDATE-FEMALE_BIRTHDATE]
+	tmp		<- merge(tmp, tmp[, list(	MALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, 
+							FEMALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE,
+							BOTHPOS_AVGAGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-(FEMALE_BIRTHDATE+FEMALE_BIRTHDATE)/2), by='COUPID'], by='COUPID')	
+	tmp[, FIRSTPOSDATE_AGE_MFDIFF:= MALE_BIRTHDATE-FEMALE_BIRTHDATE]
+	set(tmp, NULL,'SELECT_P50', tmp[, as.integer(as.character(factor(SELECT_P50, levels=c('Y','N'), labels=c('1','0'))))])	
+	tmp2	<- subset(tmp, select=c(SELECT_P50, MALE_COMM_TYPE, BOTHPOS_AVGAGE, FEMALE_BOTHPOS_AGE, MALE_BOTHPOS_AGE, FIRSTPOSDATE_AGE_MFDIFF))	
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE, family=LO))
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE+BOTHPOS_AVGAGE, family=LO))
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE+BOTHPOS_AVGAGE+FIRSTPOSDATE_AGE_MFDIFF, family=LO))	
+}
 
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.communities.auxsampling<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)	
+	require(coin)
+	require(Hmisc)
+	require(gamlss)
+	# load pty.runs
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load posterior relationships
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	# add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+							COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
+	#
+	#	select cohabiting couples	
+	#
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant')
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID','COUP_SC'))
+	rpd		<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM), by='COUPID')
+	#
+	#	Monte Carlo procedure that defines an auxiliary variable Z:= truely unlinked 
+	#		where Z has as pdf the posterior distribution from phyloscanner  
+	#		this fully accounts for uncertainty in the phylogenetic relationships 
+	#		and avoids cut-offs
+	
+	#	select couples
+	rpds	<- subset(rpd, select=c(COUPID, COUP_SC, MALE_COMM_TYPE, POSTERIOR_ALPHA, POSTERIOR_BETA))
+	rpds[, COUP_SC:='all +/+ couples']
+	tmp2	<- subset(rpd, COUP_SC%in%c('seroinc','M->F','F->M'), select=c(COUPID, COUP_SC, MALE_COMM_TYPE, POSTERIOR_ALPHA, POSTERIOR_BETA))
+	tmp2[, COUP_SC:='-/-, -/+, +/- at enrollment']
+	rpds	<- rbind(rpds, tmp2)
+	#
+	tmp2	<- tmp2[, list(N=length(COUPID)), by=c('MALE_COMM_TYPE','COUP_SC')]
+	setkey(tmp2, MALE_COMM_TYPE, COUP_SC)
+	tmp3	<- data.table(	COUP_SC			= c('seroinc', 'seroinc',   'seroinc','M->F',    'M->F',      'M->F',   'F->M',    'F->M',      'F->M'),
+							MALE_COMM_TYPE	= c('agrarian','fisherfolk','trading','agrarian','fisherfolk','trading','agrarian','fisherfolk','trading'),
+							EXTRACOUPLE		= c((.05+.29)/2,(.16+.56)/2,(.08+.42)/2,.05,      .16,         .08,      .29,       .56,         .42))
+	tmp2	<- merge(tmp2,tmp3,by=c('MALE_COMM_TYPE','COUP_SC'))
+	tmp2[, list(EXTRACOUPLE= sum( N/sum(N)*EXTRACOUPLE) ), by='MALE_COMM_TYPE']
+	#   MALE_COMM_TYPE EXTRACOUPLE
+	#1:       agrarian   0.1300000
+	#2:     fisherfolk   0.3535484
+	#3:        trading   0.1650000
+	
+	#	
+	mc.it	<- 1e4	
+	set.seed(42)
+	# 1e7 iterations seem reasonable to get accurate mean to tolerance 1e-3
+	# 	mean(rbinom(1e7,1,rbeta(1e7, 0.1, 1.2))) - 0.1/(0.1+1.2)
+	rpds	<- do.call('rbind',lapply(seq_len(mc.it), function(i)
+					{
+						#	one Monte Carlo iteration:
+						#	1- draw Z from posterior probabilities
+						#	2- count successes Z=1 (unlinked couples) and evaluate binomial prob and confidence intervals
+						#i		<- 1
+						if(i%%1e2==0) cat('\n',i)
+						mc		<- rpds[, list(	MC_IT=i, 
+												MC_Z= rbinom(1,1,rbeta(1, POSTERIOR_ALPHA, POSTERIOR_BETA))), by=c('COUPID','COUP_SC','MALE_COMM_TYPE')]
+						tmp		<- mc[, 	{
+									z	<- binconf( length(which(MC_Z==1)), length(MC_Z) )				
+									list(K=length(which(MC_Z==1)), N=length(MC_Z), P=z[1], QL=z[2], QU=z[3])
+								}, by=c('MALE_COMM_TYPE','COUP_SC','MC_IT')]	
+						tmp						
+					}))
+	save(rpds, file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_by_commtype_MonteCarlo.rda')))
+	# 
+	tmp		<- rpds[, list(N=mean(N), P=mean(P), QL=mean(QL), QU=mean(QU)), by=c('COUP_SC','MALE_COMM_TYPE')]
+	set(tmp, NULL, 'MALE_COMM_TYPE', tmp[, factor(MALE_COMM_TYPE, levels=c('agrarian','trading','fisherfolk'))])
+	set(tmp, tmp[, which(COUP_SC=='-/-, -/+, +/- at enrollment')],'COUP_SC','+/+ couples,\n-/-, -/+, +/- at enrollment')
+	#                                     COUP_SC MALE_COMM_TYPE   N         P         QL        QU
+	#1:                           all +/+ couples       agrarian  53 0.2336755 0.14093054 0.3624179
+	#2:                           all +/+ couples     fisherfolk 146 0.4148418 0.33822165 0.4958283
+	#3:                           all +/+ couples        trading   4 0.4676250 0.13353785 0.8294649
+	#4: +/+ couples,\n-/-, -/+, +/- at enrollment       agrarian  18 0.2157944 0.08888292 0.4425456
+	#5: +/+ couples,\n-/-, -/+, +/- at enrollment     fisherfolk  31 0.4611935 0.30106451 0.6298798
+	#6: +/+ couples,\n-/-, -/+, +/- at enrollment        trading   2 0.4442000 0.03338005 0.9284103
+	ggplot(tmp, aes(x=MALE_COMM_TYPE)) +
+			geom_point(aes(y=P)) + geom_errorbar(aes(ymax=QU, ymin=QL), width=0.5) +
+			geom_text(aes(y=QU+.05, label=paste0('n=',N))) + 
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous(limits=c(0,1), labels=percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
+			facet_grid(~COUP_SC) +
+			labs(x='\ncommunity type', y='phylogenetically unlinked couples\n(proportion)\n')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_by_commtype_MonteCarlo.pdf')), w=5, h=6)
+	
+	#
+	#	repeat for comparison using distance only, ie no topological information
+	#
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='distant')
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID','COUP_SC'))
+	rpd		<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM), by='COUPID')
+	rpds	<- subset(rpd, select=c(COUPID, COUP_SC, MALE_COMM_TYPE, POSTERIOR_ALPHA, POSTERIOR_BETA))
+	rpds[, COUP_SC:='all +/+ couples']
+	tmp2	<- subset(rpd, COUP_SC%in%c('seroinc','M->F','F->M'), select=c(COUPID, COUP_SC, MALE_COMM_TYPE, POSTERIOR_ALPHA, POSTERIOR_BETA))
+	tmp2[, COUP_SC:='-/-, -/+, +/- at enrollment']
+	rpds	<- rbind(rpds, tmp2)
+	mc.it	<- 1e4	
+	set.seed(42)
+	rpds	<- do.call('rbind',lapply(seq_len(mc.it), function(i)
+					{
+						#	one Monte Carlo iteration:
+						#	1- draw Z from posterior probabilities
+						#	2- count successes Z=1 (unlinked couples) and evaluate binomial prob and confidence intervals
+						#i		<- 1
+						if(i%%1e2==0) cat('\n',i)
+						mc		<- rpds[, list(	MC_IT=i, 
+										MC_Z= rbinom(1,1,rbeta(1, POSTERIOR_ALPHA, POSTERIOR_BETA))), by=c('COUPID','COUP_SC','MALE_COMM_TYPE')]
+						tmp		<- mc[, 	{
+									z	<- binconf( length(which(MC_Z==1)), length(MC_Z) )				
+									list(K=length(which(MC_Z==1)), N=length(MC_Z), P=z[1], QL=z[2], QU=z[3])
+								}, by=c('MALE_COMM_TYPE','COUP_SC','MC_IT')]	
+						tmp						
+					}))
+	save(rpds, file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_by_commtype_MonteCarlo_usingdistanceonly.rda')))
+	tmp		<- rpds[, list(N=mean(N), P=mean(P), QL=mean(QL), QU=mean(QU)), by=c('COUP_SC','MALE_COMM_TYPE')]
+	set(tmp, NULL, 'MALE_COMM_TYPE', tmp[, factor(MALE_COMM_TYPE, levels=c('agrarian','trading','fisherfolk'))])
+	set(tmp, tmp[, which(COUP_SC=='-/-, -/+, +/- at enrollment')],'COUP_SC','+/+ couples,\n-/-, -/+, +/- at enrollment')	
+	#                                     COUP_SC MALE_COMM_TYPE   N         P         QL        QU
+	#1:                           all +/+ couples       agrarian  53 0.1810358 0.10082490 0.3043593
+	#2:                           all +/+ couples     fisherfolk 146 0.3590110 0.28582459 0.4394263
+	#3:                           all +/+ couples        trading   4 0.4664500 0.13280196 0.8288349
+	#4: +/+ couples,\n-/-, -/+, +/- at enrollment       agrarian  18 0.1656944 0.06000133 0.3885805
+	#5: +/+ couples,\n-/-, -/+, +/- at enrollment     fisherfolk  31 0.3395161 0.19990158 0.5145191
+	#6: +/+ couples,\n-/-, -/+, +/- at enrollment        trading   2 0.4430500 0.03326284 0.9277401
+	
+}
+
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.communities<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)	
+	require(coin)
+	require(Hmisc)
+	require(gamlss)
+	
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	rc		<- copy(rp)
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')	
+	#	make pair data table
+	rp		<- copy(rpw)
+	set(rp, NULL, c('DIR','FILE','PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]	
+	#	add PAIR_TYPE
+	tmp		<- unique(subset(rc, select=c(COUPID, MALE_HH_NUM, FEMALE_HH_NUM, COUP_SC, PAIR_TYPE)))	
+	setnames(tmp, 'COUP_SC', 'COUP_TYPE')
+	rp	<- merge(rp, tmp, by=c('COUPID','MALE_HH_NUM','FEMALE_HH_NUM'),all.x=1)
+	set(rp, rp[, which(is.na(PAIR_TYPE))], 'PAIR_TYPE', 'not registered as couple')
+	
+	#
+	#	select stable couples
+	#	
+	rp	<- subset(rp, PAIR_TYPE!='not registered as couple')
+	
+	#
+	#	compare distance / distance + topology
+	#	results: 	with TYPE_PAIR_TODI3 pairs in close transmission chains end up in unlinked 
+	#				contiguous cannot be interpreted as 'A->C->B' it can also be 'A->B/C' or 'A->B and A->C'
+	confint	<- 0.5
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='distant')
+	tmp		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant')
+	rpd		<- rbind(rpd, tmp)
+	rpd[, SELECT_P50:= as.character(factor(pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'))
+	rpd		<- dcast.data.table(rpd, COUPID+COUP_TYPE+LABEL+PTY_RUN+FEMALE_SANGER_ID+MALE_SANGER_ID+MALE_RID+FEMALE_RID~GROUP, value.var='SELECT_P50')
+		
+	tmp		<- subset(rpd, TYPE_PAIR_DI=='N' & TYPE_PAIR_TODI3=='Y')
+	unique(tmp, by=c('MALE_RID','FEMALE_RID'))
+	
+	#
+	#	select unlinked couples	by distance + topology
+	#
+
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='distant')		
+	confint	<- 0.5
+	rpd[, SELECT_P50:= as.character(factor(pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd[, SELECT_P80:= as.character(factor(pbeta(0.8, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confint, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID, NEFF, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA, LABEL_SH, LABEL, SELECT_P50, SELECT_P80))
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'), all.x=1)
+	
 	#
 	#	region among cohabiting couples and extra-couple transmission
 	#
@@ -3312,19 +4956,139 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 			}, by='MALE_REGION']	
 	#REGION          K  N         P         QL        QU
 	#1:           4  2 14 0.1428571 0.04009392 0.3994138
-	#2:          12 30 93 0.3225806 0.23624944 0.4229874
+	#2:          12 29 93 0.3118280 0.22672869 0.4118559
 	#3:           9  3 17 0.1764706 0.06191127 0.4102946
 	#4:           5  3  8 0.3750000 0.13684429 0.6942576
-	#5:          13 27 71 0.3802817 0.27627173 0.4965814
+	#5:          13 30 72 0.4166667 0.30985217 0.5319230
 	#
 	#	extra-couple trm seems higher in 5, 12, 13
 	#	if I square the maps in Chang 2016 with the IDs in Collinson-Streng 2009
 	#	4, 9 seem agragrian
+	
+	#
+	#	community type among cohabiting couples and extra-couple transmission
+	#
+	#	results:
+	#	significantly more phylog discordance among couples in fisherfolk communities
+	tmp	<- unique(subset(rpd, PAIR_TYPE=='stable cohabiting' & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp2	<- tmp[, {
+				z	<- binconf( length(which(SELECT_P50=='Y')), length(which(SELECT_P50%in%c('Y','N'))) )				
+				list(K=length(which(SELECT_P50=='Y')), N=length(which(SELECT_P50%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
+			}, by=c('MALE_COMM_TYPE')]
+	setkey(tmp2, MALE_COMM_TYPE)	
+	set(tmp2, NULL, 'MALE_COMM_TYPE', tmp2[, factor(MALE_COMM_TYPE, levels=c('agrarian','trading','fisherfolk'))])
+	#   MALE_COMM_TYPE  K   N         P        QL        QU
+	#1:       agrarian  9  53 0.1698113 0.09199945 0.2922528
+	#2:     fisherfolk 56 147 0.3809524 0.30642783 0.4615405
+	#3:        trading  2   4 0.5000000 0.15003899 0.8499610
+	ggplot(subset(tmp2, MALE_COMM_TYPE!='trading'), aes(x=MALE_COMM_TYPE)) +
+			geom_point(aes(y=P)) + geom_errorbar(aes(ymax=QU, ymin=QL), width=0.5) +
+			geom_text(aes(y=QU+.05, label=paste0('n=',N))) + 
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous(limits=c(0,1), labels=percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
+			labs(x='\ncommunity type', y='phylogenetically unlinked couples among +/+ couples\n(proportion)\n')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_by_commtype.pdf')), w=3, h=6)
+	set(tmp, NULL,'SELECT_P50', tmp[, as.integer(as.character(factor(SELECT_P50, levels=c('Y','N'), labels=c('1','0'))))])	
+	summary(gamlss(data=subset(tmp, select=c(SELECT_P50, MALE_COMM_TYPE)), SELECT_P50~MALE_COMM_TYPE, family=LO))
+	#(Intercept)               0.10632    0.06625   1.605  0.11008   
+	#MALE_COMM_TYPEfisherfolk  0.21257    0.07727   2.751  0.00649 **
+	#MALE_COMM_TYPEtrading     0.39368    0.25008   1.574  0.11700 
+	#
+	#	repeat community type among cohabiting seroinc, M->F, F->M couples and extra-couple transmission
+	#
+	#	results:
+	#	significantly more extra-couple trms among couples in fisherfolk communities
+	tmp	<- unique(subset(rpd, COUP_TYPE%in%c('seroinc','M->F','F->M') & PAIR_TYPE=='stable cohabiting' & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp2	<- tmp[, {
+				z	<- binconf( length(which(SELECT_P50=='Y')), length(which(SELECT_P50%in%c('Y','N'))) )				
+				list(K=length(which(SELECT_P50=='Y')), N=length(which(SELECT_P50%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
+			}, by=c('MALE_COMM_TYPE')]
+	setkey(tmp2, MALE_COMM_TYPE)	
+	set(tmp2, NULL, 'MALE_COMM_TYPE', tmp2[, factor(MALE_COMM_TYPE, levels=c('agrarian','trading','fisherfolk'))])
+	#      MALE_COMM_TYPE  	K  N         P         QL        QU
+	#1:       agrarian  2 18 0.1111111 0.03101952 0.3279977
+	#2:     fisherfolk 10 31 0.3225806 0.18569427 0.4985899
+	#3:        trading  1  2 0.5000000 0.02564665 0.9743534
+	ggplot(subset(tmp2, MALE_COMM_TYPE!='trading'), aes(x=MALE_COMM_TYPE)) +
+			geom_point(aes(y=P)) + geom_errorbar(aes(ymax=QU, ymin=QL), width=0.5) +
+			geom_text(aes(y=QU+.05, label=paste0('n=',N))) + 
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous(limits=c(0,1), labels=percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
+			labs(x='\ncommunity type', y='extra-couple transmission among incident/initially discordant couples\n(posterior probability)\n')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_incdisc_by_commtype.pdf')), w=3, h=6)
+	set(tmp, NULL,'SELECT_P50', tmp[, as.integer(as.character(factor(SELECT_P50, levels=c('Y','N'), labels=c('1','0'))))])	
+	summary(gamlss(data=subset(tmp, select=c(SELECT_P50, MALE_COMM_TYPE)), SELECT_P50~MALE_COMM_TYPE, family=LO))
+	#                         Estimate Std. Error t value Pr(>|t|)  
+	#(Intercept)               0.05694    0.09610   0.592    0.556
+	#MALE_COMM_TYPEfisherfolk  0.16674    0.12082   1.380    0.174
+	#MALE_COMM_TYPEtrading     0.44306    0.30391   1.458    0.151
+	
 
+	#
+	#	How many individuals report extra partner among unlinked couples?
+	#
+
+	tmp	<- unique(subset(rpd, PAIR_TYPE=='stable cohabiting' & SELECT_P50%in%c('Y')), by='COUPID')
+	tmp	<- melt(tmp, measure.vars=c('MALE_SEXC','FEMALE_SEXC'))
+	set(tmp, NULL, 'variable', tmp[, factor(variable, levels=c('MALE_SEXC','FEMALE_SEXC'), labels=c('male','female') )])
+	tmp[, value2:= 'No']
+	set(tmp, tmp[, which(grepl('other partner',value))], 'value2', 'Yes')
+	
+	tmp2	<- tmp[, {
+				z	<- binconf( length(which(value2=='Yes')), length(value2) )				
+				list(K=length(which(value2=='Yes')), N=length(value2), P=z[1], QL=z[2], QU=z[3])
+			}, by=c('MALE_COMM_TYPE','variable')]
+	setkey(tmp2, MALE_COMM_TYPE)	
+	#   MALE_COMM_TYPE variable  K  N         P          QL        QU
+	#1:       agrarian     male  1  9 0.1111111 0.005699255 0.4349997
+	#2:       agrarian   female  1  9 0.1111111 0.005699255 0.4349997
+	#3:     fisherfolk     male 28 56 0.5000000 0.373317388 0.6266826
+	#4:     fisherfolk   female 15 56 0.2678571 0.169573054 0.3959456
+	#5:        trading     male  0  2 0.0000000 0.000000000 0.6576198
+	#6:        trading   female  1  2 0.5000000 0.025646647 0.9743534
+	ggplot(subset(tmp2, MALE_COMM_TYPE!='trading'), aes(x= variable, y=P, ymin=QL, ymax=QU)) + 
+		geom_point() + geom_errorbar() + 
+		facet_grid(~MALE_COMM_TYPE) +
+		scale_y_continuous(expand=c(0,0), limits=c(0,1), labels=percent, breaks=seq(0,1,0.2)) +
+		theme_bw() + 
+		labs(x='\nindividuals in phylogenetically unlinked\nstable relationships', y='extra-marital partner reported\n(proportion)\n')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_extrapartnerreported_conf.pdf')), w=4, h=6)
+	ggplot(subset(tmp, MALE_COMM_TYPE!='trading'), aes(x= variable, fill=value2)) + 
+			geom_bar(position='stack') + 
+			facet_grid(~MALE_COMM_TYPE) +
+			scale_y_continuous(expand=c(0,0), limits=c(0,65)) +
+			theme_bw() + 
+			labs(x='\npartner', y='phylogenetically unlinked +/+ couples\n', fill='extra-marital partner\nreported')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_all_extrapartnerreported.pdf')), w=6, h=8)
+	
+	#
+	#	repeat community type among couples that were found +/+ 
+	#
+	#	results:
+	#	still significantly more extra-couple trms among couples in fisherfolk communities
+	#	but discrepancy slightly lower, suggesting that both individuals were already infected before couple formation
+	tmp	<- unique(subset(rpd, COUP_SC%in%c('seropos') & MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp2	<- tmp[, {
+				z	<- binconf( length(which(SELECT_P50=='Y')), length(which(SELECT_P50%in%c('Y','N'))) )				
+				list(K=length(which(SELECT_P50=='Y')), N=length(which(SELECT_P50%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
+			}, by=c('MALE_COMM_TYPE')]
+	setkey(tmp2, MALE_COMM_TYPE)	
+	set(tmp2, NULL, 'MALE_COMM_TYPE', tmp2[, factor(MALE_COMM_TYPE, levels=c('agrarian','trading','fisherfolk'))])
+	#      MALE_COMM_TYPE  K   N         P         QL        QU
+	#1:       agrarian  6  35 0.1714286 0.08102640 0.3268228
+	#2:     fisherfolk 42 115 0.3652174 0.28289758 0.4562507
+	#3:        trading  1   2 0.5000000 0.02564665 0.9743534
+	ggplot(tmp2, aes(x=MALE_COMM_TYPE)) +
+			geom_point(aes(y=P)) + geom_errorbar(aes(ymax=QU, ymin=QL), width=0.5) +
+			geom_text(aes(y=QU+.05, label=paste0('n=',N))) + 
+			theme_bw() + theme(legend.position='bottom') +
+			scale_y_continuous(limits=c(0,1), labels=percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
+			labs(x='\ncommunity type', y='phylogenetically unlinked couples among couples that were +/+ at enrollment\n(proportion)\n')
+	ggsave(file=file.path(dir, paste0(run,'-phsc-extracoupletrm_couples_seropos_by_commtype.pdf')), w=4, h=6)
 	#
 	#	community among cohabiting couples and extra-couple transmission
 	#
-	tmp	<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp	<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')	
 	tmp	<- tmp[, {
 				z	<- binconf( length(which(SELECT_P50=='Y')), length(which(SELECT_P50%in%c('Y','N'))) )				
 				list(K=length(which(SELECT_P50=='Y')), N=length(which(SELECT_P50%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
@@ -3334,7 +5098,7 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 	#	38 is also fairly high and the largest fishing community in Rakai
 	#	770 771 are fishing villages in Masaka district
 	#	on the other hand, 770 seems fairly low, hmmm
-
+	
 	#	MALE_REGION MALE_COMM_NUM  K  N         P         QL        QU
 	#1:           4             7  0  4 0.0000000 0.00000000 0.4898908
 	#2:           4             8  0  1 0.0000000 0.00000000 0.9487067
@@ -3358,29 +5122,25 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples<- function()
 	#20:          13           773  0  1 0.0000000 0.00000000 0.9487067
 	#21:          13           774  4 11 0.3636364 0.15166471 0.6461988
 	
-	#
-	#	among cohabiting couples: age at diagnosis vs extra-couple transmission
-	#
-	tmp		<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
+	
+	tmp		<- unique(subset(rpd, 	MALE_HH_NUM==FEMALE_HH_NUM & 
+							COUP_SC%in%c('seroinc','M->F','F->M') &
+							!is.na(FEMALE_BIRTHDATE) & !is.na(MALE_BIRTHDATE) & 
+							SELECT_P50%in%c('Y','N')), by='COUPID')
 	tmp[, MALE_FIRSTPOSDATE_AGE:= MALE_FIRSTPOSDATE-MALE_BIRTHDATE]
 	tmp[, FEMALE_FIRSTPOSDATE_AGE:= FEMALE_FIRSTPOSDATE-FEMALE_BIRTHDATE]
-	tmp[, FIRSTPOSDATE_AGE_MFDIFF:= MALE_FIRSTPOSDATE_AGE-FEMALE_FIRSTPOSDATE_AGE]
-	ggplot(tmp, aes(x=SELECT_P50, y=FIRSTPOSDATE_AGE_MFDIFF)) + geom_boxplot()
-	#	age difference is smaller among extra-transmission couples
-	ggplot(tmp, aes(x=SELECT_P50, y=MALE_FIRSTPOSDATE_AGE)) + geom_boxplot()
-	#	the men are substantially younger in extra-transmission couples
-	ggplot(tmp, aes(x=SELECT_P50, y=FEMALE_FIRSTPOSDATE_AGE)) + geom_boxplot()	
-	#	this is not the case for women (if anything they are older in extra-transmission couples)
-	
-	#	TODO I think we have some info on sexual behaviour?
-
-	#	religion - let s drop this
-	tmp		<- unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
-	tmp[, prop.table(table(MALE_RELIGION, SELECT_P50),1)]
-	tmp[, prop.table(table(FEMALE_RELIGION, SELECT_P50),1)]
+	tmp		<- merge(tmp, tmp[, list(	MALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, 
+							FEMALE_BOTHPOS_AGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE,
+							BOTHPOS_AVGAGE= max(MALE_FIRSTPOSDATE, FEMALE_FIRSTPOSDATE)-(FEMALE_BIRTHDATE+FEMALE_BIRTHDATE)/2), by='COUPID'], by='COUPID')	
+	tmp[, FIRSTPOSDATE_AGE_MFDIFF:= MALE_BIRTHDATE-FEMALE_BIRTHDATE]
+	set(tmp, NULL,'SELECT_P50', tmp[, as.integer(as.character(factor(SELECT_P50, levels=c('Y','N'), labels=c('1','0'))))])	
+	tmp2	<- subset(tmp, select=c(SELECT_P50, MALE_COMM_TYPE, BOTHPOS_AVGAGE, FEMALE_BOTHPOS_AGE, MALE_BOTHPOS_AGE, FIRSTPOSDATE_AGE_MFDIFF))
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE, family=LO))
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE+BOTHPOS_AVGAGE, family=LO))
+	summary(gamlss(data=tmp2, SELECT_P50~MALE_COMM_TYPE+BOTHPOS_AVGAGE+FIRSTPOSDATE_AGE_MFDIFF, family=LO))	
 }
 
-RakaiCouples.extracoupletrm.170106.bb.model<- function()
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.noncohabiting<- function()
 {
 	require(data.table)
 	require(scales)
@@ -3388,7 +5148,207 @@ RakaiCouples.extracoupletrm.170106.bb.model<- function()
 	require(grid)
 	require(gridExtra)
 	require(RColorBrewer)	
-	# load pty.run
+	require(coin)
+	require(Hmisc)
+	require(gamlss)
+	# load pty.runs
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load posterior relationships
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	# add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+			COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
+	#
+	#	select couples	
+	#
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant')	
+	#	make central selection: post prob of extra-couple trm > 50%
+	rpd[, SELECT_P50:= as.character(factor(pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.8, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd[, SELECT_P80:= as.character(factor(pbeta(0.8, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.8, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID, NEFF, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA, LABEL_SH, LABEL, SELECT_P50, SELECT_P80))
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'), all.x=1)
+	set(rpd, rpd[, which(is.na(SELECT_P50))], 'SELECT_P50', 'No_PANGEA_data')
+	set(rpd, rpd[, which(is.na(SELECT_P80))], 'SELECT_P80', 'No_PANGEA_data')
+	#
+	unique(rpd, by='COUPID')[, table(SELECT_P50)]
+	#	308 couples, 211 with PANGEA data, 73 with strong evidence for extra-couple trm 
+	#
+	#	cohabitation and extra-couple transmission
+	#
+	unique(subset(rpd, MALE_HH_NUM==FEMALE_HH_NUM), by='COUPID')[, table(SELECT_P50)]
+	binconf(64,199)
+	# 291 couples cohabitate
+	# 64 / 199 (32%) with PANGEA data extra-couple trms (at least)
+	# conf int:	0.2606181-0.3893548
+	unique(subset(rpd, MALE_HH_NUM!=FEMALE_HH_NUM), by='COUPID')[, table(SELECT_P50)]
+	unique(subset(rpd, MALE_HH_NUM!=FEMALE_HH_NUM & !is.na(FEMALE_TAXA) & !is.na(MALE_TAXA) & !is.na(NEFF)), by='COUPID')[, COUPID]
+	#	"A114712:H104287" "H115099:C106054" "F105662:B096376" "C114447:J114639" "F049477:F115144" "H061328:B104087" "B110153:K105200" "E104488:K105535" "H087552:A032173" "G107639:C107790" "F108382:A107756" "A104696:D107343"
+	
+	# 17 couples do not cohabitate in same household
+	# 9 / 12 (75%) with PANGEA data extra couple trms
+	# conf int: 0.4676947-0.9110583
+	unique(subset(rpd, MALE_COMM_NUM!=FEMALE_COMM_NUM), by='COUPID')	
+	# 3 couples do not live in same community
+	# 2/3 extra couple trms
+	unique(subset(rpd, MALE_REGION!=FEMALE_REGION), by='COUPID')		
+	# 1 couples does not live in same region
+	# 1/1 extra couple trms
+	#
+	#	cohabitation / extra-couple transmission significant ?
+	#	
+	rpd[, COHABITATE:= as.character(factor(MALE_HH_NUM==FEMALE_HH_NUM, levels=c(TRUE,FALSE),labels=c('Y','N')))]
+	chisq_test(factor(SELECT_P50) ~ factor(COHABITATE), data=subset(rpd, SELECT_P50%in%c('Y','N')), distribution="exact")
+	# p-value = 0.001212
+}
+
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.indexpartner<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)	
+	require(coin)
+	require(Hmisc)
+	require(gamlss)
+	# load pty.runs
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load posterior relationships
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	# add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+			COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
+	#
+	#	select couples	
+	#
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant')	
+	#	make central selection: post prob of extra-couple trm > 50%
+	rpd[, SELECT_P50:= as.character(factor(pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.8, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd[, SELECT_P80:= as.character(factor(pbeta(0.8, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.8, levels=c(TRUE,FALSE), labels=c('Y','N')))]
+	rpd		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID, NEFF, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA, LABEL_SH, LABEL, SELECT_P50, SELECT_P80))
+	rpd		<- merge(rp, rpd, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'), all.x=1)
+	set(rpd, rpd[, which(is.na(SELECT_P50))], 'SELECT_P50', 'No_PANGEA_data')
+	set(rpd, rpd[, which(is.na(SELECT_P80))], 'SELECT_P80', 'No_PANGEA_data')
+	#
+	#	by index partner
+	#
+	tmp	<- unique(subset(rpd, COUP_SC%in%c('M->F','F->M') & MALE_HH_NUM==FEMALE_HH_NUM & SELECT_P50%in%c('Y','N')), by='COUPID')
+	tmp2	<- tmp[, {
+				z	<- binconf( length(which(SELECT_P50=='Y')), length(which(SELECT_P50%in%c('Y','N'))) )				
+				list(K=length(which(SELECT_P50=='Y')), N=length(which(SELECT_P50%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
+			}, by=c('COUP_SC')]
+	#   COUP_SC K  N         P        QL        QU
+	#1:    M->F 4 14 0.2857143 0.1172138 0.5464908
+	#2:    F->M 3  6 0.5000000 0.1876163 0.8123837
+	set(tmp, NULL,'SELECT_P50', tmp[, as.integer(as.character(factor(SELECT_P50, levels=c('Y','N'), labels=c('1','0'))))])
+	summary(gamlss(data=subset(tmp, select=c(SELECT_P50, COUP_SC)), SELECT_P50~COUP_SC, family=LO))	
+}
+
+RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.samplingbias<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)	
+	require(coin)
+	require(Hmisc)
+	require(gamlss)
+	# load pty.runs
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load posterior relationships
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	# add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+			COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
+	#
+	#	sampling bias of couples 
+	#	-- currently not meaningful
+	sb		<- unique(rp, by='COUPID')
+	sb[, COUPLE_SEQUENCED:= factor(!is.na(MALE_SANGER_ID)&!is.na(FEMALE_SANGER_ID), levels=c(TRUE,FALSE),labels=c('Y','N'))]	
+	sb[, MALE_FIRSTPOSDATE_AGE:= MALE_FIRSTPOSDATE-MALE_BIRTHDATE]
+	sb[, FEMALE_FIRSTPOSDATE_AGE:= FEMALE_FIRSTPOSDATE-FEMALE_BIRTHDATE]
+	sb[, FIRSTPOSDATE_AGE_MFDIFF:= MALE_FIRSTPOSDATE_AGE-FEMALE_FIRSTPOSDATE_AGE]	
+	tmp		<- subset(sb, MALE_HH_NUM==FEMALE_HH_NUM & !is.na(MALE_FIRSTPOSDATE_AGE) & !is.na(FEMALE_FIRSTPOSDATE_AGE))
+	#	by agrarian/trading/fisherfolk	
+	tmp[, {
+				z	<- binconf( length(which(COUPLE_SEQUENCED=='Y')), length(which(COUPLE_SEQUENCED%in%c('Y','N'))) )				
+				list(K=length(which(COUPLE_SEQUENCED=='Y')), N=length(which(COUPLE_SEQUENCED%in%c('Y','N'))), P=z[1], QL=z[2], QU=z[3])
+			}, by='MALE_COMM_TYPE']
+	#	by age
+	tmp2	<- melt(tmp, measure.vars=c('MALE_FIRSTPOSDATE_AGE','FEMALE_FIRSTPOSDATE_AGE'))
+	set(tmp2, NULL,'variable', tmp2[,factor(variable, 	levels=c('MALE_FIRSTPOSDATE_AGE','FEMALE_FIRSTPOSDATE_AGE'),labels=c('male partner','female partner'))])
+	set(tmp2, NULL,'COUPLE_SEQUENCED', tmp2[, factor(COUPLE_SEQUENCED, levels=c('Y','N'), labels=c('Yes','No'))])
+	ggplot(tmp2, aes(x=COUPLE_SEQUENCED, y=value)) +
+			geom_boxplot() +
+			facet_grid(~MALE_COMM_TYPE) 
+}
+
+RakaiCouples.extracoupletrm.170106.addposteriors<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)	
+	# load pty.runs
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
@@ -3660,11 +5620,56 @@ RakaiCouples.extracoupletrm.170106.bb.model<- function()
 	grid.draw(p3)
 	dev.off()	
 	#
+	#	plot 'TYPE_PAIR_TODI3': keff and posterior prob of no intermediate and close
+	#	
+	tmp		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3'))
+	setkey(tmp, LABEL_SH)	
+	set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=rev(c("no intermediate\n and close","no intermediate\n but not close","with intermediate\nor distant")))])	
+	#tmp2	<- c(cols.type[['TYPE_PAIR_DI']],cols.type[['TYPE_PAIR_TODI3']],cols.type[['TYPE_PAIR_TODI2x2']])	
+	p1		<- ggplot(tmp, aes(x=LABEL_SH, y=KEFF, fill=TYPE)) + 
+			geom_bar(stat='identity',position='stack') +
+			scale_y_continuous(expand=c(0,0)) +
+			scale_fill_manual(values=cols.type[['TYPE_PAIR_TODI3']]) +			
+			theme_bw() + 
+			theme(	legend.position='bottom', 
+					axis.ticks.y=element_blank()) +			
+			coord_flip() +
+			guides(fill=guide_legend(ncol=3, byrow = TRUE)) +
+			labs(	x='', 
+					y='non-overlapping windows with ancestral assignments\n(number)\n',
+					fill='phylogenetic\nrelationship')
+	p2		<- ggplot(	subset(tmp, TYPE%in%c("no intermediate\n and close")), 
+					aes(x=LABEL_SH, 	middle=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							lower=qbeta(0.25, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							upper=qbeta(0.75, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							ymin=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							ymax=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA), fill=TYPE)) + 
+			geom_boxplot(stat='identity') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.2), labels=percent) +
+			scale_fill_manual(values=cols.type[['TYPE_PAIR_TODI3']]) +
+			theme_bw() + 
+			theme(	legend.position='bottom', axis.text.y=element_blank(),
+					axis.ticks.y=element_blank()) +
+			coord_flip() +
+			guides(fill=guide_legend(ncol=3, byrow = TRUE)) +
+			labs(	x='', 
+					y='posterior probability\n\n',
+					fill='phylogenetic\nrelationship')
+	p3		<- g_legend(p1)	
+	p3$vp	<- viewport(layout.pos.row=2, layout.pos.col=1:2)	
+	pdf(file=file.path(dir, paste(run,'-phsc-likelypair_relationships_TODI3.pdf',sep='')), w=15, h=60)	
+	grid.newpage()	
+	pushViewport(viewport(layout = grid.layout(2, 2, heights=unit(c(40,1), "null"), widths=unit(c(7, 3), "null"))))   	
+	print(p1+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+	print(p2+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+	grid.draw(p3)
+	dev.off()	
+	#
 	#	save
 	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')	
 }
 
-RakaiCouples.analyze.couples.161219.dir.bb.model<- function()
+RakaiCouples.analyze.couples.161219.direction.serodisc<- function()
 {
 	require(data.table)
 	require(scales)
@@ -3791,7 +5796,7 @@ RakaiCouples.analyze.couples.161219.dir.bb.model<- function()
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_DIR_NUMBER']]	<- tmp2	
 	tmp2		<- data.table(	TYPE= c("chain correct direction","chain incorrect direction"),
-								COLS= c(rev(brewer.pal(9, 'BuGn'))[6], rev(brewer.pal(11, 'PuOr'))[2]))					
+			COLS= c(rev(brewer.pal(9, 'BuGn'))[6], rev(brewer.pal(11, 'PuOr'))[2]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_DIR_ANC']]	<- tmp2
 	
@@ -3827,7 +5832,7 @@ RakaiCouples.analyze.couples.161219.dir.bb.model<- function()
 	#
 	#	plot ancestral assignments in correct direction
 	#
-
+	
 	tmp		<- subset(rplkl, GROUP%in%c('TYPE_DIR_ANC'))
 	setkey(tmp, LABEL_SH)	
 	set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, levels=rev(c("chain correct direction","chain incorrect direction")))])
@@ -3997,6 +6002,192 @@ RakaiCouples.analyze.couples.161219.dir.bb.model<- function()
 	dev.off()	
 }
 
+RakaiCouples.analyze.couples.170120.direction.serodisc<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	
+	#	add MALE_RID, FEMALE_RID, COUPID
+	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID))
+	rplkl	<- merge(tmp, rplkl, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	#
+	#	select lkl transmission pairs based on "no intermediate and close"
+	#	evaluate proportion of initially serodisc couples with correct transmission estimated
+	#
+	confidence.cut	<- 0.5
+	rpd				<- subset(rplkl, COUP_SC%in%c('M->F','F->M') & GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)		
+	tmp				<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID))
+	tmp				<- merge(tmp, rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	rmf				<- subset(tmp, GROUP%in%c('TYPE_DIR_TO3') & COUP_SC=='M->F')
+	rfm				<- subset(tmp, GROUP%in%c('TYPE_DIR_TO3') & COUP_SC=='F->M')
+	#
+	unique(subset(rplkl, COUP_SC%in%c('M->F','F->M') & GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close'), by='COUPID')
+	#	initially +/- -/+ couples: 20
+	cat('\ncouples with phyloscanner evidence M->F, n=',nrow(unique(rmf, by='COUPID')))
+	cat('\ncouples with phyloscanner evidence F->M, n=',nrow(unique(rfm, by='COUPID')))
+	#	initially +/- couples with phyloscanner evidence for lkl trm pair, n= 9	
+	#	initially -/+ couples with phyloscanner evidence for lkl trm pair, n= 3	
+	rtr		<- rbind(rmf, rfm)
+	rtr[, DIR_SELECT:= pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut]
+	unique(subset(rtr, (COUP_SC=='M->F' & TYPE=='mf' | COUP_SC=='F->M' & TYPE=='fm')), by='COUPID')[, mean(DIR_SELECT)]
+	#	0.75
+	unique(subset(rtr, (COUP_SC=='M->F' & TYPE=='fm' | COUP_SC=='F->M' & TYPE=='mf')), by='COUPID')[, mean(DIR_SELECT)]
+	#	0.08333333 (1/12)
+		
+}
+
+RakaiCouples.analyze.couples.170120.direction.all.analyze<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
+	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	# load pairwise probabilities
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	
+	# 	add agrarian etc
+	# 	from Kate:
+	#	Trading communities: 1   4   16  22  24  33  51  107 776
+	#	Fishing communities: 38, 770, 771, 774	
+	# 	tmp		<- rp[, sort(unique(c(MALE_COMM_NUM,FEMALE_COMM_NUM)))]; cat(paste('"', tmp, '",', collapse='', sep=''))
+	tmp		<- data.table(	COMM_NUM=	c("1","2","4","7","8","16","22","23","24","33","34","38","40","51","56","57","58","89","94","106","107","108","370","391","770","771","772","773","774","776"),
+			COMM_TYPE=	c("T","A","T","A","A", "T", "T", "A", "T", "T", "A", "F", "A", "T", "A", "A", "A", "A", "A",  "A",  "T",  "A",  "A",  "A", "F",  "F",  "A",  "A",  "F",   "T"))
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(COMM_TYPE, levels=c('A','T','F'), labels=c('agrarian','trading','fisherfolk')))])
+	set(tmp, NULL, 'COMM_NUM', tmp[, as.integer(COMM_NUM)])
+	setnames(tmp, c('COMM_NUM','COMM_TYPE'), c('MALE_COMM_NUM','MALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='MALE_COMM_NUM')
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'))
+	rp		<- merge(rp, tmp, by='FEMALE_COMM_NUM')
+	
+	#	add RCCS IDs
+	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID))
+	rplkl	<- merge(tmp, rplkl, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#	select first couples for whom transmission cannot be excluded 
+	#	no intermediate\n and close > 50%
+	confidence.cut	<- 0.5
+	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)		
+	tmp		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID))
+	tmp		<- merge(tmp, rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
+	rmf		<- subset(tmp, GROUP%in%c('TYPE_DIR_TO') & TYPE=='mf' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	rfm		<- subset(tmp, GROUP%in%c('TYPE_DIR_TO') & TYPE=='fm' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	rex		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
+	
+	cat('\ncouples with phyloscanner assessment, n=',nrow(unique(rplkl, by='COUPID')))
+	cat('\ncouples for whom transmission cannot be excluded, n=',nrow(unique(rpd, by='COUPID')))
+	cat('\ncouples with evidence M->F, n=',nrow(unique(rmf, by='COUPID')))
+	cat('\ncouples with evidence F->M, n=',nrow(unique(rfm, by='COUPID')))
+	cat('\ncouples for whom transmission can be excluded, n=',nrow(unique(rex, by='COUPID')))
+	#	couples with phyloscanner assessment					215	
+	#	for whom transmission can be excluded 					83		(38.6%)
+	#	ambiguous												8		(3.7%)
+	#	no intermediate and close								124		(57.7%)	
+	#	of those we cannot determine likely direction for		37		(37/124=30%)
+	#	with evidence for M->F 									56		(56/87 =64%)
+	#	with evidence for F->M									31 		(31/87 =36%)
+	
+	rmf		<- merge(unique(subset(rmf, select=COUPID)), unique(rp, by='COUPID'),by='COUPID')
+	rmf[, PHSC_DIR:='m->f']
+	rfm		<- merge(unique(subset(rfm, select=COUPID)), unique(rp, by='COUPID'),by='COUPID')
+	rfm[, PHSC_DIR:='f->m']
+	rtr		<- rbind(rmf, rfm)
+	
+	rtr[, AGEDIFF:= MALE_BIRTHDATE-FEMALE_BIRTHDATE]
+	rtr[, AVGAGE:= (MALE_BIRTHDATE+FEMALE_BIRTHDATE)/2]
+	#
+	#	is there a difference in male->female transmission by community type?
+	#	results: no	
+	rtr[, {
+				z	<- binconf( length(which(PHSC_DIR=='m->f')), length(PHSC_DIR) )				
+				list(K=length(which(PHSC_DIR=='m->f')), N=length(PHSC_DIR), P=z[1], QL=z[2], QU=z[3])
+			}, by='MALE_COMM_TYPE']	
+	#	MALE_COMM_TYPE  K  N         P        QL        QU
+	#1:       agrarian 21 32 0.6562500 0.4831109 0.7958956
+	#2:     fisherfolk 33 53 0.6226415 0.4880690 0.7406373
+	#3:        trading  2  2 1.0000000 0.3423802 1.0000000
+	
+	#
+	#	is there a difference in age gap between male->female transmission / female->male transmission ?
+	#	results: no
+	ggplot(rtr, aes(x=PHSC_DIR, y=AGEDIFF)) + geom_boxplot()
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE), select=c(PHSC_DIR,AGEDIFF))
+	set(tmp, NULL, 'PHSC_DIR', tmp[, as.integer(as.character(factor(PHSC_DIR, levels=c('f->m','m->f'), labels=c('0','1'))))])
+	summary(gamlss(data=tmp, PHSC_DIR~AGEDIFF, family=LO))
+	summary(gamlss(data=tmp, AGEDIFF~PHSC_DIR))
+	#				Estimate Std. Error t value Pr(>|t|)    
+	#(Intercept)  0.626998   0.071579   8.759 1.98e-13 ***
+	#AGEDIFF     -0.002135   0.008422  -0.254      0.8    
+	
+	#
+	#	are couples overall younger in male->female transmission ?
+	#	results: no
+	ggplot(rtr, aes(x=PHSC_DIR, y=AVGAGE)) + geom_boxplot()
+	tmp		<- subset(rtr, !is.na(AVGAGE), select=c(PHSC_DIR,AVGAGE))
+	summary(rq(AVGAGE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	
+	
+	#
+	#	are female transmitters younger than female recipients ?
+	#	results: yes but not significant if all couples are considered
+	#			 yes and signficant if fairly old couples are excluded (female age < 40)
+	ggplot(rtr, aes(x=PHSC_DIR, y=FEMALE_BIRTHDATE)) + geom_boxplot()	
+	ggplot(subset(rtr,FEMALE_BIRTHDATE>1975), aes(x=PHSC_DIR, y=FEMALE_BIRTHDATE)) + geom_boxplot()	
+	#	the female birthdate distribution among m->f is asymmetric 
+	#	the female birthdate distribution has outliers in f->m
+	#	try median
+	tmp		<- subset(rtr, !is.na(FEMALE_BIRTHDATE), select=c(PHSC_DIR,FEMALE_BIRTHDATE))
+	summary(rq(FEMALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#	             Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1986.31800    1.16809 1700.48527    0.00000
+	#PHSC_DIRm->f   -1.80805    1.54660   -1.16904    0.24565
+
+	tmp		<- subset(rtr, !is.na(FEMALE_BIRTHDATE) & FEMALE_BIRTHDATE>1975, select=c(PHSC_DIR,FEMALE_BIRTHDATE))
+	summary(rq(FEMALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#             	Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1987.95300    0.78721 2525.31962    0.00000
+	#PHSC_DIRm->f   -3.27014    1.33152   -2.45595    0.01625
+	
+
+	#
+	#	are male transmitters younger than male recipients ?
+	#	results: no, male transmitter tend to be older than male recipients 
+	#			 but this is not significant
+	ggplot(rtr, aes(x=PHSC_DIR, y=MALE_BIRTHDATE)) + geom_boxplot()	
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE), select=c(PHSC_DIR,MALE_BIRTHDATE))
+	summary(rq(MALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#				Value      Std. Error t value    Pr(>|t|)  
+	#(Intercept)  1981.17500    2.16624  914.56890    0.00000
+	#PHSC_DIRm->f   -2.29300    2.55394   -0.89783    0.37184
+	tmp		<- subset(rtr, !is.na(MALE_BIRTHDATE) & FEMALE_BIRTHDATE>1975 & MALE_BIRTHDATE>1975, select=c(PHSC_DIR,MALE_BIRTHDATE))
+	summary(rq(MALE_BIRTHDATE~PHSC_DIR, tau=.5, data=tmp, method='fn'), se='nid')
+	#	
+}
+
 RakaiCouples.analyze.couples.161219.distances<- function()
 {
 	require(data.table)
@@ -4010,11 +6201,12 @@ RakaiCouples.analyze.couples.161219.distances<- function()
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')
-	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d7") )
+	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5") )
 	#	
 	rpw[, table(RUN, useNA='if')]
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]
+	
 	#	define order: largest number of trm assignments
 	tmp		<- rpw[, list( WIN_TR=length(which(grepl('close|anc',TYPE))) ), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
 	tmp		<- tmp[order(-WIN_TR),]
@@ -4023,11 +6215,12 @@ RakaiCouples.analyze.couples.161219.distances<- function()
 	tmp		<- merge(tmp, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp[, LABEL_SH:= factor(PLOT_ID, levels=PLOT_ID, labels=paste(COUPID, ' ( M:', MALE_SANGER_ID,' F:',FEMALE_SANGER_ID, ' run:', PTY_RUN, ' )', sep=''))]
 	tmp[, LABEL:= factor(PLOT_ID, levels=PLOT_ID, labels=paste('Pair ', COUPID,' -type=', COUP_SC, ' -phsc.run=',PTY_RUN, '\nPerson M ', MALE_RID, ' ', MALE_SANGER_ID,' -loc:',MALE_REGION,',',MALE_COMM_NUM,',',MALE_HH_NUM,' -birth:',MALE_BIRTHDATE,' -neg:',MALE_LASTNEGDATE,' -pos:',MALE_FIRSTPOSDATE,' -seq:',MALE_SEQDATE,
-							'\n<->', 
-							'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
-							'\n',sep=''))]
+								'\n<->', 
+								'\nPerson F ', FEMALE_RID, ' ', FEMALE_SANGER_ID,' -loc:',FEMALE_REGION,',',FEMALE_COMM_NUM,',',FEMALE_HH_NUM,' -birth:',FEMALE_BIRTHDATE,' -neg:',FEMALE_LASTNEGDATE,' -pos:',FEMALE_FIRSTPOSDATE,' -seq:',FEMALE_SEQDATE,																				
+								'\n',sep=''))]
 	tmp		<- subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL, LABEL_SH))	
-	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	rpw		<- merge(rpw, tmp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))		
+	
 	
 	#
 	#	patristic distances across the genome and smooth
@@ -4129,6 +6322,21 @@ RakaiCouples.analyze.couples.161219.distances<- function()
 			theme_bw() + theme(legend.position='bottom') + 
 			labs(x='\npatristic distance\n(subst/site)', y='', colour='')
 	ggsave(file=paste0(dir,'/',run,'_distances_bimodal.pdf'), w=6, h=6)	
+	
+	tmp		<- melt(rpd, id.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID','PTY_RUN','LABEL_SH'), measure.vars=c('PHSC_PD_MEAN','CONS_GD'))
+	set(tmp, NULL, 'variable', tmp[, as.character(factor(as.character(variable), levels=c('PHSC_PD_MEAN','CONS_GD'), labels=c('average patristic distance in read trees','genetic distance among consensus sequences')))])
+	#tmp		<- subset(tmp, variable=='PHSC_PD_MEAN')
+	ggplot(tmp, aes(x=log10(value), colour=variable)) +
+			geom_density(adjust=0.5) +
+			scale_colour_brewer(palette='Set1') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1.7)) + 
+			scale_x_continuous(		limits=log10(c(0.002, 0.5)), expand=c(0,0), 
+					breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)), 
+					labels=paste0(100*c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25),'%')) +
+			geom_vline(xintercept=log10(c(0.035,0.07))) +
+			theme_bw() + theme(legend.position='bottom') + 
+			labs(x='\npatristic distance\n(subst/site)', y='', colour='')
+	ggsave(file=paste0(dir,'/',run,'_distances_bimodal_gd.pdf'), w=6, h=6)	
 }
 	
 RakaiCouples.analyze.couples.161219.distances.window.topology<- function()
@@ -5426,7 +7634,7 @@ RakaiCouples.save.couples.to.rda<- function()
 	
 	#	load combination of all couples sequences
 	infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda'
-	load
+	#	load Kates couple data
 	infile	<- '~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Pangea_Couples.csv'
 	rc		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 	setnames(rc, c('female.PANGEA.ID','male.PANGEA.ID'), c('female.TAXA','male.TAXA'))
@@ -5438,37 +7646,74 @@ RakaiCouples.save.couples.to.rda<- function()
 	set(rc, NULL, 'FEMALE_LASTNEGDATE', rc[, hivc.db.Date2numeric(as.Date(FEMALE_LASTNEGDATE))])	
 	set(rc, NULL, 'MALE_FIRSTPOSDATE', rc[, hivc.db.Date2numeric(as.Date(MALE_FIRSTPOSDATE))])
 	set(rc, NULL, 'FEMALE_FIRSTPOSDATE', rc[, hivc.db.Date2numeric(as.Date(FEMALE_FIRSTPOSDATE))])
+	#	486 couples
 	#
 	#	get all possible unique pairings of SANGER_IDs from couples
-	#
+	#	347
 	rp		<- subset(rc, !is.na(MALE_SANGER_ID), c(COUPID, MALE_RID, MALE_SANGER_ID, MALE_TAXA ))
 	tmp		<- subset(rc, !is.na(FEMALE_SANGER_ID), c(COUPID, FEMALE_RID, FEMALE_SANGER_ID, FEMALE_TAXA ))	
 	rp		<- merge(rp, tmp, by='COUPID')
-	setkey(rp, FEMALE_SANGER_ID, MALE_SANGER_ID)
-	rp		<- unique(rp)
+	rp		<- unique(rp, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'))
+	cat('\nnumber of pairs with sequence from both partners=',rp[, length(unique(COUPID))])	
 	#
-	#	add epi info 
+	#	add couples where sequences from both are not available
+	#
+	tmp		<- unique(subset(rc, select=c("COUPID", "FEMALE_RID", "MALE_RID", "MALE_SANGER_ID", "MALE_TAXA", "FEMALE_SANGER_ID", "FEMALE_TAXA"))) 
+	tmp2	<- tmp[, list(	BOTH_SEQUENCED= any(!is.na(FEMALE_SANGER_ID)) & any(!is.na(MALE_SANGER_ID))), by='COUPID']
+	tmp		<- unique(merge(tmp, subset(tmp2, !BOTH_SEQUENCED), by='COUPID'), by='COUPID')
+	set(tmp, NULL, c('BOTH_SEQUENCED'), NULL)
+	rp		<- rbind(rp, tmp)
+	#
+	#	add visit when both first positive
+	#	did couples always / never live together before then?
+	#
+	tmp		<- unique(subset(rd, select=c(RID, VISIT, HH_NUM)))
+	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT'], paste('MALE_',colnames(tmp)[colnames(tmp)!='VISIT'],sep=''))
+	rc		<- merge(rc, tmp, by=c('MALE_RID','VISIT'), all.x=1)
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	rc		<- merge(rc, tmp, by=c('FEMALE_RID','VISIT'), all.x=1)
+	tmp		<- rc[, {
+				z	<- which(MALE_FIRSTPOSDATE<=(MALE_DATE+.2) & FEMALE_FIRSTPOSDATE<=(FEMALE_DATE+.2))
+				if(length(z)==0)
+					z	<- which.max(VISIT)
+				z	<- min(z)
+				tmp	<- c( sum(na.omit(MALE_HH_NUM[1:z]==FEMALE_HH_NUM[1:z])), sum(na.omit(MALE_HH_NUM[1:z]!=FEMALE_HH_NUM[1:z])))				
+				list(VISIT_FIRSTCONCPOS=VISIT[z], PAIR_TYPE=ifelse(tmp[1]>0 & tmp[2]==0, 'stable cohabiting', ifelse(tmp[2]>0, 'not always cohabiting', 'no joint household data')))
+			}, by='COUPID']
+	rp		<- merge(rp, tmp, by='COUPID')
+	#
+	#	add epi info closest to first +/+ positive
 	#	for males
-	tmp		<- subset(rd, !is.na(PID), select=c(RID, SEX, REGION, COMM_NUM, HH_NUM, BIRTHDATE, LASTNEGVIS, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, RELIGION))
-	setkey(tmp, RID)
-	tmp		<- unique(tmp)
-	setnames(tmp, colnames(tmp), paste('MALE_',colnames(tmp),sep=''))
-	rp		<- merge(rp,tmp,by='MALE_RID')
+	tmp		<- subset(rd, !is.na(PID), select=c(RID, VISIT, SEX, REGION, COMM_NUM, HH_NUM, BIRTHDATE, LASTNEGVIS, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, RELIGION))
+	tmp2	<- unique(subset(rp, select=c('MALE_RID','VISIT_FIRSTCONCPOS')))
+	setnames(tmp2, 'MALE_RID', 'RID')
+	tmp		<- merge(tmp, tmp2, by='RID')
+	tmp2	<- tmp[, list(VISIT= VISIT[which.min(abs(VISIT_FIRSTCONCPOS-VISIT))]), by=c('RID','VISIT_FIRSTCONCPOS')]
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT_FIRSTCONCPOS','VISIT'))
+	set(tmp, NULL, 'VISIT', NULL)	
+	tmp		<- unique(tmp, by=c('RID','VISIT_FIRSTCONCPOS'))
+	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'], paste('MALE_',colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'],sep=''))
+	rp		<- merge(rp,tmp,by=c('MALE_RID','VISIT_FIRSTCONCPOS'))
 	#	for females
-	tmp		<- subset(rd, !is.na(PID), select=c(RID, SEX, REGION, COMM_NUM, HH_NUM, BIRTHDATE, LASTNEGVIS, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, RELIGION))
-	setkey(tmp, RID)
-	tmp		<- unique(tmp)
-	setnames(tmp, colnames(tmp), paste('FEMALE_',colnames(tmp),sep=''))
-	rp		<- merge(rp,tmp,by='FEMALE_RID')	
+	tmp		<- subset(rd, !is.na(PID), select=c(RID, VISIT, SEX, REGION, COMM_NUM, HH_NUM, BIRTHDATE, LASTNEGVIS, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, RELIGION))
+	tmp2	<- unique(subset(rp, select=c('FEMALE_RID','VISIT_FIRSTCONCPOS')))
+	setnames(tmp2, 'FEMALE_RID', 'RID')
+	tmp		<- merge(tmp, tmp2, by='RID')
+	tmp2	<- tmp[, list(VISIT= VISIT[which.min(abs(VISIT_FIRSTCONCPOS-VISIT))]), by=c('RID','VISIT_FIRSTCONCPOS')]
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT_FIRSTCONCPOS','VISIT'))
+	set(tmp, NULL, 'VISIT', NULL)	
+	tmp		<- unique(tmp, by=c('RID','VISIT_FIRSTCONCPOS'))
+	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'], paste('FEMALE_',colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'],sep=''))
+	rp		<- merge(rp,tmp,by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'))
 	#
 	#	get info on sequences: date of sampling
 	#	for males
-	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)))
+	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)), by='SID')
 	setnames(tmp, c('SID','DATE'), c('MALE_SANGER_ID','MALE_SEQDATE'))
-	rp		<- merge(rp, tmp, by='MALE_SANGER_ID')
-	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)))
+	rp		<- merge(rp, tmp, by='MALE_SANGER_ID', all.x=1)
+	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)), by='SID')
 	setnames(tmp, c('SID','DATE'), c('FEMALE_SANGER_ID','FEMALE_SEQDATE'))	
-	rp		<- merge(rp, tmp, by='FEMALE_SANGER_ID')				
+	rp		<- merge(rp, tmp, by='FEMALE_SANGER_ID', all.x=1)				
 	#
 	#	define direction based on seroconversion dates
 	#
@@ -5476,7 +7721,14 @@ RakaiCouples.save.couples.to.rda<- function()
 	set(rp, rp[, which(MALE_LASTNEGDATE>=FEMALE_FIRSTPOSDATE)],'COUP_SC','F->M')
 	set(rp, rp[, which(FEMALE_LASTNEGDATE>=MALE_FIRSTPOSDATE)],'COUP_SC','M->F')
 	set(rp, rp[, which(FEMALE_FIRSTPOSDATE==MALE_FIRSTPOSDATE)],'COUP_SC','seroinc')
+	#	F->M    M->F seroinc seropos 
+	#	20      31      69     417 
+
+	#	link individual household data from most recent visit
+	set(rp, rp[, which(PAIR_TYPE=='no joint household data' & FEMALE_HH_NUM==MALE_HH_NUM)], 'PAIR_TYPE', 'stable cohabiting')
+	set(rp, rp[, which(PAIR_TYPE=='no joint household data' & FEMALE_HH_NUM!=MALE_HH_NUM)], 'PAIR_TYPE', 'not always cohabiting')
 	
+	#	save
 	save(rp, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")	
 }
 

@@ -115,6 +115,160 @@ project.dual.alignments.160110<- function()
 	save( seq, file=paste(outdir,'/PANGEA_HIV_n5003_Imperial_v160110_ZA.R',sep=''))
 }
 
+project.reference.trees<- function()
+{
+	require(phytools)
+	require(phangorn)
+	require(data.table)
+	require(ape)
+	require(ggtree)
+	
+	indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/reference_trees'
+	phd		<- data.table(F=list.files(indir, pattern='RAxML_bestTree', full.names=TRUE))
+	phd[, W_FROM:= as.integer(gsub('.*bestTree\\.([0-9]+)_.*','\\1',F))]
+	phd[, W_TO:= as.integer(gsub('.*bestTree\\.[0-9]+_([0-9]+)\\.tree','\\1',F))]
+	phd[, RUN:=1]
+	set(phd, phd[, which(grepl('TAKE2',F))],'RUN',2)
+	setkey(phd, W_FROM)
+	phd[, IDX:= seq_len(nrow(phd))]
+	
+	#	read trees
+	phs		<- lapply(seq_len(nrow(phd)), function(i)
+			{
+				ph	<- read.tree(phd[i,F])
+			})
+	#	re-root half way at MRCA of subtype A taxa	
+	ph		<- phs[[1]]
+	phi		<- data.table(TAXA=ph$tip.label)
+	phi[, ST:= gsub('^([^\\.]+)\\..*','\\1',TAXA)]
+	phi[, ST2:= gsub('^[0-9]+_','',ST)]
+	root.taxa	<- subset(phi, ST2%in%c('A1','A2'))[, TAXA]
+	phs		<- lapply(seq_along(phs), function(i)
+			{
+				#cat('\n',i)
+				ph			<- phs[[i]]
+				root.parent	<- getMRCA(ph, root.taxa)				
+				tryCatch({
+							ans			<- phytools::reroot(ph, root.parent, position=ph$edge.length[which(ph$edge[, 2]==root.parent)] / 2)			
+						}, error = function(e)
+						{
+							cat('\ntree',i,'use child of root.parent to root')
+							root.parent	<- max(Children(ph, root.parent))
+							ans			<<- phytools::reroot(ph, root.parent, position=ph$edge.length[which(ph$edge[, 2]==root.parent)] / 2)
+						})				
+				ans				
+			})
+	names(phs)	<- phd[, paste0(W_FROM,'-',W_TO,'-',RUN)] 
+	# 	plot trees
+	class(phs) 	<- "multiPhylo"			
+	p			<- ggtree(phs, size=0.4) +
+		theme_classic() + 
+		scale_x_continuous(breaks=seq(0,5,0.1)) +
+		labs(x='\nsubst/site') +
+		theme(axis.line.x=element_line(), axis.line.y=element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+		theme(panel.grid.major.x=element_line(color="grey80", size=.3), panel.grid.major.y=element_blank()) +
+		facet_wrap(~.id, ncol=5)
+	pdf(file=file.path(indir, 'groupM_reference_trees.pdf'), w=40, h=100*20)
+	print(p)
+	dev.off()	
+	#
+	#	there are crazy outliers
+	#	remove any tip branches longer than 0.2 or grubbs?
+	#	
+	max.tip.divergence	<- 0.3
+	phs					<- unclass(phs)
+	phs.mtd				<- lapply(phs, function(ph)
+			{	
+				#ph			<- phs[[1]]
+				repeat{
+					tmp			<- which( ph$edge[,2] <= Ntip(ph) )
+					outliers	<- which( ph$edge.length[tmp]>max.tip.divergence )
+					if(length(outliers))
+						ph			<- drop.tip(ph, ph$edge[ tmp[outliers[1]], 2 ])
+					if(length(outliers)<2)
+						break
+				}								
+				ph				
+			})
+	# 	plot trees
+	class(phs.mtd) 	<- "multiPhylo"		 	
+	p			<- ggtree(phs.mtd, size=0.4) +
+			theme_classic() + 
+			scale_x_continuous(breaks=seq(0,5,0.1)) +
+			labs(x='\nsubst/site') +
+			theme(axis.line.x=element_line(), axis.line.y=element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+			theme(panel.grid.major.x=element_line(color="grey80", size=.3), panel.grid.major.y=element_blank()) +
+			facet_wrap(~.id, ncol=5)
+	pdf(file=file.path(indir, 'groupM_reference_trees_maxtipdivergence30.pdf'), w=40, h=250)
+	print(p)
+	dev.off()	
+	#
+	#	still not satisfactory
+	#	try Grubbs test, sequentially applied
+	#		
+	require(outliers)
+	grubss.pval			<- 0.01
+	phs					<- unclass(phs)
+	phs.grb				<- lapply(phs, function(ph)
+			{	
+				#ph			<- phs[[1]]
+				repeat{
+					tmp			<- which( ph$edge[,2] <= Ntip(ph) )
+					gr 			<- grubbs.test(ph$edge.length[tmp])
+					outlier		<- NA
+					if(gr$p.value<grubss.pval & grepl('highest',gr$alternative))
+						outlier	<- which.max(ph$edge.length[tmp])
+					if(!is.na(outlier))					
+						ph			<- drop.tip(ph, ph$edge[ tmp[outlier], 2 ])
+					if(is.na(outlier))
+						break
+				}								
+				ph				
+			})
+	# 	plot trees
+	class(phs.grb) 	<- "multiPhylo"		 	
+	p			<- ggtree(phs.grb, size=0.4) +
+			theme_classic() + 
+			scale_x_continuous(breaks=seq(0,5,0.1)) +
+			labs(x='\nsubst/site') +
+			theme(axis.line.x=element_line(), axis.line.y=element_blank(), axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+			theme(panel.grid.major.x=element_line(color="grey80", size=.3), panel.grid.major.y=element_blank()) +
+			facet_wrap(~.id, ncol=5)
+	pdf(file=file.path(indir, paste0('groupM_reference_trees_grubbs',grubss.pval*100,'.pdf')), w=40, h=250*15)
+	print(p)
+	dev.off()		
+	#
+	#	keep 5860-2, 8460-2, 9060-1, 9140-2
+	#	
+	phd[, USE:=1]
+	set(phd, phd[, which(RUN==1 & W_FROM%in%c(5860, 8460, 9140))], 'USE', 0)
+	set(phd, phd[, which(RUN==2 & W_FROM%in%c(9060))], 'USE', 0)
+	
+	#	calculate stats on trees
+	tmp		<- lapply(seq_along(phs.grb), function(i){
+				#i	<- 1
+				ph	<- phs.grb[[i]]
+				tmp	<- cophenetic.phylo(ph)
+				tmp[upper.tri(tmp, diag=TRUE)]	<- NA
+				tmp	<- as.numeric(na.omit(as.vector(tmp)))
+				data.table(IDX=i, MEAN_PWD=mean(tmp), MEDIAN_PWD=median(tmp), MAX_PWD=max(tmp), SUM_BRL=sum(ph$edge.length))				
+			})
+	tmp		<- do.call('rbind',tmp)
+	phd		<- merge(phd, tmp, by='IDX')
+	#	plot stats
+	phdp	<- melt(phd, measure.vars=c('MEAN_PWD','MEDIAN_PWD','MAX_PWD','SUM_BRL'))	
+	ggplot(phdp, aes(x=W_FROM, y=value)) + 
+			geom_point(size=1, colour='grey50') +
+			facet_grid(variable~., scales='free_y') +
+			theme_bw() +
+			scale_x_continuous(breaks=seq(0,10e3,250)) +
+			labs(x='\nwindow start', y='') #+ 			
+			#geom_smooth(method='loess', span=0.05, se=FALSE, colour='black', size=0.5)
+	ggsave(file=file.path(indir, paste0('groupM_reference_trees_grubbs',grubss.pval*100,'_stats.pdf')), w=15, h=10)
+	#	save to file
+	write.csv(subset(phd, select=c(W_FROM, W_TO, MEAN_PWD, MEDIAN_PWD, MAX_PWD, SUM_BRL)), file=file.path(indir, paste0('groupM_reference_trees_grubbs',grubss.pval*100,'_stats.csv')), row.names=FALSE)	
+}
+
 project.dual.alignments.151023<- function()
 {
 	outdir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/alignments_151113'
@@ -1659,9 +1813,11 @@ pty.pipeline.phyloscanner.test<- function()
 									splits.sankhoff.k=35,
 									duplicated.raw.threshold=3,
 									duplicated.ratio.threshold=1/200,
-									rogue.dropProportion=0.01,
-									rogue.longestBranchLength=0.04,
-									rogue.probThreshold=0.001,
+									dual.minProportion=0.5,
+									rogue.dropProportion=NA,#0.01
+									rogue.longestBranchLength=NA, #0.04
+									rogue.sankhoffK=20,
+									rogue.probThreshold=NA, #0.001,
 									dwns.maxReadsPerPatient=200,
 									select=pty.select)
 							
@@ -2050,6 +2206,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160208_couples_w270_d50_p50_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2084,9 +2241,11 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										splits.sankhoff.k=35,
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
-										rogue.dropProportion=0.01,
-										rogue.longestBranchLength=0.05,
-										rogue.probThreshold=0.001,
+										dual.minProportion=0.5,
+										rogue.dropProportion=NA,#0.01
+										rogue.longestBranchLength=NA, #0.04
+										rogue.sankhoffK=20,
+										rogue.probThreshold=NA, #0.001,										
 										dwns.maxReadsPerPatient=50,				
 										select=NA)
 	}	
