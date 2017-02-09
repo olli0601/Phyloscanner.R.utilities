@@ -1074,6 +1074,14 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*duallist.*csv$',sep=''), full.names=TRUE))
+		if(nrow(tmp))
+		{
+			tmp2	<- paste(gsub('\\.rda','',save.file),'_duallist.zip',sep='')
+			cat('\nZip to file', tmp2,'...\n')
+			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
+			invisible( file.remove( tmp[, FILE] ) )			
+		}
 		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*collapsed\\.csv$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
