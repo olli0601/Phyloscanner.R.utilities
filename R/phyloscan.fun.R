@@ -21,9 +21,11 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, dual.minProportion=0.01, windowCount=NA)
+phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, treeFileName=NA, dual.minProportion=0.01, windowCount=NA)
 {
 	cmd	<- paste(pr, dual.minProportion, inputFileNameDuals, outputFileName)
+	if(!is.na(treeFileName))
+		cmd	<- paste(cmd, '--treePrefix', treeFileName)		
 	if(!is.na(windowCount))
 		cmd	<- paste(cmd, '--windowCount', windowCount)
 	if(!is.na(blacklistFileName))
@@ -620,14 +622,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
 	#
 	if(!is.na(dual.minProportion))
-	{
-		cmd				<- paste0(cmd,"\nTMP=$(find . -name '",run.id_,"*tree' | wc -l)")		
+	{			
 		tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
 																file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
-																file.path(tmp.dir,paste0(run.id_,'blacklistdual_')), 
+																file.path(tmp.dir,paste0(run.id_,'blacklistdual_')),
+																treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')), 
 																blacklistFileName=blacklistFiles, 
-																dual.minProportion=dual.minProportion, 
-																windowCount='$TMP')
+																dual.minProportion=dual.minProportion)
 		cmd				<- paste(cmd, tmp, sep='\n')
 		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','mv "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
 		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','mv "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
