@@ -2207,6 +2207,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_160208_couples_w270_d50_p50_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_160208_couples_w270_d50_p25_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2241,7 +2242,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										splits.sankhoff.k=35,
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
-										dual.minProportion=0.5,
+										dual.minProportion=0.25, #0.5,
 										rogue.dropProportion=NA,#0.01
 										rogue.longestBranchLength=NA, #0.04
 										rogue.sankhoffK=20,
