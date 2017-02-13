@@ -78,9 +78,9 @@ phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outpu
 }
 
 
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, fastaFiles, splitsFiles, outputBaseName, blacklistFiles=NA)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFiles, outputBaseName, blacklistFiles=NA)
 {
-	cmd	<- paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',fastaFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')
+	cmd	<- paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklists "',blacklistFiles,'"', sep='')
 	cmd
@@ -674,7 +674,6 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 													root.name, 
 													file.path(tmp.dir, file.patients), 
 													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')),
 													file.path(tmp.dir, paste('Subtrees_r_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
 													blacklistFiles=blacklistFiles

@@ -1722,6 +1722,24 @@ pty.process.160901<- function()
 						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
+	#	170208
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160208_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170208/RCCS_170208_w270'
+		for(opt in c('d50_p25_rerun','d50_p50_rerun','d50_p75_rerun'))
+		for(opt in c('d50_p75_rerun'))
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.01, 0.02, Inf))
+					for(trmw.distant.brl in c(0.05, Inf))
+					{
+						trmw.min.tips		<- 1
+						tmp.in		<- paste(infile.base, opt, sep='_')
+						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+						cat('\n',tmp.in,' -> ',tmp.out)
+						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					}		
+	}
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -2258,7 +2276,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		#pty.c	<- subset(pty.c, PTY_RUN==110)
+		#pty.c	<- subset(pty.c, PTY_RUN==3)
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
