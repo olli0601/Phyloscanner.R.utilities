@@ -1725,10 +1725,10 @@ pty.process.160901<- function()
 	#	170208
 	if(1)
 	{
-		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160208_couples_w270'
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170208_couples_w270'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170208/RCCS_170208_w270'
-		for(opt in c('d50_p25_rerun','d50_p50_rerun','d50_p75_rerun'))
-		for(opt in c('d50_p75_rerun'))
+		#for(opt in c('d50_p25_rerun'))
+		for(opt in c('d50_p50_rerun','d50_p75_rerun'))		
 			for(trmw.min.reads in c(20))
 				for(trmw.close.brl in c(0.01, 0.02, Inf))
 					for(trmw.distant.brl in c(0.05, Inf))
@@ -2257,13 +2257,13 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										min.ureads.individual=NA, 
 										win=c(800,9400,25,250), 
 										keep.overhangs=FALSE,										
-										splits.sankhoff.k=35,
+										sankhoff.k=20,
+										use.sankhoff.blacklister=1,
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
 										dual.minProportion=0.25, #0.5,
 										rogue.dropProportion=NA,#0.01
 										rogue.longestBranchLength=NA, #0.04
-										rogue.sankhoffK=20,
 										rogue.probThreshold=NA, #0.001,										
 										dwns.maxReadsPerPatient=50,				
 										select=NA)

@@ -21,7 +21,7 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, treeFileName=NA, dual.minProportion=0.01, windowCount=NA)
+phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.minProportion=0.01, windowCount=NA)
 {
 	cmd	<- paste(pr, dual.minProportion, inputFileNameDuals, outputFileName)
 	if(!is.na(treeFileName))
@@ -29,7 +29,9 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	if(!is.na(windowCount))
 		cmd	<- paste(cmd, '--windowCount', windowCount)
 	if(!is.na(blacklistFileName))
-		cmd	<- paste(cmd, '--existingBlacklistsPrefix', blacklistFileName)		
+		cmd	<- paste(cmd, '--existingBlacklistsPrefix', blacklistFileName)
+	if(!is.na(summaryFileName))
+		cmd	<- paste(cmd, '--summaryFile', summaryFileName)
 	cmd
 }
 
@@ -103,7 +105,7 @@ phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infil
 	cmd
 }
 
-phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, sankhoff.k=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, pdfwidth=30, pdfrelheight=0.15)	
 {
 	cmd	<- paste(pr, ' --inputFile "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -114,6 +116,8 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 		cmd	<- paste(cmd, ' --outputfileid "', outputFileIdentifier, '"', sep='')
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, ' --outgroupName ', outgroupName, sep='')
+	if(!is.na(splitsRule))
+		cmd	<- paste(cmd, ' --splitsRule ', splitsRule, sep='')
 	if(!is.na(sankhoff.k))
 		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')	
 	if(!is.na(pdfwidth))
@@ -515,8 +519,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 			
 	#	define variables
 	prog.pty						<- pty.args[['prog.pty']]
-	root.name						<- pty.args[['alignments.root']]
-	splits.sankhoff.k				<- pty.args[['splits.sankhoff.k']]
+	root.name						<- pty.args[['alignments.root']]	
+	sankhoff.k						<- pty.args[['sankhoff.k']]
+	use.sankhoff.blacklister		<- pty.args[['use.sankhoff.blacklister']]
 	duplicated.raw.threshold		<- pty.args[['duplicated.raw.threshold']]
 	duplicated.ratio.threshold		<- pty.args[['duplicated.ratio.threshold']]
 	dual.minProportion				<- pty.args[['dual.minProportion']]
@@ -549,7 +554,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#
-	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & is.na(rogue.sankhoffK))
+	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & (is.na(use.sankhoff.blacklister) | use.sankhoff.blacklister==0))
 	{
 		cmd				<- paste(cmd, 'for file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
 		tmp				<- phsc.cmd.blacklist.reads(prog.pty.readblacklist, '"$file"', paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), duplicated.raw.threshold, duplicated.ratio.threshold, tipRegex=NA)
@@ -560,7 +565,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
-	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & !is.na(rogue.sankhoffK))
+	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & !is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1)
 	{
 		cmd				<- paste(cmd, 'for file in ', run.id_,'InWindow_*.tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
@@ -571,7 +576,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 																	paste('"${TMP//InWindow/duallistsank_InWindow}"',sep=''),
 																	duplicated.raw.threshold, 
 																	duplicated.ratio.threshold, 
-																	rogue.sankhoffK,	
+																	sankhoff.k,	
 																	outgroupName=root.name,
 																	tipRegex=NA)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
@@ -626,12 +631,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 		tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
 																file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
 																file.path(tmp.dir,paste0(run.id_,'blacklistdual_')),
-																treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')), 
+																treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')),
+																summaryFileName=file.path(tmp.dir,paste0(run.id_,'dualsummary.csv')),
 																blacklistFileName=blacklistFiles, 
 																dual.minProportion=dual.minProportion)
 		cmd				<- paste(cmd, tmp, sep='\n')
-		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','mv "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
-		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','mv "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
+		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
+		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_',sep=''))
 	}
 	#
@@ -661,11 +667,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															blacklistFiles=blacklistFiles,
 															outputdir=tmp.dir,																													
 															outgroupName=root.name,
-															sankhoff.k=splits.sankhoff.k,
+															splitsRule= ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),
+															sankhoff.k=sankhoff.k,
 															pdfwidth=30, pdfrelheight=0.15)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	file.patients	<- paste(run.id_,'patients.txt',sep='')	
-	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')
+	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')	
 	#
 	#	bash command to calculate patient stats
 	#							
@@ -674,7 +681,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 													root.name, 
 													file.path(tmp.dir, file.patients), 
 													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, paste('Subtrees_r_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste('Subtrees_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
 													blacklistFiles=blacklistFiles
 													)
@@ -684,8 +691,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
 														pty.tools.dir, 
-														file.path(tmp.dir,paste('ProcessedTree_r_',run.id_,sep='')), 
-														file.path(tmp.dir,paste('Subtrees_r_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('ProcessedTree_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('Subtrees_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
 														file.path(tmp.dir,run.id_))
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -695,7 +702,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															pty.tools.dir,
 															file.path(tmp.dir, file.patients),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
-															file.path(tmp.dir, paste('ProcessedTree_r_',run.id_,sep='')), 
+															file.path(tmp.dir, paste('ProcessedTree_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
@@ -742,7 +749,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.trees)
 	{
 		save.file		<- paste(save.file.base,'trees.rda',sep='')
-		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='Subtrees_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		tmp				<- NULL		
 	}
 	#
@@ -751,7 +758,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.subtrees)
 	{
 		save.file		<- paste(save.file.base,'subtrees_r.rda',sep='')
-		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='Subtrees_r_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='Subtrees_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		stat.subtrees	<- NULL				
 	}
 	NULL
