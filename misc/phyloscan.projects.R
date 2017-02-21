@@ -1827,16 +1827,16 @@ pty.pipeline.phyloscanner.test<- function()
 									strip.max.len=350, 
 									min.ureads.individual=NA, 
 									win=c(2500,3000,250,250), 
-									keep.overhangs=FALSE,
-									splits.sankhoff.k=35,
+									keep.overhangs=FALSE,									
+									sankhoff.k=20,
+									use.sankhoff.blacklister=1,									
 									duplicated.raw.threshold=3,
 									duplicated.ratio.threshold=1/200,
 									dual.minProportion=0.5,
 									rogue.dropProportion=NA,#0.01
 									rogue.longestBranchLength=NA, #0.04
-									rogue.sankhoffK=20,
 									rogue.probThreshold=NA, #0.001,
-									dwns.maxReadsPerPatient=200,
+									dwns.maxReadsPerPatient=50,
 									select=pty.select)
 							
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
@@ -2224,8 +2224,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_160208_couples_w270_d50_p50_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_160208_couples_w270_d50_p25_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p50_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2298,7 +2298,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							#stop()
+							stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
