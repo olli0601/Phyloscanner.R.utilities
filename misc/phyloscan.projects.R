@@ -2225,7 +2225,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p50_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2261,7 +2261,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										use.sankhoff.blacklister=1,
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,	
-										dual.minProportion=0.25, #0.5,
+										dual.minProportion=0.5, #0.5,
 										rogue.dropProportion=NA,#0.01
 										rogue.longestBranchLength=NA, #0.04
 										rogue.probThreshold=NA, #0.001,										
@@ -2276,7 +2276,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		#pty.c	<- subset(pty.c, PTY_RUN==3)
+		#pty.c	<- subset(pty.c, PTY_RUN==1)
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -2298,7 +2298,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							stop()
+							#stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
