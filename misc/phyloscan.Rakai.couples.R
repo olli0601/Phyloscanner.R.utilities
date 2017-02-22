@@ -3744,8 +3744,6 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	
-	run		<- 'RCCS_161219_w270_dxxx'
-	dir		<- rpw$DIR[1]	
 	# load pty.run
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
@@ -3755,6 +3753,8 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
+	run		<- 'RCCS_161219_w270_dxxx'
+	dir		<- rpw$DIR[1]		
 	# load pairwise probabilities
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	
@@ -3803,13 +3803,13 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 	#	for whom transmission can be excluded 					1414	(81.2%)
 	#	ambiguous												135		(7.7%)
 	#	no intermediate and close								193		(11%)	
-	#	of those we cannot determine likely direction for		60		(31%)
-	#	with evidence for M->F 									80		(60%)
+	#	of those we cannot determine likely direction for		53		(31%)
+	#	with evidence for M->F 									87		(60%)
 	#	with evidence for F->M									53 		(39%)
 	
 	unique(rpd, by='COUPID')[, table(PAIR_TYPE)]
 	#	   not always cohabiting 	not registered as couple        stable cohabiting 
-    #                          4                          67                      122 
+    #                          3                       	  71        119  
 
 	rmf		<- merge(unique(subset(rmf, select=COUPID)), unique(rp, by='COUPID'),by='COUPID')
 	rmf[, PHSC_DIR:='m->f']
@@ -3844,9 +3844,9 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 	#				 REC_COMM_TYPE
 	#			     agrarian fisherfolk trading
 	#TR_COMM_TYPE 
-	#agrarian         36          3       1
-	#fisherfolk        1         90       0
-	#trading           0          0       2
+	#agrarian         36          3       2
+  	#fisherfolk        2         95       0
+  	#trading           0          0       2
 	tmp		<- rtr2[,list(N=length(unique(COUPID))), by=c('TR_COMM_NUM','REC_COMM_NUM')]
 	ggplot(tmp, aes(x=factor(REC_COMM_NUM),y=factor(TR_COMM_NUM))) + 
 			geom_point(aes(size=N), colour='grey80') +
@@ -3933,7 +3933,7 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 			}, by='MALE_COMM_TYPE']	
 	#	MALE_COMM_TYPE  K  N         P        QL        QU
 	#1:       agrarian 24 36 0.6666667 0.5033400 0.7978538
-	#2:     fisherfolk 52 90 0.5777778 0.4746119 0.6745759
+	#2:     fisherfolk 58 95 0.6105263 0.5100024 0.7024590
 	#3:        trading  2  2 1.0000000 0.3423802 1.0000000
 	
 	#
@@ -3945,8 +3945,9 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 				list(K=length(which(PHSC_DIR=='m->f')), N=length(PHSC_DIR), P=z[1], QL=z[2], QU=z[3])
 			}, by='PAIR_TYPE']	
 	#			PAIR_TYPE  K  N         P        QL        QU
-	#1: cohabiting couple 56 87 0.6436782 0.5389320 0.7362727
-	#2:            casual 24 46 0.5217391 0.3813741 0.6587531	
+	#1: stable cohabiting 			57 85 0.6705882 0.56520191 0.7612223
+	#2: not registered as couple 	29 53 0.5471698 0.41453975 0.6734242
+	#3:    not always cohabiting  	 1  2 0.5000000 0.02564665 0.9743534	
 	chisq_test(factor(PHSC_DIR) ~ factor(PAIR_TYPE), data=rtr, distribution="exact")
 	#	chi-squared = 1.8666, p-value = 0.1953
 
