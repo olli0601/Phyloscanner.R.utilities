@@ -1833,7 +1833,7 @@ pty.pipeline.dualparameter<- function()
 						invisible(phsc.plot.selected.pairs(phs, dfs, rpoku[ii, MALE_SANGER_ID], rpoku[ii, FEMALE_SANGER_ID], plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))
 					}))	
 	
-	phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+	phsc.plot.selected.individuals(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 }
 
 pty.pipeline.phyloscanner.test<- function() 
