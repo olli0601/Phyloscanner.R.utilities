@@ -857,7 +857,7 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 #' @param pdf.title.size Size of pdf title in inches.
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
-phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, group.redo=FALSE, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
 	suppressMessages(require(grid))
 	#	determine which phylogenies contain at least one of the requested individuals
@@ -872,6 +872,24 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 				if('TITLE'%in%colnames(tmp))
 					ph.title	<- tmp[i, TITLE]										
 				ph			<- phs[[ tmp[i, IDX] ]]
+				#
+				#
+				if(group.redo)
+				{
+					phb			<- data.table(IDX=seq_along(ph$tip.label), TAXA=ph$tip.label, ID='none')
+					for(id in ids)
+						set(phb, phb[, which(grepl(id,TAXA))], 'ID', id)
+					tmp				<- lapply( phb[, unique(ID)], function(x)	subset(phb, ID==x)[, TAXA]	)
+					names(tmp)		<- phb[, unique(ID)]
+					ph				<- groupOTU(ph, tmp, group='INDIVIDUAL')
+					#z	<- merge(data.table(FROM=ph$edge[,1],IDX=ph$edge[,2]), phb, by='IDX', all=1)
+					#z[, GROUP:= attr(ph,'INDIVIDUAL')[1:nrow(ph$edge)]]
+					#z	<- unique(subset(z, !is.na(ID), select=c(ID, GROUP)))
+					#attr(ph,'INDIVIDUAL')	<- factor(attr(ph,'INDIVIDUAL'), levels=c(0,z[,as.character(GROUP)]), labels=c('not characterized',z[,FILE_ID]))
+					#ph									
+				}				
+				#
+				#
 				cols		<- rep('grey50', length(attr(ph, "INDIVIDUAL"))) 
 				for(i in seq_along(ids))
 					cols[ grepl(ids[i], attr(ph, "INDIVIDUAL")) ]<- plot.cols[i]
@@ -885,7 +903,8 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 						theme_tree2() +
 						theme(legend.position="bottom", plot.title = element_text(size=pdf.title.size)) + 
 						ggplot2::xlim(0, max(node.depth.edgelength(ph)[1:Ntip(ph)])*1.3) +
-						labs(x='subst/site', title=ph.title)						
+						labs(x='subst/site', title=ph.title)
+				#ggsave(plot.file, w=10, h=200, limitsize = FALSE)
 				p
 			})
 	#

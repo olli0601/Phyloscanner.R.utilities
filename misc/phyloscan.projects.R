@@ -1794,15 +1794,19 @@ pty.pipeline.dualparameter<- function()
 	#	get evidence for dual infections
 	#
 	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170208_couples_w270_d50_p50_rerun'
+	outfile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170222_duals/170222-phsc-dualcandidate-'
 	infiles		<- data.table(F=list.files(indir, pattern='dualsummary.csv$',full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('.*ptyr([0-9]+)_.*','\\1',F))]
 	setkey(infiles, PTY_RUN)
-	setdiff(pty.runs[, unique(PTY_RUN)], infiles[, unique(PTY_RUN)])	
+	
+	#setdiff(pty.runs[, unique(PTY_RUN)], infiles[, unique(PTY_RUN)])
+	#	missing runs: 22  43  52  73  82 115 (phylos never generated in first place)
+	
 	dd			<- infiles[, as.data.table(read.csv(F, stringsAsFactors=FALSE)), by=c('PTY_RUN')]
 	setnames(dd, colnames(dd), toupper(colnames(dd)))
 	setnames(dd, 'PATIENT', 'SANGER_ID')
 	set(dd, NULL, 'SANGER_ID', dd[, gsub('\\.bam','',SANGER_ID)])
-	unique(subset(dd, PROPORTION>0.5),by='SANGER_ID')	
+	dd			<- unique(subset(dd, PROPORTION>0.2),by='SANGER_ID')	
 	#
 	#	read all trees and read tree info
 	#
@@ -1823,17 +1827,17 @@ pty.pipeline.dualparameter<- function()
 	#
 	#	print putative duals
 	#
-	invisible(sapply(seq_len(nrow(rpoku)), function(ii)
+	invisible(sapply(seq_len(nrow(dd))[-1], function(ii)
 					{								
-						pair.id		<- rpoku[ii, PAIR_ID]
-						pty.run		<- rpoku[ii, PTY_RUN]
+						id			<- dd[ii, SANGER_ID]
+						pty.run		<- dd[ii, PTY_RUN]
 						dfs			<- subset(dtrees, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
-						dfs[, TITLE:= dfs[, paste('pair', pair.id, '\n', rpoku[ii, COUP_SC], '\nid M: ', rpoku[ii, MALE_RID], ' (', rpoku[ii, MALE_SANGER_ID], ')\nid F: ', rpoku[ii, FEMALE_RID], ' (', rpoku[ii, FEMALE_SANGER_ID], ')\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
-						plot.file	<- file.path(dir, paste(run,'-phsc-serodiscpairs-',rpoku[ii, COUP_SC],'-M-', rpoku[ii, MALE_RID],'-F-',rpoku[ii, FEMALE_RID],'-', pair.id,'.pdf',sep=''))			
-						invisible(phsc.plot.selected.pairs(phs, dfs, rpoku[ii, MALE_SANGER_ID], rpoku[ii, FEMALE_SANGER_ID], plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))
+						dfs[, TITLE:= dfs[, paste('potential dual', id, '\ncount', dd[ii, COUNT], '\tproportion ', dd[ii, round(PROPORTION, d=2)], '\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
+						plot.file	<- paste0(outfile,dd[ii, round(PROPORTION*100, d=0)],'-', id,'.pdf')
+						invisible(phsc.plot.selected.individuals(phs, dfs, id, plot.cols='red', group.redo=TRUE, plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))					
 					}))	
 	
-	phsc.plot.selected.individuals(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+	
 }
 
 pty.pipeline.phyloscanner.test<- function() 
@@ -2328,15 +2332,12 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(22,43,52,73,81,115))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(22,43,52,73,81,115))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
-		setkey(pty.c, PTY_RUN)
-		print(pty.c)
-		stop()
-		
+		setkey(pty.c, PTY_RUN)		
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
