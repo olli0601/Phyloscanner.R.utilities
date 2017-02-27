@@ -1791,22 +1791,20 @@ pty.pipeline.dualparameter<- function()
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
 	#
-	#	get evidence for dual infections
+	#	get dual infection candidates
 	#
 	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170208_couples_w270_d50_p50_rerun'
 	outfile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170222_duals/170222-phsc-dualcandidate-'
 	infiles		<- data.table(F=list.files(indir, pattern='dualsummary.csv$',full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('.*ptyr([0-9]+)_.*','\\1',F))]
-	setkey(infiles, PTY_RUN)
-	
+	setkey(infiles, PTY_RUN)	
 	#setdiff(pty.runs[, unique(PTY_RUN)], infiles[, unique(PTY_RUN)])
-	#	missing runs: 22  43  52  73  82 115 (phylos never generated in first place)
-	
+	#	missing runs: 22  43  52  73  82 115 (phylos never generated in first place)	
 	dd			<- infiles[, as.data.table(read.csv(F, stringsAsFactors=FALSE)), by=c('PTY_RUN')]
 	setnames(dd, colnames(dd), toupper(colnames(dd)))
 	setnames(dd, 'PATIENT', 'SANGER_ID')
 	set(dd, NULL, 'SANGER_ID', dd[, gsub('\\.bam','',SANGER_ID)])
-	dd			<- unique(subset(dd, PROPORTION>0.2),by='SANGER_ID')	
+	dd.cand		<- unique(subset(dd, PROPORTION>0.2),by='SANGER_ID')	
 	#
 	#	read all trees and read tree info
 	#
@@ -1827,16 +1825,69 @@ pty.pipeline.dualparameter<- function()
 	#
 	#	print putative duals
 	#
-	invisible(sapply(seq_len(nrow(dd))[-1], function(ii)
-					{								
-						id			<- dd[ii, SANGER_ID]
-						pty.run		<- dd[ii, PTY_RUN]
+	invisible(sapply(seq_len(nrow(dd.cand)), function(ii)
+					{	
+						#ii<- 14
+						id			<- dd.cand[ii, SANGER_ID]
+						pty.run		<- dd.cand[ii, PTY_RUN]
 						dfs			<- subset(dtrees, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
-						dfs[, TITLE:= dfs[, paste('potential dual', id, '\ncount', dd[ii, COUNT], '\tproportion ', dd[ii, round(PROPORTION, d=2)], '\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
-						plot.file	<- paste0(outfile,dd[ii, round(PROPORTION*100, d=0)],'-', id,'.pdf')
+						dfs[, TITLE:= dfs[, paste('potential dual', id, '\ncount', dd.cand[ii, COUNT], ' proportion ', dd.cand[ii, round(PROPORTION, d=2)], '\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
+						plot.file	<- paste0(outfile,dd.cand[ii, round(PROPORTION*100, d=0)],'-', id,'.pdf')
 						invisible(phsc.plot.selected.individuals(phs, dfs, id, plot.cols='red', group.redo=TRUE, plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))					
 					}))	
-	
+	#
+	#	make sliding dual plots for dual infection candidates
+	#
+	#	read dual info per window
+	dds		<- data.table(FD=list.files(indir, pattern='_dualsummary.rda', full.names=TRUE))
+	dds[, PTY_RUN:= as.integer(gsub('.*ptyr([0-9]+)_.*','\\1',FD))]
+	dds		<- dds[, {
+				#FD		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170208_couples_w270_d50_p50_rerun/ptyr1_dualsummary.rda'
+				load(FD)
+				dd[, W_FROM:= as.integer(gsub('InWindow_([0-9]+)_to_([0-9]+)','\\1',W_INFO))]
+				dd[, W_TO:= as.integer(gsub('InWindow_([0-9]+)_to_([0-9]+)','\\2',W_INFO))]
+				set(dd, NULL, c('W_INFO','W_POTENTIAL_DUAL'), NULL)
+				setkey(dd, PATIENT, W_FROM, READS_IN_SUBTREE)
+				dd		<- dd[, list(SUBTREE= rev(seq_along(READS_IN_SUBTREE)), READS_IN_SUBTREE=READS_IN_SUBTREE, TIPS_IN_SUBTREE=TIPS_IN_SUBTREE), by=c('PATIENT','W_FROM','W_TO')]				
+			}, by='PTY_RUN']
+	setnames(dds, 'PATIENT', 'SANGER_ID')
+	set(dds, NULL, 'SANGER_ID', dds[,gsub('\\.bam','',SANGER_ID)])
+	dds		<- merge(dds, dd.cand, by=c('PTY_RUN','SANGER_ID'))
+	#	read #reads and #tips per patient in all windows
+	tmp		<- dtrees[, {
+				ph	<- phs[[IDX]]
+				phb	<- subset(data.table(TAXA=ph$tip.label), !grepl('REF',TAXA))
+				phb[, SANGER_ID:= gsub('^([0-9]+_[0-9]+_[0-9]+).*','\\1',TAXA)]
+				phb[, READS_IN_TREE:= as.integer(gsub('.*_count_([0-9]+)','\\1',TAXA))]
+				phb	<- phb[, list(READS_IN_TREE=sum(READS_IN_TREE), TIPS_IN_TREE=length(READS_IN_TREE)), by='SANGER_ID']
+			}, by=c('PTY_RUN','W_FROM','W_TO')]
+	tmp		<- merge(tmp, unique(subset(dds, select=c('PTY_RUN','SANGER_ID'))), by=c('PTY_RUN','SANGER_ID')) 	
+	dds		<- merge(tmp, dds, by=c('PTY_RUN','SANGER_ID','W_FROM','W_TO'), all.x=1)
+	set(dds, dds[, which(is.na(SUBTREE))], 'SUBTREE', 1L)
+	tmp		<- dds[, which(is.na(READS_IN_SUBTREE))]
+	set(dds, tmp, 'READS_IN_SUBTREE', dds[tmp, READS_IN_TREE])
+	tmp		<- dds[, which(is.na(TIPS_IN_SUBTREE))]
+	set(dds, tmp, 'TIPS_IN_SUBTREE', dds[tmp, TIPS_IN_TREE])	
+	tmp		<- unique(subset(dds, !is.na(COUNT), c(PTY_RUN, SANGER_ID, COUNT, PROPORTION)))
+	set(dds, NULL, c('COUNT','PROPORTION'), NULL)
+	dds		<- merge(dds, tmp, by=c('PTY_RUN','SANGER_ID'))
+	set(dds, NULL, 'SUBTREE', dds[, as.character(factor(SUBTREE))])
+	tmp		<- unique(subset(dds, select=c(PTY_RUN, SANGER_ID, COUNT, PROPORTION)))
+	tmp		<- tmp[order(-PROPORTION)]
+	tmp[, PLOTID:= seq_len(nrow(tmp))]
+	tmp[, TITLE:= factor(PLOTID, levels=PLOTID, labels=paste0(SANGER_ID,'\nrun: ',PTY_RUN,' dual count: ',COUNT,' dual prop:  ',round(PROPORTION,d=2),'\n'))]
+	dds		<- merge(dds, subset(tmp, select=c(PTY_RUN,SANGER_ID,TITLE)), by=c('PTY_RUN','SANGER_ID'))
+	#	plot
+	ggplot(dds, aes(x=W_FROM, y=READS_IN_SUBTREE, fill=SUBTREE)) +
+			geom_bar(position='stack', stat='identity') +
+			scale_x_continuous(breaks=seq(0,1e4,500), expand=c(0,0)) +
+			scale_y_log10(breaks=c(10,1e2,1e3,1e4,1e5, 1e6), expand=c(0,0)) +
+			geom_hline(yintercept=20) +
+			labs(x='window start', y='reads') + facet_wrap(~TITLE, ncol=1) +
+			theme_bw()
+	ggsave(file=paste0(outfile, 'subtree_scan.pdf'), w=15, h=40)
+	#	write csv
+	write.csv(subset(tmp, select=c(PTY_RUN, SANGER_ID, COUNT, PROPORTION)), file=paste0(outfile, 'assessments.csv'), row.names=FALSE)
 	
 }
 
@@ -1883,13 +1934,15 @@ pty.pipeline.phyloscanner.test<- function()
 									strip.max.len=350, 
 									min.ureads.individual=NA, 
 									win=c(2500,3000,250,250), 
-									keep.overhangs=FALSE,									
+									keep.overhangs=FALSE,																		
+									use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
 									sankhoff.k=20,
-									use.sankhoff.blacklister=1,									
-									duplicated.raw.threshold=3,
-									duplicated.ratio.threshold=1/200,
-									dual.minProportion=0.5,
-									rogue.dropProportion=NA,#0.01
+									contaminant.read.threshold=3,
+									contaminant.prop.threshold=1/200,
+									roguesubtree.prop.threshold=0,
+									roguesubtree.read.threshold=20,
+									dual.minProportion=NA,
+									rogue.prop.threshold=NA, #0.01
 									rogue.longestBranchLength=NA, #0.04
 									rogue.probThreshold=NA, #0.001,
 									dwns.maxReadsPerPatient=50,
@@ -2280,7 +2333,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p50_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170227_couples_w270_d50_st20_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
@@ -2312,12 +2365,14 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										strip.max.len=350, 
 										min.ureads.individual=NA, 
 										win=c(800,9400,25,250), 
-										keep.overhangs=FALSE,										
+										keep.overhangs=FALSE,	
+										use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
-										use.sankhoff.blacklister=1,
-										duplicated.raw.threshold=3,
-										duplicated.ratio.threshold=1/200,	
-										dual.minProportion=0.5, #0.5,
+										contaminant.read.threshold=3,
+										contaminant.prop.threshold=1/200,
+										roguesubtree.prop.threshold=0,
+										roguesubtree.read.threshold=20,
+										dual.minProportion=NA,
 										rogue.dropProportion=NA,#0.01
 										rogue.longestBranchLength=NA, #0.04
 										rogue.probThreshold=NA, #0.001,										

@@ -21,9 +21,9 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.minProportion=0.01, windowCount=NA)
+phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.prop.threshold=0.01, windowCount=NA)
 {
-	cmd	<- paste(pr, dual.minProportion, inputFileNameDuals, outputFileName)
+	cmd	<- paste(pr, dual.prop.threshold, inputFileNameDuals, outputFileName)
 	if(!is.na(treeFileName))
 		cmd	<- paste(cmd, '--treePrefix', treeFileName)		
 	if(!is.na(windowCount))
@@ -35,9 +35,11 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, outgroupName=NA, tipRegex=NA)
 {
-	cmd	<- paste(pr, '--scriptdir',scriptdir, rawThreshold, ratioThreshold, sankhoffK, inputFileName, outputFileName, dualCandidatesOutputFileName)
+	cmd	<- paste(pr, '--scriptdir',scriptdir, rawThreshold, ratioThreshold, sankhoffK, inputFileName, outputFileName)
+	if(!is.na(dualCandidatesOutputFileName))
+		cmd	<- paste(cmd, '--dualsOutputFile', dualCandidatesOutputFileName)			
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)		
 	if(!is.na(tipRegex))
@@ -521,14 +523,15 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty						<- pty.args[['prog.pty']]
 	root.name						<- pty.args[['alignments.root']]	
 	sankhoff.k						<- pty.args[['sankhoff.k']]
-	use.sankhoff.blacklister		<- pty.args[['use.sankhoff.blacklister']]
-	duplicated.raw.threshold		<- pty.args[['duplicated.raw.threshold']]
-	duplicated.ratio.threshold		<- pty.args[['duplicated.ratio.threshold']]
-	dual.minProportion				<- pty.args[['dual.minProportion']]
-	rogue.dropProportion			<- pty.args[['rogue.dropProportion']]
+	use.blacklisters				<- pty.args[['use.blacklisters']]
+	contaminant.read.threshold		<- pty.args[['contaminant.read.threshold']]
+	contaminant.prop.threshold		<- pty.args[['contaminant.prop.threshold']]
+	dual.prop.threshold				<- pty.args[['dual.prop.threshold']]
+	roguesubtree.prop.threshold		<- pty.args[['roguesubtree.prop.threshold']]
+	roguesubtree.read.threshold		<- pty.args[['roguesubtree.read.threshold']]
+	rogue.prop.threshold			<- pty.args[['rogue.prop.threshold']]
 	rogue.longestBranchLength		<- pty.args[['rogue.longestBranchLength']]
-	rogue.probThreshold				<- pty.args[['rogue.probThreshold']]
-	rogue.sankhoffK					<- pty.args[['rogue.sankhoffK']]
+	rogue.probThreshold				<- pty.args[['rogue.probThreshold']]	
 	dwns.maxReadsPerPatient			<- pty.args[['dwns.maxReadsPerPatient']]	
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
@@ -543,21 +546,45 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummaryExperimental.R'),sep='')	
 	run.id							<- gsub('_bam.txt','',basename(file.bam))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
-	blacklistFiles					<- NA_character_	
+	blacklistFiles					<- NA_character_
+	#
+	stopifnot(	!is.null(use.blacklisters) & !is.na(use.blacklisters)	)
+	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
+		stopifnot(	!is.null(contaminant.prop.threshold) & !is.na(contaminant.prop.threshold), 
+					!is.null(contaminant.read.threshold) & !is.na(contaminant.read.threshold))
+	if(any(grepl('ParsimonyBasedBlacklister', use.blacklisters)))
+		stopifnot(	!any(grepl('MakeRogueBlacklist', use.blacklisters)),	
+					!is.null(roguesubtree.prop.threshold) & !is.na(roguesubtree.prop.threshold),
+					!is.null(roguesubtree.read.threshold) & !is.na(roguesubtree.read.threshold),
+					!is.null(sankhoff.k) & !is.na(sankhoff.k))		
+	if(any(grepl('MakeRogueBlacklist', use.blacklisters))) 
+		stopifnot(	!any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)),
+					!is.null(rogue.prop.threshold) & !is.na(rogue.prop.threshold),
+					!is.null(rogue.longestBranchLength) & !is.na(rogue.longestBranchLength))
+	if(any(grepl('MakeRogueBlacklistWeibull', use.blacklisters))) 
+		stopifnot(	!any(grepl('ParsimonyBasedBlacklister', use.blacklisters)),
+					!is.null(rogue.prop.threshold) & !is.na(rogue.prop.threshold),
+					!is.null(rogue.longestBranchLength) & !is.na(rogue.longestBranchLength),
+					!is.null(rogue.probThreshold) & !is.na(rogue.probThreshold))
+	if(any(grepl('DualPatientBlacklister', use.blacklisters))) 
+		stopifnot(!is.null(dual.prop.threshold) & !is.na(dual.prop.threshold))
+	if(any(grepl('DownsampleReads', use.blacklisters))) 
+		stopifnot(!is.null(dwns.maxReadsPerPatient) & !is.na(dwns.maxReadsPerPatient))
+	use.sankhoff.blacklister		<- any(grepl('ParsimonyBasedBlacklister', use.blacklisters))
 	#
 	cmd					<- ''
 	#
 	if(1)	# OLD CODE (as long as we work with prev generated zip files) TODO: swith off
 	{
-		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone\n',sep='')	
+		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
 	}	
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
-	#
-	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & (is.na(use.sankhoff.blacklister) | use.sankhoff.blacklister==0))
+	#	
+	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
 	{
-		cmd				<- paste(cmd, 'for file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
-		tmp				<- phsc.cmd.blacklist.reads(prog.pty.readblacklist, '"$file"', paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), duplicated.raw.threshold, duplicated.ratio.threshold, tipRegex=NA)
+		cmd				<- paste(cmd, '\nfor file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
+		tmp				<- phsc.cmd.blacklist.reads(prog.pty.readblacklist, '"$file"', paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), contaminant.read.threshold, contaminant.prop.threshold, tipRegex=NA)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
@@ -565,18 +592,18 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
-	if(!is.na(duplicated.raw.threshold) & !is.na(duplicated.ratio.threshold) & !is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1)
+	if(any(grepl('ParsimonyBasedBlacklister', use.blacklisters)))	
 	{
-		cmd				<- paste(cmd, 'for file in ', run.id_,'InWindow_*.tree; do\n\t',sep='')
+		cmd				<- paste(cmd, '\nfor file in ', run.id_,'InWindow_*.tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
 		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff, 
 																	pty.tools.dir,
 																	'"$file"', 
 																	paste('"${TMP//InWindow/blacklistsank_InWindow}"',sep=''), 
-																	paste('"${TMP//InWindow/duallistsank_InWindow}"',sep=''),
-																	duplicated.raw.threshold, 
-																	duplicated.ratio.threshold, 
-																	sankhoff.k,	
+																	dualCandidatesOutputFileName=paste('"${TMP//InWindow/duallistsank_InWindow}"',sep=''),
+																	rawThreshold=roguesubtree.read.threshold, 
+																	ratioThreshold=roguesubtree.prop.threshold, 
+																	sankhoffK=sankhoff.k,	
 																	outgroupName=root.name,
 																	tipRegex=NA)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
@@ -585,9 +612,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
 	#
-	if(!is.na(rogue.dropProportion) & !is.na(rogue.longestBranchLength) & !is.numeric(rogue.probThreshold))
+	if(any(grepl('MakeRogueBlacklist', use.blacklisters)))	
 	{
-		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
 		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
 		tmp				<- phsc.cmd.blacklist.rogue.geneticdistance(	prog.pty.rogueblacklist, 
@@ -595,7 +622,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															'"$file"', 
 															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
 															longestBranchLength=rogue.longestBranchLength, 
-															dropProportion=rogue.dropProportion, 
+															dropProportion=rogue.prop.threshold, 
 															blackListFileName=tmp, 
 															outgroupName=root.name, 
 															tipRegex=NA)				
@@ -605,9 +632,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
 	#
-	if(!is.na(rogue.dropProportion) & !is.na(rogue.longestBranchLength) & is.numeric(rogue.probThreshold))
+	if(any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)))	
 	{
-		cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
 		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
 		tmp				<- phsc.cmd.blacklist.rogue.extremeprob(	prog.pty.roguewblacklist, 
@@ -616,7 +643,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
 															probThreshold=rogue.probThreshold,
 															longestBranchLength=rogue.longestBranchLength, 
-															dropProportion=rogue.dropProportion, 
+															dropProportion=rogue.prop.threshold, 
 															blackListFileName=tmp, 
 															outgroupName=root.name, 
 															tipRegex=NA)				
@@ -626,7 +653,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
 	#
-	if(!is.na(dual.minProportion))
+	if(any(grepl('DualPatientBlacklister', use.blacklisters)))	
 	{			
 		tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
 																file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
@@ -634,7 +661,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 																treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')),
 																summaryFileName=file.path(tmp.dir,paste0(run.id_,'dualsummary.csv')),
 																blacklistFileName=blacklistFiles, 
-																dual.minProportion=dual.minProportion)
+																dual.prop.threshold=dual.prop.threshold)
 		cmd				<- paste(cmd, tmp, sep='\n')
 		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
 		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
@@ -643,7 +670,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	#	bash command to downsample tips (add to blacklist)
 	#
-	if(!is.na(dwns.maxReadsPerPatient))
+	if(any(grepl('DownsampleReads', use.blacklisters)))
 	{
 		tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 
 																pty.tools.dir, 
@@ -667,7 +694,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															blacklistFiles=blacklistFiles,
 															outputdir=tmp.dir,																													
 															outgroupName=root.name,
-															splitsRule= ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),
+															splitsRule= ifelse(use.sankhoff.blacklister, 's', 'r'),
 															sankhoff.k=sankhoff.k,
 															pdfwidth=30, pdfrelheight=0.15)
 	cmd				<- paste(cmd, tmp, sep='\n')
@@ -681,7 +708,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 													root.name, 
 													file.path(tmp.dir, file.patients), 
 													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, paste('Subtrees_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste('Subtrees_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
 													blacklistFiles=blacklistFiles
 													)
@@ -691,8 +718,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#
 	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
 														pty.tools.dir, 
-														file.path(tmp.dir,paste('ProcessedTree_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
-														file.path(tmp.dir,paste('Subtrees_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('Subtrees_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 														file.path(tmp.dir,run.id_))
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -702,7 +729,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															pty.tools.dir,
 															file.path(tmp.dir, file.patients),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
-															file.path(tmp.dir, paste('ProcessedTree_',ifelse(!is.na(use.sankhoff.blacklister) & use.sankhoff.blacklister==1, 's', 'r'),'_',run.id_,sep='')), 
+															file.path(tmp.dir, paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
@@ -864,7 +891,7 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {
 						ph	<- phs[[ IDX ]]
-						list(HAS_ANY_IND=any(sapply(ids, function(id) any(grepl(id, attr(ph, "INDIVIDUAL"))) )))						  				
+						list(HAS_ANY_IND=any(sapply(ids, function(id) any(grepl(id, ph$tip.label)) )))						  				
 					}, by='IDX'], by='IDX')
 	tmp		<- subset(tmp, HAS_ANY_IND)
 	phps	<- lapply(seq_len(nrow(tmp)), function(i){
