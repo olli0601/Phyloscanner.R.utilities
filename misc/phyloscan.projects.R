@@ -831,6 +831,7 @@ project.RakaiAll.setup.RAxMLmodel.170301<- function()
 	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RAxML_model_test'
 	
 	infiles	<- data.table(F=list.files(indir, pattern='fasta$', full.names=TRUE))
+	infiles	<- subset(infiles, !grepl('ptyr1_',F))
 	infiles[, {				
 				cmd			<- cmd.jmodeltest(F, pr.args='-f -i -g 4 -s 3 -DT -S NNI -t ML', nproc=hpc.nproc)
 				tmp			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=hpc.walltime, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
@@ -2544,7 +2545,7 @@ pty.pipeline.phyloscanner.170301.all<- function()
 				alignments.root='REF_CPX_AF460972', 
 				alignments.pairwise.to='REF_B_K03455',
 				window.automatic= '', 
-				merge.threshold=0, 
+				merge.threshold=2, 
 				min.read.count=1, 
 				quality.trim.ends=23, 
 				min.internal.quality=23, 
@@ -2555,13 +2556,11 @@ pty.pipeline.phyloscanner.170301.all<- function()
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
-				#win=c(800,9400,25,250), 
+				#win=c(800,9400,125,250), 
 				win=c(2500,3000,250,250), #TEST RUN
 				keep.overhangs=FALSE,
-				use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 				sankhoff.k=20,
-				contaminant.read.threshold=3,
-				contaminant.prop.threshold=1/200,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
 				dwns.maxReadsPerPatient=50,		
