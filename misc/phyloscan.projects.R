@@ -9,7 +9,8 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	pty.pipeline.phyloscanner.160915.couples.resume()
+	#pty.pipeline.phyloscanner.160915.couples.resume()
+	pty.pipeline.phyloscanner.170301.all()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
@@ -813,6 +814,162 @@ project.dualinfecions.UG.setup.windowlength<- function()
 	
 	ggplot(sd, aes(x=FROM, y=value, colour=TYPE, group=TYPE)) + geom_step() + facet_grid(variable~IND, scales='free_y') + scale_y_log10()
 	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=12, limitsize = FALSE)
+}
+
+project.RakaiAll.setup.phyloscanner.170301<- function()
+{
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
+	#
+	#	list of files that Chris has
+	#
+	infiles	<- data.table(F=list.files(indir, pattern='^CW_PANGEA',full.names=TRUE))
+	dc		<- do.call('rbind',lapply(infiles[, F], function(file){
+							tmp<- as.data.table(read.csv(file, header=FALSE, col.names='PID', stringsAsFactors=FALSE))
+							tmp[, F:=file]
+							tmp
+					}))
+	set(dc, NULL, 'PROC_STATUS', dc[, gsub('CW_PANGEA_Rakai_','',gsub('\\.txt','',basename(F)))])	
+	set(dc, NULL, 'F', NULL)	
+	#	add Sanger IDs
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
+	setnames(tmp, c('Lane','Public'), c('SID','PIDF'))
+	tmp		<- subset(tmp, select=c(SID,PIDF))
+	set(tmp, NULL, 'SID', tmp[, gsub('#','_',SID)])
+	set(tmp, NULL, 'PID', tmp[, gsub('-S[0-9]+$','',PIDF)])
+	dc		<- merge(dc, tmp, by='PID',all.x=1)
+	dc[, PART:= as.numeric(gsub('^[0-9]+_([0-9])_[0-9]+','\\1',SID))]
+	dc[, DUMMY:= gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_x_\\2',SID)]	
+	dc		<- merge(dc, dc[, list(N_PART=length(PART), S_PART=sum(PART)), by='DUMMY'], by='DUMMY')	
+	#	check if we always have _1_ and _2_
+	stopifnot(!nrow(subset(dc, N_PART==2 & S_PART!=3)))
+	#	assume Tanya merges to _3_
+	tmp		<- dc[, which(N_PART==2)]
+	set(dc, tmp, 'SID', dc[tmp, gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_3_\\2',SID)])
+	set(dc, NULL, c('PART','N_PART','S_PART','DUMMY'),NULL)
+	dc		<- unique(dc)
+	tmp		<- subset(dc, !is.na(SID))[, list(N_SID=length(SID)), by='PIDF']
+	dc		<- merge(dc, tmp, by='PIDF',all.x=1)	
+	#	extra category: not processed by Kate
+	tmp		<- as.data.table(read.table("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=TRUE))
+	setnames(tmp, c('SampleID','LaneID'), c('PID','SID'))
+	tmp[, KATE_PROC:='Y']
+	dc		<- merge(dc, tmp, by=c('PID','SID'), all.x=1)	
+	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithKateShiverOutput' & is.na(KATE_PROC))], 'PROC_STATUS','ThoseWithFastqs_KateNotProcessed') 
+	set(dc, NULL, 'KATE_PROC', NULL)	
+	#	add RIDs
+	load('~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda')
+	tmp		<- subset(as.data.table(rccsData), select=c(RCCS_studyid,Pangea.id, batch, date, SEX))
+	setnames(tmp, c('RCCS_studyid','Pangea.id','batch','date'), c('RID','PID','RCCS_SHIP_BATCH','SAMPLE_DATE'))
+	tmp		<- subset(tmp, !is.na(PID))
+	tmp		<- unique(tmp, by=c('RID','PID'))
+	tmp2	<- subset(as.data.table(neuroData), select=c(studyid, Pangea.id, sampleDate, gender))
+	setnames(tmp2, c('studyid','Pangea.id','sampleDate','gender'), c('RID','PID','SAMPLE_DATE','SEX'))
+	tmp2[, RCCS_SHIP_BATCH:='neuro']
+	tmp		<- rbind(tmp, tmp2, use.names=TRUE)
+	dc		<- merge(dc, tmp, by='PID',all.x=1)
+	#	flag test plate
+	set(dc, dc[, which(grepl('PG14-UG9000[0-9][0-9]',PID))], 'RCCS_SHIP_BATCH', 'test')
+	#	see if on HPC	
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_bams.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_BAM:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('\\.bam','',SID)])
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_BAM))], 'HPC_BAM', 'N')	
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_refs.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_REF:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])	
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_REF))], 'HPC_REF', 'N')
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_fastq.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_FASTQ:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('_[0-9].fastq.gz','',SID)])	
+	dc		<- merge(dc, unique(tmp), by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_FASTQ))], 'HPC_FASTQ', 'N')	
+	#	add latest PANGEA stats
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv', stringsAsFactors=FALSE))
+	setnames(tmp, 	c('Status','Submitted','DayDiff','ProjectID','Cohort','Submitted.1','Sequenced','Assembled','HIVcontig'), 
+					c('WTSI_STATUS','WTSI_SUBMITTED_DATE','DayDiff','PID','Cohort','WTSI_SUBMITTED','WTSI_SEQUENCED','WTSI_ASSEMBLED','WTSI_HIVCONTIG'))
+	tmp		<- subset(tmp, PID!='')
+	set(tmp, NULL, 'WTSI_SUBMITTED', tmp[, as.character(factor(WTSI_SUBMITTED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_SEQUENCED', tmp[, as.character(factor(WTSI_SEQUENCED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_ASSEMBLED', tmp[, as.character(factor(WTSI_ASSEMBLED=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, 'WTSI_HIVCONTIG', tmp[, as.character(factor(WTSI_HIVCONTIG=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
+	set(tmp, NULL, c('DayDiff','Cohort'), NULL)
+	dc		<- merge(dc, tmp, by='PID', all.x=1)
+	#	check what Dan assembled
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017/collated_stats_all_genomes_UCL_release_Feb2017.csv', stringsAsFactors=FALSE))
+	setnames(tmp, c('PANGEA_ID','PGID_full','WTSI_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	set(tmp, NULL, c('Method','X','X.1','X.2'), NULL)
+	set(tmp, NULL, 'PID', tmp[, gsub('r[0-9]$','',PID)])
+	set(tmp, NULL, 'PIDF', tmp[, gsub('r[0-9]$','',PIDF)])	
+	tmp		<- subset(tmp, grepl('Rakai',COHORT))
+	tmp2	<- setdiff( tmp[, unique(sort(PID))], dc[, unique(sort(PID))] )
+	#	n=6 plus test plate
+	write.csv(data.table(ID=tmp2), file=file.path(indir,'IDs_that_Dan_flags_from_Rakai_but_not_in_Chris_census.csv'), row.names=FALSE)
+	set(tmp, NULL, 'COHORT', NULL)	
+	dc		<- merge(dc, tmp, by=c('PID','PIDF','SID'),all.x=1)	
+	#	resolve 60 from Chris that he confirmed he has not processed -- at least one SID from said individual has been processed
+	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithChrisShiverOutput' & HPC_BAM=='N')], 'PROC_STATUS','ThoseWithFastqs_ChrisNotProcessed')		
+	#	define RIDs from whom all SIDs are complete and on HPC
+	tmp		<- dc[, list(	HPC_ALL_SID_FOR_RID= all(HPC_BAM=='Y') & all(HPC_REF=='Y')), by='RID']	
+	set(tmp, NULL, 'HPC_ALL_SID_FOR_RID', tmp[,as.character(factor(HPC_ALL_SID_FOR_RID, levels=c(TRUE,FALSE), labels=c('Y','N')))])
+	dc		<- merge(dc, tmp, by='RID',all.x=1)
+	#	define Sampling Time
+	set(dc, NULL, 'WTSI_SUBMITTED_DATE', dc[, as.Date(WTSI_SUBMITTED_DATE)])	
+
+	if(0)
+	{
+		#	add PANGEA2 IDs
+		#tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/Old_New_PANGEA_ID_Linkage_Table.csv', stringsAsFactors=FALSE))
+		#setnames(tmp, c('Pangea_ID','New_ID'), c('PID','PIDF2'))
+		#set(tmp, NULL, 'PID2', tmp[,gsub('-[0-9]+$','',PIDF2)])	
+		#dc		<- merge(dc, unique(subset(tmp, select=c(PID,PID2))), by='PID', all.x=1)		
+	}
+	if(0)
+	{
+		#
+		#	Kate to check if we have RIDs= 240
+		#	resolved --> these are neuro
+		write.csv(	subset(dc, is.na(RID)), 
+				file=file.path(indir,'Kate_RIDs_needed.csv'), row.names=FALSE)
+		#	Kate to check samples that Dan could assemble
+		#	n=134
+		#	NOT YET RESOLVED
+		write.csv(	subset(dc, !is.na(UCL_LEN) & PROC_STATUS=='ThoseWithFastqs_WithKateShiverOutput' & HPC_BAM=='N'), 
+				file=file.path(indir,'Kate_check_unassembled_among_597_that_Dan_could_assemble.csv'), row.names=FALSE)
+		#	WTSI gone missing=16 -- check with Swee Hoe
+		#	Anne suggests they 'failed' sequencing. I am not sure what this means
+		write.csv(subset(dc, !is.na(RID) & is.na(SID) & WTSI_STATUS=='Assume sequencing failed'), file=file.path(indir,'WTSI_gone_missing.csv'), row.names=FALSE)		
+		#	New list for Tanya of unprocessed SIDs that are not in Kate s batch
+		#	n=1617
+		write.csv(subset(dc, PROC_STATUS%in%c('ThoseWithFastqs_KateNotProcessed','ThoseWithFastqs_ChrisNotProcessed','ThoseWithFastqs_WithoutShiverOutput')), file=file.path(indir,'SHIVER_to_run_on_existing_FASTQ.csv'), row.names=FALSE)
+	}
+	#
+	#	set up first batches
+	#
+	batch.n	<- 15
+	dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
+	tmp		<- unique(subset(dc.it1, select=RID))	
+	set.seed(42)
+	tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
+	dc.it1	<- merge(dc.it1, tmp, by='RID')
+	setkey(dc.it1, RID_B)
+	dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+	#
+	#	set up first pty.runs
+	#		
+	pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
+	setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
+	pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
+	pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+	set(pty.runs, NULL, 'DUMMY', NULL)
+	setkey(pty.runs, PTY_RUN)
+	tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
+	tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+	pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
+
+	#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
+	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301.rda'))	
 }
 
 project.dualinfecions.UG.setup.coinfections.160219<- function()
@@ -1722,16 +1879,15 @@ pty.process.160901<- function()
 						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
-	#	170208
+	#	170227
 	if(1)
 	{
-		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170208_couples_w270'
-		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170208/RCCS_170208_w270'
-		#for(opt in c('d50_p25_rerun'))
-		for(opt in c('d50_p50_rerun','d50_p75_rerun'))		
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170227_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270'		
+		for(opt in c('d50_st20_rerun'))		
 			for(trmw.min.reads in c(20))
-				for(trmw.close.brl in c(0.01, 0.02, Inf))
-					for(trmw.distant.brl in c(0.05, Inf))
+				for(trmw.close.brl in c(0.02))
+					for(trmw.distant.brl in c(0.05))
 					{
 						trmw.min.tips		<- 1
 						tmp.in		<- paste(infile.base, opt, sep='_')
@@ -2296,6 +2452,95 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 										duplicated.raw.threshold=3,
 										duplicated.ratio.threshold=1/200,				
 										select=pty.select)
+	}	
+	#
+	#	RUN PHYLOSCANNER
+	#
+	if(1)
+	{
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
+		#pty.c[1,cat(CMD)]		
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=71, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper(CMD, hpc.walltime=400, hpc.q="pqeelab", hpc.mem="13900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper(CMD, hpc.walltime=4, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cat(cmd)					
+							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							#stop()
+						}, by='PTY_RUN'])
+		quit('no')
+	}	
+}
+
+pty.pipeline.phyloscanner.170301.all<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
+		in.dir				<- file.path(HOME,"RakaiAll_input_170301")
+		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25")
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )		
+		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 4
+		hpc.mem				<- "5900mb"						
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		pty.select			<- 1
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,' -p 42"',sep=''))
+	}	
+	if(0)
+	{
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		pty.select			<- c(1)
+	}			
+	#
+	#	INPUT ARGS PHYLOSCANNER RUN
+	#	
+	if(1)
+	{				
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				#win=c(800,9400,25,250), 
+				win=c(2500,3000,250,250), #TEST RUN
+				keep.overhangs=FALSE,
+				use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
+				sankhoff.k=20,
+				contaminant.read.threshold=3,
+				contaminant.prop.threshold=1/200,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,		
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				mem.save=0,
+				select=pty.select)		
 	}	
 	#
 	#	RUN PHYLOSCANNER

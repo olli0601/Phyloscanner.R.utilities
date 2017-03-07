@@ -17,7 +17,7 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 {
 	cmd	<- paste(pr, rawThreshold, ratioThreshold, inputFileName, outputFileName)
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
 	cmd
 }
 
@@ -43,7 +43,7 @@ phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outpu
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)		
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex, '"')
 	cmd
 }
 
@@ -51,7 +51,7 @@ phsc.cmd.blacklist.rogue.geneticdistance<- function(pr, scriptdir, inputTreeFile
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, dropProportion, longestBranchLength, inputTreeFileName, outputFileName)
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
@@ -63,7 +63,7 @@ phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, dropProportion, probThreshold, longestBranchLength, inputTreeFileName, outputFileName)
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, '--tipRegex', tipRegex)
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
@@ -82,9 +82,11 @@ phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outpu
 }
 
 
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFiles, outputBaseName, blacklistFiles=NA)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA)
 {
-	cmd	<- paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')
+	cmd	<- paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, ' --tipRegex "',tipRegex,'"', sep='')	
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklists "',blacklistFiles,'"', sep='')
 	cmd
@@ -107,7 +109,7 @@ phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infil
 	cmd
 }
 
-phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
 {
 	cmd	<- paste(pr, ' --inputFile "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -121,7 +123,9 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	if(!is.na(splitsRule))
 		cmd	<- paste(cmd, ' --splitsRule ', splitsRule, sep='')
 	if(!is.na(sankhoff.k))
-		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')	
+		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')		
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -129,9 +133,11 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 	
-phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out)
+phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA)
 {
 	cmd<- paste(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir, sep='')
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, ' --tipRegex "', tipRegex,'"', sep='')			
 	cmd
 }
 
@@ -323,15 +329,17 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 {	
 	#	create local tmp dir
-	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
-	cmd		<- paste(cmd,"echo $CWD\n",sep='')
-	tmpdir	<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
-	tmpdir	<- paste("$CWD/",tmpdir,sep='')
-	cmd		<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
+	cmd			<- paste("CWD=$(pwd)\n",sep='\n')
+	cmd			<- paste(cmd,"echo $CWD\n",sep='')
+	tmpdir		<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
+	tmpdir		<- paste("$CWD/",tmpdir,sep='')
+	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
 	#	copy required files to local tmp dir	
-	file.bam<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*bam.txt',sep=''), full.names=TRUE)
-	stopifnot(length(file.bam)==1)	
-	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
+	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*rename.txt',sep=''), full.names=TRUE)
+	if(length(file.patient)==1)
+		file.patient	<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*bam.txt',sep=''), full.names=TRUE)
+	stopifnot(length(file.patient)==1)	
+	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
 	if(1)	#OLD CODE (as long as we work with prev generated zip files)
 	{
 		tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*otherstuff.zip',sep=''), full.names=TRUE)	
@@ -351,9 +359,9 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	#	add all toolkit commands according to pty.args
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.bam, pty.args), collapse='\n',sep='')
+	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
 	#	move all files starting with current run ID
-	run.id	<- gsub('_bam.txt','',basename(file.bam))
+	run.id	<- gsub('_bam.txt','',basename(file.patient))
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
 	#	zip up everything else
 	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
@@ -366,15 +374,17 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 
 #' @export
 #' @title Generate bash command for a single phyloscanner run
+#' @param pty.args List of phyloscanner input variables. See examples.
 #' @param file.bam File name of the file that contains the list of bam files.
 #' @param file.ref File name of the file that contains the list of reference files.
-#' @param pty.args List of phyloscanner input variables. See examples.
+#' @param file.patient File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit.
+#' @param file.rename File name of the file that contains new ID names for each bam/ref file. Can be set to NA. 
 #' @return Character string of phyloscanner commands.
 #' @description This function generates bash commands for a single phyloscanner run, that can be called via 'system' in R, or written to file to run on a UNIX system.
 #' @example example/ex.cmd.phyloscanner.one.R    
-phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
+phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient, file.rename=NA)
 {	
-	stopifnot(is.character(file.bam),is.character(file.ref))
+	stopifnot(is.character(file.bam),is.character(file.ref),is.character(file.patient))
 	#	copy input variables into namespace	 
 	attach(pty.args)	
 	#	sense checks
@@ -404,6 +414,9 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
 	#	copy files to local tmp dir
 	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
 	cmd		<- paste(cmd,'cp "',file.ref,'" "',tmpdir,'"\n',sep='')
+	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')
+	if(!is.na(file.rename))
+		cmd	<- paste(cmd,'cp "',file.rename,'" "',tmpdir,'"\n',sep='')
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	cmd		<- paste(cmd, prog.pty,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
@@ -412,6 +425,8 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
 		cmd	<- paste(cmd,' ',merge.paired.reads,sep='')	
 	if(!is.na(dont.check.duplicates))
 		cmd	<- paste(cmd,' ',dont.check.duplicates,sep='')
+	if(!is.na(file.rename))	
+		cmd	<- paste(cmd,' --renaming-file "',basename(file.rename),'"',sep='')
 	if(!is.na(alignments.pairwise.to))		
 		cmd	<- paste(cmd,' --pairwise-align-to ',alignments.pairwise.to,sep='')
 	if(nchar(window.automatic))
@@ -450,12 +465,15 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
 	#	move Duplicate Read Counts
 	cmd		<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id,'_DuplicateReadCounts_}"\ndone',sep='')
 	#	run phyloscanner tools and compress output
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.bam, pty.args), sep='\n')
+	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), sep='\n')
 	#
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir,'"\n',sep='')	
 	#	zip up everything else
-	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir,'"\n',sep='')
+	if(is.null(mem.save) || is.na(mem.save) || mem.save==0)
+	{
+		cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
+		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir,'"\n',sep='')		
+	}
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
 	detach(pty.args)
@@ -464,7 +482,7 @@ phsc.cmd.phyloscanner.one<- function(file.bam, file.ref, pty.args)
 
 #' @export
 #' @title Generate bash commands for a multiple phyloscanner runs
-#' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id) and 'IND_ID' (ID of individuals that are assigned to that run).
+#' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
 #' @param pty.args List of phyloscanner input variables. See examples.
 #' @return Data.table with columns 'PTY_RUN' (run id) and 'CMD' (bash commands for that run). 
 #' @description This function generates bash commands for multiple phyloscanner runs, that can be called via 'system' in R, or written to file to run on a UNIX system.
@@ -480,10 +498,10 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')
 	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
 	ptyd		<- subset(ptyd, !is.na(TYPE))
-	ptyd[, IND_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
-	ptyd		<- dcast.data.table(ptyd, IND_ID~TYPE, value.var='FILE')
+	ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
+	ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
 	#	merge
-	ptyd	<- merge(pty.runs, ptyd, by='IND_ID', all.x=1)
+	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)
 	if(!any(is.na(pty.args[['select']])))
 		ptyd<- subset(ptyd, PTY_RUN%in%pty.args[['select']])		
 	if(ptyd[,any(is.na(BAM))])
@@ -495,12 +513,27 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	#	write pty.run files and get pty command lines
 	#
 	pty.c		<- ptyd[, {
-				#PTY_RUN<- z <- 5; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]									
-				file.bam	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
-				file.ref	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_ref.txt',sep=''))
-				cat( paste(BAM[!is.na(BAM)],collapse='\n'), file= file.bam	)
-				cat( paste(REF[!is.na(REF)],collapse='\n'), file= file.ref	)
-				cmd			<- phsc.cmd.phyloscanner.one(file.bam, file.ref, pty.args)
+				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]									
+				file.bam		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
+				file.ref		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_ref.txt',sep=''))				
+				cat( paste(BAM[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.bam	)
+				cat( paste(REF[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.ref	)				
+				file.rename		<- NA_character_
+				if(!is.null(RENAME_ID))
+				{
+					file.rename	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_rename.txt',sep=''))
+					cat( paste(RENAME_ID[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.rename	)					
+				}	
+				file.patient	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_patient.txt',sep=''))
+				tmp				<- SAMPLE_ID[!is.na(BAM)&!is.na(REF)]
+				if(!is.null(UNIT_ID))
+					tmp			<- unique(UNIT_ID[!is.na(BAM)&!is.na(REF)])
+				cat( paste(tmp,collapse='\n'), file= file.patient	)
+				cmd			<- phsc.cmd.phyloscanner.one(	pty.args, 
+															file.bam, 
+															file.ref,
+															file.patient,
+															file.rename)
 				#cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
@@ -512,10 +545,10 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 #' @title Generate bash commands to process phyloscanner output
 #' @description This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit   
 #' @param tmp.dir Directory with phyloscanner output.
-#' @param file.bam File name of the file that contains the list of bam files.
+#' @param file.patients File name of the file that contains the list of unique individuals/units that the bam files correspond to, possibly after re-naming.
 #' @param pty.args List of phyloscanner input variables. 
 #' @return character string of bash commands.
-phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, pty.args)
+phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patients, pty.args)
 {
 	#run.id		<- 'ptyr5'; tmp.dir		<- '$CWD/pty_16-09-08-07-32-26'; file.bam	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput/ptyr5_bam.txt'
 			
@@ -532,7 +565,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	rogue.prop.threshold			<- pty.args[['rogue.prop.threshold']]
 	rogue.longestBranchLength		<- pty.args[['rogue.longestBranchLength']]
 	rogue.probThreshold				<- pty.args[['rogue.probThreshold']]	
-	dwns.maxReadsPerPatient			<- pty.args[['dwns.maxReadsPerPatient']]	
+	dwns.maxReadsPerPatient			<- pty.args[['dwns.maxReadsPerPatient']]
+	tip.regex						<- pty.args[['tip.regex']]
+	mem.save						<- pty.args[['mem.save']]
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
 	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'ParsimonyBasedBlacklister.R'),sep='')
@@ -544,7 +579,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
 	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationshipsExperimental.R'),sep='')	
 	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummaryExperimental.R'),sep='')	
-	run.id							<- gsub('_bam.txt','',basename(file.bam))
+	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
 	#
@@ -570,6 +605,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 		stopifnot(!is.null(dual.prop.threshold) & !is.na(dual.prop.threshold))
 	if(any(grepl('DownsampleReads', use.blacklisters))) 
 		stopifnot(!is.null(dwns.maxReadsPerPatient) & !is.na(dwns.maxReadsPerPatient))
+	if(is.null(tip.regex))
+		tip.regex					<- NA_character_
 	use.sankhoff.blacklister		<- any(grepl('ParsimonyBasedBlacklister', use.blacklisters))
 	#
 	cmd					<- ''
@@ -584,7 +621,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
 	{
 		cmd				<- paste(cmd, '\nfor file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
-		tmp				<- phsc.cmd.blacklist.reads(prog.pty.readblacklist, '"$file"', paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), contaminant.read.threshold, contaminant.prop.threshold, tipRegex=NA)
+		tmp				<- phsc.cmd.blacklist.reads(	prog.pty.readblacklist, 
+														'"$file"', 
+														paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), 
+														contaminant.read.threshold, 
+														contaminant.prop.threshold, 
+														tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
@@ -605,7 +647,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 																	ratioThreshold=roguesubtree.prop.threshold, 
 																	sankhoffK=sankhoff.k,	
 																	outgroupName=root.name,
-																	tipRegex=NA)
+																	tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_',sep=''))
 	}		
@@ -625,7 +667,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															dropProportion=rogue.prop.threshold, 
 															blackListFileName=tmp, 
 															outgroupName=root.name, 
-															tipRegex=NA)				
+															tipRegex=tip.regex)				
 		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
@@ -646,7 +688,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															dropProportion=rogue.prop.threshold, 
 															blackListFileName=tmp, 
 															outgroupName=root.name, 
-															tipRegex=NA)				
+															tipRegex=tip.regex)				
 		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
@@ -679,7 +721,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 																maxReadsPerPatient=dwns.maxReadsPerPatient, 
 																blackListFileName=blacklistFiles, 
 																outgroupName=root.name, 
-																tipRegex=NA)
+																tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, sep='\n')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_',sep=''))
 		#cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
@@ -696,20 +738,21 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 															outgroupName=root.name,
 															splitsRule= ifelse(use.sankhoff.blacklister, 's', 'r'),
 															sankhoff.k=sankhoff.k,
-															pdfwidth=30, pdfrelheight=0.15)
+															tipRegex=tip.regex,
+															pdfwidth=30, 
+															pdfrelheight=0.15)
 	cmd				<- paste(cmd, tmp, sep='\n')
-	file.patients	<- paste(run.id_,'patients.txt',sep='')	
-	cmd				<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')	
 	#
 	#	bash command to calculate patient stats
 	#							
 	tmp				<- phsc.cmd.SummaryStatistics( 	prog.pty.smry, 
 													pty.tools.dir, 
 													root.name, 
-													file.path(tmp.dir, file.patients), 
+													file.path(tmp.dir, basename(file.patients)), 
 													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, paste('Subtrees_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
+													tipRegex=tip.regex,
 													blacklistFiles=blacklistFiles
 													)
 	cmd				<- paste(cmd, tmp, sep='\n')
@@ -727,7 +770,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 	#						
 	tmp				<- phsc.cmd.LikelyTransmissionsSummary(	prog.pty.lkl.smry, 
 															pty.tools.dir,
-															file.path(tmp.dir, file.patients),												
+															file.path(tmp.dir, basename(file.patients)),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
 															file.path(tmp.dir, paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
@@ -746,6 +789,15 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.bam, 
 																				resume=FALSE, 
 																				zip=TRUE)
 	cmd				<- paste(cmd, tmp, sep='\n')
+	#
+	#	if mem-save output delete: .*subtrees_[scr]_csv.zip  .*subtrees_[scr]_rda.zip .*DuplicateReadCounts.zip .*_blacklist.zip .*_duallist.zip .*_collapsed.zip .*_LikelyTransmissions.zip
+	#	
+	if(!is.null(mem.save) & mem.save==1)
+	{
+		tmp				<- c('*_subtrees_r.rda','*subtrees_[scr]_rda.zip','*DuplicateReadCounts.zip','*_blacklist.zip','*_duallist.zip','*_collapsed.zip','*_LikelyTransmissions.zip')
+		tmp				<- paste('rm ',tmp, sep='',collapse='\n')
+		cmd				<- paste(cmd, tmp, sep='\n')	
+	}	
 	cmd
 }
 
@@ -766,9 +818,8 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	#
 	if(read.likelytransmissions)
 	{
-		save.file		<- paste(save.file.base,'trmStats.rda',sep='')
-		plot.file		<- gsub('\\.rda','\\.pdf',save.file)
-		phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=save.file, plot.file=plot.file, resume=resume, zip=zip)				
+		save.file		<- paste(save.file.base,'trmStats.rda',sep='')		
+		phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', save.file=save.file, resume=resume, zip=zip)				
 	}
 	#
 	#	read trees
@@ -973,13 +1024,11 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 #' @description This function reads likely transmissions summary files from the phyloscanner toolkit. 
 #' @param prefix.infiles Full path name identifying likely transmissions summary files
 #' @param prefix.run Character string to identify separate phyloscanner runs. After the prefix, an integer number is expected. For example, if prefix.run='ptyr', then files are expected to start like 'ptyr123_'.
-#' @param regexpr.lklsu Regular expression that identifies likely transmissions summary files in the directory.  
-#' @param regexpr.patient Regular expression that identifies individuals of interest that are reported in the likely transmissions summary files.	
-#' @param save.file If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.   
-#' @param plot.file If not missing, types of evidence of transmission are plotted to this file	
+#' @param regexpr.lklsu Regular expression that identifies likely transmissions summary files in the directory.  	
+#' @param save.file If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.   	
 #' @param resume If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.
 #' @return Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL, SCORE 
-phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', regexpr.patient='^[0-9]+_[0-9]+_[0-9]+', save.file=NA, plot.file=NA, resume=FALSE, zip=FALSE)
+phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', save.file=NA, resume=FALSE, zip=FALSE)
 {
 	if(!is.na(save.file) & resume)
 	{
@@ -1012,27 +1061,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-	}	
-	#	could still do the plotting using the per window assignments
-	if(0 & !is.na(plot.file))
-	{		
-		cat('\nPlot to file', plot.file,'...\n')
-		setkey(df, ID1, ID2)
-		tmp	<- unique(df)
-		tmp	<- tmp[order(-PAIR_ID),]
-		tmp[, LABEL:= factor(PAIR_ID, levels=PAIR_ID, labels=paste('Pair',PAIR_ID, ' (', ID1,'<->', ID2,')',sep=''))]
-		tmp	<- merge(subset(tmp, select=c(PAIR_ID, LABEL)), df, by='PAIR_ID')
-		set(tmp, NULL, 'TYPE', tmp[, factor(TYPE, 	levels=c('anc_12','anc_21','sibling','int','unint','disconnected'), 
-													labels=c('from 1 to 2','from 2 to 1','1, 2 are siblings','1, 2 are intermingled','1, 2 are unint','1, 2 are disconnected'))])
-		ggplot(tmp, aes(x=LABEL, y=WIN_OF_TYPE, fill=TYPE)) +
-				geom_bar(stat='identity', position='stack') +
-				coord_flip() +
-				labs(x='', y='number of read windows', fill='topology of clades from reads\nbetween patient pairs') +
-				scale_fill_manual(values=c('from 1 to 2'="#9E0142",'from 2 to 1'="#F46D43",'1, 2 are siblings'="#ABDDA4",'1, 2 are intermingled'="#3288BD", '1, 2 are unint'='grey70', '1, 2 are disconnected'='grey50')) +
-				theme_bw() + theme(legend.position='bottom') +
-				guides(fill=guide_legend(ncol=2))
-		ggsave(plot.file, w=10, h=0.15*nrow(unique(df)), limitsize = FALSE)
-	}	
+	}
 }
 
 #' @import data.table ape
