@@ -10,7 +10,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.resume()
-	pty.pipeline.phyloscanner.170301.all()
+	#pty.pipeline.phyloscanner.170301.all()
+	project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
@@ -826,7 +827,9 @@ project.RakaiAll.setup.RAxMLmodel.170301<- function()
 	hpc.mem		<- "5900mb"	
 	hpc.walltime<- 300 
 	
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/RAxML_model_test'
+	#indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/RAxML_model_test'
+	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RAxML_model_test'
+	
 	infiles	<- data.table(F=list.files(indir, pattern='fasta$', full.names=TRUE))
 	infiles[, {				
 				cmd			<- cmd.jmodeltest(F, pr.args='-f -i -g 4 -s 3 -DT -S NNI -t ML', nproc=hpc.nproc)
