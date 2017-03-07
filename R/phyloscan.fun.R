@@ -35,13 +35,15 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, outgroupName=NA, tipRegex=NA)
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, rawThreshold, ratioThreshold, sankhoffK, inputFileName, outputFileName)
 	if(!is.na(dualCandidatesOutputFileName))
 		cmd	<- paste(cmd, '--dualsOutputFile', dualCandidatesOutputFileName)			
 	if(!is.na(outgroupName))
-		cmd	<- paste(cmd, '--outgroupName', outgroupName)		
+		cmd	<- paste(cmd, '--outgroupName', outgroupName)
+	if(!is.na(blackListFileName))
+		cmd	<- paste(cmd, '--blacklist', blackListFileName)	
 	if(!is.na(tipRegex))
 		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex, '"')
 	cmd
@@ -638,11 +640,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	{
 		cmd				<- paste(cmd, '\nfor file in ', run.id_,'InWindow_*.tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
+		tmp				<- ifelse(any(is.na(blacklistFiles)), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
 		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff, 
 																	pty.tools.dir,
 																	'"$file"', 
 																	paste('"${TMP//InWindow/blacklistsank_InWindow}"',sep=''), 
 																	dualCandidatesOutputFileName=paste('"${TMP//InWindow/duallistsank_InWindow}"',sep=''),
+																	blackListFileName=tmp,
 																	rawThreshold=roguesubtree.read.threshold, 
 																	ratioThreshold=roguesubtree.prop.threshold, 
 																	sankhoffK=sankhoff.k,	
@@ -658,7 +662,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	{
 		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
-		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+		tmp				<- ifelse(any(is.na(blacklistFiles)), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
 		tmp				<- phsc.cmd.blacklist.rogue.geneticdistance(	prog.pty.rogueblacklist, 
 															pty.tools.dir, 
 															'"$file"', 

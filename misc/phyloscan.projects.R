@@ -816,6 +816,30 @@ project.dualinfecions.UG.setup.windowlength<- function()
 	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=12, limitsize = FALSE)
 }
 
+
+project.RakaiAll.setup.RAxMLmodel.170301<- function()
+{
+	require(big.phylo)
+	require(data.table)
+	hpc.load	<- "module load intel-suite/2015.1 mpi R/3.2.0"
+	hpc.nproc	<- 8
+	hpc.mem		<- "5900mb"	
+	hpc.walltime<- 300 
+	
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/RAxML_model_test'
+	infiles	<- data.table(F=list.files(indir, pattern='fasta$', full.names=TRUE))
+	infiles[, {				
+				cmd			<- cmd.jmodeltest(F, pr.args='-f -i -g 4 -s 3 -DT -S NNI -t ML', nproc=hpc.nproc)
+				tmp			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=hpc.walltime, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+				cmd			<- paste(tmp,cmd,sep='\n')
+				cat(cmd)
+				stop()
+				outfile		<- paste("jm",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+				cmd.hpccaller(indir, outfile, cmd)				
+			}, by='F']
+		
+}
+
 project.RakaiAll.setup.phyloscanner.170301<- function()
 {
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
