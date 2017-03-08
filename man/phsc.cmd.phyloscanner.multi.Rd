@@ -7,7 +7,7 @@
 phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 }
 \arguments{
-\item{pty.runs}{Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id) and 'IND_ID' (ID of individuals that are assigned to that run).}
+\item{pty.runs}{Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).}
 
 \item{pty.args}{List of phyloscanner input variables. See examples.}
 }

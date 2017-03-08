@@ -4,14 +4,19 @@
 \alias{phsc.cmd.phyloscanner.one}
 \title{Generate bash command for a single phyloscanner run}
 \usage{
-phsc.cmd.phyloscanner.one(file.bam, file.ref, pty.args)
+phsc.cmd.phyloscanner.one(pty.args, file.bam, file.ref, file.patient,
+  file.rename = NA)
 }
 \arguments{
+\item{pty.args}{List of phyloscanner input variables. See examples.}
+
 \item{file.bam}{File name of the file that contains the list of bam files.}
 
 \item{file.ref}{File name of the file that contains the list of reference files.}
 
-\item{pty.args}{List of phyloscanner input variables. See examples.}
+\item{file.patient}{File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit.}
+
+\item{file.rename}{File name of the file that contains new ID names for each bam/ref file. Can be set to NA.}
 }
 \value{
 Character string of phyloscanner commands.

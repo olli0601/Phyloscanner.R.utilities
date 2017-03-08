@@ -4,12 +4,13 @@
 \alias{phsc.cmd.process.phyloscanner.output.in.directory}
 \title{Generate bash commands to process phyloscanner output}
 \usage{
-phsc.cmd.process.phyloscanner.output.in.directory(tmp.dir, file.bam, pty.args)
+phsc.cmd.process.phyloscanner.output.in.directory(tmp.dir, file.patients,
+  pty.args)
 }
 \arguments{
 \item{tmp.dir}{Directory with phyloscanner output.}
 
-\item{file.bam}{File name of the file that contains the list of bam files.}
+\item{file.patients}{File name of the file that contains the list of unique individuals/units that the bam files correspond to, possibly after re-naming.}
 
 \item{pty.args}{List of phyloscanner input variables.}
 }

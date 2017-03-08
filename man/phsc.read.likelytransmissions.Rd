@@ -5,9 +5,8 @@
 \title{Read likely transmissions summary files into a data.table}
 \usage{
 phsc.read.likelytransmissions(prefix.infiles, prefix.run = "ptyr",
-  regexpr.lklsu = "trmStats.csv$",
-  regexpr.patient = "^[0-9]+_[0-9]+_[0-9]+", save.file = NA,
-  plot.file = NA, resume = FALSE, zip = FALSE)
+  regexpr.lklsu = "trmStats.csv$", save.file = NA, resume = FALSE,
+  zip = FALSE)
 }
 \arguments{
 \item{prefix.infiles}{Full path name identifying likely transmissions summary files}
@@ -16,11 +15,7 @@ phsc.read.likelytransmissions(prefix.infiles, prefix.run = "ptyr",
 
 \item{regexpr.lklsu}{Regular expression that identifies likely transmissions summary files in the directory.}
 
-\item{regexpr.patient}{Regular expression that identifies individuals of interest that are reported in the likely transmissions summary files.}
-
 \item{save.file}{If not missing, function output (a data.table) will be stored to 'save.file', input files will be zipped, and input files will be deleted.}
-
-\item{plot.file}{If not missing, types of evidence of transmission are plotted to this file}
 
 \item{resume}{If TRUE and save.file is not missing, the function loads and returns trees stored in save.file.}
 }
