@@ -10,8 +10,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.resume()
-	#pty.pipeline.phyloscanner.170301.all()
-	project.RakaiAll.setup.RAxMLmodel.170301()
+	pty.pipeline.phyloscanner.170301.all()
+	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
@@ -817,8 +817,17 @@ project.dualinfecions.UG.setup.windowlength<- function()
 	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=12, limitsize = FALSE)
 }
 
+project.RakaiAll.setup.batchno.170301<- function()
+{
+	require(big.phylo)
+	require(data.table)
+	indir	<- '/Users/Oliver/duke/tmp/pty_17-03-08-11-12-50'
+	infiles	<- list.files(indir, pattern='^ptyr1_.*tree', full.names=TRUE)	
+	ntips	<- sapply(infiles, function(x) Ntip(read.tree(x)))
+	
+}
 
-project.RakaiAll.setup.RAxMLmodel.170301<- function()
+project.RakaiAll.setup.RAxMLmodel.submit.170301<- function()
 {
 	require(big.phylo)
 	require(data.table)
@@ -842,6 +851,75 @@ project.RakaiAll.setup.RAxMLmodel.170301<- function()
 				cmd.hpccaller(indir, outfile, cmd)				
 			}, by='F']
 		
+}
+
+project.RakaiAll.setup.RAxMLmodel.evaluate.170301<- function()
+{
+	require(big.phylo)
+	require(data.table)
+	require(ggplot2)
+	require(scales)
+	require(gamlss)
+	
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/RAxML_model_test'
+	infiles	<- data.table(F=list.files(indir, pattern='jmodeltest$', full.names=TRUE))
+	infiles[, PTY_RUN:= gsub('.*ptyr([0-9]+)_InWindow_([0-9]+)_to_([0-9]+).*','\\1',F)]
+	infiles[, W_FROM:= gsub('.*ptyr([0-9]+)_InWindow_([0-9]+)_to_([0-9]+).*','\\2',F)]
+	infiles[, W_TO:= gsub('.*ptyr([0-9]+)_InWindow_([0-9]+)_to_([0-9]+).*','\\3',F)]
+	
+	dt	<- infiles[, {
+				#F	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/RAxML_model_test/ptyr1_InWindow_2250_to_2499.fasta.jmodeltest'
+				cat('process',basename(F),'\n')
+				dt	<- readLines(F)
+				taxa<- as.numeric(gsub('.*number of sequences: ([0-9]+).*','\\1',dt[which(grepl('number of sequences',dt))]))
+				
+				
+				dt	<- dt[which(grepl('* DT MODEL SELECTION : Selection uncertainty',dt)):which(grepl('* DT MODEL SELECTION : Confidence interval',dt))]
+				dt	<- dt[(which(grepl('------------------------------------',dt))[1]+1): (which(grepl('------------------------------------',dt))[2]-1)]
+				dt	<- as.data.table(t(sapply(strsplit(dt,' +'), function(x) x)))
+				setnames(dt, paste0('V',1:7), toupper(c('Model','lnL','K','DT','delta','weight','cumWeight')))
+				for(x in setdiff(colnames(dt),'MODEL'))
+					set(dt, NULL, x, as.numeric(dt[[x]]))
+				dt[, N_TAXA:=taxa]
+				dt[, BEST_MODEL:= MODEL[which.max(WEIGHT)]]
+				dt
+			}, by=c('PTY_RUN','W_FROM','W_TO')]
+		
+	ggplot(dt, aes(x=W_FROM, y=N_TAXA, colour=BEST_MODEL)) + 
+			geom_point() + 			
+			theme_bw() 
+	ggsave(file=file.path(indir,'Best_Subst_Model_acrossgenome_by_ntaxa.pdf'), w=5, h=4)
+	tmp	<- unique(dt,by=c('PTY_RUN','W_FROM','W_TO'))
+	ggplot(tmp, aes(x=BEST_MODEL)) +
+			geom_bar() + 			
+			theme_bw() 
+	ggsave(file=file.path(indir,'Best_Subst_Model_number.pdf'), w=5, h=4)
+	ggplot(tmp, aes(x=W_FROM, y=WEIGHT, colour=BEST_MODEL)) + 
+			geom_point() + 	
+			scale_y_continuous(labels=percent) +
+			labs(y='model prob in model averaging') +
+			theme_bw() 
+	ggsave(file=file.path(indir,'Best_Subst_Model_acrossgenome_by_modelprob.pdf'), w=5, h=4)
+	ggplot(tmp, aes(x=W_FROM, y=PTY_RUN, colour=BEST_MODEL)) + 
+			geom_point() + 				
+			labs(y='phyloscanner run (different patients)') +
+			theme_bw() 
+	ggsave(file=file.path(indir,'Best_Subst_Model_acrossgenome_by_selectedpatients.pdf'), w=5, h=4)	
+	tmp	<- dt[, list(SW=sum(WEIGHT)), by='MODEL']
+	ggplot(tmp, aes(x=MODEL, y=SW)) +
+			geom_bar(stat='identity') + 			
+			theme_bw() +
+			coord_flip() +
+			labs(y='sum of model probabilities in model averaging over all runs')
+	ggsave(file=file.path(indir,'Best_Subst_Model_summodelprob.pdf'), w=5, h=4)	
+	tmp	<- subset(dt, MODEL%in%c('HKY+G','GTR+G'))
+	ggplot(tmp, aes(x=N_TAXA, y=WEIGHT, colour=MODEL)) + 
+			geom_point() +
+			theme_bw() +
+			scale_y_continuous(labels=percent) +
+			labs(y='model prob in model averaging') +
+			geom_smooth(se=TRUE, fill='grey80', span=2)
+	ggsave(file=file.path(indir,'Best_Subst_Model_trends_by_ntaxa.pdf'), w=5, h=4)	 
 }
 
 project.RakaiAll.setup.phyloscanner.170301<- function()
@@ -997,7 +1075,37 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
 
 	#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
-	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301.rda'))	
+	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301.rda'))
+	
+	#
+	#	set up first batches
+	#
+	batch.n	<- 75
+	dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
+	tmp		<- unique(subset(dc.it1, select=RID))	
+	set.seed(42)
+	tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
+	dc.it1	<- merge(dc.it1, tmp, by='RID')
+	setkey(dc.it1, RID_B)
+	dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+	#
+	#	set up first pty.runs
+	#		
+	pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
+	setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
+	pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
+	pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+	set(pty.runs, NULL, 'DUMMY', NULL)
+	setkey(pty.runs, PTY_RUN)
+	tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
+	tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+	pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
+	
+	#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
+	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301_b75.rda'))
+	
+	subset(pty.runs, PTY_RUN==1)[, paste0(SID,'.bam', collapse=' ')]
+	subset(pty.runs, PTY_RUN==1)[, paste0(SID,'_ref.fasta', collapse=' ')]
 }
 
 project.dualinfecions.UG.setup.coinfections.160219<- function()
@@ -2514,15 +2622,16 @@ pty.pipeline.phyloscanner.170301.all<- function()
 		in.dir				<- file.path(HOME,"RakaiAll_input_170301")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25")
-		load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )		
+		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 4
+		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"						
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
-		pty.select			<- 1
-		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT -T ',hpc.nproc,' -p 42"',sep=''))
+		pty.select			<- 1:2
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 	}	
 	if(0)
 	{
@@ -2557,7 +2666,7 @@ pty.pipeline.phyloscanner.170301.all<- function()
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
 				#win=c(800,9400,125,250), 
-				win=c(2500,3000,250,250), #TEST RUN
+				win=c(1000,2000,250,250), #TEST RUN
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 				sankhoff.k=20,
