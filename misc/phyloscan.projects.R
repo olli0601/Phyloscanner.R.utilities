@@ -9,8 +9,8 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	#pty.pipeline.phyloscanner.160915.couples.resume()
-	pty.pipeline.phyloscanner.170301.all()
+	pty.pipeline.phyloscanner.160915.couples.resume()
+	#pty.pipeline.phyloscanner.170301.all()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -821,7 +821,17 @@ project.RakaiAll.setup.batchno.170301<- function()
 {
 	require(big.phylo)
 	require(data.table)
+	
+	#	batch=15 merge=2
 	indir	<- '/Users/Oliver/duke/tmp/pty_17-03-08-11-12-50'
+	infiles	<- list.files(indir, pattern='^ptyr1_.*tree', full.names=TRUE)	
+	ntips	<- sapply(infiles, function(x) Ntip(read.tree(x)))
+	#	batch=15 merge=0
+	indir	<- '/Users/Oliver/duke/tmp/pty_17-03-08-11-30-25'
+	infiles	<- list.files(indir, pattern='^ptyr1_.*tree', full.names=TRUE)	
+	ntips	<- sapply(infiles, function(x) Ntip(read.tree(x)))
+	#	batch=75 merge=2
+	indir	<- '/Users/Oliver/duke/tmp/pty_17-03-08-11-52-06'
 	infiles	<- list.files(indir, pattern='^ptyr1_.*tree', full.names=TRUE)	
 	ntips	<- sapply(infiles, function(x) Ntip(read.tree(x)))
 	
@@ -2710,9 +2720,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
-		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")		
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_161213_couples_w270_d50_p001_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170227_couples_w270_d50_st20_rerun")
+		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")				
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170309_couples_w270_d50_st20_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
@@ -2745,17 +2754,11 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										min.ureads.individual=NA, 
 										win=c(800,9400,25,250), 
 										keep.overhangs=FALSE,	
-										use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
+										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
-										contaminant.read.threshold=3,
-										contaminant.prop.threshold=1/200,
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
-										dual.minProportion=NA,
-										rogue.dropProportion=NA,#0.01
-										rogue.longestBranchLength=NA, #0.04
-										rogue.probThreshold=NA, #0.001,										
-										dwns.maxReadsPerPatient=50,				
+										dwns.maxReadsPerPatient=50,		
 										select=NA)
 	}	
 	#
@@ -2781,9 +2784,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(CMD, hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(CMD, hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

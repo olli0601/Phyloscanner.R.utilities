@@ -3839,6 +3839,12 @@ RakaiAll.analyze.pairs.170227.comparetoprevious<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	require(Hmisc)
+	#	get epi info
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
+	rs		<- subset(rs, !is.na(VISIT))	
 	
 	# load pty.run
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
@@ -3855,6 +3861,8 @@ RakaiAll.analyze.pairs.170227.comparetoprevious<- function()
 	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227'		
 	# load pairwise probabilities
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmp_allpairs_posteriors.rda')
+	set(rplkl, NULL, 'MALE_SANGER_ID', rplkl[, as.character(MALE_SANGER_ID)])
+	set(rplkl, NULL, 'FEMALE_SANGER_ID', rplkl[, as.character(FEMALE_SANGER_ID)])
 	
 	#	make pair data table
 	rp		<- copy(rpw)
@@ -3891,29 +3899,20 @@ RakaiAll.analyze.pairs.170227.comparetoprevious<- function()
 					ids			<- c(tmp[ii, MALE_SANGER_ID],tmp[ii, FEMALE_SANGER_ID])
 					pty.run		<- tmp[ii, PTY_RUN]
 					dfs			<- subset(dtrees, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
-					dfs[, TITLE:= dfs[, paste('couple', tmp[ii,COUPID], 'male ', ids[1],' female ',ids[2],'\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
+					dfs[, TITLE:= dfs[, paste('couple', tmp[ii,COUPID], '\nmale ', ids[1],'\nfemale ',ids[2],'\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
 					plot.file	<- paste0(outfile, pty.run,'_',ids[1],'_', ids[2],'.pdf')
-					invisible(phsc.plot.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), group.redo=TRUE, plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))
-					stop()
+					invisible(phsc.plot.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), group.redo=TRUE, plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))					
 				}))	
+	#	are the missing couples in our dataset before subset confidence.cut is taken?
+	#	yes, none of them removed with new blacklister
+	subset(merge(subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID)), rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & RUN=='RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5')
 
-
+	tmp		<- subset(dch, is.na(RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5))
+	subset(merge(subset(tmp, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID)), rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='no intermediate\n and close' & RUN=='RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5')
+	
 	tmp		<- dcast.data.table(rpd, LABEL_SH~RUN, value.var='KEFF')
 	tmp[, table(is.na(RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5), is.na(RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5))]
-	subset(tmp, is.na(RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5))
-	
-	
-	tmp		<- subset(rpd, select=c(PTY_RUN, FEMALE_SANGER_ID, MALE_SANGER_ID))
-	tmp		<- merge(tmp, rplkl, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))	
-	rmf		<- subset(tmp, GROUP%in%c('TYPE_DIR_TODI3') & TYPE=='mf' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
-	rfm		<- subset(tmp, GROUP%in%c('TYPE_DIR_TODI3') & TYPE=='fm' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
-	rex		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE=='with intermediate\nor distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>confidence.cut)
-	
-	cat('\ncouples with phyloscanner assessment, n=',nrow(unique(rplkl, by='COUPID')))
-	cat('\ncouples for whom transmission cannot be excluded, n=',nrow(unique(rpd, by='COUPID')))
-	cat('\ncouples with evidence M->F, n=',nrow(unique(rmf, by='COUPID')))
-	cat('\ncouples with evidence F->M, n=',nrow(unique(rfm, by='COUPID')))
-	cat('\ncouples for whom transmission can be excluded, n=',nrow(unique(rex, by='COUPID')))
+	subset(tmp, is.na(RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5))	
 }
 
 	
