@@ -337,9 +337,7 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	tmpdir		<- paste("$CWD/",tmpdir,sep='')
 	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
 	#	copy required files to local tmp dir	
-	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*rename.txt',sep=''), full.names=TRUE)
-	if(length(file.patient)==1)
-		file.patient	<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*bam.txt',sep=''), full.names=TRUE)
+	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patient.txt',sep=''), full.names=TRUE)
 	stopifnot(length(file.patient)==1)	
 	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
 	if(1)	#OLD CODE (as long as we work with prev generated zip files)
@@ -363,7 +361,7 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	#	add all toolkit commands according to pty.args
 	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
 	#	move all files starting with current run ID
-	run.id	<- gsub('_bam.txt','',basename(file.patient))
+	run.id	<- gsub('_patient.txt','',basename(file.patient))
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
 	#	zip up everything else
 	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
