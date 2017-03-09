@@ -337,7 +337,7 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	tmpdir		<- paste("$CWD/",tmpdir,sep='')
 	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
 	#	copy required files to local tmp dir	
-	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patient.txt',sep=''), full.names=TRUE)
+	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patients.txt',sep=''), full.names=TRUE)
 	stopifnot(length(file.patient)==1)	
 	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
 	if(1)	#OLD CODE (as long as we work with prev generated zip files)
@@ -361,7 +361,7 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	#	add all toolkit commands according to pty.args
 	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
 	#	move all files starting with current run ID
-	run.id	<- gsub('_patient.txt','',basename(file.patient))
+	run.id	<- gsub('_patients.txt','',basename(file.patient))
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
 	#	zip up everything else
 	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
@@ -579,7 +579,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
 	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationshipsExperimental.R'),sep='')	
 	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummaryExperimental.R'),sep='')	
-	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt','',basename(file.patients))
+	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
 	#

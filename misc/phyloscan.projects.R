@@ -2758,7 +2758,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										sankhoff.k=20,
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
-										dwns.maxReadsPerPatient=50,		
+										dwns.maxReadsPerPatient=50,	
+										mem.save=0,
 										select=NA)
 	}	
 	#
@@ -2777,6 +2778,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		setkey(pty.c, PTY_RUN)		
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
 					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
