@@ -202,7 +202,9 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
-	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])	
+	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
+	if(!any(colnames(dwin)=='UNINTERRUPTED'))	#for backward compatibility
+		dwin[, UNINTERRUPTED:=FALSE]
 	#
 	#	build transmission summary stats based on selection criteria
 	#	
@@ -214,32 +216,32 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	#
 	dwin[, TYPE_RAW:= TYPE]
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE=="anc_12" & CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="anc_12" & (CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound contiguous anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_12" & CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & (CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound contiguous multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE=="anc_21" & CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="anc_21" & (CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound contiguous anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_21" & CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & (CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound contiguous multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')	
 	#
 	#	chains with intermediate
-	tmp		<- dwin[, which(TYPE=="anc_12" & !CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="anc_12" & !(CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound discontiguous anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !(CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound discontiguous multi_anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
 	#	chains with intermediate
-	tmp		<- dwin[, which(TYPE=="anc_21" & !CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="anc_21" & !(CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound discontiguous anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !(CONTIGUOUS|UNINTERRUPTED))]
 	cat('\nFound discontiguous multi_anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
 	#
@@ -253,10 +255,10 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	set(dwin, tmp, 'TYPE', 'intermingled_withintermediate')
 	#
 	#	other	
-	tmp		<- dwin[, which(CONTIGUOUS & PATHS_12==0 & PATHS_21==0)]
+	tmp		<- dwin[, which((CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound contiguous with no paths, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other')
-	tmp		<- dwin[, which(!CONTIGUOUS & PATHS_12==0 & PATHS_21==0)]
+	tmp		<- dwin[, which(!(CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound discontiguous with no assignment, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other')
 	#	check
@@ -858,7 +860,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 #' @param pdf.title.size Size of pdf title in inches.
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
-phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+phsc.plot.phy.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
 	suppressMessages(require(grid))
 	#	determine which phylogenies contain both individuals
@@ -924,29 +926,942 @@ phsc.plot.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, 
 }
 
 #' @export
+#' @import data.table
+#' @title Default colours for relationship types
+#' @description This function returns default colours for each relationship type in one of the defined relationship groups.  
+#' @return Named list with names corresponding to RELATIONSHIP GROUPS. For each relationship group, the list contains a named vector. Entries in this vector are colours, and names are relationship types.
+phsc.plot.default.colours.for.relationtypes<- function()
+{
+	cols.type	<- list()
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("chain fm\nno intermediate\nclose","chain fm\nno intermediate","chain fm\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PiYG')[c(1,2,4)]),
+					data.table(	TYPE= c("chain mf\nno intermediate\nclose","chain mf\nno intermediate","chain mf\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("intermingled\nno intermediate\nclose","intermingled\nno intermediate","intermingled\nno intermediate\ndistant"),
+							COLS= brewer.pal(11, 'PRGn')[c(1,2,4)]),
+					data.table(	TYPE= c("chain fm\nwith intermediate\nclose","chain fm\nwith intermediate","chain fm\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'BrBG'))[c(3,4,5)]),
+					data.table(	TYPE= c("chain mf\nwith intermediate\nclose","chain mf\nwith intermediate","chain mf\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
+					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c("pair close","pair","pair distant"),
+							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
+					data.table(	TYPE= c("withintermediate close","withintermediate","withintermediate distant"),
+							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3x3']]	<- tmp2	
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c('close ancestral/\nintermingled', 'not close ancestral/\nintermingled'),
+							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
+					data.table(	TYPE= c('close other','not close other'),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI2x2']]	<- tmp2	
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c('likely pair', 'chain'),
+							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
+					data.table(	TYPE= c('intermdiate distance','distant'),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIRCHAIN_TODI']]	<- tmp2	
+	tmp2		<- data.table(	TYPE= c("no intermediate\n and close", "no intermediate\n but not close", "with intermediate\nor distant"),
+			COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI3']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("close", "intermediate\ndistance", "distant"),
+			COLS= c(rev(brewer.pal(11, 'RdBu'))[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_DI']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("ancestral/\nintermingled", "other"),
+			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TO']]	<- tmp2
+	
+	cols.type
+}
+
+#' @export
+#' @import data.table ggplot2 scales
+#' @title Compare window assignments by different phyloscanner runs
+#' @description This function plots the window assignments for each pair of individuals and for several phyloscanner runs.  
+#' @param rplkl2 Posterior probability assignments for pairs of individuals. This is specified as a data.table with columns RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, TYPE, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA 
+#' @param plot.file Name of output file
+#' @param cols Colours for phyloscanner runs. This is specified as a named vector which must not be missing.
+#' @param cols Colours for relationship types. This is specified as a named vector, which can be null. 
+#' @param group Relationship group name. This is used to define default colours if cols==NULL.   
+#' @param height Total height of pdf in inches. This is overwritten if group is specified.
+#' @return Plots to file.
+phsc.plot.windowassignments.by.runs <- function(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=NA, height=40)
+{
+	#	height<- 40
+	g_legend<-function(a.gplot)
+	{
+		tmp <- ggplot_gtable(ggplot_build(a.gplot))
+		leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+		legend <- tmp$grobs[[leg]]
+		legend
+	}
+	#	define colours to be used
+	if(is.null(cols))
+	{
+		stopifnot(!is.na(group))		
+		cols.type	<- phsc.plot.default.colours.for.relationtypes()
+		stopifnot(group%in%names(cols.type))
+		cols		<- cols.type[[group]]
+	}
+	#	re-order pairs
+	setkey(rplkl2, LABEL_SH)	
+	tmp		<- subset(rplkl2, TYPE%in%plot.prob.select)
+	tmp2	<- tmp[, list(D=mean(POSTERIOR_ALPHA/(POSTERIOR_ALPHA+POSTERIOR_BETA))), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','LABEL_SH')]
+	tmp2	<- tmp2[order(-D),]
+	tmp2[, PLOT_ID:= 1:nrow(tmp2)]
+	set(tmp2, NULL, 'PLOT_ID', tmp2[, factor(PLOT_ID, levels=PLOT_ID, labels=LABEL_SH)])
+	setnames(tmp2, c('PLOT_ID','LABEL_SH'),c('LABEL_SH','OLD_LABEL_SH'))
+	set(tmp2, NULL, c('OLD_LABEL_SH','D'), NULL)
+	set(rplkl2, NULL, c('LABEL_SH'), NULL)
+	rplkl2	<- merge(rplkl2, tmp2, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
+	setkey(rplkl2, LABEL)
+	p1		<- ggplot(rplkl2, aes(x=RUN, y=KEFF, fill=TYPE, colour=RUN)) + 
+			geom_bar(stat='identity',position='stack') +
+			scale_y_continuous(expand=c(0,0)) +
+			scale_fill_manual(values=cols) +
+			scale_colour_manual(values=cols.run) +
+			theme_bw() + 
+			theme(	legend.position='bottom', axis.text.y=element_blank(),
+					axis.ticks.y=element_blank(),
+					panel.spacing=unit(0.4, "lines"), strip.text.y = element_text(angle=180),
+					strip.background=element_rect(fill="transparent", colour="transparent"),
+					panel.border=element_rect(color="transparent")) +
+			facet_grid(LABEL_SH~., switch='y') +
+			coord_flip() +
+			guides(fill=guide_legend(ncol=3, byrow = TRUE), colour=guide_legend(ncol=1, byrow = TRUE)) +
+			labs(	x='', 
+					y='non-overlapping windows\n(number)\n',
+					fill='phylogenetic\nrelationship')
+	tmp		<- subset(rplkl2, TYPE%in%plot.prob.select)
+	p2		<- ggplot(tmp, aes(x=RUN, fill=TYPE, colour=RUN, 
+							middle= qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							lower=qbeta(0.25, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							upper=qbeta(0.75, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							ymin=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+							ymax=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA))) + 
+			geom_boxplot(stat='identity') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.2), labels=percent) +
+			scale_fill_manual(values=cols) +
+			scale_colour_manual(values=cols.run) +
+			theme_bw() + 
+			theme(	legend.position='bottom', axis.text.y=element_blank(),
+					axis.ticks.y=element_blank(),
+					panel.spacing=unit(0.4, "lines"), strip.text.y=element_blank(),
+					strip.background=element_blank(),
+					panel.border=element_rect(color="transparent")) +
+			facet_grid(LABEL_SH~., switch='y') +
+			coord_flip() +
+			guides(fill=guide_legend(ncol=3, byrow = TRUE), colour=guide_legend(ncol=1, byrow = TRUE)) +
+			labs(	x='', 
+					y='posterior probability\n\n',
+					fill='phylogenetic\nrelationship')
+	p3		<- g_legend(p1)	
+	p3$vp	<- viewport(layout.pos.row=2, layout.pos.col=1:2)	
+	pdf(file=plot.file, w=12, h=height)
+	grid.newpage()	
+	pushViewport(viewport(layout = grid.layout(2, 2, heights=unit(c(40,1), "null"), widths=unit(c(7, 3), "null"))))   	
+	print(p1+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+	print(p2+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+	grid.draw(p3)
+	#pushViewport(viewport(layout = grid.layout(1, 2, heights=unit(c(10,1), "null"), widths=unit(c(7, 3), "null"))))   	
+	#print(p1+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+	#print(p2+theme(legend.position = 'none'), vp = viewport(layout.pos.row = 1, layout.pos.col = 2))	
+	dev.off()	
+}
+
+#' @export
+#' @import data.table ggplot2 scales
+#' @title Plot window summaries for pairs of individuals
+#' @description This function plots the window summaries for each pair of individuals.  
+#' @param plot.select Select pairs for plotting. This is specified as a data.table with columns PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL. Each pair has assigned a label that is used as title.
+#' @param rpw2 Window assignments for pairs of individuals. This is specified as a data.table with columns PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, ID_R_MAX, ID_R_MIN, TYPE.  
+#' @param rplkl2 Posterior probability assignments for pairs of individuals. This is specified as a data.table with columns PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, TYPE, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA 
+#' @param plot.file Name of output file
+#' @param cols Colours for relationship types. This is specified as a named vector, which can be null. 
+#' @param group Relationship group name. This is used to define default colours if cols==NULL.   
+#' @param widhts Widths of subfigures in grid.layout. This is overwritten if group is specified. 
+#' @param heights Heights of subfigures in grid.layout. This is overwritten if group is specified. 
+#' @param height Total height of pdf in inches. This is overwritten if group is specified.
+#' @return Plots to file.
+phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=NA, widths=unit(c(4, 6), "null"), heights=unit(c(2, 3.5, 4, 5), "null"), height=9)
+{
+	#	widths	<- unit(c(4, 6), "null"); heights	<- unit(c(2, 3.5, 4, 5), "null"); height	<- 9
+	
+	#	define colours to be used
+	if(is.null(cols))
+	{
+		stopifnot(!is.na(group))		
+		cols.type	<- phsc.plot.default.colours.for.relationtypes()
+		stopifnot(group%in%names(cols.type))
+		cols		<- cols.type[[group]]
+	}
+	#	re-define dimensions if group specified
+	if(!is.na(group))
+	{
+		if(group%in%c('TYPE_DIR_TODI7x3'))
+		{
+			widths	<- unit(c(4, 6), "null")
+			heights	<- unit(c(2, 3.5, 4, 15), "null")
+			height	<- 17
+		}		
+		if(group%in%c('TYPE_PAIR_TODI2x2','TYPE_PAIRCHAIN_TODI'))
+		{
+			heights	<- unit(c(2, 3.5, 4, 3.75), "null")
+			height	<- 8
+		}
+		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI'))
+		{
+			heights	<- unit(c(2, 3.5, 4, 3.5), "null")
+			height	<- 7
+		}	
+	}
+	pdf(file=plot.file, w=10, h=height)		
+	setkey(plot.select, LABEL)		
+	for(i in seq_len(nrow(plot.select)))
+	{
+		#i<- 85
+		#pty_run	<- 38; id1		<- '16016_1_4'; id2		<- '15105_1_35'
+		pty_run	<- plot.select[i, PTY_RUN]; id1		<- plot.select[i, FEMALE_SANGER_ID]; id2		<- plot.select[i, MALE_SANGER_ID]		
+		tmp		<- subset(rpw2, PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p1		<- ggplot(tmp, aes(x=W_FROM)) +			
+				geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
+				geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
+				labs(x='', y='number of reads', fill='phylogenetic\nrelationship\n', colour='phylogenetic\nrelationship\n') +
+				scale_fill_manual(values=cols) +
+				scale_colour_manual(values=cols) +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)-100], rpw2[, max(W_FROM)+100])) +
+				scale_y_log10(breaks=c(10,100,1000,1e4,1e5)) +
+				theme_bw() + theme(legend.position='left') +			
+				guides(fill=FALSE, colour=FALSE)
+		p2		<- ggplot(tmp, aes(x=W_FROM, y=PATRISTIC_DISTANCE)) +
+				geom_point(size=1) +					
+				labs(x='window start\n\n', y='patristic distance') +
+				scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)], rpw2[, max(W_FROM)])) +
+				scale_y_log10(labels=percent, limits=c(0.001, 0.7), expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+				theme_bw() + theme(legend.position='left')
+		tmp		<- subset(rplkl2, PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		p3		<- ggplot(tmp, aes(x=TYPE, y=KEFF, fill=TYPE)) + geom_bar(stat='identity') +
+				scale_fill_manual(values=cols) +
+				theme_bw() + theme(legend.position='bottom') +
+				coord_flip() + guides(fill=FALSE) +			
+				labs(x='', y='\nnon-overlapping windows\n(number)', fill='phylogenetic\nrelationship\n')
+		p4		<- ggplot(tmp, aes(x=TYPE, 	middle=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								ymin=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								ymax=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								lower=qbeta(0.25, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								upper=qbeta(0.75, POSTERIOR_ALPHA, POSTERIOR_BETA), 
+								fill=TYPE)) + 
+				geom_boxplot(stat='identity') +
+				scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), limits=c(0,1), expand=c(0,0)) +
+				scale_fill_manual(values=cols) +
+				theme_bw() + theme(legend.position='right', legend.margin=margin(0, .1, 0, 1, "cm")) +
+				coord_flip() + guides(fill=guide_legend(ncol=1)) +
+				labs(x='', y='\nposterior probability\n', fill='phylogenetic\nrelationship\n')				
+		grid.newpage()
+		pushViewport(viewport(layout = grid.layout(4, 2, heights=heights, widths=widths)))   
+		grid.text(tmp[1,LABEL], gp=gpar(fontsize=10), vp=viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+		print(p1, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:2))
+		print(p2, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:2))         
+		print(p3, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+		print(p4, vp = viewport(layout.pos.row = 4, layout.pos.col = 2))
+	}
+	dev.off()
+}
+
+phsc.extract.clade <- function(phy, node, root.edge = 0, interactive = FALSE)
+{
+	n <- length(phy$tip.label)
+	if (interactive) {
+		cat("Click close to the node...\n")
+		node <- identify(phy)$nodes
+	} else {
+		if (length(node) > 1) {
+			node <- node[1]
+			warning("only the first value of 'node' has been considered")
+		}
+		if (is.character(node)) {
+			if (is.null(phy$node.label))
+				stop("the tree has no node labels")
+			node <- match(node, phy$node.label) + n
+			if (is.na(node)) stop("'node' not among the node labels.")
+		}
+		if (node <= n)
+			stop("node number must be greater than the number of tips")
+	}
+	if (node == n + 1L) return(phy)
+	keep <- prop.part(phy)[[node - n]]
+	drop.tip(phy, (1:n)[-keep], root.edge = root.edge, rooted = TRUE)
+}
+
+#' @import data.table phangorn ape
+phsc.phy.collapse.monophyletic.clades<- function(ph, drop.blacklisted=TRUE, tip.regex='(.*)_read_([0-9]+)_count_([0-9]+)')
+{
+	#ph<- phs[[1]]
+	#references.pattern<- 'REF'
+	phb			<- data.table(	IDX=seq_along(ph$tip.label), 
+								BAM=ph$tip.label, 
+								IND= gsub(tip.regex,'\\1',ph$tip.label),
+								COUNT=sub(tip.regex,'\\3',ph$tip.label),
+								BLACKLISTED= is.na(attr(ph, 'INDIVIDUAL')[seq_len(Ntip(ph))])
+								)
+	set(phb, phb[, which(IND==COUNT)], 'COUNT', NA_character_)
+	set(phb, NULL, 'COUNT', phb[, as.integer(COUNT)])
+	set(phb, NULL, 'REF', phb[, is.na(COUNT)])	
+	set(phb, phb[, which(REF)],'IND','REFERENCE')
+	tmp			<- subset(phb, BLACKLISTED & !REF)[,IDX]
+	if(drop.blacklisted & length(tmp))
+	{
+		ph		<- phsc.drop.tip(ph, tmp)
+		phb		<- data.table(	IDX=seq_along(ph$tip.label), 
+								BAM=ph$tip.label, 
+								IND= gsub(tip.regex,'\\1',ph$tip.label),
+								COUNT=sub(tip.regex,'\\3',ph$tip.label)		)
+		set(phb, phb[, which(IND==COUNT)], 'COUNT', NA_character_)
+		set(phb, NULL, 'COUNT', phb[, as.integer(COUNT)])
+		set(phb, NULL, 'REF', phb[, is.na(COUNT)])	
+		set(phb, phb[, which(REF)],'IND','REFERENCE')		
+	}
+	#	for each patient define mrca (MRCA)
+	#	for each patient, 
+	#		determine MRCA (mrca)
+	#		calculate number of other individuals in clade below MRCA (diff)	
+	z			<- phb[, {
+				#IND<- "15861_1_37.bam"
+				#IDX<- subset(phb, IND=="15861_1_37.bam")[, IDX]
+				#print(IND)
+				mrca	<- IDX		
+				diff	<- 0L
+				if(length(IDX)>1)
+				{
+					mrca	<- as.integer(getMRCA(ph, IDX))
+					tmp		<- phsc.extract.clade(ph, mrca, root.edge=1)
+					#print(tmp)
+					diff	<- length(setdiff(gsub(tip.regex,'\\1',tmp$tip.label), IND))								
+				}												
+				list(MRCA=mrca, DIFF_IND=diff)							
+			}, by=c('IND')]	
+	z			<- subset(z, IND!='REFERENCE')
+	#	for all patients that are not monophyletic, there could be several clades
+	#		trace back all ancestors between tips of other individuals and MRCA
+	#		for each such tip, construct the unique path to MRCA that is not on a previous path
+	#		find change points on these unique paths below which the subtree contains reads from the current patient
+	#		the idea is that all monophyletic clades of this patient must break off from one of these paths	
+	tmp			<- subset(z, DIFF_IND>0, c(IND, MRCA))
+	if(!nrow(tmp))
+		z[, CLADE:=NA_integer_]
+	if(nrow(tmp))
+	{
+		#	find all tips that belong to another patient than the current individual
+		tmp			<- tmp[, {
+					if(MRCA<=Ntip(ph))
+						tmp	<- ph$tip.label[MRCA]
+					if(MRCA>Ntip(ph))
+						tmp	<- phsc.extract.clade(ph,MRCA)$tip.label
+					list(MRCA=MRCA, MRCA_IND=IND, BAM=tmp)	
+				}, by='IND']
+		tmp[, IND:=NULL]
+		zz			<- merge(tmp, subset(phb, select=c(BAM, IND, IDX)), by='BAM')
+		zz			<- subset(zz, MRCA_IND!=IND)
+		#	determine change points
+		zz			<- zz[, {
+					#IDX<- c(980,910,912,950); MRCA<- 1580; IND<- 'R1_RES669_S20_L001'; MRCA_IND<- 'R1_RES827_S23_L001'					
+					#	determine paths to MRCA from each tip
+					anc.group		<- Ancestors(ph, IDX)	
+					if(!is.list(anc.group))
+						anc.group	<- list(anc.group)
+					anc.group	<- lapply(seq_along(anc.group), function(i)  anc.group[[i]][ seq_len(which(anc.group[[i]]==MRCA[1])-1)] )							
+					#	determine unique paths until we hit a path that is already visited
+					anc.join	<- lapply(seq_along(anc.group), function(i){	unique(unlist(lapply(seq_len(i), function(j) anc.group[[j]])))	})
+					anc.join	<- c(NA,anc.join)
+					anc.group	<- lapply(seq_along(anc.group), function(i)	setdiff(anc.group[[i]],anc.join[[i]])	)
+					#	check which clades defined by the mrcas on the ancestor path contain at least one read from MRCA_IND
+					tmp			<- lapply(seq_along(anc.group), function(i) sapply(anc.group[[i]], function(j)	any(grepl(MRCA_IND, phsc.extract.clade(ph,j)$tip.label))		)	)				
+					#	determine lowest node (counting from tips) which contains at least one read from MRCA_IND
+					tmp			<- lapply(seq_along(tmp), function(i){
+								ans		<- NA_integer_	
+								tmp2	<- integer(0)
+								if(length(tmp[[i]]))
+									tmp2<- which(tmp[[i]]) 
+								if(length(tmp2))
+									ans	<- as.integer(anc.group[[i]][tmp2[1]])										
+								ans
+							})				
+					list(IDX=IDX, CHANGE_NODE=unlist(tmp))
+				},by=c('IND','MRCA','MRCA_IND')]
+		zz			<- subset(zz, !is.na(CHANGE_NODE))
+		#	each ancestor before a change node could have as one of its children a monophyletic clade from this patient		
+		zz	<- unique(zz, by=c('MRCA_IND','CHANGE_NODE'))
+		if(!nrow(zz))
+		{
+			set(zz, NULL, c('IDX','MRCA','IND'), NULL)
+			zz[, CLADE:= rep(NA_integer_,0)]
+		}			
+		if(nrow(zz))
+			zz	<- zz[, {
+						#CHANGE_NODE<- 2053; MRCA<- 1580; MRCA_IND<- 'R1_RES827_S23_L001'
+						#MRCA<- 1212; MRCA_IND<- 'R1_RES669_S20_L001'; CHANGE_NODE<- 1218
+						#	the first two potentially monophyletic clades are the children of the CHANGE_NODE
+						tmp			<- Children(ph, CHANGE_NODE)					
+						#	define path from change node to just before mrca 					
+						path		<- c(CHANGE_NODE, setdiff( Ancestors(ph,CHANGE_NODE), c(MRCA,Ancestors(ph,MRCA)) ))
+						#	monophyletic clades could break off the path ending at MRCA
+						#	the mrca's of these clades are the siblings of the path constructed above 
+						pot.clade	<- c(tmp, unlist(Siblings(ph, path)))
+						#	check if potential clades are monophyletic
+						tmp			<- sapply(pot.clade, function(x){
+									if(x<=Ntip(ph))
+										ans	<- grepl(MRCA_IND, ph$tip.label[x])
+									if(x>Ntip(ph))
+										ans	<- all(grepl(MRCA_IND, phsc.extract.clade(ph,x)$tip.label))
+									ans
+								})	
+						#	return monophyletic clades
+						list(CLADE=as.integer(pot.clade[tmp]))
+					}, by=c('MRCA_IND','CHANGE_NODE')]
+		zz[, CHANGE_NODE:=NULL]
+		setnames(zz,'MRCA_IND','IND')
+		#	merge all monophyletic clades
+		z	<- merge(z, unique(zz), all=1, by='IND', allow.cartesian=TRUE)
+	}	
+	tmp	<- z[, which(DIFF_IND==0)]
+	set(z, tmp, 'CLADE', z[tmp,MRCA])
+	z	<- subset(z, !is.na(CLADE))
+	#	double check CLADEs (the MONOPH_PA condition is key)
+	if(nrow(z))
+	{
+		tmp	<- subset(z, !is.na(CLADE))[,{
+					if(CLADE<=Ntip(ph))
+						tmp	<- grepl(IND, ph$tip.label[CLADE])
+					if(CLADE>Ntip(ph))
+						tmp	<- all(grepl(IND, phsc.extract.clade(ph,CLADE)$tip.label))
+					list(MONOPH=tmp, MONOPH_PA=all(grepl(IND, phsc.extract.clade(ph,Ancestors(ph, CLADE, type="parent"))$tip.label)))
+				}, by=c('IND','CLADE')]
+		stopifnot(tmp[, all(MONOPH)], tmp[, !any(MONOPH_PA)])
+		#
+		#	collapse clades
+		#
+		zz	<- z[, {	
+					#CLADE<- 292
+					list(IDX=Descendants(ph, CLADE, type='tips')[[1]])			
+				}, by='CLADE']
+		zz	<- merge(phb, zz, by='IDX')
+		zz	<- merge(zz, zz[, list(CLADE_N_TAXA=length(COUNT), CLADE_LABEL=paste0(IND[1],'_read_',CLADE[1],'_count_',sum(COUNT))), by='CLADE'],by='CLADE')
+		zz	<- subset(zz, CLADE_N_TAXA>1)
+		for(clu.id in zz[, unique(CLADE)])
+		{
+			tmp			<- subset(zz, CLADE==clu.id)[, BAM]			
+			z			<- phsc.drop.tip(ph, tip=tmp, subtree=TRUE)
+			if(!is.null(z))
+			{
+				ph		<- z
+				ph$tip.label[ which(grepl("[",ph$tip.label,fixed=TRUE)) ]	<- subset(zz, CLADE==clu.id)[1,CLADE_LABEL]	
+			}			 				
+		}
+	}		
+	ph
+}
+
+phsc.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.edge = 0, rooted = is.rooted(phy)) 
+{
+	#	code from ape
+	if (!inherits(phy, "phylo")) 
+		stop("object \"phy\" is not of class \"phylo\"")
+	Ntip <- length(phy$tip.label)
+	if (is.character(tip)) 
+			tip <- which(phy$tip.label %in% tip)	
+	out.of.range <- tip > Ntip
+	if (any(out.of.range)) 
+	{
+		warning("some tip numbers were larger than the number of tips: they were ignored")
+		tip <- tip[!out.of.range]
+	}
+	if (!length(tip)) 
+		return(phy)
+	if (length(tip) == Ntip) 
+	{
+		warning("drop all tips of the tree: returning NULL")
+		return(NULL)
+	}
+	wbl <- !is.null(phy$edge.length)
+	if (!rooted && subtree) 
+	{
+		phy <- root(phy, (1:Ntip)[-tip][1])
+		root.edge <- 0
+	}
+	phy <- reorder(phy)
+	NEWROOT <- ROOT <- Ntip + 1
+	Nnode <- phy$Nnode
+	Nedge <- dim(phy$edge)[1]
+	if (subtree) 
+	{
+		trim.internal <- TRUE
+		tr <- reorder(phy, "postorder")
+		N <- .C(node_depth, as.integer(Ntip), as.integer(Nnode), 
+				as.integer(tr$edge[, 1]), as.integer(tr$edge[, 2]), 
+				as.integer(Nedge), double(Ntip + Nnode), 1L)[[6]]
+	}
+	edge1 <- phy$edge[, 1]
+	edge2 <- phy$edge[, 2]
+	keep <- !logical(Nedge)
+	keep[match(tip, edge2)] <- FALSE
+	if (trim.internal) 
+	{
+		ints <- edge2 > Ntip
+		repeat 
+		{
+			sel <- !(edge2 %in% edge1[keep]) & ints & keep
+			if (!sum(sel)) 
+				break
+			keep[sel] <- FALSE
+		}
+		if (subtree) 
+		{
+			subt <- edge1 %in% edge1[keep] & edge1 %in% edge1[!keep]
+			keep[subt] <- TRUE
+		}
+		if (root.edge && wbl) 
+		{
+			degree <- tabulate(edge1[keep])
+			if (degree[ROOT] == 1) 
+			{
+				j <- integer(0)
+				repeat 
+				{
+					i <- which(edge1 == NEWROOT & keep)
+					j <- c(i, j)
+					NEWROOT <- edge2[i]
+					degree <- tabulate(edge1[keep])
+					if (degree[NEWROOT] > 1) 
+						break
+				}
+				keep[j] <- FALSE
+				if (length(j) > root.edge) 
+					j <- 1:root.edge
+				NewRootEdge <- sum(phy$edge.length[j])
+				if (length(j) < root.edge && !is.null(phy$root.edge)) 
+					NewRootEdge <- NewRootEdge + phy$root.edge
+				phy$root.edge <- NewRootEdge
+			}
+		}
+	}
+	if (!root.edge) 
+		phy$root.edge <- NULL
+	phy$edge <- phy$edge[keep, ]
+	if (wbl) 
+		phy$edge.length <- phy$edge.length[keep]
+	TERMS <- !(phy$edge[, 2] %in% phy$edge[, 1])	#all nodes that do not appear in first column are new tips
+	oldNo.ofNewTips <- phy$edge[TERMS, 2]
+	if (subtree) 
+	{
+		i <- which(tip %in% oldNo.ofNewTips)
+		if (length(i)) 
+		{
+			phy$tip.label[tip[i]] <- "[1_tip]"
+			tip <- tip[-i]
+		}
+	}
+	n <- length(oldNo.ofNewTips)
+	phy$edge[TERMS, 2] <- rank(phy$edge[TERMS, 2])	
+	phy$tip.label <- phy$tip.label[-tip]
+	if (subtree || !trim.internal) 
+	{
+		node2tip <- oldNo.ofNewTips[oldNo.ofNewTips > Ntip]
+		new.tip.label <- if(subtree) 
+				{
+					paste("[", N[node2tip], "_tips]", sep = "")
+				}
+				else 
+				{
+					if (is.null(phy$node.label)) 
+						rep("NA", length(node2tip))
+					else phy$node.label[node2tip - Ntip]
+				}
+		phy$tip.label <- c(phy$tip.label, new.tip.label)
+		#	the order of oldNo.ofNewTips does not mean anything. Need to sort.
+		#	also: node2tip may not have a colour, whereas it should have the colour of one of the tips, so use 1 tip
+		oldNo.ofNewTips	<- c( sort(oldNo.ofNewTips[-which(oldNo.ofNewTips > Ntip)]), tip[1] )
+	}
+	phy$Nnode <- dim(phy$edge)[1] - n + 1L
+	newNb <- integer(Ntip + Nnode)
+	newNb[NEWROOT] <- n + 1L
+	sndcol <- phy$edge[, 2] > n
+	newNb[sort(phy$edge[sndcol, 2])] <- (n + 2):(n + phy$Nnode)
+	phy$edge[sndcol, 2] <- newNb[phy$edge[sndcol, 2]]
+	phy$edge[, 1] <- newNb[phy$edge[, 1]]
+	storage.mode(phy$edge) <- "integer"
+	if (!is.null(phy$node.label)) 
+		phy$node.label <- phy$node.label[which(newNb > 0) - Ntip]	
+	#	add new tip numbers to newNb
+	#	want to reorder oldNo.ofNewTips so this corresponds to new tips
+	newNb[oldNo.ofNewTips] 	<- seq_along(oldNo.ofNewTips)
+	#	select remaining nodes and put into right order
+	newNb					<- subset(data.table(IDX_O=seq_along(newNb), IDX_N=newNb), IDX_N>0)
+	setkey(newNb, IDX_N)
+	attr(phy, "INDIVIDUAL")	<- attr(phy, "INDIVIDUAL")[ newNb[, IDX_O] ]
+	attr(phy, "NODE_SHAPES")<- attr(phy, "NODE_SHAPES")[ newNb[, IDX_O] ]
+	attr(phy, "SPLIT")		<- attr(phy, "SPLIT")[ newNb[, IDX_O] ]
+	#	collapse singles
+	#	code from ape
+	n 	<- length(phy$tip.label)
+	e1 	<- phy$edge[, 1]
+	e2 	<- phy$edge[, 2]
+	tab <- tabulate(e1)
+	if(all(tab > 1)) 
+		return(phy)
+	if(is.null(phy$edge.length)) 
+	{
+		root.edge <- FALSE
+		wbl <- FALSE
+	}
+	if(!is.null(phy$edge.length)) 
+	{
+		wbl <- TRUE
+		el <- phy$edge.length
+	}
+	if (root.edge) 
+		ROOTEDGE <- 0
+	ROOT <- n + 1L
+	while (tab[ROOT] == 1) 
+	{
+		i <- which(e1 == ROOT)
+		ROOT <- e2[i]
+		if (wbl) {
+			if (root.edge) 
+				ROOTEDGE <- ROOTEDGE + el[i]
+			el <- el[-i]
+		}
+		e1 <- e1[-i]
+		e2 <- e2[-i]
+	}
+	singles <- which(tabulate(e1) == 1)
+	while (length(singles)) 
+	{
+		i <- which(e1 == singles[1])
+		j <- which(e2 == e1[i])
+		e2[j] <- e2[i]
+		if (wbl) {
+			el[j] <- el[j] + el[i]
+			el <- el[-i]
+		}
+		e1 <- e1[-i]
+		e2 <- e2[-i]
+		singles <- which(tabulate(e1) == 1)
+	}
+	Nnode <- length(e1) - n + 1L
+	oldnodes <- unique(e1)
+	if (!is.null(phy$node.label)) 
+		phy$node.label <- phy$node.label[oldnodes - n]
+	newNb <- integer(max(oldnodes))
+	newNb[ROOT] <- n + 1L
+	sndcol <- e2 > n
+	e2[sndcol] <- newNb[e2[sndcol]] <- n + 2:Nnode
+	e1 <- newNb[e1]
+	phy$edge <- cbind(e1, e2, deparse.level = 0)
+	phy$Nnode <- Nnode
+	if (wbl) 
+	{
+		if (root.edge) 
+			phy$root.edge <- ROOTEDGE
+		phy$edge.length <- el
+	}
+	#	select remaining nodes and put into right order
+	attr(phy, "INDIVIDUAL")		<- attr(phy, "INDIVIDUAL")[c(seq_len(Ntip(phy)), oldnodes)]
+	attr(phy, "NODE_SHAPES")	<- attr(phy, "NODE_SHAPES")[c(seq_len(Ntip(phy)), oldnodes)]
+	attr(phy, "SPLIT")			<- attr(phy, "SPLIT")[c(seq_len(Ntip(phy)), oldnodes)]		
+	phy	
+}
+
+drop.tip2 <- function (phy, tip, trim.internal=TRUE, subtree=FALSE, root.edge=0, rooted=is.rooted(phy)) 
+{
+	if (!inherits(phy, "phylo")) 
+		stop("object \"phy\" is not of class \"phylo\"")
+	Ntip <- length(phy$tip.label)
+	if (is.character(tip)) 
+		tip <- which(phy$tip.label %in% tip)
+	if (!rooted && subtree) {
+		phy <- root(phy, (1:Ntip)[-tip][1])
+		root.edge <- 0
+	}
+	phy <- reorder(phy)
+	NEWROOT <- ROOT <- Ntip + 1
+	Nnode <- phy$Nnode
+	Nedge <- dim(phy$edge)[1]
+	if (subtree) {
+		trim.internal <- TRUE
+		tr <- reorder(phy, "pruningwise")
+		N <- .C("node_depth", as.integer(Ntip), as.integer(Nnode), 
+				as.integer(tr$edge[, 1]), as.integer(tr$edge[, 2]), 
+				as.integer(Nedge), double(Ntip + Nnode), DUP = FALSE, 
+				PACKAGE = "ape")[[6]]
+	}
+	wbl <- !is.null(phy$edge.length)
+	edge1 <- phy$edge[, 1]
+	edge2 <- phy$edge[, 2]
+	keep <- !logical(Nedge)
+	if (is.character(tip)) 
+		tip <- which(phy$tip.label %in% tip)
+	if (!rooted && subtree) {
+		phy <- root(phy, (1:Ntip)[-tip][1])
+		root.edge <- 0
+	}
+	keep[match(tip, edge2)] <- FALSE
+	if (trim.internal) {
+		ints <- edge2 > Ntip
+		repeat {
+			sel <- !(edge2 %in% edge1[keep]) & ints & keep
+			if (!sum(sel)) 
+				break
+			keep[sel] <- FALSE
+		}
+		if (subtree) {
+			subt <- edge1 %in% edge1[keep] & edge1 %in% edge1[!keep]
+			keep[subt] <- TRUE
+		}
+		if (root.edge && wbl) {
+			degree <- tabulate(edge1[keep])
+			if (degree[ROOT] == 1) {
+				j <- integer(0)
+				repeat {
+					i <- which(edge1 == NEWROOT & keep)
+					j <- c(i, j)
+					NEWROOT <- edge2[i]
+					degree <- tabulate(edge1[keep])
+					if (degree[NEWROOT] > 1) 
+						break
+				}
+				keep[j] <- FALSE
+				if (length(j) > root.edge) 
+					j <- 1:root.edge
+				NewRootEdge <- sum(phy$edge.length[j])
+				if (length(j) < root.edge && !is.null(phy$root.edge)) 
+					NewRootEdge <- NewRootEdge + phy$root.edge
+				phy$root.edge <- NewRootEdge
+			}
+		}
+	}
+	if (!root.edge) 
+		phy$root.edge <- NULL
+	phy$edge <- phy$edge[keep, ]
+	if (wbl) 
+		phy$edge.length <- phy$edge.length[keep]
+	TERMS <- !(phy$edge[, 2] %in% phy$edge[, 1])
+	oldNo.ofNewTips <- phy$edge[TERMS, 2]
+	n <- length(oldNo.ofNewTips)
+	phy$edge[TERMS, 2] <- rank(phy$edge[TERMS, 2])
+	if (subtree || !trim.internal) {
+		tips.kept <- oldNo.ofNewTips <= Ntip & !(oldNo.ofNewTips %in% 
+					tip)
+		new.tip.label <- character(n)
+		new.tip.label[tips.kept] <- phy$tip.label[-tip]
+		node2tip <- oldNo.ofNewTips[!tips.kept]
+		new.tip.label[!tips.kept] <- if (subtree) {
+					paste("[", N[node2tip], "_tips]", sep = "")
+				}
+				else {
+					if (is.null(phy$node.label)) 
+						rep("NA", length(node2tip))
+					else phy$node.label[node2tip - Ntip]
+				}
+		if (!is.null(phy$node.label)) 
+			phy$node.label <- phy$node.label[-(node2tip - Ntip)]
+		phy$tip.label <- new.tip.label
+	}
+	if (!(subtree || !trim.internal))
+		phy$tip.label <- phy$tip.label[-tip]
+	if (!is.null(phy$node.label)) 
+		phy$node.label <- phy$node.label[sort(unique(phy$edge[, 
+										1])) - Ntip]
+	phy$Nnode <- dim(phy$edge)[1] - n + 1L
+	newNb <- integer(n + phy$Nnode)
+	newNb[NEWROOT] <- n + 1L
+	sndcol <- phy$edge[, 2] > n
+	phy$edge[sndcol, 2] <- newNb[phy$edge[sndcol, 2]] <- (n + 
+				2):(n + phy$Nnode)
+	phy$edge[, 1] <- newNb[phy$edge[, 1]]
+	storage.mode(phy$edge) <- "integer"
+	phy <- collapse.singles(phy)	
+	# handle non-standard node attributes
+	drop <- edge1[which(!keep)]
+	z	<- attr(phy, "INDIVIDUAL")
+	z[-drop]
+	attr(phy, "INDIVIDUAL")[-drop]
+
+	sdtnames <- c("edge", "edge.length", "Nnode", "tip.label", 		"node.label")
+	if (!all(names(phy) %in% sdtnames)){
+		id <- which(!names(phy) %in% sdtnames)
+		drop <- edge1[which(!keep)] - Ntip
+		for (i in id){
+			phy[[i]] <- phy[[i]][-drop]
+		}
+	}	
+	phy    
+}
+
+#' @export
 #' @import data.table grid ggtree
 #' @title Plot short read phylogenies and highlight individuals
 #' @description This function plots short read phylogenies and highlights the clades of two individuals in red and blue.  
 #' @param phs List of trees in ape format
 #' @param dfs data.table with mandatory column 'IDX' and optional column 'TITLE'. IDX is the index of all phylogenies in 'phs' that are to be plotted. TITLE is a title for each sub-plot, for example specifying a window.
 #' @param ids Vector of regular expressions that identify individuals to be highlighted in colour.
-#' @param plot.cols Vector of colours for each individual  
+#' @param plot.cols Vector of colours for each individual
+#' @param group.redo Logical, indicating if the colour groups should be recalculated from ids.
+#' @param drop.blacklisted Logical, indicating if all blacklisted taxa should be dropped prior to plotting.  
 #' @param pdf.h	Height of the pdf file in inches.
 #' @param pdf.rw Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.
 #' @param pdf.ntrees Number of trees per pdf.
 #' @param pdf.title.size Size of pdf title in inches.
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
-phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, group.redo=FALSE, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.cols.background=function(n){ rainbow_hcl(n, start = 60, end = 240, c=30, l=80) }, drop.blacklisted=TRUE, tip.regex='(.*)_read_([0-9]+)_count_([0-9]+)', plot.file=NA, drop.less.than.n.ids=2, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
+{
+	require(colorspace)
+	suppressMessages(require(grid))	
+	#	determine which phylogenies contain at least one of the requested individuals
+	tmp		<- copy(dfs)
+	tmp		<- merge(tmp, tmp[, {
+						ph	<- phs[[ IDX ]]
+						z	<- ph$tip.label
+						if(drop.blacklisted)
+							z	<- as.character(attr(ph, "INDIVIDUAL"))
+						list(HAS_N_IND=length(which(sapply(ids, function(id) any(grepl(id, z)) ))))						  				
+					}, by='IDX'], by='IDX')
+	tmp		<- subset(tmp, HAS_N_IND>=drop.less.than.n.ids)
+	#	define colours so that they don t change across windows
+	cols	<- tmp[, {
+				ph	<- phs[[ IDX ]]
+				phb			<- data.table(	TAXA=ph$tip.label,
+											IDX=seq_along(ph$tip.label), 											 
+											ID= gsub(tip.regex,'\\1',ph$tip.label),
+											COUNT=sub(tip.regex,'\\3',ph$tip.label)		)
+				set(phb, phb[, which(ID==COUNT)], 'COUNT', NA_character_)
+				set(phb, NULL, 'COUNT', phb[, as.integer(COUNT)])
+				set(phb, phb[, which(is.na(COUNT))], 'ID','REFERENCE')	
+				list(ID= phb[, unique(ID)])				
+			}, by='IDX']
+	cols	<- unique(subset(cols, select=ID))
+	cols[,COL:= plot.cols.background(nrow(cols))]	
+	set(cols, cols[,which(grepl('REFERENCE',ID))], 'COL', 'grey50')
+	for(i in seq_along(ids))
+		set(cols, cols[, which(grepl(ids[i], ID))], 'COL', plot.cols[i])
+	#	
+	phps	<- lapply(seq_len(nrow(tmp)), function(i){
+				cat(i,'\n')
+				ph.title	<- NULL
+				if('TITLE'%in%colnames(tmp))
+					ph.title	<- tmp[i, TITLE]										
+				ph			<- phs[[ tmp[i, IDX] ]]
+				ph			<- phsc.phy.collapse.monophyletic.clades(ph, drop.blacklisted=TRUE, tip.regex=tip.regex)
+				#
+				#	define IDs, find COUNTS, find references
+				phb			<- data.table(	TAXA=ph$tip.label,
+											IDX=seq_along(ph$tip.label), 											 
+											ID= gsub(tip.regex,'\\1',ph$tip.label),
+											COUNT=sub(tip.regex,'\\3',ph$tip.label)		)
+				set(phb, phb[, which(ID==COUNT)], 'COUNT', NA_character_)
+				set(phb, NULL, 'COUNT', phb[, as.integer(COUNT)])
+				set(phb, phb[, which(is.na(COUNT))], 'ID','REFERENCE')	
+				set(phb, phb[, which(is.na(COUNT))], 'COUNT', 1L)
+				#	define cols for this tree
+				tmp					<- data.table(IDX= seq_along(attr(ph, "INDIVIDUAL")), ID= attr(ph, "INDIVIDUAL"))
+				set(tmp, tmp[, which(is.na(ID))], 'ID', 'REFERENCE')
+				tmp					<- merge(tmp, cols, by='ID')
+				attr(ph, 'COLOUR')	<- tmp[order(IDX),][,COL]	
+				#						
+				p 			<- ggtree(ph, aes(color=I(COLOUR))) %<+% phb +
+						geom_tippoint(aes(size=COUNT), shape=18) +
+						#geom_point2(shape=16, aes(size=NODE_S, subset=NODE_S)) +
+						scale_fill_hue(na.value="black") +								
+						theme(legend.position="none") +
+						geom_tiplab(align=T, aes(col=I(COLOUR)), size=1, linetype=NA, linesize=NA) +
+						guides(size='none') +
+						theme_tree2() +
+						theme(	axis.line.x=element_line(),
+								panel.grid.major.x=element_line(color="grey20", linetype="dotted", size=.3),
+								legend.position="bottom",								
+								plot.title = element_text(hjust = 0.5, size=pdf.title.size)) + 
+						ggplot2::xlim(0, max(node.depth.edgelength(ph)[1:Ntip(ph)])*1.05) +
+						labs(x='subst/site', title=ph.title)
+				#ggsave(plot.file, w=10, h=200, limitsize = FALSE)
+				p
+			})
+	#
+	#	single page plot
+	#		
+	if(!is.na(plot.file))					
+	{
+		if(length(phps)<=pdf.ntrees)
+		{
+			cat('Plotting to file', plot.file,'...\n')
+			pdf(file=plot.file, w=pdf.rw*length(phps), h=pdf.h)
+			grid.newpage()
+			pushViewport(viewport(layout=grid.layout(1, length(phps))))
+			for(i in seq_along(phps))
+				print(phps[[i]], vp = viewport(layout.pos.row=1, layout.pos.col=i))
+			dev.off()
+		}
+		if(length(phps)>pdf.ntrees)
+		{
+			pi	<- data.table(IDX=seq_along(phps))
+			pi[, PLOT:= ceiling(IDX/pdf.ntrees)]
+			pi[, PLOT_IDX:= (IDX-1)%%pdf.ntrees+1]
+			pi[,{
+						cat('Plotting to file', gsub('\\.pdf',paste('_plot',PLOT,'\\.pdf',sep=''),plot.file),'...\n')
+						pdf(file=gsub('\\.pdf',paste('_plot',PLOT,'\\.pdf',sep=''),plot.file), w=pdf.rw*pdf.ntrees, h=pdf.h)
+						grid.newpage()
+						pushViewport(viewport(layout=grid.layout(1, pdf.ntrees)))
+						for(i in seq_along(IDX))
+							print(phps[[IDX[i]]], vp = viewport(layout.pos.row=1, layout.pos.col=PLOT_IDX[i]))
+						dev.off()
+					}, by='PLOT']
+		}
+	}
+	phps	
+}
+
+#' @export
+#' @import data.table grid ggtree
+#' @title Plot short read phylogenies and highlight individuals
+#' @description This function plots short read phylogenies and highlights the clades of two individuals in red and blue.  
+#' @param phs List of trees in ape format
+#' @param dfs data.table with mandatory column 'IDX' and optional column 'TITLE'. IDX is the index of all phylogenies in 'phs' that are to be plotted. TITLE is a title for each sub-plot, for example specifying a window.
+#' @param ids Vector of regular expressions that identify individuals to be highlighted in colour.
+#' @param plot.cols Vector of colours for each individual
+#' @param group.redo Logical, indicating if the colour groups should be recalculated from ids.
+#' @param drop.blacklisted Logical, indicating if all blacklisted taxa should be dropped prior to plotting.  
+#' @param pdf.h	Height of the pdf file in inches.
+#' @param pdf.rw Relative width of the pdf file, internally multiplied by the number of phylogenies to give the total width in inches.
+#' @param pdf.ntrees Number of trees per pdf.
+#' @param pdf.title.size Size of pdf title in inches.
+#' @param plot.file If not missing, the phylogenies will be printed to file.	
+#' @return List of ggtree objects, ready for printing.
+phsc.plot.phy.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, group.redo=FALSE, drop.less.than.n.ids=2, drop.blacklisted=FALSE, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
 	suppressMessages(require(grid))
 	#	determine which phylogenies contain at least one of the requested individuals
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {
 						ph	<- phs[[ IDX ]]
-						list(HAS_ANY_IND=any(sapply(ids, function(id) any(grepl(id, ph$tip.label)) )))						  				
+						z	<- ph$tip.label
+						if(drop.blacklisted)
+							z	<- as.character(attr(ph, "INDIVIDUAL"))
+						list(HAS_N_IND=length(which(sapply(ids, function(id) any(grepl(id, z)) ))))						  				
 					}, by='IDX'], by='IDX')
-	tmp		<- subset(tmp, HAS_ANY_IND)
+	tmp		<- subset(tmp, HAS_N_IND>=drop.less.than.n.ids)
 	phps	<- lapply(seq_len(nrow(tmp)), function(i){
 				ph.title	<- NULL
 				if('TITLE'%in%colnames(tmp))
@@ -954,7 +1869,19 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 				ph			<- phs[[ tmp[i, IDX] ]]
 				#
 				#
-				if(group.redo)
+				if(drop.blacklisted)
+				{
+					z						<- data.table(FROM=ph$edge[,1],TO=ph$edge[,2])
+					z						<- merge(z, data.table(TO= seq_len(length(attr(ph,'INDIVIDUAL'))), GROUP= attr(ph,'INDIVIDUAL')), by='TO')
+					z						<- subset(z, is.na(GROUP) & TO<=Ntip(ph))[, TO]
+					ph						<- drop.tip(ph, z)
+					attr(ph,'NODE_SHAPES')	<- rep(FALSE, Nnode(ph, internal.only=FALSE))
+					attr(ph,'INDIVIDUAL')	<- NULL
+					attr(ph,'SPLIT')		<- NULL
+				}
+				#
+				#
+				if(group.redo||drop.blacklisted)
 				{
 					phb			<- data.table(IDX=seq_along(ph$tip.label), TAXA=ph$tip.label, ID='none')
 					for(id in ids)
@@ -976,7 +1903,7 @@ phsc.plot.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(lengt
 				attr(ph, 'COLOUR')	<- cols								
 				#						
 				p 			<- ggtree(ph, aes(color=I(COLOUR))) +
-						geom_point2(shape = 16, size=3, aes(subset=NODE_SHAPES)) +
+						#geom_point2(shape = 16, size=3, aes(subset=NODE_SHAPES)) +
 						scale_fill_hue(na.value="black") +								
 						theme(legend.position="none") +
 						geom_tiplab(aes(col=I(COLOUR))) +

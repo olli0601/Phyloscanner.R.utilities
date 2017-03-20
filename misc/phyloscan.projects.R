@@ -817,6 +817,22 @@ project.dualinfecions.UG.setup.windowlength<- function()
 	ggsave(file='~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_selecthelp_windows.pdf', w=50, h=12, limitsize = FALSE)
 }
 
+
+project.RakaiAll.setup.prior.170301<- function()
+{
+	df	<- as.data.table(expand.grid(T=c(2,5,8), N0=c(0.1,1,10,100)))
+	df	<- df[, list(X=seq(1e-3,1-1e-3,by=1e-3), Y=dbeta(seq(1e-3,1-1e-3,by=1e-3), N0/T, N0-N0/T)), by=c('T','N0')]
+	set(df, NULL, 'T', df[,paste0('T=',T)])
+	set(df, NULL, 'N0', df[,paste0('n0=',N0)])
+	set(df, NULL, 'N0', df[,factor(N0, levels=c('n0=0.1','n0=1','n0=10','n0=100'))])
+	ggplot(df,aes(x=X,y=Y)) + 
+			geom_line() +
+			theme_bw() +
+			facet_grid(T~N0) +
+			labs(x='pi_t', y='prior density')
+	ggsave(file='~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/prior_beta.pdf', w=8, h=8)
+}
+
 project.RakaiAll.setup.batchno.170301<- function()
 {
 	require(big.phylo)
@@ -2038,6 +2054,40 @@ pty.process.160901<- function()
 						trmw.min.tips		<- 1
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+						cat('\n',tmp.in,' -> ',tmp.out)
+						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					}		
+	}
+	#	170309
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170309_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250'		
+		for(opt in c('d50_st20_rerun'))		
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.02))
+					for(trmw.distant.brl in c(0.05))
+					{
+						trmw.min.tips		<- 1
+						tmp.in		<- paste(infile.base, opt, sep='_')
+						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+						cat('\n',tmp.in,' -> ',tmp.out)
+						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					}		
+	}
+	#	170320
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170309_couples_w270'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250'		
+		for(opt in c('d50_st20_rerun'))		
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.02))
+					for(trmw.distant.brl in c(0.05))
+					{
+						trmw.min.tips		<- 1
+						tmp.in		<- paste(infile.base, opt, sep='_')
+						tmp.out		<- paste(gsub('170309','170320',save.file), '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
 						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
