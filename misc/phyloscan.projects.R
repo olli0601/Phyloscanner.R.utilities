@@ -2252,7 +2252,7 @@ pty.pipeline.phyloscanner.test<- function()
 	#	
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
-	setnames(pty.runs, 'FILE_ID', 'IND_ID')
+	setnames(pty.runs, c('FILE_ID'), c('SAMPLE_ID'))
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 	work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 	out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/test_ptoutput'	
@@ -2286,18 +2286,14 @@ pty.pipeline.phyloscanner.test<- function()
 									strip.max.len=350, 
 									min.ureads.individual=NA, 
 									win=c(2500,3000,250,250), 
-									keep.overhangs=FALSE,																		
-									use.blacklisters=c('MakeReadBlacklist','ParsimonyBasedBlacklister','DownsampleReads'),
+									keep.overhangs=FALSE,	
+									use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 									sankhoff.k=20,
-									contaminant.read.threshold=3,
-									contaminant.prop.threshold=1/200,
+									split.tiesRule='u',
 									roguesubtree.prop.threshold=0,
 									roguesubtree.read.threshold=20,
-									dual.minProportion=NA,
-									rogue.prop.threshold=NA, #0.01
-									rogue.longestBranchLength=NA, #0.04
-									rogue.probThreshold=NA, #0.001,
-									dwns.maxReadsPerPatient=50,
+									dwns.maxReadsPerPatient=50,											
+									mem.save=0,
 									select=pty.select)
 							
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
@@ -2771,8 +2767,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")				
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170309_couples_w270_d50_st20_rerun")
-		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170208_couples_w270_d50_p25_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trU_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trB_rerun")		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2806,9 +2802,10 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										keep.overhangs=FALSE,	
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
+										split.tiesRule='u',
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
-										dwns.maxReadsPerPatient=50,	
+										dwns.maxReadsPerPatient=50,											
 										mem.save=0,
 										select=NA)
 	}	
@@ -2836,9 +2833,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

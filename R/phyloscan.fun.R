@@ -111,7 +111,7 @@ phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infil
 	cmd
 }
 
-phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
 {
 	cmd	<- paste(pr, ' --inputFile "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -126,6 +126,32 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 		cmd	<- paste(cmd, ' --splitsRule ', splitsRule, sep='')
 	if(!is.na(sankhoff.k))
 		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')
+	if(!is.na(tiesRule))
+		cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
+	if(!is.na(tipRegex))
+		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')		
+	if(!is.na(pdfwidth))
+		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
+	if(!is.na(pdfrelheight))
+		cmd	<- paste(cmd, ' --pdfrelheight ', pdfrelheight, sep='')
+	cmd	
+}
+
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
+{
+	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
+	if(!is.na(blacklistFiles))
+		cmd	<- paste(cmd, ' --blacklist "', blacklistFiles,'"', sep='')
+	if(!is.na(outputdir))
+		cmd	<- paste(cmd, ' --outputdir "', outputdir,'"', sep='')	
+	if(!is.na(outgroupName))
+		cmd	<- paste(cmd, ' --outgroupName ', outgroupName, sep='')
+	if(!is.na(splitsRule))
+		cmd	<- paste(cmd, ' --splitsRule ', splitsRule, sep='')
+	if(!is.na(sankhoff.k))
+		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')
+	if(!is.na(tiesRule))
+		cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')		
 	if(!is.na(pdfwidth))
@@ -521,14 +547,14 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 				cat( paste(BAM[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.bam	)
 				cat( paste(REF[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.ref	)				
 				file.rename		<- NA_character_
-				if(!is.null(RENAME_ID))
+				if(exists('RENAME_ID'))
 				{
 					file.rename	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_rename.txt',sep=''))
 					cat( paste(RENAME_ID[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.rename	)					
 				}	
 				file.patient	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_patient.txt',sep=''))
-				tmp				<- SAMPLE_ID[!is.na(BAM)&!is.na(REF)]
-				if(!is.null(UNIT_ID))
+				tmp				<- paste0(SAMPLE_ID[!is.na(BAM)&!is.na(REF)],'.bam')
+				if(exists('UNIT_ID'))
 					tmp			<- unique(UNIT_ID[!is.na(BAM)&!is.na(REF)])
 				cat( paste(tmp,collapse='\n'), file= file.patient	)
 				cmd			<- phsc.cmd.phyloscanner.one(	pty.args, 
@@ -558,6 +584,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty						<- pty.args[['prog.pty']]
 	root.name						<- pty.args[['alignments.root']]	
 	sankhoff.k						<- pty.args[['sankhoff.k']]
+	split.tiesRule					<- pty.args[['split.tiesRule']]
 	use.blacklisters				<- pty.args[['use.blacklisters']]
 	contaminant.read.threshold		<- pty.args[['contaminant.read.threshold']]
 	contaminant.prop.threshold		<- pty.args[['contaminant.prop.threshold']]
@@ -577,10 +604,10 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty.roguewblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklistWeibull.R'),sep='')
 	prog.pty.dualblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'DualPatientBlacklister.R'),sep='')
 	prog.pty.downsample				<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
-	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubtrees.R'),sep='')
+	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubGraphs.R'),sep='')
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
-	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationshipsExperimental.R'),sep='')	
-	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummaryExperimental.R'),sep='')	
+	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationships.R'),sep='')	
+	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
@@ -733,28 +760,31 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	}
 	#
 	#	bash command to plot trees and calculate splits
-	#							
-	tmp				<- phsc.cmd.SplitPatientsToSubtrees(	prog.pty.split,
+	#			
+	tmp				<- phsc.cmd.SplitPatientsToSubGraphs(	prog.pty.split,
 															pty.tools.dir,
 															file.path(tmp.dir,run.id_),
-															blacklistFiles=blacklistFiles,
-															outputdir=tmp.dir,																													
-															outgroupName=root.name,
-															splitsRule= ifelse(use.sankhoff.blacklister, 's', 'r'),
-															sankhoff.k=sankhoff.k,
-															tipRegex=tip.regex,
-															pdfwidth=30, 
-															pdfrelheight=0.15)
+															run.id_, 
+															outputdir=tmp.dir, 
+															blacklistFiles=blacklistFiles, 
+															outgroupName=root.name, 
+															splitsRule=ifelse(use.sankhoff.blacklister, 's', 'r'), 
+															sankhoff.k=sankhoff.k, 
+															tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
+															tipRegex=tip.regex, 
+															pdfwidth=30, pdfrelheight=0.15)	
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	bash command to calculate patient stats
-	#							
+	#	
+	#file.bam		<- paste(run.id_,'bam.txt',sep='')	
+	#cmd			<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')
 	tmp				<- phsc.cmd.SummaryStatistics( 	prog.pty.smry, 
 													pty.tools.dir, 
 													root.name, 
 													file.path(tmp.dir, basename(file.patients)), 
 													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, paste('Subtrees_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
 													tipRegex=tip.regex,
 													blacklistFiles=blacklistFiles
@@ -766,7 +796,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
 														pty.tools.dir, 
 														file.path(tmp.dir,paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
-														file.path(tmp.dir,paste('Subtrees_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 														file.path(tmp.dir,run.id_))
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -831,7 +861,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.trees)
 	{
 		save.file		<- paste(save.file.base,'trees.rda',sep='')
-		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='Subtrees_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='subgraphs_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		tmp				<- NULL		
 	}
 	#
@@ -840,7 +870,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.subtrees)
 	{
 		save.file		<- paste(save.file.base,'subtrees_r.rda',sep='')
-		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='Subtrees_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='subgraphs_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		stat.subtrees	<- NULL				
 	}
 	NULL
@@ -968,10 +998,14 @@ phsc.plot.default.colours.for.relationtypes<- function()
 	tmp2		<- do.call('rbind',list(
 					data.table(	TYPE= c('likely pair', 'chain'),
 							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
-					data.table(	TYPE= c('intermdiate distance','distant'),
+					data.table(	TYPE= c('intermediate distance','distant'),
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
-	cols.type[['TYPE_PAIRCHAIN_TODI']]	<- tmp2	
+	cols.type[['TYPE_PAIR_TODI']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("chain", "intermediate distance", "distant"),
+								COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_CHAIN_TODI']]	<- tmp2	
 	tmp2		<- data.table(	TYPE= c("no intermediate\n and close", "no intermediate\n but not close", "with intermediate\nor distant"),
 			COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
@@ -1118,12 +1152,12 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 			heights	<- unit(c(2, 3.5, 4, 15), "null")
 			height	<- 17
 		}		
-		if(group%in%c('TYPE_PAIR_TODI2x2','TYPE_PAIRCHAIN_TODI'))
+		if(group%in%c('TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI'))
 		{
 			heights	<- unit(c(2, 3.5, 4, 3.75), "null")
 			height	<- 8
 		}
-		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI'))
+		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_CHAIN_TODI'))
 		{
 			heights	<- unit(c(2, 3.5, 4, 3.5), "null")
 			height	<- 7
@@ -1585,132 +1619,6 @@ phsc.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.
 	phy	
 }
 
-drop.tip2 <- function (phy, tip, trim.internal=TRUE, subtree=FALSE, root.edge=0, rooted=is.rooted(phy)) 
-{
-	if (!inherits(phy, "phylo")) 
-		stop("object \"phy\" is not of class \"phylo\"")
-	Ntip <- length(phy$tip.label)
-	if (is.character(tip)) 
-		tip <- which(phy$tip.label %in% tip)
-	if (!rooted && subtree) {
-		phy <- root(phy, (1:Ntip)[-tip][1])
-		root.edge <- 0
-	}
-	phy <- reorder(phy)
-	NEWROOT <- ROOT <- Ntip + 1
-	Nnode <- phy$Nnode
-	Nedge <- dim(phy$edge)[1]
-	if (subtree) {
-		trim.internal <- TRUE
-		tr <- reorder(phy, "pruningwise")
-		N <- .C("node_depth", as.integer(Ntip), as.integer(Nnode), 
-				as.integer(tr$edge[, 1]), as.integer(tr$edge[, 2]), 
-				as.integer(Nedge), double(Ntip + Nnode), DUP = FALSE, 
-				PACKAGE = "ape")[[6]]
-	}
-	wbl <- !is.null(phy$edge.length)
-	edge1 <- phy$edge[, 1]
-	edge2 <- phy$edge[, 2]
-	keep <- !logical(Nedge)
-	if (is.character(tip)) 
-		tip <- which(phy$tip.label %in% tip)
-	if (!rooted && subtree) {
-		phy <- root(phy, (1:Ntip)[-tip][1])
-		root.edge <- 0
-	}
-	keep[match(tip, edge2)] <- FALSE
-	if (trim.internal) {
-		ints <- edge2 > Ntip
-		repeat {
-			sel <- !(edge2 %in% edge1[keep]) & ints & keep
-			if (!sum(sel)) 
-				break
-			keep[sel] <- FALSE
-		}
-		if (subtree) {
-			subt <- edge1 %in% edge1[keep] & edge1 %in% edge1[!keep]
-			keep[subt] <- TRUE
-		}
-		if (root.edge && wbl) {
-			degree <- tabulate(edge1[keep])
-			if (degree[ROOT] == 1) {
-				j <- integer(0)
-				repeat {
-					i <- which(edge1 == NEWROOT & keep)
-					j <- c(i, j)
-					NEWROOT <- edge2[i]
-					degree <- tabulate(edge1[keep])
-					if (degree[NEWROOT] > 1) 
-						break
-				}
-				keep[j] <- FALSE
-				if (length(j) > root.edge) 
-					j <- 1:root.edge
-				NewRootEdge <- sum(phy$edge.length[j])
-				if (length(j) < root.edge && !is.null(phy$root.edge)) 
-					NewRootEdge <- NewRootEdge + phy$root.edge
-				phy$root.edge <- NewRootEdge
-			}
-		}
-	}
-	if (!root.edge) 
-		phy$root.edge <- NULL
-	phy$edge <- phy$edge[keep, ]
-	if (wbl) 
-		phy$edge.length <- phy$edge.length[keep]
-	TERMS <- !(phy$edge[, 2] %in% phy$edge[, 1])
-	oldNo.ofNewTips <- phy$edge[TERMS, 2]
-	n <- length(oldNo.ofNewTips)
-	phy$edge[TERMS, 2] <- rank(phy$edge[TERMS, 2])
-	if (subtree || !trim.internal) {
-		tips.kept <- oldNo.ofNewTips <= Ntip & !(oldNo.ofNewTips %in% 
-					tip)
-		new.tip.label <- character(n)
-		new.tip.label[tips.kept] <- phy$tip.label[-tip]
-		node2tip <- oldNo.ofNewTips[!tips.kept]
-		new.tip.label[!tips.kept] <- if (subtree) {
-					paste("[", N[node2tip], "_tips]", sep = "")
-				}
-				else {
-					if (is.null(phy$node.label)) 
-						rep("NA", length(node2tip))
-					else phy$node.label[node2tip - Ntip]
-				}
-		if (!is.null(phy$node.label)) 
-			phy$node.label <- phy$node.label[-(node2tip - Ntip)]
-		phy$tip.label <- new.tip.label
-	}
-	if (!(subtree || !trim.internal))
-		phy$tip.label <- phy$tip.label[-tip]
-	if (!is.null(phy$node.label)) 
-		phy$node.label <- phy$node.label[sort(unique(phy$edge[, 
-										1])) - Ntip]
-	phy$Nnode <- dim(phy$edge)[1] - n + 1L
-	newNb <- integer(n + phy$Nnode)
-	newNb[NEWROOT] <- n + 1L
-	sndcol <- phy$edge[, 2] > n
-	phy$edge[sndcol, 2] <- newNb[phy$edge[sndcol, 2]] <- (n + 
-				2):(n + phy$Nnode)
-	phy$edge[, 1] <- newNb[phy$edge[, 1]]
-	storage.mode(phy$edge) <- "integer"
-	phy <- collapse.singles(phy)	
-	# handle non-standard node attributes
-	drop <- edge1[which(!keep)]
-	z	<- attr(phy, "INDIVIDUAL")
-	z[-drop]
-	attr(phy, "INDIVIDUAL")[-drop]
-
-	sdtnames <- c("edge", "edge.length", "Nnode", "tip.label", 		"node.label")
-	if (!all(names(phy) %in% sdtnames)){
-		id <- which(!names(phy) %in% sdtnames)
-		drop <- edge1[which(!keep)] - Ntip
-		for (i in id){
-			phy[[i]] <- phy[[i]][-drop]
-		}
-	}	
-	phy    
-}
-
 #' @export
 #' @import data.table grid ggtree
 #' @title Plot short read phylogenies and highlight individuals
@@ -1794,7 +1702,7 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 								panel.grid.major.x=element_line(color="grey20", linetype="dotted", size=.3),
 								legend.position="bottom",								
 								plot.title = element_text(hjust = 0.5, size=pdf.title.size)) + 
-						ggplot2::xlim(0, max(node.depth.edgelength(ph)[1:Ntip(ph)])*1.05) +
+						ggplot2::xlim(0, max(node.depth.edgelength(ph)[1:Ntip(ph)])*1.15) +
 						labs(x='subst/site', title=ph.title)
 				#ggsave(plot.file, w=10, h=200, limitsize = FALSE)
 				p
@@ -2030,11 +1938,11 @@ phsc.read.subtrees<- function(prefix.infiles, prefix.run='ptyr', regexpr.subtree
 	rs.subtrees	<- lapply(seq_len(nrow(dfr)), function(i){				 
 				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
 				load(dfr[i,FILE_TR])	
-				rs.subtrees	<- as.data.table(rs.subtrees)
-				rs.subtrees[, PTY_RUN:= dfr[i, PTY_RUN]]
-				rs.subtrees[, W_FROM:= dfr[i, W_FROM]]
-				rs.subtrees[, W_TO:= dfr[i, W_TO]]
-				rs.subtrees
+				rs.subgraphs	<- as.data.table(rs.subgraphs)
+				rs.subgraphs[, PTY_RUN:= dfr[i, PTY_RUN]]
+				rs.subgraphs[, W_FROM:= dfr[i, W_FROM]]
+				rs.subgraphs[, W_TO:= dfr[i, W_TO]]
+				rs.subgraphs
 			})
 	rs.subtrees	<- do.call('rbind', rs.subtrees)	
 	if(!is.na(save.file))

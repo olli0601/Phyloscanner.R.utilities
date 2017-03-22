@@ -2347,7 +2347,9 @@ RakaiAll.preprocess.pairs.170320<- function()
 	require(ggplot2)
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -5955,7 +5957,7 @@ RakaiAll.addposteriors.pairs.170320<- function()
 					}))	
 }
 
-RakaiAll.addposteriors.pairs.170320.otherclose<- function()
+RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 {
 	require(data.table)
 	require(scales)
@@ -5966,22 +5968,11 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 	# load pty.run
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	
-	tmp		<- copy(rpw)
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
-	rpw[, UNINTERRUPTED:=NA]	
-	tmp		<- rbind(rpw, tmp, fill=TRUE)	
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
-	rpw		<- rbind(rpw, tmp)
-	
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
-	#	check if we have all pty.runs
-	stopifnot(!length(setdiff( 	subset(rpw, RUN=='RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5')[, sort(unique(PTY_RUN))],
-							subset(rpw, RUN=='RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5')[, sort(unique(PTY_RUN))]	)),
-			!length(setdiff( 	subset(rpw, RUN=='RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5')[, sort(unique(PTY_RUN))],
-							subset(rpw, RUN=='RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5')[, sort(unique(PTY_RUN))]	)))	
+	
 	#	define plotting order: largest number of trm assignments	
 	tmp		<- rpw[, list( WIN_TR=length(which(grepl('close|anc',TYPE_DIR_TODI7x3))) ), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
 	tmp		<- tmp[, list(WIN_TR=max(WIN_TR)), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
@@ -6064,12 +6055,17 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 	rpw[, TYPE_DIR_TODI3:= NA_character_]
 	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
 	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
-	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')		
-	rpw[, TYPE_PAIRCHAIN_TODI:= 'distant']
-	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRCHAIN_TODI', 'chain')
-	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRCHAIN_TODI', 'chain')
-	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRCHAIN_TODI', 'likely pair')
-	set(rpw, rpw[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRCHAIN_TODI', 'intermediate distance')
+	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	rpw[, TYPE_PAIR_TODI:= 'distant']
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')
+	set(rpw, rpw[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')	
+	rpw[, TYPE_CHAIN_TODI:= 'distant']
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'intermediate distance')
 	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])
 	#
 	#	identify chunks of contiguous windows
@@ -6083,7 +6079,7 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 				list(W_SLIDE=ans)
 			}, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN')][, min(na.omit(W_SLIDE))]
 	#	melt because chunks are dependent on topology types: if there are NAs, then the chunks may change
-	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_PAIRCHAIN_TODI','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
+	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_PAIR_TODI','TYPE_CHAIN_TODI','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
 	set(rpw, NULL, 'TYPE', rpw[,gsub('_',' ', TYPE)])	
 	rpw		<- subset(rpw, !is.na(TYPE))			
 	#	define chunks
@@ -6139,7 +6135,8 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 	#	check prior
 	#
 	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
-	rps				<- unique(subset(rplkl, NEFF<5 & KEFF>.25 & PAR_PRIOR==0.1 & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)>0.5 & GROUP=='TYPE_PAIRCHAIN_TODI' & TYPE=='likely pair', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
+	rps				<- unique(subset(rplkl, NEFF<5 & KEFF>.25 & PAR_PRIOR==0.1 & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.5 & GROUP=='TYPE_PAIRCHAIN_TODI' & TYPE=='likely pair', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
+	write.csv(rps, file=paste0(outfile.base,'-phsc-relationships__compare_prior_0.1_3_5.csv'))
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
 	tmp			<- copy(rps)
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
@@ -6147,7 +6144,7 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
-	invisible(sapply(seq_len(nrow(tmp))[-c(1:7)], function(ii)
+	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
 						ids			<- c(tmp[ii, MALE_SANGER_ID],tmp[ii, FEMALE_SANGER_ID])
@@ -6157,74 +6154,28 @@ RakaiAll.addposteriors.pairs.170320.otherclose<- function()
 						plot.file	<- paste0(outfile, pty.run,'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
 						invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10))					
 					}))	
-	#	
-	#
-	group			<- 'TYPE_PAIR_TODI3'
+	#	compare priors
+	group			<- 'TYPE_PAIR_TODI'
 	rplkl2			<- merge(rps, subset(rplkl, GROUP==group), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
 	set(rplkl2, NULL, 'RUN', rplkl2[, paste0(RUN, '_prior', PAR_PRIOR)])	
 	set(rplkl2, NULL, 'RUN', rplkl2[, factor(RUN, levels=rev(c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior0.1','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior3','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior5')))])
-	set(rplkl2, NULL, 'TYPE', rplkl2[, factor(TYPE, levels=rev(c("no intermediate\n and close","no intermediate\n but not close","with intermediate\nor distant")))])
+	set(rplkl2, NULL, 'TYPE', rplkl2[, factor(TYPE, levels=rev(c("likely pair","chain","intermediate distance", "distant")))])
 	cols.run		<- c('black', 'blue', 'green')
 	names(cols.run)	<- c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior0.1','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior3','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior5')	
 	plot.file	<- paste0(outfile.base,'-phsc-relationships_compare_prior_0.1_3_5.pdf')
-	plot.prob.select	<- "no intermediate\n and close"
-	phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=group, height=20)
-	
-	
-	#
-	#	plot next to each other 
-	#		'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5' (using uninterrupted)
-	#		'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5' (not using uninterrupted)
-	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 
-	
-	rps		<- subset(rplkl, 	GROUP%in%c('TYPE_PAIR_TODI3') & 
-					TYPE==c("no intermediate\n and close") &
-					RUN%in%c('RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5','RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5'))
-	rps[, PROB:=pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)]
-	rps		<- rps[, list(PROB_D=abs(diff(PROB))), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID')]
-	write.csv(subset(rps, PROB_D>.05), file=paste0(outfile.base,'-phsc-relationships_compare_contiguous_to_contiguousORuninterrupted.csv'))
-	#	
-	#
-	group			<- 'TYPE_PAIR_TODI3'
-	cols.run		<- c('black', 'blue', 'green')
-	names(cols.run)	<- c('RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5','RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5')
-	rplkl2		<- merge(subset(rps, PROB_D>.05), subset(rplkl, GROUP==group), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
-	set(rplkl2, NULL, 'RUN', rplkl2[, factor(RUN, levels=rev(c('RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5','RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5')))])
-	set(rplkl2, NULL, 'TYPE', rplkl2[, factor(TYPE, levels=rev(c("no intermediate\n and close","no intermediate\n but not close","with intermediate\nor distant")))])
-	plot.file	<- paste0(outfile.base,'-phsc-relationships_compare_contiguous_to_contiguousORuninterrupted_EXP.pdf')
-	plot.prob.select	<- "no intermediate\n and close"
-	phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=group, height=40)
-	#
-	#	make detailed plots for each pair with PROB_D > 0.05
-	#	
-	#groups		<- c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI3','TYPE_PAIR_DI')
-	run			<- 'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5'
-	run			<- 'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5'
-	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'
-	group		<- c('TYPE_DIR_TODI7x3')		
-	plot.select	<- unique(subset(rplkl, GROUP==group, c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','LABEL')), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	plot.select	<- merge(subset(rps, PROB_D>.05), plot.select, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	plot.file	<- paste0(outfile.base,'-phsc-relationships_allpairs','_',run,'_',group,'.pdf')
-	rpw2		<- subset(rpw, RUN==run & GROUP==group)
-	rplkl2		<- subset(rplkl, RUN==run & GROUP==group)
-	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
-	
-	#
-	#	check prior 
-	#
+	plot.prob.select	<- "likely pair"
+	phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=group, height=20)	
+	#	make detailed plots for each pair 
 	group		<- 'TYPE_DIR_TODI7x3'
-	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'
-	rps			<- subset(rplkl, NEFF<5 & KEFF>2 & GROUP=='TYPE_PAIR_TODI3' & TYPE=='no intermediate\n and close', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'	
 	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	rpw2		<- subset(rpw, RUN==run & GROUP==group)
 	rplkl2		<- subset(rplkl, RUN==run & GROUP==group)
 	plot.file	<- paste0(outfile.base,'-phsc-relationships_allpairsNEFF5KEFF2','_',run,'_',group,'.pdf')
-	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
-	
+	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)	
 }
 
-RakaiAll.addposteriors.pairs.170320.checkprior<- function()
+RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 {
 	require(data.table)
 	require(scales)
@@ -6234,12 +6185,13 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	require(RColorBrewer)
 	# load pty.run
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
-	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')			
 	
+	# load transmission summaries
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
+	
 	#	define plotting order: largest number of trm assignments	
 	tmp		<- rpw[, list( WIN_TR=length(which(grepl('close|anc',TYPE_DIR_TODI7x3))) ), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
 	tmp		<- tmp[, list(WIN_TR=max(WIN_TR)), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')]
@@ -6265,46 +6217,7 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	tmp		<- rpw[, list(	ID_R_MIN=min(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R),
 					ID_R_MAX=max(MALE_SANGER_ID_R, FEMALE_SANGER_ID_R)), by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM')]
 	rpw		<- merge(rpw, tmp, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','W_FROM'))
-	#
-	#	define topo/distance types of phylogenetic relationship between pairs
-	#
-	#	given the bimodal distribution of patristic distances from phyloscanner
-	#	I ususally consider 3 distance states: close, neither close nor distant, distant
-	#
-	#	TYPE_DIR_TODI7x3		7 topology states (this is the "basic topological characterization" on Slack that I derive from Matthew's output) 
-	#							chain_12_nointermediate, chain_12_withintermediate, chain_21_nointermediate, chain_21_withintermediate, intermingled_nointermediate, intermingled_withintermediate, other  
-	#							times 
-	#							3 distance states
-	#
-	#	TYPE_PAIR_TODI3x3		3 topology states
-	#							pair (chain_XX_nointermediate+intermingled_nointermediate), withintermediate (XX_withintermediate), other
-	#							times 
-	#							3 distance states
-	#
-	#	TYPE_PAIR_TODI2x2		2 topology states
-	#							ancestral/intermingled, other
-	#							times 
-	#							2 distance states (close, not close)
-	#
-	#	TYPE_PAIR_TODI3			non-factorial design that combines distant or withintermediate, and close or ancestral/intermingled
-	#							the idea here is that 
-	#							evidence for extra-couple transmission comes from large patristic distance OR intermediates	
-	#							evidence for extra-couple transmission comes from ancestral/intermingled OR short patristic distance	
-	#
-	#	TYPE_PAIR_DI			3 distance states
-	#
-	#
-	#	TYPE_DIR_TO3			3 topological direction states
-	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
-	#							Rest: intermingled -> NA.
-	#
-	#	TYPE_DIR_TODI3			3 topological direction states if close.  
-	#							chain_fm	(chain_fm_nointermediate regardless of distance); chain_mf	(chain_mf_nointermediate regardless of distance); other
-	#							Rest: intermingled / distant / intermediate distance -> NA.
-	#
-	#	TYPE_CHAIN_TODI2		2 topological states if close.  
-	#							chain	(xxx_withintermediate_close); pair	(xxx_nointermediate_close, other)
-	#							Rest: distant / intermediate distance -> NA.
+	#	define relationships
 	rpw[, TYPE_PAIR_TO:= 'other']
 	set(rpw, rpw[, which(TYPE_PAIR_TODI3x3%in%c('pair_close','pair','pair_distant'))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
 	rpw[, TYPE_PAIR_TODI3:= 'with intermediate\nor distant']
@@ -6323,11 +6236,16 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	set(rpw, rpw[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
 	set(rpw, rpw[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
 	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
-	rpw[, TYPE_CHAIN_TODI2:= NA_character_]
-	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'chain')
-	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
-	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI2', 'pair')
-	set(rpw, rpw[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'intermingled')			
+	rpw[, TYPE_PAIR_TODI:= 'distant']
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')
+	set(rpw, rpw[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')	
+	rpw[, TYPE_CHAIN_TODI:= 'distant']
+	set(rpw, rpw[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+	set(rpw, rpw[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'intermediate distance')
 	set(rpw, NULL, 'TYPE_DIR_TODI7x3', rpw[, gsub('intermediate',' intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3))))])
 	#
 	#	identify chunks of contiguous windows
@@ -6341,7 +6259,7 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 				list(W_SLIDE=ans)
 			}, by=c('RUN','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','RUN')][, min(na.omit(W_SLIDE))]
 	#	melt because chunks are dependent on topology types: if there are NAs, then the chunks may change
-	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_CHAIN_TODI2','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
+	rpw		<- melt(rpw, measure.vars=c('TYPE_PAIR_TO','TYPE_PAIR_TODI','TYPE_CHAIN_TODI','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI7x3','TYPE_DIR_TO3','TYPE_DIR_TODI3'), variable.name='GROUP', value.name='TYPE')
 	set(rpw, NULL, 'TYPE', rpw[,gsub('_',' ', TYPE)])	
 	rpw		<- subset(rpw, !is.na(TYPE))			
 	#	define chunks
@@ -6391,69 +6309,94 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	rplkl		<- merge(rplkl,tmp,by=c('GROUP','PAR_PRIOR'))
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
+	#
+	#	load consensus distances
+	#
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda")
+	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	load(infile)
+	#	prepare patristic distance data.table
+	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
+	setnames(ph.gdtr, 'value', 'PD')
+	ph.gdtr	<- subset(ph.gdtr, TAXA1!=TAXA2)
+	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
+	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
+	#	load genetic distance matrix with overlap
+	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	load(infile)	#loads sq.gd
+	setnames(sq.gd, 'PD', 'GD')
+	#	for each run construct all pairings that were evaluated
+	ptc			<- lapply(pty.runs[, unique(PTY_RUN)], function(pty_run)
+			{
+				#pty_run<- 1
+				z			<- sort(gsub('_','-',subset(pty.runs, PTY_RUN==pty_run)[, TAXA], fixed=1))				
+				tmp			<- subset(sq.gd, TAXA1%in%z & TAXA2%in%z)	# this is symmetric
+				tmp[, PTY_RUN:=pty_run]				
+				tmp2		<- subset(ph.gdtr, TAXA1%in%z & TAXA2%in%z)
+				tmp			<- merge(tmp, tmp2, by=c('TAXA1','TAXA2'), all.x=1)
+				tmp				
+			})
+	ptc			<- do.call('rbind',ptc)
+	ph.gdtr		<- sq.gd	<- NULL
+	gc()
+	ptc[, MALE_PID:= gsub('-S[0-9]+','',TAXA1)]
+	ptc[, FEMALE_PID:= gsub('-S[0-9]+','',TAXA2)]
+	#ptcc		<- copy(ptc)
+	#	merge with Rakai IDs and make sure male is first
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	rs		<- subset(rs, !is.na(VISIT))		
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#	add sequence dates to rd
+	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, DATE)),by='PID')
+	setnames(tmp, 'DATE','SEQDATE')
+	rd		<- merge(rd, tmp, by='PID',all.x=1)
+	#	focus on those with PANGEA seqs
+	rd		<- subset(rd, !is.na(PID))
+	#	merge RIDs
+	tmp			<- subset(rd, select=c(PID, RID, SEX))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	ptc			<- merge(ptc, tmp, by='MALE_PID')
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	ptc			<- merge(ptc, tmp, by='FEMALE_PID')
+	ptc			<- subset(ptc, MALE_SEX=='M' & FEMALE_SEX=='F')
+	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
+	set(ptc, NULL, c('MALE_SEX','FEMALE_SEX'), NULL)
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_checkprior.rda')
+	save(rd, rh, rs, rp, rpw, rplkl, ptc, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda')
 	#
-	#	plot next to each other 
-	#		'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5' (using uninterrupted)
-	#		'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5' (not using uninterrupted)
+	#	compare 
 	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
-	rps				<- unique(subset(rplkl, NEFF<5 & KEFF>2 & GROUP=='TYPE_PAIR_TODI3' & TYPE=='no intermediate\n and close', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
-	
-	
-	rps		<- subset(rplkl, 	GROUP%in%c('TYPE_PAIR_TODI3') & 
-					TYPE==c("no intermediate\n and close") &
-					RUN%in%c('RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5','RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5'))
-	rps[, PROB:=pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)]
-	rps		<- rps[, list(PROB_D=abs(diff(PROB))), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID')]
-	write.csv(subset(rps, PROB_D>.05), file=paste0(outfile.base,'-phsc-relationships_compare_contiguous_to_contiguousORuninterrupted.csv'))
+	set(ptc, NULL, c('TAXA1','TAXA2'), NULL)
+	ptc			<- unique(ptc, by=c('MALE_PID','FEMALE_PID'))
+	setnames(ptc, 'OVERLAP', 'GD_OVERLAP')
+	rpw			<- merge(rpw, ptc, by=c('PTY_RUN','MALE_PID','FEMALE_PID','MALE_RID','FEMALE_RID'), all.x=1)
+	#
+	#	unique(subset(rpw, is.na(GD)), by=c('MALE_RID','FEMALE_RID'))
+	#	1701 pairings with cons sequence info, 207 without
 	#	
-	#
-	group			<- 'TYPE_PAIR_TODI3'
-	rplkl2			<- merge(rps, subset(rplkl, GROUP==group), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))
-	set(rplkl2, NULL, 'RUN', rplkl2[, paste0(RUN, '_prior', PAR_PRIOR)])	
-	set(rplkl2, NULL, 'RUN', rplkl2[, factor(RUN, levels=rev(c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior0.1','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior3','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior5')))])
-	set(rplkl2, NULL, 'TYPE', rplkl2[, factor(TYPE, levels=rev(c("no intermediate\n and close","no intermediate\n but not close","with intermediate\nor distant")))])
-	cols.run		<- c('black', 'blue', 'green')
-	names(cols.run)	<- c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior0.1','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior3','RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_prior5')	
-	plot.file	<- paste0(outfile.base,'-phsc-relationships_compare_prior_0.1_3_5.pdf')
-	plot.prob.select	<- "no intermediate\n and close"
-	phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=group, height=20)
-	#
-	#	make detailed plots for each pair with PROB_D > 0.05
-	#	
-	#groups		<- c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI3','TYPE_PAIR_DI')
-	run			<- 'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5'
-	run			<- 'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5'
-	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'
-	group		<- c('TYPE_DIR_TODI7x3')		
-	plot.select	<- unique(subset(rplkl, GROUP==group, c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','LABEL')), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	plot.select	<- merge(subset(rps, PROB_D>.05), plot.select, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	plot.file	<- paste0(outfile.base,'-phsc-relationships_allpairs','_',run,'_',group,'.pdf')
-	rpw2		<- subset(rpw, RUN==run & GROUP==group)
-	rplkl2		<- subset(rplkl, RUN==run & GROUP==group)
-	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
-	
-	#
-	#	check prior 
-	#
-	group		<- 'TYPE_DIR_TODI7x3'
-	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'
-	rps			<- subset(rplkl, NEFF<5 & KEFF>2 & GROUP=='TYPE_PAIR_TODI3' & TYPE=='no intermediate\n and close', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	rpw2		<- subset(rpw, RUN==run & GROUP==group)
-	rplkl2		<- subset(rplkl, RUN==run & GROUP==group)
-	plot.file	<- paste0(outfile.base,'-phsc-relationships_allpairsNEFF5KEFF2','_',run,'_',group,'.pdf')
-	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
+	rpw			<- subset(rpw, !is.na(GD))
+	rpw			<- merge(rpw, rpw[, list(PSC_MPD=mean(PATRISTIC_DISTANCE), PSC_SPD=sd(PATRISTIC_DISTANCE)), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')], by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	#	work out average by which consensus raw genetic distances are larger
+	tmp			<- unique(rpw, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	tmp[, F:= GD/PSC_MPD]
+	#	tmp[, median(F)]	# 1.08279
+	#	ggplot(tmp, aes(x=F)) + geom_histogram()
+	#	select potentially interesting cases with much lower than expected phyloscanner distances than their consensus distance
+	rps			<- unique(subset(rpw, (PSC_MPD+2*PSC_SPD) < GD/1.083,select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID', 'PSC_MPD', 'PSC_SPD', 'PD', 'GD')))
+	rps[, F:=GD/PSC_MPD]
+	rps			<- rps[order(-F),]	
+	outfile.base<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
+	write.csv(rps, file=paste0(outfile.base,'-phsc-relationships_compare_largeconsensus.csv'))
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
 	tmp			<- copy(rps)
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
-	invisible(sapply(seq_len(nrow(tmp))[-c(1:7)], function(ii)
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/consensus_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
+	invisible(sapply(seq_len(nrow(tmp))[1:40], function(ii)
 					{	
 						#ii<- 1
 						ids			<- c(tmp[ii, MALE_SANGER_ID],tmp[ii, FEMALE_SANGER_ID])
@@ -6462,7 +6405,41 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 						dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]								
 						plot.file	<- paste0(outfile, pty.run,'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
 						invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10))					
+					}))
+	invisible(sapply(seq_len(nrow(tmp)[1:40]), function(ii)
+					{	
+						#ii<- 14
+						ids			<- c(tmp[ii, MALE_SANGER_ID],tmp[ii, FEMALE_SANGER_ID])
+						pty.run		<- tmp[ii, PTY_RUN]
+						dfs			<- subset(dtrees, PTY_RUN==pty.run, select=c(PTY_RUN, W_FROM, W_TO, IDX))
+						dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', pty.run, '\nwindow ', W_FROM,'-', W_TO,sep='')]]			
+						plot.file	<- paste0(outfile, pty.run,'_M_',ids[1],'_F_', ids[2],'.pdf')						
+						invisible(phsc.plot.phy.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), group.redo=TRUE, plot.file=plot.file, pdf.h=150, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40))					
 					}))	
+	#	make flat plot
+	group			<- 'TYPE_PAIR_TODI'
+	rplkl2			<- merge(rps, subset(rplkl, GROUP==group & PAR_PRIOR==3), by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID'))		
+	set(rplkl2, NULL, 'RUN', rplkl2[, factor(RUN, levels=rev(c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5')))])
+	set(rplkl2, NULL, 'TYPE', rplkl2[, factor(TYPE, levels=rev(c("likely pair","chain","intermediate distance", "distant")))])
+	cols.run		<- c('black')
+	names(cols.run)	<- c('RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5')	
+	plot.file	<- paste0(outfile.base,'-phsc-relationships_consensus_flat.pdf')
+	plot.prob.select	<- "likely pair"
+	setkey()
+	phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select, cols.run, cols=NULL, group=group, height=40)
+	#	plot consensus distance vs likely pair prob
+	#		we have no striking pairs that are likely transmissions and have large cons distance
+	ggplot( subset(rplkl2, TYPE=='likely pair'), aes(x=GD, y= qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA))) +
+			geom_point()
+	ggsave(file=paste0(outfile.base,'-phsc-relationships_consensus_distvspairprob.pdf'), h=5, w=5)
+	#	make detailed plots for each pair 
+	group		<- 'TYPE_DIR_TODI7x3'
+	run			<- 'RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5'	
+	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	rpw2		<- subset(rpw, RUN==run & GROUP==group)
+	rplkl2		<- subset(rplkl, RUN==run & GROUP==group & PAR_PRIOR==3)
+	plot.file	<- paste0(outfile.base,'-phsc-relationships_consensus_windowsummary.pdf')
+	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)	
 }
 
 
