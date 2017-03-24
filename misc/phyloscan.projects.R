@@ -2092,6 +2092,23 @@ pty.process.160901<- function()
 						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
+	#	170324
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170322_couples_w250'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250'		
+		for(opt in c('d50_st20_trU_rerun','d50_st20_trB_rerun'))		
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.02))
+					for(trmw.distant.brl in c(0.05))
+					{
+						trmw.min.tips		<- 1
+						tmp.in		<- paste(infile.base, opt, sep='_')
+						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+						cat('\n',tmp.in,' -> ',tmp.out)
+						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					}		
+	}
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -2767,7 +2784,8 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")				
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trU_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trA_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trU_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trB_rerun")		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
@@ -2802,7 +2820,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										keep.overhangs=FALSE,	
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
-										split.tiesRule='u',
+										split.tiesRule='b',
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
 										dwns.maxReadsPerPatient=50,											
