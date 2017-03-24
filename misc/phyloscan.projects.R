@@ -2772,7 +2772,7 @@ pty.pipeline.phyloscanner.170301.all<- function()
 pty.pipeline.phyloscanner.160915.couples.resume<- function() 
 {
 	require(big.phylo)
-	require(phyloscan) 
+	require(phyloscan)  
 	#
 	#	INPUT ARGS PLATFORM
 	#	
