@@ -2097,7 +2097,7 @@ pty.process.160901<- function()
 	{
 		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170322_couples_w250'
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250'		
-		for(opt in c('d50_st20_trU_rerun','d50_st20_trB_rerun'))		
+		for(opt in c('d50_st20_trA_rerun','d50_st20_trU_rerun','d50_st20_trB_rerun'))		
 			for(trmw.min.reads in c(20))
 				for(trmw.close.brl in c(0.02))
 					for(trmw.distant.brl in c(0.05))
@@ -2309,7 +2309,8 @@ pty.pipeline.phyloscanner.test<- function()
 									split.tiesRule='u',
 									roguesubtree.prop.threshold=0,
 									roguesubtree.read.threshold=20,
-									dwns.maxReadsPerPatient=50,											
+									dwns.maxReadsPerPatient=50,	
+									multifurcation.threshold=1e-5,
 									mem.save=0,
 									select=pty.select)
 							
@@ -2835,7 +2836,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		#pty.c	<- subset(pty.c, PTY_RUN%in%c(22,43,52,73,81,115))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(1))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -2853,7 +2854,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		invisible(pty.c[,	{					
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

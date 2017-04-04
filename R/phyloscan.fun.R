@@ -35,7 +35,7 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA)
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, rawThreshold, ratioThreshold, sankhoffK, inputFileName, outputFileName)
 	if(!is.na(dualCandidatesOutputFileName))
@@ -46,6 +46,8 @@ phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outpu
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)	
 	if(!is.na(tipRegex))
 		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex, '"')
+	if(!is.na(multifurcation.threshold))
+		cmd	<- paste0(cmd, ' --multifurcationThreshold ', multifurcation.threshold)		
 	cmd
 }
 
@@ -84,9 +86,9 @@ phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outpu
 }
 
 
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, outgroupName, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA)
 {
-	cmd	<- paste(pr,' --scriptdir ',scriptdir,' --outgroupName ', outgroupName, ' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
+	cmd	<- paste(pr,' --scriptdir ',scriptdir,' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "',tipRegex,'"', sep='')	
 	if(!is.na(blacklistFiles))
@@ -137,7 +139,7 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 
-phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15)	
 {
 	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -153,7 +155,9 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	if(!is.na(tiesRule))
 		cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')		
+		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')	
+	if(!is.na(multifurcation.threshold))
+		cmd	<- paste(cmd, ' --multifurcationThreshold ', multifurcation.threshold, sep='')		
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -283,26 +287,12 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	#	other	
 	tmp		<- dwin[, which((CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound contiguous with no paths, n=', length(tmp),'--> other')
-	set(dwin, tmp, 'TYPE', 'other')
+	set(dwin, tmp, 'TYPE', 'other_nointermediate')
 	tmp		<- dwin[, which(!(CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound discontiguous with no assignment, n=', length(tmp),'--> other')
-	set(dwin, tmp, 'TYPE', 'other')
+	set(dwin, tmp, 'TYPE', 'other_withintermediate')
 	#	check
 	stopifnot( !nrow(subset(dwin, TYPE=='none'))	)
-	#
-	#	merge assignments (short for pairs)
-	#
-	dwin[, TYPE_PAIR:= TYPE]
-	cat('\nBuilding TYPE_PAIR')
-	tmp		<- dwin[, which(grepl('nointermediate', TYPE_PAIR))]
-	cat('\nFound pairs, n=', length(tmp),'--> pair')
-	set(dwin, tmp, 'TYPE_PAIR', 'pair')
-	tmp		<- dwin[, which(grepl('withintermediate', TYPE_PAIR))]
-	cat('\nFound individuals with intermediates, n=', length(tmp),'--> withintermediate')
-	set(dwin, tmp, 'TYPE_PAIR', 'withintermediate')
-	tmp		<- dwin[, which(grepl('other', TYPE_PAIR))]
-	cat('\nFound other relationships, n=', length(tmp),'--> other')
-	set(dwin, tmp, 'TYPE_PAIR', 'other')
 	#
 	#	add distance as second dimension
 	#
@@ -311,21 +301,19 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
 		tmp		<- dwin[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
 		cat('\nFound close, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_close')])
-		set(dwin, tmp, 'TYPE_PAIR', dwin[tmp, paste0(TYPE_PAIR,'_close')])
+		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_close')])		
 	}
 	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
 	{
 		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
 		tmp		<- dwin[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
 		cat('\nFound distant, n=', length(tmp))
-		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_distant')])
-		set(dwin, tmp, 'TYPE_PAIR', dwin[tmp, paste0(TYPE_PAIR,'_distant')])
+		set(dwin, tmp, 'TYPE', dwin[tmp, paste0(TYPE,'_distant')])	
 	}
 	#	
 	#	summarise transmission stats
 	#	
-	dtrms	<- dwin[, list(WIN_OF_TYPE=length(W_FROM), ID1_R=ID1_R[1], ID1_L=ID1_L[1], ID2_R=ID2_R[1], ID2_L=ID2_L[1]), by=c('PTY_RUN','ID1','ID2','TYPE','TYPE_PAIR')]
+	dtrms	<- dwin[, list(WIN_OF_TYPE=length(W_FROM), ID1_R=ID1_R[1], ID1_L=ID1_L[1], ID2_R=ID2_R[1], ID2_L=ID2_L[1]), by=c('PTY_RUN','ID1','ID2','TYPE')]
 	tmp		<- dtrms[, list(WIN_TOTAL=sum(WIN_OF_TYPE)), by=c('PTY_RUN','ID1','ID2')]
 	dtrms	<- merge(dtrms, tmp, by=c('PTY_RUN','ID1','ID2'))
 	#	set pair id	
@@ -597,6 +585,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	dwns.maxReadsPerPatient			<- pty.args[['dwns.maxReadsPerPatient']]
 	tip.regex						<- pty.args[['tip.regex']]
 	mem.save						<- pty.args[['mem.save']]
+	multifurcation.threshold		<- pty.args[['multifurcation.threshold']]
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
 	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'ParsimonyBasedBlacklister.R'),sep='')
@@ -607,7 +596,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubgraphs.R'),sep='')
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
 	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'NewClassifyRelationships.R'),sep='')	
-	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
+	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'NewTransmissionSummary.R'),sep='')	
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
@@ -657,7 +646,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 														contaminant.prop.threshold, 
 														tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
@@ -676,11 +665,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																	blackListFileName=tmp,
 																	rawThreshold=roguesubtree.read.threshold, 
 																	ratioThreshold=roguesubtree.prop.threshold, 
-																	sankhoffK=sankhoff.k,	
+																	sankhoffK=sankhoff.k,
+																	multifurcation.threshold=multifurcation.threshold,
 																	outgroupName=root.name,
 																	tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
 	}		
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
@@ -700,7 +690,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															outgroupName=root.name, 
 															tipRegex=tip.regex)				
 		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
@@ -721,7 +711,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															outgroupName=root.name, 
 															tipRegex=tip.regex)				
 		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
@@ -738,7 +728,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 		cmd				<- paste(cmd, tmp, sep='\n')
 		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
 		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_InWindow_',sep=''))
 	}
 	#
 	#	bash command to downsample tips (add to blacklist)
@@ -754,7 +744,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																outgroupName=root.name, 
 																tipRegex=tip.regex)
 		cmd				<- paste(cmd, tmp, sep='\n')
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_InWindow_',sep=''))
 		#cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
 		#cmd				<- paste(cmd, 'mv "$file" "${file//blacklistdwns/blacklist}"\ndone',sep='')		
 	}
@@ -766,10 +756,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															file.path(tmp.dir,run.id_),
 															run.id_, 
 															outputdir=tmp.dir, 
-															blacklistFiles=blacklistFiles, 
+															blacklistFiles=gsub('InWindow_','',blacklistFiles), 
 															outgroupName=root.name, 
 															splitsRule=ifelse(use.sankhoff.blacklister, 's', 'r'), 
-															sankhoff.k=sankhoff.k, 
+															sankhoff.k=sankhoff.k,
+															multifurcation.threshold=multifurcation.threshold,
 															tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
 															tipRegex=tip.regex, 
 															pdfwidth=30, pdfrelheight=0.15)	
@@ -780,10 +771,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#file.bam		<- paste(run.id_,'bam.txt',sep='')	
 	#cmd			<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')
 	tmp				<- phsc.cmd.SummaryStatistics( 	prog.pty.smry, 
-													pty.tools.dir, 
-													root.name, 
+													pty.tools.dir, 													 
 													file.path(tmp.dir, basename(file.patients)), 
-													file.path(tmp.dir, paste(run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
 													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
 													tipRegex=tip.regex,
@@ -797,7 +787,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 														pty.tools.dir, 
 														file.path(tmp.dir,paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 														file.path(tmp.dir,paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
-														file.path(tmp.dir,run.id_))
+														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1))
+														)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	add bash command to get likely transmissions summary
@@ -806,7 +797,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															pty.tools.dir,
 															file.path(tmp.dir, basename(file.patients)),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
-															file.path(tmp.dir, paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
+															file.path(tmp.dir, paste(run.id_,'classification_InWindow_',sep='')), 
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
@@ -853,7 +844,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.likelytransmissions)
 	{
 		save.file		<- paste(save.file.base,'trmStats.rda',sep='')		
-		phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu='trmStats.csv$', save.file=save.file, resume=resume, zip=zip)				
+		phsc.read.likelytransmissions(prefix.infiles, prefix.run='ptyr', regexpr.lklsu="classification_.*.csv$", save.file=save.file, resume=resume, zip=zip)				
 	}
 	#
 	#	read trees
@@ -976,8 +967,8 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
 					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
 							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
-					data.table(	TYPE= c("other close","other","other distant"),
-							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)])))
+					data.table(	TYPE= c("other\nno intermediate\nclose","other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(9,3,4,5)])))
 	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	tmp2		<- do.call('rbind',list(
 					data.table(	TYPE= c("pair close","pair","pair distant"),
@@ -1002,6 +993,13 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI']]	<- tmp2
+	tmp2		<- do.call('rbind',list(
+					data.table(	TYPE= c('likely pair', 'chain'),
+							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
+					data.table(	TYPE= c('intermediate distance','distant'),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI_NEW']]	<- tmp2
 	tmp2		<- data.table(	TYPE= c("chain", "intermediate distance", "distant"),
 								COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
@@ -1171,6 +1169,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 		#pty_run	<- 38; id1		<- '16016_1_4'; id2		<- '15105_1_35'
 		pty_run	<- plot.select[i, PTY_RUN]; id1		<- plot.select[i, FEMALE_SANGER_ID]; id2		<- plot.select[i, MALE_SANGER_ID]		
 		tmp		<- subset(rpw2, PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		set(tmp, NULL, 'TYPE', tmp[, gsub('  ',' ',TYPE)])
 		p1		<- ggplot(tmp, aes(x=W_FROM)) +			
 				geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
 				geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
@@ -1188,6 +1187,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 				scale_y_log10(labels=percent, limits=c(0.001, 0.7), expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
 				theme_bw() + theme(legend.position='left')
 		tmp		<- subset(rplkl2, PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
+		set(tmp, NULL, 'TYPE', tmp[, gsub('  ',' ',TYPE)])
 		p3		<- ggplot(tmp, aes(x=TYPE, y=KEFF, fill=TYPE)) + geom_bar(stat='identity') +
 				scale_fill_manual(values=cols) +
 				theme_bw() + theme(legend.position='bottom') +
@@ -1889,15 +1889,7 @@ phsc.read.likelytransmissions<- function(prefix.infiles, prefix.run='ptyr', rege
 			cat('\nZip to file', tmp2,'...\n')
 			invisible( tmp[, list(RTN= zip( tmp2, FILE_TRSU, flags = "-ur9XTjq")), by='FILE_TRSU'] )
 			invisible( file.remove( dfr[, FILE_TRSU] ) )
-		}
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*_LikelyTransmissions.csv$',sep=''), full.names=TRUE))
-		if(nrow(tmp))
-		{
-			tmp2	<- paste(gsub('\\.rda','',save.file),'_LikelyTransmissions.zip',sep='')
-			cat('\nZip to file', tmp2,'...\n')
-			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )
-			invisible( file.remove( tmp[, FILE] ) )			
-		}
+		}		
 	}
 }
 
@@ -2022,7 +2014,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 	}
 	if(zip & !is.na(save.file))
 	{
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=gsub('\\.rda','\\.pdf',gsub("subtrees","tree",gsub("Subtrees","Tree",regexpr.trees))), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern='.*Tree.*.pdf$|tree.*.pdf$', full.names=TRUE))
 		tmp	<- subset(tmp, grepl(basename(prefix.infiles), basename(FILE),fixed=1))
 		if(nrow(tmp))
 		{
@@ -2079,7 +2071,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 			invisible( tmp[, list(RTN= zip( tmp2, FILE, flags = "-ur9XTjq")), by='FILE'] )			
 			invisible( file.remove( tmp[, FILE] ) )			
 		}
-		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*collapsed\\.csv$',sep=''), full.names=TRUE))
+		tmp	<- data.table(FILE= list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*collapsed.*csv$',sep=''), full.names=TRUE))
 		if(nrow(tmp))
 		{
 			tmp2	<- paste(gsub('\\.rda','',save.file),'_collapsed.zip',sep='')
