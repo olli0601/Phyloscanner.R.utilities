@@ -2819,6 +2819,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										min.ureads.individual=NA, 
 										win=c(800,9400,25,250), 
 										keep.overhangs=FALSE,	
+										multifurcation.threshold=1e-5,
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
 										split.tiesRule='b',
