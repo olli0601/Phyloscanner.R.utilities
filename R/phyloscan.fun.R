@@ -37,17 +37,17 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 
 phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA)
 {
-	cmd	<- paste(pr, '--scriptdir',scriptdir, rawThreshold, ratioThreshold, sankhoffK, inputFileName, outputFileName)
+	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'" ')
 	if(!is.na(dualCandidatesOutputFileName))
-		cmd	<- paste(cmd, '--dualsOutputFile', dualCandidatesOutputFileName)			
+		cmd	<- paste0(cmd, '--dualsOutputFile "', dualCandidatesOutputFileName,'" ')			
 	if(!is.na(outgroupName))
-		cmd	<- paste(cmd, '--outgroupName', outgroupName)
+		cmd	<- paste0(cmd, '--outgroupName ', outgroupName,' ')
 	if(!is.na(blackListFileName))
-		cmd	<- paste(cmd, '--blacklist', blackListFileName)	
+		cmd	<- paste0(cmd, '--blacklist "', blackListFileName,'" ')	
 	if(!is.na(tipRegex))
-		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex, '"')
+		cmd	<- paste0(cmd, '--tipRegex "', tipRegex, '" ')
 	if(!is.na(multifurcation.threshold))
-		cmd	<- paste0(cmd, ' --multifurcationThreshold ', multifurcation.threshold)		
+		cmd	<- paste0(cmd, '--multifurcationThreshold ', multifurcation.threshold,' ')		
 	cmd
 }
 
@@ -653,23 +653,20 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
 	if(any(grepl('ParsimonyBasedBlacklister', use.blacklisters)))	
-	{
-		cmd				<- paste(cmd, '\nfor file in ', run.id_,'InWindow_*.tree; do\n\t',sep='')
-		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
-		tmp				<- ifelse(any(is.na(blacklistFiles)), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+	{		
 		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff, 
-																	pty.tools.dir,
-																	'"$file"', 
-																	paste('"${TMP//InWindow/blacklistsank_InWindow}"',sep=''), 
-																	dualCandidatesOutputFileName=paste('"${TMP//InWindow/duallistsank_InWindow}"',sep=''),
-																	blackListFileName=tmp,
-																	rawThreshold=roguesubtree.read.threshold, 
-																	ratioThreshold=roguesubtree.prop.threshold, 
-																	sankhoffK=sankhoff.k,
-																	multifurcation.threshold=multifurcation.threshold,
-																	outgroupName=root.name,
-																	tipRegex=tip.regex)
-		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
+																pty.tools.dir,
+																file.path(tmp.dir,paste0(run.id_,'InWindow_')),
+																file.path(tmp.dir,paste0(run.id_,'blacklistsank_InWindow_')),																 
+																dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow_')),
+																blackListFileName=blacklistFiles,
+																rawThreshold=roguesubtree.read.threshold, 
+																ratioThreshold=roguesubtree.prop.threshold, 
+																sankhoffK=sankhoff.k,
+																multifurcation.threshold=multifurcation.threshold,
+																outgroupName=root.name,
+																tipRegex=tip.regex)
+		cmd				<- paste(cmd, tmp, sep='\n')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
 	}		
 	#
