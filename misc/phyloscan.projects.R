@@ -2785,8 +2785,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")				
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trA_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trA_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trU_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trC_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trB_rerun")		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
@@ -2822,7 +2823,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										multifurcation.threshold=1e-5,
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
-										split.tiesRule='b',
+										split.tiesRule='c',
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
 										dwns.maxReadsPerPatient=50,											
@@ -2837,7 +2838,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(1))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(1))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
