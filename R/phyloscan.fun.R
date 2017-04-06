@@ -21,6 +21,12 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
+phsc.cmd.NormalisationLookupWriter<- function(pr, inputTreeFileName, normFileName, outputFileName, normFileVar)
+{
+	cmd	<- paste(pr, ' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
+	cmd
+}
+
 phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.prop.threshold=0.01, windowCount=NA)
 {
 	cmd	<- paste(pr, dual.prop.threshold, inputFileNameDuals, outputFileName)
@@ -206,7 +212,7 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 				load(ptyr[i, FILE])
 				phs
 			})
-	phs		<- do.call(c, phs)
+	phs		<- do.call('c', phs)
 	#	read tree info
 	dtrees	<- lapply(seq_len(nrow(ptyr)), function(i)
 			{
@@ -228,13 +234,17 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 				tt
 			})
 	dwin	<- do.call('rbind', dwin)
-	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_LEAVES','PAT.2_LEAVES','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'),
-					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
+	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21','ADJACENT'),
+					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21','CONTIGUOUS'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
 	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
 	if(!any(colnames(dwin)=='UNINTERRUPTED'))	#for backward compatibility
 		dwin[, UNINTERRUPTED:=FALSE]
+	#	create W_FROM W_TO from SUFFIX
+	set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
+	set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
+	set(dwin, NULL, 'SUFFIX', NULL)
 	#
 	#	build transmission summary stats based on selection criteria
 	#	
@@ -583,10 +593,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	rogue.longestBranchLength		<- pty.args[['rogue.longestBranchLength']]
 	rogue.probThreshold				<- pty.args[['rogue.probThreshold']]	
 	dwns.maxReadsPerPatient			<- pty.args[['dwns.maxReadsPerPatient']]
+	bl.normalising.reference.file	<- pty.args[['bl.normalising.reference.file']]
+	bl.normalising.reference.var	<- pty.args[['bl.normalising.reference.var']]
 	tip.regex						<- pty.args[['tip.regex']]
 	mem.save						<- pty.args[['mem.save']]
 	multifurcation.threshold		<- pty.args[['multifurcation.threshold']]
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
+	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir,'NormalisationLookupWriter.R'),sep='')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
 	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'ParsimonyBasedBlacklister.R'),sep='')
 	prog.pty.rogueblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklist.R'),sep='')
@@ -633,6 +646,19 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	{
 		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
 	}	
+	#
+	#	bash command to define normalising constants, if
+	#		a reference file and a reference column name in that file are specified
+	#
+	if(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var))
+	{
+		tmp				<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser, 
+																file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
+																bl.normalising.reference.file, 
+																file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
+																bl.normalising.reference.var)
+		cmd				<- paste(cmd, tmp, sep='\n')								
+	}
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#	
