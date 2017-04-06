@@ -21,9 +21,11 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.NormalisationLookupWriter<- function(pr, inputTreeFileName, normFileName, outputFileName, normFileVar)
+phsc.cmd.NormalisationLookupWriter<- function(pr, inputTreeFileName, normFileName, outputFileName, normFileVar, standardize=FALSE)
 {
-	cmd	<- paste(pr, ' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
+	cmd	<- paste0(pr, ' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
+	if(!is.na(standardize) & standardize)
+		cmd	<- paste0(cmd, ' --standardize')
 	cmd
 }
 
@@ -41,19 +43,23 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA, branchLengthNormalisation=NA)
 {
-	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'" ')
+	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'"')
 	if(!is.na(dualCandidatesOutputFileName))
-		cmd	<- paste0(cmd, '--dualsOutputFile "', dualCandidatesOutputFileName,'" ')			
+		cmd	<- paste0(cmd, ' --dualsOutputFile "', dualCandidatesOutputFileName,'"')			
 	if(!is.na(outgroupName))
-		cmd	<- paste0(cmd, '--outgroupName ', outgroupName,' ')
+		cmd	<- paste0(cmd, ' --outgroupName ', outgroupName)
 	if(!is.na(blackListFileName))
-		cmd	<- paste0(cmd, '--blacklist "', blackListFileName,'" ')	
+		cmd	<- paste0(cmd, ' --blacklist "', blackListFileName,'"')	
 	if(!is.na(tipRegex))
-		cmd	<- paste0(cmd, '--tipRegex "', tipRegex, '" ')
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex, '"')
 	if(!is.na(multifurcation.threshold))
-		cmd	<- paste0(cmd, '--multifurcationThreshold ', multifurcation.threshold,' ')		
+		cmd	<- paste0(cmd, ' --multifurcationThreshold ', multifurcation.threshold,' ')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)		
 	cmd
 }
 
@@ -145,7 +151,7 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 
-phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15)	
 {
 	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -163,7 +169,11 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')	
 	if(!is.na(multifurcation.threshold))
-		cmd	<- paste(cmd, ' --multifurcationThreshold ', multifurcation.threshold, sep='')		
+		cmd	<- paste(cmd, ' --multifurcationThreshold ', multifurcation.threshold, sep='')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
+		cmd	<- paste(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"',sep='')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
+		cmd	<- paste(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation, sep='')	
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -613,6 +623,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
+	bl.normalising.file				<- NA_character_
 	#
 	stopifnot(	!is.null(use.blacklisters) & !is.na(use.blacklisters)	)
 	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
@@ -652,12 +663,15 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	if(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var))
 	{
-		tmp				<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser, 
-																file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
-																bl.normalising.reference.file, 
-																file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
-																bl.normalising.reference.var)
-		cmd				<- paste(cmd, tmp, sep='\n')								
+		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser, 
+																	file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
+																	bl.normalising.reference.file, 
+																	file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
+																	bl.normalising.reference.var,
+																	standardize=TRUE
+																	)
+		cmd					<- paste(cmd, tmp, sep='\n')	
+		bl.normalising.file	<- file.path(tmp.dir,paste0(run.id_,'normconst.csv'))
 	}
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
@@ -691,7 +705,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																sankhoffK=sankhoff.k,
 																multifurcation.threshold=multifurcation.threshold,
 																outgroupName=root.name,
-																tipRegex=tip.regex)
+																tipRegex=tip.regex,
+																branchLengthNormalisation=bl.normalising.file
+																)
 		cmd				<- paste(cmd, tmp, sep='\n')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
 	}		
@@ -784,6 +800,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															splitsRule=ifelse(use.sankhoff.blacklister, 's', 'r'), 
 															sankhoff.k=sankhoff.k,
 															multifurcation.threshold=multifurcation.threshold,
+															branchLengthNormalisation=bl.normalising.file,
 															tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
 															tipRegex=tip.regex, 
 															pdfwidth=30, pdfrelheight=0.15)	

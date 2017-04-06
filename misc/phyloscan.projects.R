@@ -2290,6 +2290,8 @@ pty.pipeline.phyloscanner.test<- function()
 									out.dir=out.dir, 
 									alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
 									alignments.root='REF_CPX_AF460972', 
+									bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
+									bl.normalising.reference.var='MEDIAN_PWD',
 									alignments.pairwise.to='REF_B_K03455',
 									window.automatic= '', 
 									merge.threshold=1, 
@@ -2786,9 +2788,10 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
 		in.dir				<- file.path(HOME,"Rakai_ptoutput_160915_couples_w270")						
-		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trU_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trC_rerun")
-		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170322_couples_w270_d50_st20_trB_rerun")		
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trU_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trC_rerun")
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_blNormed_rerun")		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -2804,7 +2807,9 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										work.dir=work.dir, 
 										out.dir=out.dir, 
 										alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
-										alignments.root='REF_CPX_AF460972', 
+										alignments.root='REF_CPX_AF460972',
+										bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+										bl.normalising.reference.var='MEDIAN_PWD',										
 										alignments.pairwise.to='REF_B_K03455',
 										window.automatic= '', 
 										merge.threshold=0, 
@@ -2823,7 +2828,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 										multifurcation.threshold=1e-5,
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 										sankhoff.k=20,
-										split.tiesRule='c',
+										split.tiesRule='b',
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
 										dwns.maxReadsPerPatient=50,											
