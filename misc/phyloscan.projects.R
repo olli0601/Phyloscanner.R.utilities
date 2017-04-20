@@ -831,6 +831,43 @@ project.RakaiAll.setup.prior.170301<- function()
 			facet_grid(T~N0) +
 			labs(x='pi_t', y='prior density')
 	ggsave(file='~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/prior_beta.pdf', w=8, h=8)
+	
+	n0<- 3; T<- 3; n<- c(3,4,5)	
+	a<- (n0+T*n)/T; b<- ((T-1)*n0+T*(sum(n)-n))/T
+	pbeta(1/T,a,b,lower.tail=FALSE)
+	#0.2611934 0.4755005 0.6898075
+	
+	n0<- 3; T<- 3; n<- c(1e3,1e3,1e3)	
+	a<- (n0+T*n)/T; b<- ((T-1)*n0+T*(sum(n)-n))/T
+	pbeta(1/T,a,b,lower.tail=FALSE)
+	#0.498284 0.498284 0.498284
+	
+	n0<- 3; T<- 3; n<- c(1,0,0)	
+	a<- (n0+T*n)/T; b<- ((T-1)*n0+T*(sum(n)-n))/T
+	pbeta(1/T,a,b,lower.tail=FALSE)
+	#0.7407407 0.2962963 0.2962963
+	
+	n0<- c(0.1,1,3,5,100); T<- 3; n<- c(1)	
+	pbeta(1/T, (n0+T*n)/T, (T-1)*n0/T, lower.tail=FALSE)
+	#0.9749602 0.8457642 0.7407407 0.6952502 0.5468373
+	
+	n0<- 3; T<- c(2,3,4,5); n<- c(1)	
+	pbeta(1/T, (n0+T*n)/T, (T-1)*n0/T, lower.tail=FALSE)
+	#0.7122066 0.7407407 0.7654499 0.7857324
+	n0<- 3; T<- c(2,3,4,5); n<- c(1)	
+	pbeta(.5, (n0+T*n)/T, (T-1)*n0/T, lower.tail=FALSE)
+	#0.7122066 0.5000000 0.3904129 0.3275931
+	
+	
+	phsc.find.n0.aux<- function(n0, phsc.T=3, phsc.n=1)
+	{
+		abs( pbeta(1/phsc.T+(1-1/phsc.T)/(phsc.T+1), (n0+phsc.T*phsc.n)/phsc.T, (phsc.T-1)*n0/phsc.T, lower.tail=FALSE)-0.5 ) 	
+	}
+	phsc.find.n0.aux(c(0.1,1,3,5,10,15,20), 3, 1)
+	optimize(phsc.find.n0.aux, c(.1,10), phsc.T=3, phsc.n=1)
+	
+	N_TYPE<-3; NEFF<- 3; KEFF<- NEFF*2/3; n0<- c(0.1,0.5,1,2,3,4)
+	pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), n0/N_TYPE+KEFF, n0*(1-1/N_TYPE)+NEFF-KEFF, lower.tail=FALSE)
 }
 
 project.RakaiAll.setup.batchno.170301<- function()
@@ -951,24 +988,29 @@ project.RakaiAll.setup.RAxMLmodel.evaluate.170301<- function()
 project.RakaiAll.setup.phyloscanner.170301<- function()
 {
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
+	#	start with latest Sanger IDs
+	dc		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
+	setnames(dc, c('Lane','Public'), c('SID','PIDF'))
+	dc		<- subset(dc, select=c(SID,PIDF))
+	set(dc, NULL, 'SID', dc[, gsub('#','_',SID)])
+	set(dc, NULL, 'PID', dc[, gsub('-S[0-9]+$','',PIDF)])
 	#
 	#	list of files that Chris has
 	#
 	infiles	<- data.table(F=list.files(indir, pattern='^CW_PANGEA',full.names=TRUE))
-	dc		<- do.call('rbind',lapply(infiles[, F], function(file){
+	tmp		<- do.call('rbind',lapply(infiles[, F], function(file){
 							tmp<- as.data.table(read.csv(file, header=FALSE, col.names='PID', stringsAsFactors=FALSE))
 							tmp[, F:=file]
 							tmp
 					}))
-	set(dc, NULL, 'PROC_STATUS', dc[, gsub('CW_PANGEA_Rakai_','',gsub('\\.txt','',basename(F)))])	
-	set(dc, NULL, 'F', NULL)	
-	#	add Sanger IDs
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/WTSI_PANGEA_InfoFind_2017-02-14.csv', header=TRUE, stringsAsFactors=FALSE))
-	setnames(tmp, c('Lane','Public'), c('SID','PIDF'))
-	tmp		<- subset(tmp, select=c(SID,PIDF))
-	set(tmp, NULL, 'SID', tmp[, gsub('#','_',SID)])
-	set(tmp, NULL, 'PID', tmp[, gsub('-S[0-9]+$','',PIDF)])
-	dc		<- merge(dc, tmp, by='PID',all.x=1)
+	set(tmp, NULL, 'PROC_STATUS', tmp[, gsub('CW_PANGEA_Rakai_','',gsub('\\.txt','',basename(F)))])	
+	set(tmp, NULL, 'F', NULL)
+	#	all files for which we have some PID
+	dc		<- merge(dc, tmp, by='PID',all=1)	
+	stopifnot(!nrow(subset(dc, is.na(SID) & PROC_STATUS!='ThoseWithoutFastqs')))
+	dc		<- subset(dc, is.na(SID) | SID!='15351_1_1')		#	remove 15351_1_1  with no PANGEA info in WTSI file
+	dc		<- subset(dc, is.na(SID) | SID!='15430_1_75')	#	remove 15430_1_75  with no PANGEA info in WTSI file
+	stopifnot(!nrow(subset(dc, is.na(PIDF) & !is.na(SID))))
 	dc[, PART:= as.numeric(gsub('^[0-9]+_([0-9])_[0-9]+','\\1',SID))]
 	dc[, DUMMY:= gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_x_\\2',SID)]	
 	dc		<- merge(dc, dc[, list(N_PART=length(PART), S_PART=sum(PART)), by='DUMMY'], by='DUMMY')	
@@ -980,9 +1022,13 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	set(dc, NULL, c('PART','N_PART','S_PART','DUMMY'),NULL)
 	dc		<- unique(dc)
 	tmp		<- subset(dc, !is.na(SID))[, list(N_SID=length(SID)), by='PIDF']
-	dc		<- merge(dc, tmp, by='PIDF',all.x=1)	
-	#	extra category: not processed by Kate
-	tmp		<- as.data.table(read.table("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=TRUE))
+	dc		<- merge(dc, tmp, by='PIDF',all.x=1)
+	#	define controls
+	set(dc, dc[, which(grepl('neg',PID))], 'PROC_STATUS', 'NegControl')
+	#	define not in Chris census
+	set(dc, dc[, which(is.na(PROC_STATUS))], 'PROC_STATUS', 'NotTrackedByChris')	
+	#	add extra category to PROC_STATUS: not processed by Kate
+	tmp		<- as.data.table(read.table("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/KG_PANGEA_Processed_597.txt", header=TRUE,stringsAsFactors=FALSE))
 	setnames(tmp, c('SampleID','LaneID'), c('PID','SID'))
 	tmp[, KATE_PROC:='Y']
 	dc		<- merge(dc, tmp, by=c('PID','SID'), all.x=1)	
@@ -998,6 +1044,9 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	setnames(tmp2, c('studyid','Pangea.id','sampleDate','gender'), c('RID','PID','SAMPLE_DATE','SEX'))
 	tmp2[, RCCS_SHIP_BATCH:='neuro']
 	tmp		<- rbind(tmp, tmp2, use.names=TRUE)
+	set(tmp, NULL, 'RID', tmp[, as.character(RID)])
+	set(tmp, NULL, 'PID', tmp[, as.character(PID)])
+	set(tmp, NULL, 'SEX', tmp[, as.character(SEX)])
 	dc		<- merge(dc, tmp, by='PID',all.x=1)
 	#	flag test plate
 	set(dc, dc[, which(grepl('PG14-UG9000[0-9][0-9]',PID))], 'RCCS_SHIP_BATCH', 'test')
@@ -1005,16 +1054,21 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_bams.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_BAM:='Y']
 	set(tmp, NULL, 'SID', tmp[, gsub('\\.bam','',SID)])
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to bams from SANGER
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )
 	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_BAM))], 'HPC_BAM', 'N')	
 	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_refs.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_REF:='Y']
-	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])	
+	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to refs from SANGER	
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )	
 	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_REF))], 'HPC_REF', 'N')
 	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/HPC_census_fastq.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
 	tmp[, HPC_FASTQ:='Y']
 	set(tmp, NULL, 'SID', tmp[, gsub('_[0-9].fastq.gz','',SID)])	
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to fastqz's from SANGER	
 	dc		<- merge(dc, unique(tmp), by='SID',all.x=TRUE)
 	set(dc, dc[, which(is.na(HPC_FASTQ))], 'HPC_FASTQ', 'N')	
 	#	add latest PANGEA stats
@@ -1028,27 +1082,41 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	set(tmp, NULL, 'WTSI_HIVCONTIG', tmp[, as.character(factor(WTSI_HIVCONTIG=='',levels=c(TRUE,FALSE),labels=c('N','Y')))])
 	set(tmp, NULL, c('DayDiff','Cohort'), NULL)
 	dc		<- merge(dc, tmp, by='PID', all.x=1)
-	#	check what Dan assembled
-	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017/collated_stats_all_genomes_UCL_release_Feb2017.csv', stringsAsFactors=FALSE))
+	#	check what Dan assembled HISEQ
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allhitodate.csv', stringsAsFactors=FALSE))
 	setnames(tmp, c('PANGEA_ID','PGID_full','WTSI_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
-	set(tmp, NULL, c('Method','X','X.1','X.2'), NULL)
-	set(tmp, NULL, 'PID', tmp[, gsub('r[0-9]$','',PID)])
-	set(tmp, NULL, 'PIDF', tmp[, gsub('r[0-9]$','',PIDF)])	
-	tmp		<- subset(tmp, grepl('Rakai',COHORT))
-	tmp2	<- setdiff( tmp[, unique(sort(PID))], dc[, unique(sort(PID))] )
+	tmp		<- subset(tmp, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	#	convert SID to _3_ to match our convention
+	set(tmp, NULL, 'SID', tmp[, gsub('^([0-9]+)_[0-9]_([0-9]+)','\\1_3_\\2',SID)])
+	#	check what Dan assembled MISEQ
+	tmp2	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/PANGEA_UCL_Feb2017_collated_stats_all_genomes_UCL_release_Feb2017_allmitodate.csv', stringsAsFactors=FALSE))
+	setnames(tmp2, c('PANGEA_ID','PGID_full','WTSI_lane_ID','Length', 'Cohort'), c('PID','PIDF','SID','UCL_LEN', 'COHORT'))
+	tmp2	<- subset(tmp2, select=c('PID','PIDF','SID','UCL_LEN', 'COHORT'))	
+	tmp		<- rbind(tmp, tmp2)
+	stopifnot( !length(setdiff(tmp[, SID], dc[, SID])) )	
 	#	n=6 plus test plate
-	write.csv(data.table(ID=tmp2), file=file.path(indir,'IDs_that_Dan_flags_from_Rakai_but_not_in_Chris_census.csv'), row.names=FALSE)
-	set(tmp, NULL, 'COHORT', NULL)	
+	if(0)
+	{
+		tmp		<- subset(tmp, grepl('Rakai',COHORT))
+		tmp2	<- setdiff( tmp[, unique(sort(PID))], dc[, unique(sort(PID))] )
+		write.csv(data.table(ID=tmp2), file=file.path(indir,'IDs_that_Dan_flags_from_Rakai_but_not_in_Chris_census.csv'), row.names=FALSE)			
+	}
+	set(tmp, NULL, 'COHORT', NULL)		
 	dc		<- merge(dc, tmp, by=c('PID','PIDF','SID'),all.x=1)	
 	#	resolve 60 from Chris that he confirmed he has not processed -- at least one SID from said individual has been processed
-	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithChrisShiverOutput' & HPC_BAM=='N')], 'PROC_STATUS','ThoseWithFastqs_ChrisNotProcessed')		
+	set(dc, dc[, which(PROC_STATUS=='ThoseWithFastqs_WithChrisShiverOutput' & HPC_BAM=='N')], 'PROC_STATUS','ThoseWithFastqs_ChrisNotProcessed')
+	#
+	#	subset to RAKAI
+	#
+	dc		<- subset(dc, !is.na(RID))
 	#	define RIDs from whom all SIDs are complete and on HPC
 	tmp		<- dc[, list(	HPC_ALL_SID_FOR_RID= all(HPC_BAM=='Y') & all(HPC_REF=='Y')), by='RID']	
 	set(tmp, NULL, 'HPC_ALL_SID_FOR_RID', tmp[,as.character(factor(HPC_ALL_SID_FOR_RID, levels=c(TRUE,FALSE), labels=c('Y','N')))])
 	dc		<- merge(dc, tmp, by='RID',all.x=1)
 	#	define Sampling Time
 	set(dc, NULL, 'WTSI_SUBMITTED_DATE', dc[, as.Date(WTSI_SUBMITTED_DATE)])	
-
+	stopifnot(!nrow(subset(dc, HPC_BAM!=HPC_REF)))
+	
 	if(0)
 	{
 		#	add PANGEA2 IDs
@@ -1079,59 +1147,114 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	#
 	#	set up first batches
 	#
-	batch.n	<- 15
-	dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
-	tmp		<- unique(subset(dc.it1, select=RID))	
-	set.seed(42)
-	tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
-	dc.it1	<- merge(dc.it1, tmp, by='RID')
-	setkey(dc.it1, RID_B)
-	dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
-	#
-	#	set up first pty.runs
-	#		
-	pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
-	setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
-	pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
-	pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
-	set(pty.runs, NULL, 'DUMMY', NULL)
-	setkey(pty.runs, PTY_RUN)
-	tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
-	tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
-	pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
-
-	#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
-	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301.rda'))
+	if(0)
+	{
+		batch.n	<- 15
+		dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
+		tmp		<- unique(subset(dc.it1, select=RID))	
+		set.seed(42)
+		tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
+		dc.it1	<- merge(dc.it1, tmp, by='RID')
+		setkey(dc.it1, RID_B)
+		dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+		#
+		#	set up first pty.runs
+		#		
+		pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
+		setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
+		pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
+		pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+		set(pty.runs, NULL, 'DUMMY', NULL)
+		setkey(pty.runs, PTY_RUN)
+		tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
+		tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+		pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
+		
+		#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
+		save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301.rda'))		
+	}
 	
 	#
 	#	set up first batches
 	#
-	batch.n	<- 75
-	dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
-	tmp		<- unique(subset(dc.it1, select=RID))	
-	set.seed(42)
-	tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
-	dc.it1	<- merge(dc.it1, tmp, by='RID')
-	setkey(dc.it1, RID_B)
-	dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+	if(0)
+	{
+		batch.n	<- 75
+		dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
+		tmp		<- unique(subset(dc.it1, select=RID))	
+		set.seed(42)
+		tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
+		dc.it1	<- merge(dc.it1, tmp, by='RID')
+		setkey(dc.it1, RID_B)
+		dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+		#
+		#	set up first pty.runs
+		#		
+		pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
+		setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
+		pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
+		pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+		set(pty.runs, NULL, 'DUMMY', NULL)
+		setkey(pty.runs, PTY_RUN)
+		tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
+		tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+		pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
+		
+		#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
+		save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301_b75.rda'))
+		
+		subset(pty.runs, PTY_RUN==1)[, paste0(SID,'.bam', collapse=' ')]
+		subset(pty.runs, PTY_RUN==1)[, paste0(SID,'_ref.fasta', collapse=' ')]
+	}
 	#
-	#	set up first pty.runs
-	#		
-	pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
-	setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
-	pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
-	pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
-	set(pty.runs, NULL, 'DUMMY', NULL)
-	setkey(pty.runs, PTY_RUN)
-	tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
-	tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
-	pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
-	
-	#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
-	save(dc, dc.it1, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301_b75.rda'))
-	
-	subset(pty.runs, PTY_RUN==1)[, paste0(SID,'.bam', collapse=' ')]
-	subset(pty.runs, PTY_RUN==1)[, paste0(SID,'_ref.fasta', collapse=' ')]
+	#	set up second batch
+	#
+	if(1)
+	{
+		dc.new	<- copy(dc)
+		#	update batches
+		load( file.path(indir,'Rakai_phyloscanner_170301_b75.rda') )		
+		stopifnot(!length(setdiff(dc[, RID], dc.new[, RID])))
+		batch.n	<- 75
+		batch.n2<- 55	# use smaller number because we typically have multiple seqs from these individuals
+		dc.it2	<- subset(dc.new, HPC_BAM=='Y' & HPC_REF=='Y')
+		tmp		<- unique(subset(dc.it2, select=RID))	
+		tmp		<- merge(tmp, unique(subset(dc.it1, select=c(RID, RID_B, BATCH))), by='RID', all.x=1)
+		tmp2	<- tmp[, which(is.na(RID_B))]
+		set.seed(42)
+		tmp3	<- tmp[, ceiling(max(RID_B, na.rm=TRUE) / batch.n)*batch.n]
+		set(tmp, tmp2, 'RID_B', as.integer(sample(length(tmp2),length(tmp2)) + tmp3) )
+		dc.it2	<- merge(dc.it2, tmp, by='RID')
+		setkey(dc.it2, RID_B)
+		tmp2	<- dc.it2[, which(is.na(BATCH))]
+		tmp3	<- min( dc.it2[tmp2, ceiling(RID_B/batch.n2)] ) - dc.it1[, max(BATCH)] - 1L		
+		set(dc.it2, tmp2, 'BATCH', dc.it2[tmp2, ceiling(RID_B/batch.n2)] - tmp3)
+		set(dc.it2, dc.it2[, which(BATCH==max(BATCH))], 'BATCH', dc.it2[, max(BATCH)-1L])		
+		#
+		#	set up remaining pty.runs
+		#		
+		tmp		<- as.data.table(t(combn(dc.it2[, unique(BATCH)],2)))
+		setnames(tmp, c('V1','V2'), c('BATCH','BATCH2'))
+		pty.runs<- unique(subset(pty.runs, select=c('BATCH','PTY_RUN')))
+		pty.runs<- pty.runs[, list(BATCH=BATCH[1], BATCH2=BATCH[2]), by='PTY_RUN']		
+		pty.runs<- merge(tmp, pty.runs, by=c('BATCH','BATCH2'), all.x=1)
+		tmp		<- pty.runs[, which(is.na(PTY_RUN))]
+		set(pty.runs, tmp, 'PTY_RUN', seq_along(tmp)+pty.runs[, max(PTY_RUN, na.rm=1)] )
+		#	select only those that are not yet processed
+		tmp			<- dc.it1[, max(BATCH)]
+		pty.runs	<- subset(pty.runs, BATCH>tmp | BATCH2>tmp)		
+		
+		pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+		set(pty.runs, NULL, 'DUMMY', NULL)
+		setkey(pty.runs, PTY_RUN)
+		tmp			<- subset(dc.it2, select=c(BATCH, RID, SID))
+		tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+		pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
+		#	save
+		dc			<- copy(dc.new)
+		save(dc, dc.it2, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301_b75_part2.rda'))		
+	}
+
 }
 
 project.dualinfecions.UG.setup.coinfections.160219<- function()
@@ -2110,6 +2233,49 @@ pty.process.160901<- function()
 						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
+	#	170410
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170405_couples_w250'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250'
+		opt 			<- 'd50_st20_trB_rerun'
+		trmw.min.reads 	<- 20
+		trmw.close.brl 	<- 0.02
+		trmw.distant.brl<- 0.05
+		trmw.min.tips	<- 1
+		in.dir			<- paste(infile.base, opt, sep='_')
+		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
+		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
+													trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
+													norm.file.name="/Users/Oliver/Library/R/3.3/library/phyloscan/data/hiv.hxb2.norm.constants.rda"))
+				
+	}
+	#	170410
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170405_couples_w250'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250'
+		opt 			<- 'd50_st20_trB_rerun'
+		trmw.min.reads 	<- 20
+		trmw.close.brl 	<- 0.035
+		trmw.distant.brl<- 0.08
+		trmw.min.tips	<- 1
+		in.dir			<- paste(infile.base, opt, sep='_')
+		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
+		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
+						trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
+						norm.file.name="/Users/Oliver/Library/R/3.3/library/phyloscan/data/hiv.hxb2.norm.constants.rda"))
+		norm.file.name	<- NA
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250'
+		for(opt in c('d50_st20_trC_rerun','d50_st20_trU_rerun','d50_st20_trB_rerun'))
+		{					
+				tmp.in		<- paste(infile.base, opt, sep='_')
+				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+				cat('\n',tmp.in,' -> ',tmp.out)
+				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+		}		
+	}
+	
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -2309,7 +2475,7 @@ pty.pipeline.phyloscanner.test<- function()
 									keep.overhangs=FALSE,	
 									use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 									sankhoff.k=20,
-									split.tiesRule='u',
+									split.tiesRule='b',
 									roguesubtree.prop.threshold=0,
 									roguesubtree.read.threshold=20,
 									dwns.maxReadsPerPatient=50,	
@@ -2843,7 +3009,7 @@ pty.pipeline.phyloscanner.160915.couples.resume<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=115)	#what happened to run 115??
-		#pty.c	<- subset(pty.c, PTY_RUN%in%c(19))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(48))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)

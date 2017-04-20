@@ -21,9 +21,9 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.NormalisationLookupWriter<- function(pr, inputTreeFileName, normFileName, outputFileName, normFileVar, standardize=FALSE)
+phsc.cmd.NormalisationLookupWriter<- function(pr, scriptdir, inputTreeFileName, normFileName, outputFileName, normFileVar, standardize=FALSE)
 {
-	cmd	<- paste0(pr, ' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
+	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
 	if(!is.na(standardize) & standardize)
 		cmd	<- paste0(cmd, ' --standardize')
 	cmd
@@ -181,21 +181,25 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	cmd	
 }
 	
-phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA)
+phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA, branchLengthNormalisation=NA)
 {
-	cmd<- paste(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir, sep='')
+	cmd<- paste0(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir)
 	if(!is.na(tipRegex))
-		cmd	<- paste(cmd, ' --tipRegex "', tipRegex,'"', sep='')			
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"')
+	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)			
 	cmd
 }
 
-phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, file.detailed.out=NA, min.threshold=1, allow.splits=FALSE)
+phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, file.detailed.out=NA, min.threshold=1, allow.MultiTrans=FALSE)
 {
 	cmd<- paste(pr, ' "',file.patients, '" "', file.lkl, '" "', file.out,'" --scriptdir ', scriptdir, ' --summaryFile "', file.summary, '" --minThreshold ', min.threshold, sep='')
 	if(!is.na(file.detailed.out))
 		cmd	<- paste(cmd, ' --detailedOutput "', file.detailed.out, '"', sep='')
-	if(allow.splits)
-		cmd	<- paste(cmd, ' --allowSplits', sep='')	
+	if(allow.MultiTrans)
+		cmd	<- paste(cmd, ' --allowMultiTrans', sep='')	
 	cmd
 }
 
@@ -212,7 +216,7 @@ phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, fil
 #' 	  'dtrees' is a data.table that provides info on each short read tree. Columns are 'PTY_RUN' (phyloscanner run id), 'W_FROM' (start of window), 'W_TO' (end of window), 'IDX' (index of tree in phs).
 #' 	  'dtrms' is a data.table that provides info on transmission assignments. Columns are 'PTY_RUN' (phyloscanner run id), 'ID1' (identifier of first individual), 'ID2' (identifier of second individual), 'TYPE' (window assignment), 
 #'	  'WIN_OF_TYPE' (number of windows with that assignment), 'WIN_TOTAL' (Number of windows where reads from both individuals are present), 'PAIR_ID' (unique ID of each combination of PTY_RUN,ID1, ID2)
-phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=1, trmw.min.tips=1, trmw.close.brl=Inf, trmw.distant.brl=Inf)
+phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees='trees.rda', postfix.trmwindowstats='trmStatsPerWindow.rda', regex.ind="^[0-9]+_[0-9]_[0-9]+", trmw.min.reads=1, trmw.min.tips=1, trmw.close.brl=Inf, trmw.distant.brl=Inf, norm.file.name=NA)
 {
 	#	read trees
 	cat('\nread trees')
@@ -255,6 +259,33 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
 	set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
 	set(dwin, NULL, 'SUFFIX', NULL)
+	#	normalise if desired
+	if(!is.na(norm.file.name))
+	{
+		tmp			<- load(norm.file.name)
+		if(length(tmp)!=1)	stop("Expected one R data.table in file",norm.file.name)
+		eval(parse(text=paste("norm.table<- ",tmp,sep='')))
+		stopifnot( c('W_FROM','W_TO','MEDIAN_PWD')%in%colnames(norm.table) )	 
+		setnames(norm.table, 'MEDIAN_PWD', 'NORM_CONST')
+		norm.table[, W_MID:= (W_FROM+W_TO)/2]
+		#	standardize to 1 on gag+pol ( prot + first part of RT in total 1300bp )
+		#	790 - 3385
+		cat('\nstandardise normalising constants to 1 on the gag+pol ( prot + first part of RT in total 1300bp pol ) region')
+		tmp		<- subset(norm.table, W_MID>=790L & W_MID<=3385L)
+		stopifnot( nrow(tmp)>0 )	# norm.table must contain gag+pol region	
+		tmp		<- tmp[, mean(NORM_CONST)]
+		stopifnot( is.finite(tmp) )
+		set(norm.table, NULL, 'NORM_CONST', norm.table[, NORM_CONST/tmp])
+		norm.table	<- subset(norm.table, select=c(W_MID, NORM_CONST))
+		
+		tmp		<- unique(subset(dwin, select=c(W_FROM, W_TO)))
+		setkey(tmp, W_FROM)
+		tmp		<- tmp[, {
+					list( NORM_CONST=subset(norm.table, W_MID>=W_FROM & W_MID<=W_TO)[, mean(NORM_CONST)]	)
+				}, by=c('W_FROM','W_TO')]
+		dwin	<- merge(dwin, tmp, by=c('W_FROM','W_TO'))
+		set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, PATRISTIC_DISTANCE/NORM_CONST])		
+	}
 	#
 	#	build transmission summary stats based on selection criteria
 	#	
@@ -618,8 +649,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty.downsample				<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
 	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubgraphs.R'),sep='')
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
-	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'NewClassifyRelationships.R'),sep='')	
-	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'NewTransmissionSummary.R'),sep='')	
+	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationships.R'),sep='')	
+	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
@@ -663,7 +694,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	if(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var))
 	{
-		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser, 
+		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser,
+																	pty.tools.dir,
 																	file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
 																	bl.normalising.reference.file, 
 																	file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
@@ -827,7 +859,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 														pty.tools.dir, 
 														file.path(tmp.dir,paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
 														file.path(tmp.dir,paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
-														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1))
+														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1)),
+														branchLengthNormalisation=bl.normalising.file, 
 														)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -841,7 +874,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
-															allow.splits=TRUE)
+															allow.MultiTrans=TRUE)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	add bash command to compress phyloscanner output
@@ -1020,7 +1053,7 @@ phsc.plot.default.colours.for.relationtypes<- function()
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI3x3']]	<- tmp2	
 	tmp2		<- do.call('rbind',list(
-					data.table(	TYPE= c('close ancestral/\nintermingled', 'not close ancestral/\nintermingled'),
+					data.table(	TYPE= c('close ancestral/\nintermingled\nsibling', 'not close ancestral/\nintermingled\nsibling'),
 							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
 					data.table(	TYPE= c('close other','not close other'),
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
@@ -1033,13 +1066,6 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI']]	<- tmp2
-	tmp2		<- do.call('rbind',list(
-					data.table(	TYPE= c('likely pair', 'chain'),
-							COLS= brewer.pal(11, 'PRGn')[c(2,4)]),
-					data.table(	TYPE= c('intermediate distance','distant'),
-							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
-	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
-	cols.type[['TYPE_PAIR_TODI_NEW']]	<- tmp2
 	tmp2		<- data.table(	TYPE= c("chain", "intermediate distance", "distant"),
 								COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
@@ -1210,6 +1236,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 		pty_run	<- plot.select[i, PTY_RUN]; id1		<- plot.select[i, FEMALE_SANGER_ID]; id2		<- plot.select[i, MALE_SANGER_ID]		
 		tmp		<- subset(rpw2, PTY_RUN==pty_run & FEMALE_SANGER_ID==id1 & MALE_SANGER_ID==id2)
 		set(tmp, NULL, 'TYPE', tmp[, gsub('  ',' ',TYPE)])
+		set(tmp, tmp[, which(PATRISTIC_DISTANCE<1.1e-3)], 'PATRISTIC_DISTANCE', 1.1e-3)
 		p1		<- ggplot(tmp, aes(x=W_FROM)) +			
 				geom_bar(aes(y=ID_R_MAX, colour=TYPE), stat='identity', fill='transparent') +
 				geom_bar(aes(y=ID_R_MIN, fill=TYPE), stat='identity', colour='transparent') +
@@ -2121,6 +2148,121 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 		}		
 	}
 	list(phs=phs, dfr=dfr)
+}
+
+#' @title Calculate pairwise relationships
+#' @description This function calculates pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.    
+#' @param df data.table to which new columns of relationship groups will be added. Must contain a column with name TYPE_DIR_TODI7x3. This column contains fundamental relationship states for every window, from which other relationships are derived. 
+#' @param get.groups names of relationship groups  
+#' @param make.pretty.labels Logical   
+#' @return input data.table with new columns. Each new column defines relationship states for a specific relationship group. 
+phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
+{
+	#	
+	#	group to define likely pair just based on distance
+	#
+	if('TYPE_PAIR_DI'%in%get.groups)
+	{
+		df[, TYPE_PAIR_DI:= 'intermediate\ndistance']
+		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'close')
+		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'distant')			
+	}
+	#	
+	#	group to define likely pair just based on topology
+	#	
+	if('TYPE_PAIR_TO'%in%get.groups)
+	{
+		df[, TYPE_PAIR_TO:= 'other']
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('chain',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('intermingled',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
+	}
+	#
+	#	group for Christophe's 2x2 table without ambiguous
+	#
+	if('TYPE_PAIR_TODI2x2'%in%get.groups)
+	{		
+		df[, TYPE_PAIR_TODI2x2:= 'not close other']
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2x2', 'close ancestral/\nintermingled/\nsibling')	
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2x2', 'not close ancestral/\nintermingled/\nsibling')	
+		set(df, df[, which(!grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2x2', 'close other')
+	}
+	#
+	#	group to determine direction of transmission in likely pairs
+	#
+	if('TYPE_DIR_TODI3'%in%get.groups)
+	{				
+		df[, TYPE_DIR_TODI3:= NA_character_]	# non-NA: all relationships that are used for likely pair	
+		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+	}
+	if('TYPE_DIRSCORE_TODI3'%in%get.groups)
+	{
+		df[, TYPE_DIRSCORE_TODI3:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'mf')
+	}
+	#
+	#	group to determine likely pairs
+	#
+	if('TYPE_PAIR_TODI'%in%get.groups)
+	{
+		df[, TYPE_PAIR_TODI:= 'distant']	
+		#	this counts 'other_close' as 'distant' since this is typically broken by a reference
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')
+		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')
+	}
+	#	same as TYPE_PAIR_TODI but do not count ambiguous distance
+	if('TYPE_PAIRSCORE_TODI'%in%get.groups)
+	{
+		df[, TYPE_PAIRSCORE_TODI:= 'distant']
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'chain')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'likely pair')	
+		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', NA_character_)
+	}
+	#
+	#	group to determine chains
+	#	
+	if('TYPE_CHAIN_TODI'%in%get.groups)
+	{
+		df[, TYPE_CHAIN_TODI:= 'distant']
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'intermediate distance')
+	}
+	#
+	#	TYPE_DIR_TODI7x3 make pretty labels
+	#
+	if(make.pretty.labels)
+	{
+		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE_DIR_TODI7x3)))))])	
+		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3)))))])		
+		for(x in c('TYPE_DIR_TODI7x3',get.groups))
+			set(df, NULL, x, gsub('_',' ',df[[x]]))
+	}	
+	df
+}
+
+#' @title Calculate prior parameter n0
+#' @description This function calculates the prior parameter n0 such that the minimum number of windows needed is at least n.obs in order to select a pair of individuals with confidence at least confidence.cut.    
+#' @param n.states Number of relationship states.
+#' @param n.obs Minimum number of windows to select a pair of individuals with confidence at least confidence.cut. 
+#' @param confidence.cut Confidence cut off.  
+#' @return Prior parameter n0 
+phsc.get.prior.parameter.n0<- function(n.states, n.type=2, n.obs=3, confidence.cut=0.5)
+{
+	phsc.find.n0.aux<- function(n0, n.states=3, n.type=2, n.obs=3, confidence.cut=0.5)
+	{
+		abs( pbeta(1/n.states+(1-1/n.states)/(n.states+1), (n0+n.states*n.type)/n.states, ((n.states-1)*n0+n.states*(n.obs-n.type))/n.states, lower.tail=FALSE)-confidence.cut ) 	
+	}	
+	ans	<- optimize(phsc.find.n0.aux, c(.01,100), n.states=n.states, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)
+	ans	<- round(ans$minimum, d=4)
+	ans
 }
 
 #' @import data.table 
