@@ -2436,7 +2436,6 @@ pty.pipeline.dualparameter<- function()
 
 pty.pipeline.phyloscanner.test<- function() 
 {
-	require(big.phylo)
 	require(phyloscan)
 	#
 	#	INPUT ARGS PLATFORM
@@ -2487,9 +2486,15 @@ pty.pipeline.phyloscanner.test<- function()
 									roguesubtree.read.threshold=20,
 									dwns.maxReadsPerPatient=50,	
 									multifurcation.threshold=1e-5,
+									pw.trmw.min.reads=20,									
+									pw.trmw.min.tips=1,
+									pw.trmw.close.brl=0.035,
+									pw.trmw.distant.brl=0.08,
+									pw.prior.keff=2,
+									pw.prior.neff=3,
+									pw.prior.calibrated.prob=0.5,
 									mem.save=0,
-									select=pty.select)
-							
+									select=pty.select)														
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		pty.c[1,cat(CMD)]				
 }

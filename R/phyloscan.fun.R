@@ -1,5 +1,7 @@
 PR.PACKAGE			<- "phyloscan" 
 PR.read.processed.phyloscanner.output.in.directory		<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.read.processed.phyloscanner.output.in.directory.Rscript"))
+PR.pairwise.relationships								<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.pairwise.relationships.Rscript"))
+#PR.pairwise.relationships								<- paste('Rscript', '/Users/Oliver/git/phyloscan/inst/phsc.pairwise.relationships.Rscript')
 
 .onAttach <- function(...) 
 {
@@ -129,6 +131,40 @@ phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, s
 		cmd	<- paste(cmd, ' --tipRegex "',tipRegex,'"', sep='')	
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklists "',blacklistFiles,'"', sep='')
+	cmd
+}
+
+phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.5, 
+												rel.likely.pair=TRUE, rel.likely.pair.by.distance.only=FALSE,rel.likely.pair.by.topology.only=FALSE,rel.likely.pair.by.cross.table=FALSE,rel.direction=TRUE,rel.chain=FALSE,  
+												pr=PR.pairwise.relationships)	
+{
+	cmd	<- paste0(pr,' --infile "',infile,'" --outfile "',outfile,'"')
+	if(!is.na(trmw.min.reads))
+		cmd	<- paste0(cmd, ' --trmw.min.reads ', trmw.min.reads)
+	if(!is.na(trmw.min.tips))
+		cmd	<- paste0(cmd, ' --trmw.min.tips ', trmw.min.tips)
+	if(!is.na(trmw.close.brl))
+		cmd	<- paste0(cmd, ' --trmw.close.brl ', trmw.close.brl)
+	if(!is.na(trmw.distant.brl))
+		cmd	<- paste0(cmd, ' --trmw.distant.brl ', trmw.distant.brl)
+	if(!is.na(prior.keff))
+		cmd	<- paste0(cmd, ' --prior.keff ', prior.keff)
+	if(!is.na(prior.neff))
+		cmd	<- paste0(cmd, ' --prior.neff ', prior.neff)
+	if(!is.na(prior.calibrated.prob))
+		cmd	<- paste0(cmd, ' --prior.calibrated.prob ', prior.calibrated.prob)	
+	if(rel.likely.pair)
+		cmd	<- paste(cmd, '--rel.likely.pair')
+	if(rel.likely.pair.by.distance.only)
+		cmd	<- paste(cmd, '--rel.likely.pair.by.distance.only')	
+	if(rel.likely.pair.by.topology.only)
+		cmd	<- paste(cmd,'--rel.likely.pair.by.topology.only')
+	if(rel.likely.pair.by.cross.table)
+		cmd	<- paste(cmd,'--rel.likely.pair.by.cross.table')
+	if(rel.direction)
+		cmd	<- paste(cmd,'--rel.direction')
+	if(rel.chain)
+		cmd	<- paste(cmd,'--rel.chain')	
 	cmd
 }
 
@@ -660,7 +696,14 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	bl.normalising.reference.var	<- pty.args[['bl.normalising.reference.var']]
 	tip.regex						<- pty.args[['tip.regex']]
 	mem.save						<- pty.args[['mem.save']]
-	multifurcation.threshold		<- pty.args[['multifurcation.threshold']]
+	multifurcation.threshold		<- pty.args[['multifurcation.threshold']]	
+	trmw.min.reads					<- pty.args[['pw.trmw.min.reads']] 
+	trmw.min.tips					<- pty.args[['pw.trmw.min.tips']] 
+	trmw.close.brl					<- pty.args[['pw.trmw.close.brl']] 
+	trmw.distant.brl				<- pty.args[['pw.trmw.distant.brl']] 
+	prior.keff						<- pty.args[['pw.prior.keff']] 
+	prior.neff						<- pty.args[['pw.prior.neff']] 
+	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']] 
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir,'NormalisationLookupWriter.R'),sep='')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
@@ -899,6 +942,25 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															min.threshold=1, 
 															allow.MultiTrans=TRUE)
 	cmd				<- paste(cmd, tmp, sep='\n')
+	#
+	#	add bash command to calculate pairwise relationships
+	#
+	tmp				<- phsc.cmd.pairwise.relationships(	file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
+														file.path(tmp.dir, paste(run.id_,'pairwise_relationships.rda',sep='')),
+														trmw.min.reads=20, 
+														trmw.min.tips=1, 
+														trmw.close.brl=0.035, 
+														trmw.distant.brl=0.08, 
+														prior.keff=2, 
+														prior.neff=3, 
+														prior.calibrated.prob=0.5, 
+														rel.likely.pair=TRUE, 
+														rel.likely.pair.by.distance.only=TRUE,
+														rel.likely.pair.by.topology.only=TRUE,
+														rel.likely.pair.by.cross.table=TRUE,
+														rel.direction=TRUE,
+														rel.chain=TRUE)	
+	cmd				<- paste(cmd, tmp, sep='\n')	
 	#
 	#	add bash command to compress phyloscanner output
 	#							
