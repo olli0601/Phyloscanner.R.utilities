@@ -8469,6 +8469,10 @@ RakaiFull.preprocess.closepairs.comparetocouples.170421	<- function()
 	#	
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda') 
 	set(rtp, NULL, c('TYPE_MLE','GROUP','TYPE','N_TYPE','PAR_PRIOR','K','N'), NULL)
+	#	same couple can be in one batch and hence be listed more than once
+	rtp		<- rtp[, list(PTY_RUN=PTY_RUN[1], KEFF=mean(KEFF), NEFF=mean(NEFF), POSTERIOR_ALPHA=mean(POSTERIOR_ALPHA), POSTERIOR_BETA=mean(POSTERIOR_BETA), POSTERIOR_SCORE=mean(POSTERIOR_SCORE)), by=c('ID1','ID2')]
+	#	from first batch we have 1683 close pairs -- that s exciting!!
+
 	tmp		<- copy(rtp)
 	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
 	rtp		<- rbind(rtp, tmp)
@@ -8477,9 +8481,16 @@ RakaiFull.preprocess.closepairs.comparetocouples.170421	<- function()
 	setnames(rtp, tmp, paste0(tmp,'_FULL'))
 	rtp		<- merge(rtpc2, rtp, by=c('MALE_RID','FEMALE_RID'), all.x=1)
 	
-	
-	confidence.cut	<- 0.5
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)	
+	rtp[, mean(!is.na(POSTERIOR_SCORE_FULL))]
+	#[1] 0.9471545
+	#	--> 95% of pairs in couples run that are most likely close are also most likely close in full run 
+	ggplot( subset(rtp, !is.na(POSTERIOR_SCORE_FULL)), aes(x=POSTERIOR_SCORE_COUPLES, y=POSTERIOR_SCORE_FULL)) +
+			geom_point() +
+			theme_bw()
+	#	this is not too bad
+	#	we could probably run on all MLE without confidence.cut anyhow?
+	#	PLUS we could probably be a bit generous on the close cut-off?
+
 }
 
 RakaiAll.analyze.pairs.170418.direction<- function()
