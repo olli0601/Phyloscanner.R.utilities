@@ -11,8 +11,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
-	pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
-	#pty.pipeline.phyloscanner.170301.secondbatchofall()
+	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
+	pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -2970,8 +2970,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75_part2.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 4
-		hpc.mem				<- "5900mb"						
+		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
@@ -3027,7 +3026,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=667
+				select=801:1000
 				)		
 	}	
 	#
@@ -3038,7 +3037,9 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRA",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
