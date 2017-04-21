@@ -8369,6 +8369,119 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	Rakai.plot.directed.pairs.discrete1(tmp, cols, file.path(dir, paste(run,'-phsc-directionpairs_education.pdf',sep='')), 'Educational status', w=10, h=7)	
 }
 
+RakaiFull.preprocess.closepairs.calculate.170421	<- function()
+{
+	#
+	#	from every phyloscanner run, select pairs that are closely related 
+	#
+	mle.group	<- 'TYPE_PAIR_DI'
+	mle.state	<- 'close'
+	conf.group	<- 'TYPE_PAIR_DI'
+	conf.state	<- 'close'
+	
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
+	
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	rtp		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed/ptyr1_pairwise_relationships.rda'
+				load(F)
+				rtp		<- subset(rplkl, GROUP==target.group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE_MLE==target.state)
+				rtp		<- merge(rtp, subset(rplkl, GROUP==conf.group & TYPE==conf.state), by=c('ID1','ID2'), all.x=1)	
+				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp				
+			}, by=c('PTY_RUN')]	
+	save(rtp, file=outfile)	
+}
+
+RakaiFull.preprocess.closepairs.comparetocouples.170421	<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)	
+	#	load denominator
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	ra		<- tmp$ra		
+	# load couples "rp"
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	rc		<- copy(rp)
+	# load pty.run
+	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	# load rd, rh, rs, rp, rpw, rplkl, ptc
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	#
+	# select final run
+	#
+	run		<- "RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8"
+	rpw		<- subset(rpw, RUN%in%run )
+	rplkl	<- subset(rplkl, RUN%in%run )	
+	#	add info on pair types to rplkl
+	rp		<- copy(rpw)
+	set(rp, NULL, c('DIR','FILE','RUN','W_FROM','W_TO','TYPE_RAW','TYPE','GROUP','PATRISTIC_DISTANCE','ADJACENT','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R','CHUNK','CHUNK_L','CHUNK_N','ID_R_MIN','ID_R_MAX'), NULL)
+	rp		<- unique(rp)
+	#	make COUPID
+	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]	
+	#	add PAIR_TYPE
+	tmp		<- unique(subset(rc, select=c(COUPID, MALE_HH_NUM, FEMALE_HH_NUM, COUP_SC, PAIR_TYPE)))	
+	setnames(tmp, 'COUP_SC', 'COUP_TYPE')
+	set(tmp, NULL, c('MALE_HH_NUM','FEMALE_HH_NUM'), NULL)
+	rp		<- merge(rp, tmp, by=c('COUPID'),all.x=1)	
+	set(rp, rp[, which(!MALE_RID%in%rc[, MALE_RID] & !FEMALE_RID%in%rc[, FEMALE_RID])], 'PAIR_TYPE', 'm and f not in couple')
+	set(rp, rp[, which(is.na(PAIR_TYPE))], 'PAIR_TYPE', 'f or m not in couple')	
+	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID, PTY_RUN, COUP_TYPE, PAIR_TYPE))
+	set(rplkl, NULL, c('MALE_RID','FEMALE_RID','COUPID','COUP_TYPE','PAIR_TYPE'), NULL)
+	rplkl	<- merge(tmp, rplkl, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID','PTY_RUN'))
+	set(rplkl, NULL, 'FEMALE_SANGER_ID', rplkl[, as.character(FEMALE_SANGER_ID)])
+	set(rplkl, NULL, 'MALE_SANGER_ID', rplkl[, as.character(MALE_SANGER_ID)])
+	rplkl	<- unique(rplkl)
+	set(rpw, NULL, 'FEMALE_SANGER_ID', rpw[, as.character(FEMALE_SANGER_ID)])
+	set(rpw, NULL, 'MALE_SANGER_ID', rpw[, as.character(MALE_SANGER_ID)])		
+	#	select likely transmitters (unsampled intermediate not necessarily excluded) 
+	#	find pairs for whom 'likely pair' is most likely state
+	#	(does not depend on prior or confidence cut)
+	mle.group	<- 'TYPE_PAIR_DI'
+	mle.state	<- 'close'
+	conf.group	<- 'TYPE_PAIR_DI'
+	conf.state	<- 'close'
+	rtpc		<- subset(rplkl, GROUP==mle.group)[, list(TYPE_MLE=TYPE[which.max(KEFF)], KEFF=max(KEFF)), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','COUPID')]
+	rtpc		<- subset(rtpc, TYPE_MLE==mle.state)
+	#	select one sequence pairing per couple: that with highest evidence
+	rtpc		<- rtpc[, {
+				z<- which.max(KEFF)
+				list(MALE_SANGER_ID=MALE_SANGER_ID[z], FEMALE_SANGER_ID=FEMALE_SANGER_ID[z], PTY_RUN=PTY_RUN[z])
+			}, by='COUPID']
+	set(rtpc, NULL, 'COUPID', NULL)
+	#	calculate confidence score and select	
+	rtpc		<- merge(rtpc, subset(rplkl, GROUP==conf.group & TYPE==conf.state), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all.x=1)	
+	rtpc[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+	rtpc2		<- subset(rtpc, select=c(PTY_RUN, MALE_RID, FEMALE_RID, KEFF, NEFF, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE))
+	tmp			<- setdiff(colnames(rtpc2),c('MALE_RID','FEMALE_RID'))
+	setnames(rtpc2, tmp, paste0(tmp,'_COUPLES'))
+	#
+	#	compare to first batch FULL RUN
+	#	this makes sense because the previous couples run is exactly those individuals that are in the first batch full run
+	#	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda') 
+	set(rtp, NULL, c('TYPE_MLE','GROUP','TYPE','N_TYPE','PAR_PRIOR','K','N'), NULL)
+	tmp		<- copy(rtp)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+	rtp		<- rbind(rtp, tmp)
+	setnames(rtp, c('ID1','ID2'), c('MALE_RID','FEMALE_RID'))
+	tmp		<- setdiff(colnames(rtp),c('MALE_RID','FEMALE_RID'))
+	setnames(rtp, tmp, paste0(tmp,'_FULL'))
+	rtp		<- merge(rtpc2, rtp, by=c('MALE_RID','FEMALE_RID'), all.x=1)
+	
+	
+	confidence.cut	<- 0.5
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)	
+}
+
 RakaiAll.analyze.pairs.170418.direction<- function()
 {
 	require(data.table)
@@ -8395,7 +8508,7 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 	# select final run
 	#
 	tmp		<- "RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"
-	#tmp		<- "RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8"
+	tmp		<- "RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8"
 	rpw		<- subset(rpw, RUN%in%tmp )
 	rplkl	<- subset(rplkl, RUN%in%tmp )	
 	#	add info on pair types to rplkl
@@ -8494,7 +8607,7 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 	rfm		<- subset(rtpd, TYPE=='fm')
 	
 	#subset(rtp, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
-	#subset(rtpd, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
+	#subset(rtpd, PTY_RUN==67 & MALE_SANGER_ID=='15965_1_24' & FEMALE_SANGER_ID=='15977_1_52')
 	#subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIRSCORE_TODI3')
 	#subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIR_TODI7x3')
 	
@@ -8626,8 +8739,8 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 						invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10))					
 					}))	
 	
-	subset(rplkl, PTY_RUN==62 & MALE_SANGER_ID=='15834_1_47' & FEMALE_SANGER_ID=='15172_1_43' & GROUP=='TYPE_PAIR_TODI_NEW' & TYPE=='likely pair')[, pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-	
+	subset(rplkl, PTY_RUN==44 & MALE_SANGER_ID=='15743_1_40' & FEMALE_SANGER_ID=='15115_1_22' & GROUP=='TYPE_PAIRSCORE_TODI' & TYPE=='likely pair')[, pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+	subset(rplkl, PTY_RUN==44 & MALE_SANGER_ID=='15743_1_40' & FEMALE_SANGER_ID=='15115_1_22' & GROUP=='TYPE_DIRSCORE_TODI3' & TYPE=='fm')[, pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 	
 	#
 	#rtr2[, table(PAIR_TYPE)]

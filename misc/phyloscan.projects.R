@@ -11,7 +11,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
-	pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
+	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
+	pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -2942,6 +2943,102 @@ pty.pipeline.phyloscanner.170301.firstbatchofall<- function()
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRA",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							#stop()
+						}, by='PTY_RUN'])
+		quit('no')
+	}	
+}
+
+pty.pipeline.phyloscanner.170301.secondbatchofall<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
+		in.dir				<- file.path(HOME,"RakaiAll_input_170301")
+		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_secondbatch_sk20_tb_blnormed")
+		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75_part2.rda') )
+		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 4
+		hpc.mem				<- "5900mb"						
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+	}	
+	if(0)
+	{
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'		
+	}			
+	#
+	#	INPUT ARGS PHYLOSCANNER RUN
+	#	
+	if(1)
+	{				
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=2, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,125,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				sankhoff.k=20,
+				split.tiesRule='b',
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				pw.trmw.min.reads=20,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.035,
+				pw.trmw.distant.brl=0.08,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.calibrated.prob=0.5,
+				mem.save=0,
+				select=667
+				)		
+	}	
+	#
+	#	RUN PHYLOSCANNER
+	#
+	if(1)
+	{
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
+		#pty.c[1,cat(CMD)]		
+		invisible(pty.c[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRA",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
