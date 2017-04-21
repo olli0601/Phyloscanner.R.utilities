@@ -649,7 +649,7 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 					file.rename	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_rename.txt',sep=''))
 					cat( paste(RENAME_ID[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.rename	)					
 				}	
-				file.patient	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_patient.txt',sep=''))
+				file.patient	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_patients.txt',sep=''))
 				tmp				<- paste0(SAMPLE_ID[!is.na(BAM)&!is.na(REF)],'.bam')
 				if(exists('UNIT_ID'))
 					tmp			<- unique(UNIT_ID[!is.na(BAM)&!is.na(REF)])

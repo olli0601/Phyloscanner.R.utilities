@@ -2975,7 +2975,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	#	INPUT ARGS PHYLOSCANNER RUN
 	#	
 	if(1)
-	{	
+	{			
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft=NA, 
 				prog.raxml=NA, 
@@ -3017,7 +3017,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=1:2
+				select=NA
 				)		
 	}	
 	#
@@ -3027,7 +3027,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]		
-		#pty.c	<- subset(pty.c, PTY_RUN%in%c(48))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(1,2))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -3038,11 +3038,11 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
 					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
+					print(prefix.infiles)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 					list(CMD=cmd)
 				}, by='PTY_RUN']		
-		pty.c[1,cat(CMD)]
-		stop()
+		#pty.c[1,cat(CMD)]
 		invisible(pty.c[,	{					
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
