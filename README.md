@@ -1,2 +1,2 @@
 # phyloscan
-additional functions for the phyloscanner toolkit
+Utility functions for phyloscanner

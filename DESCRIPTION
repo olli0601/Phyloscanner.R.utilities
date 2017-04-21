@@ -1,16 +1,13 @@
 Package: phyloscan
-Version: 0.3-0
-Date: 2016/09/30
+Version: 0.4-0
+Date: 2017/04/20
 Title: 
 Author: {Oliver Ratmann}
 Maintainer: Oliver Ratmann <oliver.ratmann@imperial.ac.uk>
-Depends:
+Suggests:
     R (>= 3.1),
     ape,
     argparse,
-    phytools,
-    geiger,
-    igraph,
     phytools,
     phangorn,
     reshape2,
@@ -22,7 +19,7 @@ Depends:
     ggplot2,
     ggtree,
     zoo
-Description: scan phylogenies created along a genome for patterns
+Description: Utility functions for phyloscanner
 License: GPL (>=2)
 LazyLoad: yes
 RoxygenNote: 5.0.1

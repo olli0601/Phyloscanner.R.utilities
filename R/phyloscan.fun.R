@@ -1,6 +1,28 @@
 PR.PACKAGE			<- "phyloscan" 
 PR.read.processed.phyloscanner.output.in.directory		<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.read.processed.phyloscanner.output.in.directory.Rscript"))
 
+.onAttach <- function(...) 
+{
+	packageStartupMessage("Loaded utility functions for phyloscanner (https://github.com/olli0601/phyloscan)")
+}
+.onLoad <- function(...) 
+{
+	suppressMessages(library(ape))
+	suppressMessages(library(argparse))	
+	suppressMessages(library(phytools))
+	suppressMessages(library(phangorn))	
+	suppressMessages(library(reshape2))
+	suppressMessages(library(data.table))
+	suppressMessages(library(RColorBrewer))
+	suppressMessages(library(grid))
+	suppressMessages(library(gridExtra))
+	suppressMessages(library(colorspace))
+	suppressMessages(library(scales))
+	suppressMessages(library(ggplot2))
+	suppressMessages(library(ggtree))
+	suppressMessages(library(zoo))	
+}
+
 
 phsc.cmd.mafft.add<- function(infile, reffile, outfile, options='')
 {
@@ -87,13 +109,15 @@ phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName
 	cmd
 }
 
-phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA, seed=42L)
 {
 	cmd	<- paste(pr, ' --scriptdir ',scriptdir, maxReadsPerPatient, inputTreeFileName, outputFileName)
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	if(!is.na(seed))
+		cmd	<- paste(cmd, '--seed', seed)	
 	cmd
 }
 
@@ -248,13 +272,11 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 				tt
 			})
 	dwin	<- do.call('rbind', dwin)
-	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21','ADJACENT'),
-					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21','CONTIGUOUS'))
+	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'),
+					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
 	set(dwin, NULL, 'ID1', dwin[, regmatches(ID1, regexpr(regex.ind, ID1))])
 	set(dwin, NULL, 'ID2', dwin[, regmatches(ID2, regexpr(regex.ind, ID2))])
 	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
-	if(!any(colnames(dwin)=='UNINTERRUPTED'))	#for backward compatibility
-		dwin[, UNINTERRUPTED:=FALSE]
 	#	create W_FROM W_TO from SUFFIX
 	set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
 	set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
@@ -297,49 +319,49 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	#
 	dwin[, TYPE_RAW:= TYPE]
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE=="anc_12" & (CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="anc_12" & ADJACENT)]
 	cat('\nFound contiguous anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_12" & (CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & ADJACENT)]
 	cat('\nFound contiguous multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE=="anc_21" & (CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="anc_21" & ADJACENT)]
 	cat('\nFound contiguous anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_21" & (CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & ADJACENT)]
 	cat('\nFound contiguous multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')	
 	#
 	#	chains with intermediate
-	tmp		<- dwin[, which(TYPE=="anc_12" & !(CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="anc_12" & !ADJACENT)]
 	cat('\nFound discontiguous anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !(CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !ADJACENT)]
 	cat('\nFound discontiguous multi_anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
 	#	chains with intermediate
-	tmp		<- dwin[, which(TYPE=="anc_21" & !(CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="anc_21" & !ADJACENT)]
 	cat('\nFound discontiguous anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
-	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !(CONTIGUOUS|UNINTERRUPTED))]
+	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !ADJACENT)]
 	cat('\nFound discontiguous multi_anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
 	#
 	#	intermingled with no intermediate
-	tmp		<- dwin[, which(TYPE=="conflict" & CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="conflict" & ADJACENT)]
 	cat('\nFound contiguous conflict, n=', length(tmp),'--> intermingled with no intermediate')
 	set(dwin, tmp, 'TYPE', 'intermingled_nointermediate')
 	#	intermingled with intermediate
-	tmp		<- dwin[, which(TYPE=="conflict" & !CONTIGUOUS)]
+	tmp		<- dwin[, which(TYPE=="conflict" & !ADJACENT)]
 	cat('\nFound not contiguous conflict, n=', length(tmp),'--> intermingled with intermediate')
 	set(dwin, tmp, 'TYPE', 'intermingled_withintermediate')
 	#
 	#	other	
-	tmp		<- dwin[, which((CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
+	tmp		<- dwin[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound contiguous with no paths, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other_nointermediate')
-	tmp		<- dwin[, which(!(CONTIGUOUS|UNINTERRUPTED) & PATHS_12==0 & PATHS_21==0)]
+	tmp		<- dwin[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound discontiguous with no assignment, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other_withintermediate')
 	#	check
@@ -813,7 +835,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																maxReadsPerPatient=dwns.maxReadsPerPatient, 
 																blackListFileName=blacklistFiles, 
 																outgroupName=root.name, 
-																tipRegex=tip.regex)
+																tipRegex=tip.regex,
+																seed=42L)
 		cmd				<- paste(cmd, tmp, sep='\n')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_InWindow_',sep=''))
 		#cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
@@ -956,7 +979,6 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 #' @return List of ggtree objects, ready for printing.
 phsc.plot.phy.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
 {
-	suppressMessages(require(grid))
 	#	determine which phylogenies contain both individuals
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {
@@ -1703,9 +1725,7 @@ phsc.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
 phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.cols.background=function(n){ rainbow_hcl(n, start = 60, end = 240, c=30, l=80) }, drop.blacklisted=TRUE, tip.regex='(.*)_read_([0-9]+)_count_([0-9]+)', plot.file=NA, drop.less.than.n.ids=2, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
-{
-	require(colorspace)
-	suppressMessages(require(grid))	
+{	
 	#	determine which phylogenies contain at least one of the requested individuals
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {
@@ -1825,8 +1845,7 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 #' @param plot.file If not missing, the phylogenies will be printed to file.	
 #' @return List of ggtree objects, ready for printing.
 phsc.plot.phy.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(length(ids)), plot.file=NA, group.redo=FALSE, drop.less.than.n.ids=2, drop.blacklisted=FALSE, pdf.h=50, pdf.rw=10, pdf.ntrees=20, pdf.title.size=40)
-{
-	suppressMessages(require(grid))
+{	
 	#	determine which phylogenies contain at least one of the requested individuals
 	tmp		<- copy(dfs)
 	tmp		<- merge(tmp, tmp[, {

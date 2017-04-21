@@ -2935,7 +2935,14 @@ RakaiAll.preprocess.pairs.170410<- function()
 				dwin[, FILE:= infiles[i, FILE]]
 				dwin[, DIR:= infiles[i, DIR]]
 				dwin[, RUN:= infiles[i, RUN]]
-				dwin[, NORM_CONST:=NULL]
+				if(any(colnames(dwin)=='NORM_CONST'))
+					dwin[, NORM_CONST:=NULL]
+				if(any(colnames(dwin)=='UNINTERRUPTED'))
+					dwin[, UNINTERRUPTED:=NULL]
+				if(!any(colnames(dwin)=='ADJACENT'))
+					setnames(dwin, c('CONTIGUOUS'), c('ADJACENT'))
+				if(!any(colnames(dwin)=='CONTIGUOUS'))
+					dwin[, CONTIGUOUS:=NA_integer_]
 				dwin
 			})
 	rpw		<- do.call('rbind',rpw)
@@ -7161,6 +7168,7 @@ RakaiAll.addposteriors.pairs.170410<- function()
 	#	check if we have all pty.runs
 	stopifnot(	!length(setdiff( 	subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))],subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trU_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))]	)),
 				!length(setdiff( 	subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))],subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trC_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))]	)),
+				!length(setdiff( 	subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))],subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))]	)),
 				!length(setdiff( 	subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))],subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8')[, sort(unique(PTY_RUN))]	))
 				)	
 	#	define plotting order: largest number of trm assignments	
