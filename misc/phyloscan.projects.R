@@ -18,7 +18,7 @@ project.dual<- function()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
-	#	various
+	#	various 
 	if(0)
 	{
 		require(big.phylo)
@@ -3124,7 +3124,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]		
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(3:137,402:441,448:666))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(575, 630))
 		#pty.c	<- subset(pty.c, PTY_RUN%in%448:666)		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
@@ -3143,8 +3143,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		#pty.c[1,cat(CMD)]
 		invisible(pty.c[,	{					
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
