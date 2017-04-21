@@ -320,49 +320,49 @@ phsc.combine.phyloscanner.output<- function(in.dir, save.file=NA, postfix.trees=
 	dwin[, TYPE_RAW:= TYPE]
 	#	chains with no intermediate
 	tmp		<- dwin[, which(TYPE=="anc_12" & ADJACENT)]
-	cat('\nFound contiguous anc_12, n=', length(tmp),'--> chain with no intermediate')
+	cat('\nFound adjacent anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
 	tmp		<- dwin[, which(TYPE=="multi_anc_12" & ADJACENT)]
-	cat('\nFound contiguous multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
+	cat('\nFound adjacent multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_nointermediate')
 	#	chains with no intermediate
 	tmp		<- dwin[, which(TYPE=="anc_21" & ADJACENT)]
-	cat('\nFound contiguous anc_21, n=', length(tmp),'--> chain with no intermediate')
+	cat('\nFound adjacent anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')
 	tmp		<- dwin[, which(TYPE=="multi_anc_21" & ADJACENT)]
-	cat('\nFound contiguous multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
+	cat('\nFound adjacent multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_nointermediate')	
 	#
 	#	chains with intermediate
 	tmp		<- dwin[, which(TYPE=="anc_12" & !ADJACENT)]
-	cat('\nFound discontiguous anc_12, n=', length(tmp),'--> chain with intermediate')
+	cat('\nFound non-adjacent anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
 	tmp		<- dwin[, which(TYPE=="multi_anc_12" & !ADJACENT)]
-	cat('\nFound discontiguous multi_anc_12, n=', length(tmp),'--> chain with intermediate')
+	cat('\nFound non-adjacent multi_anc_12, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_12_withintermediate')
 	#	chains with intermediate
 	tmp		<- dwin[, which(TYPE=="anc_21" & !ADJACENT)]
-	cat('\nFound discontiguous anc_21, n=', length(tmp),'--> chain with intermediate')
+	cat('\nFound non-adjacent anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
 	tmp		<- dwin[, which(TYPE=="multi_anc_21" & !ADJACENT)]
-	cat('\nFound discontiguous multi_anc_21, n=', length(tmp),'--> chain with intermediate')
+	cat('\nFound non-adjacent multi_anc_21, n=', length(tmp),'--> chain with intermediate')
 	set(dwin, tmp, 'TYPE', 'chain_21_withintermediate')
 	#
 	#	intermingled with no intermediate
 	tmp		<- dwin[, which(TYPE=="conflict" & ADJACENT)]
-	cat('\nFound contiguous conflict, n=', length(tmp),'--> intermingled with no intermediate')
+	cat('\nFound adjacent conflict, n=', length(tmp),'--> intermingled with no intermediate')
 	set(dwin, tmp, 'TYPE', 'intermingled_nointermediate')
 	#	intermingled with intermediate
 	tmp		<- dwin[, which(TYPE=="conflict" & !ADJACENT)]
-	cat('\nFound not contiguous conflict, n=', length(tmp),'--> intermingled with intermediate')
+	cat('\nFound non-adjacent conflict, n=', length(tmp),'--> intermingled with intermediate')
 	set(dwin, tmp, 'TYPE', 'intermingled_withintermediate')
 	#
 	#	other	
 	tmp		<- dwin[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
-	cat('\nFound contiguous with no paths, n=', length(tmp),'--> other')
+	cat('\nFound adjacent with no paths, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other_nointermediate')
 	tmp		<- dwin[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
-	cat('\nFound discontiguous with no assignment, n=', length(tmp),'--> other')
+	cat('\nFound non-adjacent with no assignment, n=', length(tmp),'--> other')
 	set(dwin, tmp, 'TYPE', 'other_withintermediate')
 	#	check
 	stopifnot( !nrow(subset(dwin, TYPE=='none'))	)
@@ -2169,8 +2169,90 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 	list(phs=phs, dfr=dfr)
 }
 
+#' @title Calculate basic pairwise relationships
+#' @description This function calculates basic pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.
+#' @export    
+#' @param df data.table to which basic pairwise relationships will be added. Must contain columns with name 'ADJACENT','TYPE_RAW','PATRISTIC_DISTANCE','PATHS_12','PATHS_21'. 
+#' @param trmw.close.brl  Maximum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically close.
+#' @param trmw.distant.brl   Minimum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically distant.
+#' @return input data.table with new relationship column TYPE_BASIC. 
+phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distant.brl)
+{
+	dwin[, TYPE_BASIC:= TYPE_RAW]
+	
+	stopifnot(c('ADJACENT','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(dwin))
+	#	chains with no intermediate
+	tmp		<- dwin[, which(TYPE_BASIC=="anc_12" & ADJACENT)]
+	cat('\nFound adjacent anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_12" & ADJACENT)]
+	cat('\nFound adjacent multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	#	chains with no intermediate
+	tmp		<- dwin[, which(TYPE_BASIC=="anc_21" & ADJACENT)]
+	cat('\nFound adjacent anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')
+	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_21" & ADJACENT)]
+	cat('\nFound adjacent multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
+	#
+	#	chains with intermediate
+	#
+	tmp		<- dwin[, which(TYPE_BASIC=="anc_12" & !ADJACENT)]
+	cat('\nFound non-adjacent anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_12" & !ADJACENT)]
+	cat('\nFound non-adjacent multi_anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	#	chains with intermediate
+	tmp		<- dwin[, which(TYPE_BASIC=="anc_21" & !ADJACENT)]
+	cat('\nFound non-adjacent anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_21" & !ADJACENT)]
+	cat('\nFound non-adjacent multi_anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	#
+	#	intermingled with no intermediate
+	tmp		<- dwin[, which(TYPE_BASIC=="conflict" & ADJACENT)]
+	cat('\nFound adjacent conflict, n=', length(tmp),'--> intermingled with no intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
+	#	intermingled with intermediate
+	tmp		<- dwin[, which(TYPE_BASIC=="conflict" & !ADJACENT)]
+	cat('\nFound non-adjacent conflict, n=', length(tmp),'--> intermingled with intermediate')
+	set(dwin, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
+	#
+	#	other	
+	tmp		<- dwin[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound adjacent with no paths, n=', length(tmp),'--> other')
+	set(dwin, tmp, 'TYPE_BASIC', 'other_nointermediate')
+	tmp		<- dwin[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound non-adjacent with no assignment, n=', length(tmp),'--> other')
+	set(dwin, tmp, 'TYPE_BASIC', 'other_withintermediate')
+	#	check
+	stopifnot( !nrow(subset(dwin, TYPE_BASIC=='none'))	)
+	#
+	#	add distance as second dimension
+	#
+	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
+	{
+		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
+		tmp		<- dwin[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close, n=', length(tmp))
+		set(dwin, tmp, 'TYPE_BASIC', dwin[tmp, paste0(TYPE_BASIC,'_close')])		
+	}
+	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
+	{
+		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
+		tmp		<- dwin[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
+		cat('\nFound distant, n=', length(tmp))
+		set(dwin, tmp, 'TYPE_BASIC', dwin[tmp, paste0(TYPE_BASIC,'_distant')])	
+	}
+	dwin
+}
+
 #' @title Calculate pairwise relationships
-#' @description This function calculates pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.    
+#' @description This function calculates pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.
+#' @export    
 #' @param df data.table to which new columns of relationship groups will be added. Must contain a column with name TYPE_DIR_TODI7x3. This column contains fundamental relationship states for every window, from which other relationships are derived. 
 #' @param get.groups names of relationship groups  
 #' @param make.pretty.labels Logical   
@@ -2260,11 +2342,78 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 	if(make.pretty.labels)
 	{
 		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE_DIR_TODI7x3)))))])	
-		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',TYPE_DIR_TODI7x3)))))])		
+		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE_DIR_TODI7x3))))))])		
 		for(x in c('TYPE_DIR_TODI7x3',get.groups))
 			set(df, NULL, x, gsub('_',' ',df[[x]]))
 	}	
 	df
+}
+
+#' @title Count observed relationship states
+#' @description This function counts for each pair of individuals their relationship states across all windows (KEFF), and the total number of windows (NEFF). Since windows can be overlapping, the count is a real value.
+#' @export    
+#' @param df data.table with basic relationship types for paired individuals across windows. Must contain columns 'ID1','ID2','W_FROM','W_TO','TYPE_BASIC'. 
+#' @param get.groups names of relationship groups  
+#' @return new data.table with columns ID1 ID2 GROUP TYPE K KEFF N NEFF. 
+phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
+{
+	stopifnot(c('ID1','ID2','W_FROM','W_TO','TYPE_BASIC')%in%colnames(df))
+	#
+	#	identify chunks of contiguous windows
+	#	
+	setkey(df, ID1, ID2, W_FROM)
+	w.slide	<- df[, {
+				ans	<- NA_integer_
+				tmp	<- diff(W_FROM)
+				if(length(tmp))
+					ans	<- min(tmp)
+				list(W_SLIDE=ans)
+			}, by=c('ID1','ID2')][, min(na.omit(W_SLIDE))]
+	#	define chunks
+	setkey(df, ID1, ID2, W_FROM)
+	tmp		<- df[, {
+				tmp<- as.integer( c(TRUE,(W_FROM[-length(W_FROM)]+w.slide)!=W_FROM[-1]) )
+				list(W_FROM=W_FROM, W_TO=W_TO, CHUNK=cumsum(tmp))
+			}, by=c('ID1','ID2')]
+	df		<- merge(df,tmp,by=c('ID1','ID2','W_FROM','W_TO'))
+	#	define chunk length in terms of non-overlapping windows	& number of windows in chunk
+	tmp		<- df[, {
+				list(W_FROM=W_FROM, W_TO=W_TO, CHUNK_L=(max(W_TO+1L)-min(W_FROM))/(W_TO[1]+1L-W_FROM[1]), CHUNK_N=length(W_FROM))
+			}, by=c('ID1','ID2','CHUNK')]
+	df		<- merge(df,tmp,by=c('ID1','ID2','CHUNK','W_FROM','W_TO'))	
+	#	for each chunk, count: windows by type and effective length of chunk
+	#	then sum chunks
+	rplkl	<- df[, list(	K= length(W_FROM), KEFF= length(W_FROM)/CHUNK_N[1] * CHUNK_L[1]), by=c('ID1','ID2','CHUNK','TYPE_BASIC')]	
+	rplkl	<- rplkl[, list(STAT=c('K','KEFF'), V=c(sum(K),sum(KEFF))), by=c('ID1','ID2','TYPE_BASIC')]
+	#
+	#	add relationship types
+	#
+	setnames(rplkl, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	#for backwards compatibility
+	rplkl	<- phsc.get.pairwise.relationships(rplkl, get.groups=get.groups, make.pretty.labels=FALSE)
+	for(x in get.groups)
+		set(rplkl, NULL, x, gsub('_',' ',rplkl[[x]]))
+	setnames(rplkl, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
+	#	melt relationship groups
+	rplkl	<- melt(rplkl, measure.vars=c(get.groups,'TYPE_BASIC'), variable.name='GROUP', value.name='TYPE')
+	rplkl	<- subset(rplkl, !is.na(TYPE))
+	#	sum K and KEFF of same relationship state
+	rplkl	<- rplkl[, list(V=sum(V)), by=c('ID1','ID2','GROUP','TYPE','STAT')]
+	#	add zero-count relationship states (change to wide table and set NA's to zero's)
+	rplkl	<- dcast.data.table(rplkl, ID1+ID2~GROUP+TYPE+STAT, value.var='V')
+	for(x in setdiff(colnames(rplkl),c('ID1','ID2','GROUP')))
+		set(rplkl, which(is.na(rplkl[[x]])), x, 0L)	
+	#	melt again
+	rplkl	<- melt(rplkl, id.vars=c('ID1','ID2'), variable.name='GROUP', value.name='V')
+	rplkl[, STAT:= gsub('.*_([^_]+)$','\\1',GROUP)]
+	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])	
+	rplkl[, TYPE:= gsub('.*_([^_]+)$','\\1',GROUP)]
+	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])
+	#	expand KEFF and K columns now that everything is done
+	rplkl	<- dcast.data.table(rplkl, ID1+ID2+GROUP+TYPE~STAT, value.var='V')	
+	#	calculate N and NEFF
+	tmp		<- rplkl[, list(N= sum(K), NEFF= sum(KEFF)), by=c('ID1','ID2','GROUP')]	
+	rplkl	<- merge(rplkl, tmp, by=c('ID1','ID2','GROUP'))
+	rplkl
 }
 
 #' @title Calculate prior parameter n0
@@ -2282,6 +2431,25 @@ phsc.get.prior.parameter.n0<- function(n.states, n.type=2, n.obs=3, confidence.c
 	ans	<- optimize(phsc.find.n0.aux, c(.01,100), n.states=n.states, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)
 	ans	<- round(ans$minimum, d=4)
 	ans
+}
+
+#' @title Calculate marginal posterior probability for two individuals being in a particular relationship state
+#' @description This function calculates the parameters that specify the marginal posterior probability for two individuals being in a particular relationship state. The marginal posterior is Beta distributed and this function calculates the ALPHA and BETA parameters.
+#' @export  
+#' @param df Input data.table   
+#' @param n.type Calibration parameter for the prior: minimum number of windows of state to select a pair of individuals with confidence of at least at least confidence.cut, if the total number of windows is n.obs
+#' @param n.obs Calibration parameter for the prior: total number of windows. 
+#' @param confidence.cut Calibration parameter for the prior: confidence cut off.  
+#' @return Input data.table with two additional columns POSTERIOR_ALPHA and POSTERIOR_BETA
+phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, confidence.cut=0.5)
+{
+	stopifnot(c('GROUP','TYPE')%in%colnames(df))
+	tmp		<- unique(subset(df, select=c('GROUP','TYPE')))[, list(N_TYPE=length(TYPE)), by=c('GROUP')]
+	tmp		<- tmp[, list(PAR_PRIOR=phsc.get.prior.parameter.n0(N_TYPE, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)), by=c('GROUP','N_TYPE')]
+	df		<- merge(df, tmp, by=c('GROUP'))
+	df[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
+	df[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]	
+	df
 }
 
 #' @import data.table 

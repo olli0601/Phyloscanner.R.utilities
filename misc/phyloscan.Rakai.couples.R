@@ -8394,11 +8394,13 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 	#
 	# select final run
 	#
-	rpw		<- subset(rpw, RUN%in%c("RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8") )
-	rplkl	<- subset(rplkl, RUN%in%c("RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"))	
+	tmp		<- "RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"
+	#tmp		<- "RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8"
+	rpw		<- subset(rpw, RUN%in%tmp )
+	rplkl	<- subset(rplkl, RUN%in%tmp )	
 	#	add info on pair types to rplkl
 	rp		<- copy(rpw)
-	set(rp, NULL, c('DIR','FILE','RUN','W_FROM','W_TO','TYPE_RAW','TYPE','GROUP','PATRISTIC_DISTANCE','UNINTERRUPTED','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R','CHUNK','CHUNK_L','CHUNK_N','ID_R_MIN','ID_R_MAX'), NULL)
+	set(rp, NULL, c('DIR','FILE','RUN','W_FROM','W_TO','TYPE_RAW','TYPE','GROUP','PATRISTIC_DISTANCE','ADJACENT','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R','CHUNK','CHUNK_L','CHUNK_N','ID_R_MIN','ID_R_MAX'), NULL)
 	rp		<- unique(rp)
 	#	make COUPID
 	rp[, COUPID:= paste0(MALE_RID,':',FEMALE_RID)]	
@@ -8491,28 +8493,28 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 	rmf		<- subset(rtpd, TYPE=='mf')
 	rfm		<- subset(rtpd, TYPE=='fm')
 	
-	subset(rtp, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
-	subset(rtpd, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
-	subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIRSCORE_TODI3')
-	subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIR_TODI7x3')
+	#subset(rtp, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
+	#subset(rtpd, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86')
+	#subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIRSCORE_TODI3')
+	#subset(rplkl, PTY_RUN==28 & MALE_SANGER_ID=='15714_1_84' & FEMALE_SANGER_ID=='15862_1_86' & GROUP=='TYPE_DIR_TODI7x3')
 	
 	#	info		
 	cat('\ncouples with phyloscanner assessment, n=',				nrow(unique(rplkl, by='COUPID')))	
 	cat('\ncouples not implicated in transmission, n=',				nrow(unique(rex, by='COUPID')))
 	unique(rex,by='COUPID')[, table(PAIR_TYPE)]
-	cat('\ncouples that are likely pairs, n=',						nrow(unique(rpd, by='COUPID')))
+	cat('\ncouples that are likely pairs, n=',						nrow(unique(rtp, by='COUPID')))
 	cat('\ncouples that are likely pairs with evidence M->F, n=',	nrow(unique(rmf, by='COUPID')))
 	cat('\ncouples that are likely pairswith evidence F->M, n=',	nrow(unique(rfm, by='COUPID')))
 	#	pairings assessed, n= 1741
-	#	couples not implicated in transmission, n= 1408
-	#		    f or m not in couple 		m and f not in couple 	not always cohabiting     stable cohabiting 
- 	#           1316                    	16                     	8                   	  68  
+	#	couples not implicated in transmission, n= 1402
+	#		    f or m not in couple m and f not in couple not always cohabiting     stable cohabiting 
+    #             1311                    16                     8                    67  
 	#	couples that are likely pairs, n= 209
-	#	likely direction resolved, n= 98
+	#	likely direction resolved, n= 127
 	#	   not always cohabiting 			   not registered as couple        stable cohabiting 
 	#                  2                       41                              85
-	#	couples that are likely pairs with evidence M->F, n= 69
-	#	couples that are likely pairswith evidence F->M, n= 29
+	#	couples that are likely pairs with evidence M->F, n= 84
+	#	couples that are likely pairswith evidence F->M, n= 43
 	
 	#	define two helper data.table
 	rmf		<- merge(unique(subset(rmf, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))), rp, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
@@ -8529,31 +8531,72 @@ RakaiAll.analyze.pairs.170418.direction<- function()
 	setnames(tmp,colnames(tmp),gsub('FEMALE','TR',colnames(tmp)))
 	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
 	rtr2	<- rbind(rtr2,tmp)
-	#
-	#	get difference from manual check (versionstrict2) to more relaxed version
-	#
-	rps			<- subset(rtr, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))
-	outfile.base<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI_'
-	write.csv(rps, file=paste0(outfile.base,'_summary_versionmaxscore.csv'))
-	tmp2		<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	tmp2[, VERSION:='checked manually']
-	tmp			<- copy(rps)	
-	tmp[, VERSION_NEW:='first max then score']
-	tmp			<- merge(tmp, tmp2, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all=1)
-	tmp[, table(is.na(VERSION_NEW), is.na(VERSION))]
-	#		FALSE TRUE
-	#   FALSE    59   68
-  	rps			<- subset(tmp, is.na(VERSION) | is.na(VERSION_NEW))	
-	write.csv(rps, file=paste0(outfile.base,'_summary_diffaftermaxscore.csv'))
-	set(rps, NULL, c('VERSION','VERSION_NEW'), NULL)
-	group		<- 'TYPE_DIR_TODI7x3'
-	group		<- 'TYPE_PAIR_TODI'
-	run			<- "RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"	
-	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
-	rpw2		<- subset(rpw, RUN==run & GROUP==group)
-	rplkl2		<- subset(rplkl, RUN==run & GROUP==group)	
-	plot.file	<- paste0(outfile.base,'_windows_summary_',group,'_diffaftermaxscore.pdf')	
-	phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
+	
+	if(0)	#for inscript
+	{
+		rps			<- subset(rtr, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))
+		outfile.base<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI_'
+		write.csv(rps, file=paste0(outfile.base,'_summary_versionmaxscore_inscript.csv'))
+		#
+		#	get difference from manual check (versionstrict2) to more relaxed version
+		#		
+		tmp2		<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionmaxscore.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		tmp2[, VERSION:='on the fly']
+		tmp			<- copy(rps)	
+		tmp[, VERSION_NEW:='in script']
+		tmp			<- merge(tmp, tmp2, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all=1)
+		tmp[, table(is.na(VERSION_NEW), is.na(VERSION))]
+		#		FALSE TRUE
+		#FALSE   109    4
+		#TRUE     18    0
+		rps			<- subset(tmp, is.na(VERSION) | is.na(VERSION_NEW))	
+		write.csv(rps, file=paste0(outfile.base,'_summary_diffaftermaxscore_inscript.csv'))
+		set(rps, NULL, c('VERSION','VERSION_NEW'), NULL)
+		group		<- 'TYPE_DIR_TODI7x3'
+		#group		<- 'TYPE_PAIR_TODI'
+		run			<- "RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8"	
+		plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		rpw2		<- subset(rpw, RUN==run & GROUP==group)
+		rplkl2		<- subset(rplkl, RUN==run & GROUP==group)	
+		plot.file	<- paste0(outfile.base,'_windows_summary_',group,'_diffaftermaxscore_inscript.pdf')	
+		phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
+	}	
+	if(0)	#for onthefly
+	{
+		rps			<- subset(rtr, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))
+		outfile.base<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI_'
+		write.csv(rps, file=paste0(outfile.base,'_summary_versionmaxscore.csv'))
+		group		<- 'TYPE_DIR_TODI7x3'
+		#group		<- 'TYPE_PAIR_TODI'
+		run			<- "RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"	
+		plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		rpw2		<- subset(rpw, RUN==run & GROUP==group)
+		rplkl2		<- subset(rplkl, RUN==run & GROUP==group)	
+		plot.file	<- paste0(outfile.base,'_windows_summary_',group,'_versionmaxscore.pdf')	
+		phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)
+		#
+		#	get difference from manual check (versionstrict2) to more relaxed version
+		#		
+		tmp2		<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		tmp2[, VERSION:='checked manually']
+		tmp			<- copy(rps)	
+		tmp[, VERSION_NEW:='first max then score']
+		tmp			<- merge(tmp, tmp2, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all=1)
+		tmp[, table(is.na(VERSION_NEW), is.na(VERSION))]
+		#		FALSE TRUE
+		#   FALSE    59   68
+		rps			<- subset(tmp, is.na(VERSION) | is.na(VERSION_NEW))	
+		write.csv(rps, file=paste0(outfile.base,'_summary_diffaftermaxscore.csv'))
+		set(rps, NULL, c('VERSION','VERSION_NEW'), NULL)
+		group		<- 'TYPE_DIR_TODI7x3'
+		group		<- 'TYPE_PAIR_TODI'
+		run			<- "RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8"	
+		plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		rpw2		<- subset(rpw, RUN==run & GROUP==group)
+		rplkl2		<- subset(rplkl, RUN==run & GROUP==group)	
+		plot.file	<- paste0(outfile.base,'_windows_summary_',group,'_diffaftermaxscore.pdf')	
+		phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)		
+	}
 	
 	
 	
