@@ -29,7 +29,7 @@ project.dual<- function()
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
 		quit("no")	
 	}			
-}
+} 
 
 pty.various	<- function()
 {
@@ -3026,7 +3026,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=801:1000
+				select=1001:1300
 				)		
 	}	
 	#
@@ -3038,8 +3038,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRA",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
