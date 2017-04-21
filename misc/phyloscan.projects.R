@@ -3026,7 +3026,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=800:801
+				select=801:1000
 				)		
 	}	
 	#
