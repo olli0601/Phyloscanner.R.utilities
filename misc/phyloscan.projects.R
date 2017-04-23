@@ -3026,8 +3026,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=1301:1500	#of 1891
-				)		
+				select=1501:1891	#of 1891
+				)		 
 	}	
 	#
 	#	RUN PHYLOSCANNER
@@ -3037,8 +3037,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
