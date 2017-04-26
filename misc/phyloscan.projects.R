@@ -9,10 +9,10 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	#pty.pipeline.phyloscanner.160915.couples.rerun()
+	pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondbatchofall()
+	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -2482,12 +2482,15 @@ pty.pipeline.phyloscanner.test<- function()
 									win=c(2500,3000,250,250), 
 									keep.overhangs=FALSE,	
 									use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-									sankhoff.k=20,
-									split.tiesRule='b',
+									roguesubtree.kParam=20,
 									roguesubtree.prop.threshold=0,
 									roguesubtree.read.threshold=20,
 									dwns.maxReadsPerPatient=50,	
 									multifurcation.threshold=1e-5,
+									split.rule='s',
+									split.kParam=20,
+									split.proximityThreshold=0.035,
+									split.readCountsMatterOnZeroBranches=TRUE,
 									pw.trmw.min.reads=20,									
 									pw.trmw.min.tips=1,
 									pw.trmw.close.brl=0.035,
@@ -2496,6 +2499,7 @@ pty.pipeline.phyloscanner.test<- function()
 									pw.prior.neff=3,
 									pw.prior.calibrated.prob=0.5,
 									mem.save=0,
+									verbose=TRUE,
 									select=pty.select)														
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		pty.c[1,cat(CMD)]				
@@ -3174,7 +3178,8 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trU_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trC_rerun")
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_rerun")
-		out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_blNormed_rerun")		
+		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_blNormed_rerun")
+		out.dir				<- file.path(HOME,"Rakai_ptoutput_170426_couples_w250_d50_p35_blNormed_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
 	}	
@@ -3210,12 +3215,23 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 										keep.overhangs=FALSE,	
 										multifurcation.threshold=1e-5,
 										use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-										sankhoff.k=20,
-										split.tiesRule='b',
+										roguesubtree.kParam=20,
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
-										dwns.maxReadsPerPatient=50,											
+										dwns.maxReadsPerPatient=50,		
+										split.rule='s',
+										split.kParam=20,
+										split.proximityThreshold=0.035,
+										split.readCountsMatterOnZeroBranches=TRUE,
+										pw.trmw.min.reads=20,									
+										pw.trmw.min.tips=1,
+										pw.trmw.close.brl=0.035,
+										pw.trmw.distant.brl=0.08,
+										pw.prior.keff=2,
+										pw.prior.neff=3,
+										pw.prior.calibrated.prob=0.5,										
 										mem.save=0,
+										verbose=TRUE,
 										select=NA)
 	}	
 	#
@@ -3244,12 +3260,12 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 		invisible(pty.c[,	{					
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("pty",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							#stop()
+							stop()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	

@@ -45,15 +45,17 @@ phsc.cmd.blacklist.reads<- function(pr, inputFileName, outputFileName, rawThresh
 	cmd
 }
 
-phsc.cmd.NormalisationLookupWriter<- function(pr, scriptdir, inputTreeFileName, normFileName, outputFileName, normFileVar, standardize=FALSE)
+phsc.cmd.NormalisationLookupWriter<- function(pr, scriptdir, inputTreeFileName, normFileName, outputFileName, normFileVar, standardize=FALSE, verbose=NA)
 {
 	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' "',inputTreeFileName, '" "', normFileName, '" "',outputFileName, '" "',normFileVar,'" ')
 	if(!is.na(standardize) & standardize)
 		cmd	<- paste0(cmd, ' --standardize')
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.prop.threshold=0.01, windowCount=NA)
+phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileName, blacklistFileName=NA, summaryFileName=NA, treeFileName=NA, dual.prop.threshold=0.01, windowCount=NA, verbose=NA)
 {
 	cmd	<- paste(pr, dual.prop.threshold, inputFileNameDuals, outputFileName)
 	if(!is.na(treeFileName))
@@ -64,10 +66,12 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 		cmd	<- paste(cmd, '--existingBlacklistsPrefix', blacklistFileName)
 	if(!is.na(summaryFileName))
 		cmd	<- paste(cmd, '--summaryFile', summaryFileName)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA, branchLengthNormalisation=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA, branchLengthNormalisation=NA, verbose=NA)
 {
 	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'"')
 	if(!is.na(dualCandidatesOutputFileName))
@@ -83,11 +87,13 @@ phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outpu
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
 		cmd	<- paste0(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"')
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
-		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)		
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.blacklist.rogue.geneticdistance<- function(pr, scriptdir, inputTreeFileName, outputFileName, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.rogue.geneticdistance<- function(pr, scriptdir, inputTreeFileName, outputFileName, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA, verbose=NA)
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, dropProportion, longestBranchLength, inputTreeFileName, outputFileName)
 	if(!is.na(tipRegex))
@@ -96,10 +102,12 @@ phsc.cmd.blacklist.rogue.geneticdistance<- function(pr, scriptdir, inputTreeFile
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName, outputFileName, probThreshold=0.001, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA)
+phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName, outputFileName, probThreshold=0.001, longestBranchLength=0.04, dropProportion=1/100, blackListFileName=NA, outgroupName=NA, tipRegex=NA, verbose=NA)
 {
 	cmd	<- paste(pr, '--scriptdir',scriptdir, dropProportion, probThreshold, longestBranchLength, inputTreeFileName, outputFileName)
 	if(!is.na(tipRegex))
@@ -108,10 +116,12 @@ phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA, seed=42L)
+phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA, seed=42L, verbose=NA)
 {
 	cmd	<- paste(pr, ' --scriptdir ',scriptdir, maxReadsPerPatient, inputTreeFileName, outputFileName)
 	if(!is.na(outgroupName))
@@ -119,23 +129,27 @@ phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outpu
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
 	if(!is.na(seed))
-		cmd	<- paste(cmd, '--seed', seed)	
+		cmd	<- paste(cmd, '--seed', seed)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')		
 	cmd
 }
 
 
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA, verbose=NA)
 {
 	cmd	<- paste(pr,' --scriptdir ',scriptdir,' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "',tipRegex,'"', sep='')	
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklists "',blacklistFiles,'"', sep='')
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
 phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.5, 
-												rel.likely.pair=TRUE, rel.likely.pair.by.distance.only=FALSE,rel.likely.pair.by.topology.only=FALSE,rel.likely.pair.by.cross.table=FALSE,rel.direction=TRUE,rel.chain=FALSE,  
+												rel.likely.pair=TRUE, rel.likely.pair.by.distance.only=FALSE,rel.likely.pair.by.topology.only=FALSE,rel.likely.pair.by.cross.table=FALSE,rel.direction=TRUE,rel.chain=FALSE, verbose=NA,  
 												pr=PR.pairwise.relationships)	
 {
 	cmd	<- paste0(pr,' --infile "',infile,'" --outfile "',outfile,'"')
@@ -165,6 +179,8 @@ phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, t
 		cmd	<- paste(cmd,'--rel.direction')
 	if(rel.chain)
 		cmd	<- paste(cmd,'--rel.chain')	
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
@@ -185,7 +201,7 @@ phsc.cmd.read.processed.phyloscanner.output.in.directory<- function(prefix.infil
 	cmd
 }
 
-phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15)	
+phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA, blacklistFiles=NA, outputFileIdentifier=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
 {
 	cmd	<- paste(pr, ' --inputFile "', infile, '"', ' --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -208,11 +224,13 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
 		cmd	<- paste(cmd, ' --pdfrelheight ', pdfrelheight, sep='')
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd	
 }
 
-phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15)	
-{
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, proximityThreshold=NA, readCountsMatterOnZeroBranches=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
+{	
 	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklist "', blacklistFiles,'"', sep='')
@@ -224,8 +242,13 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 		cmd	<- paste(cmd, ' --splitsRule ', splitsRule, sep='')
 	if(!is.na(sankhoff.k))
 		cmd	<- paste(cmd, ' --kParam ', sankhoff.k, sep='')
-	if(!is.na(tiesRule))
-		cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
+	if(!is.na(proximityThreshold))
+		cmd	<- paste(cmd, ' --proximityThreshold ', proximityThreshold, sep='')
+	if(!is.na(readCountsMatterOnZeroBranches) & readCountsMatterOnZeroBranches)
+		cmd	<- paste(cmd, ' --readCountsMatterOnZeroBranches', sep='')
+	stopifnot(is.na(tiesRule))
+	#if(!is.na(tiesRule))
+	#	cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')	
 	if(!is.na(multifurcation.threshold))
@@ -238,10 +261,12 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
 		cmd	<- paste(cmd, ' --pdfrelheight ', pdfrelheight, sep='')
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd	
 }
 	
-phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA, branchLengthNormalisation=NA)
+phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA, branchLengthNormalisation=NA, verbose=NA)
 {
 	cmd<- paste0(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir)
 	if(!is.na(tipRegex))
@@ -249,17 +274,21 @@ phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, f
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
 		cmd	<- paste0(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"')
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
-		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)			
+		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
-phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, file.detailed.out=NA, min.threshold=1, allow.MultiTrans=FALSE)
+phsc.cmd.LikelyTransmissionsSummary<- function(pr, scriptdir, file.patients, file.summary, file.lkl, file.out, file.detailed.out=NA, min.threshold=1, allow.MultiTrans=FALSE, verbose=NA)
 {
 	cmd<- paste(pr, ' "',file.patients, '" "', file.lkl, '" "', file.out,'" --scriptdir ', scriptdir, ' --summaryFile "', file.summary, '" --minThreshold ', min.threshold, sep='')
 	if(!is.na(file.detailed.out))
 		cmd	<- paste(cmd, ' --detailedOutput "', file.detailed.out, '"', sep='')
 	if(allow.MultiTrans)
-		cmd	<- paste(cmd, ' --allowMultiTrans', sep='')	
+		cmd	<- paste(cmd, ' --allowMultiTrans', sep='')
+	if(!is.na(verbose) & verbose)
+		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
 }
 
@@ -679,8 +708,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 			
 	#	define variables
 	prog.pty						<- pty.args[['prog.pty']]
-	root.name						<- pty.args[['alignments.root']]	
-	sankhoff.k						<- pty.args[['sankhoff.k']]
+	root.name						<- pty.args[['alignments.root']]
+	split.rule						<- pty.args[['split.rule']]
+	split.kParam					<- pty.args[['split.kParam']]
+	split.proximityThreshold		<- pty.args[['split.proximityThreshold']]
+	split.readCountsMatterOnZeroBranches	<- pty.args[['split.readCountsMatterOnZeroBranches']]
 	split.tiesRule					<- pty.args[['split.tiesRule']]
 	use.blacklisters				<- pty.args[['use.blacklisters']]
 	contaminant.read.threshold		<- pty.args[['contaminant.read.threshold']]
@@ -688,6 +720,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	dual.prop.threshold				<- pty.args[['dual.prop.threshold']]
 	roguesubtree.prop.threshold		<- pty.args[['roguesubtree.prop.threshold']]
 	roguesubtree.read.threshold		<- pty.args[['roguesubtree.read.threshold']]
+	roguesubtree.kParam				<- pty.args[['roguesubtree.kParam']]
 	rogue.prop.threshold			<- pty.args[['rogue.prop.threshold']]
 	rogue.longestBranchLength		<- pty.args[['rogue.longestBranchLength']]
 	rogue.probThreshold				<- pty.args[['rogue.probThreshold']]	
@@ -703,7 +736,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	trmw.distant.brl				<- pty.args[['pw.trmw.distant.brl']] 
 	prior.keff						<- pty.args[['pw.prior.keff']] 
 	prior.neff						<- pty.args[['pw.prior.neff']] 
-	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']] 
+	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
+	verbose							<- pty.args[['verbose']]
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir,'NormalisationLookupWriter.R'),sep='')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
@@ -729,7 +763,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 		stopifnot(	!any(grepl('MakeRogueBlacklist', use.blacklisters)),	
 					!is.null(roguesubtree.prop.threshold) & !is.na(roguesubtree.prop.threshold),
 					!is.null(roguesubtree.read.threshold) & !is.na(roguesubtree.read.threshold),
-					!is.null(sankhoff.k) & !is.na(sankhoff.k))		
+					!is.null(roguesubtree.kParam) & !is.na(roguesubtree.kParam))		
 	if(any(grepl('MakeRogueBlacklist', use.blacklisters))) 
 		stopifnot(	!any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)),
 					!is.null(rogue.prop.threshold) & !is.na(rogue.prop.threshold),
@@ -799,11 +833,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																blackListFileName=blacklistFiles,
 																rawThreshold=roguesubtree.read.threshold, 
 																ratioThreshold=roguesubtree.prop.threshold, 
-																sankhoffK=sankhoff.k,
+																sankhoffK=roguesubtree.kParam,
 																multifurcation.threshold=multifurcation.threshold,
 																outgroupName=root.name,
 																tipRegex=tip.regex,
-																branchLengthNormalisation=bl.normalising.file
+																branchLengthNormalisation=bl.normalising.file,
+																verbose=verbose
 																)
 		cmd				<- paste(cmd, tmp, sep='\n')	
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
@@ -895,13 +930,16 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															outputdir=tmp.dir, 
 															blacklistFiles=gsub('InWindow_','',blacklistFiles), 
 															outgroupName=root.name, 
-															splitsRule=ifelse(use.sankhoff.blacklister, 's', 'r'), 
-															sankhoff.k=sankhoff.k,
+															splitsRule=split.rule, 
+															sankhoff.k=split.kParam,
+															proximityThreshold=split.proximityThreshold,
+															readCountsMatterOnZeroBranches=split.readCountsMatterOnZeroBranches,
 															multifurcation.threshold=multifurcation.threshold,
 															branchLengthNormalisation=bl.normalising.file,
-															tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
+															#tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
 															tipRegex=tip.regex, 
-															pdfwidth=30, pdfrelheight=0.15)	
+															pdfwidth=30, pdfrelheight=0.15,
+															verbose=verbose)	
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	bash command to calculate patient stats
@@ -911,11 +949,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	tmp				<- phsc.cmd.SummaryStatistics( 	prog.pty.smry, 
 													pty.tools.dir, 													 
 													file.path(tmp.dir, basename(file.patients)), 
-													file.path(tmp.dir, paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,'InWindow_',sep='')), 
-													file.path(tmp.dir, substr(run.id_,1,nchar(run.id_)-1)),
+													file.path(tmp.dir, paste('ProcessedTree_',split.rule,'_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, paste('subgraphs_',split.rule,'_',run.id_,'InWindow_',sep='')), 
+													file.path(tmp.dir, run.id_),
 													tipRegex=tip.regex,
-													blacklistFiles=blacklistFiles
+													blacklistFiles=blacklistFiles,
+													verbose=verbose
 													)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -923,10 +962,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
 														pty.tools.dir, 
-														file.path(tmp.dir,paste('ProcessedTree_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
-														file.path(tmp.dir,paste('subgraphs_',ifelse(use.sankhoff.blacklister, 's', 'r'),'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('ProcessedTree_',split.rule,'_',run.id_,sep='')), 
+														file.path(tmp.dir,paste('subgraphs_',split.rule,'_',run.id_,sep='')), 
 														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1)),
-														branchLengthNormalisation=bl.normalising.file, 
+														branchLengthNormalisation=bl.normalising.file,
+														verbose=verbose
 														)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -940,20 +980,21 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
-															allow.MultiTrans=TRUE)
+															allow.MultiTrans=TRUE,
+															verbose=verbose)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	add bash command to calculate pairwise relationships
 	#
 	tmp				<- phsc.cmd.pairwise.relationships(	file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 														file.path(tmp.dir, paste(run.id_,'pairwise_relationships.rda',sep='')),
-														trmw.min.reads=20, 
-														trmw.min.tips=1, 
-														trmw.close.brl=0.035, 
-														trmw.distant.brl=0.08, 
-														prior.keff=2, 
-														prior.neff=3, 
-														prior.calibrated.prob=0.5, 
+														trmw.min.reads=trmw.min.reads, 
+														trmw.min.tips=trmw.min.tips, 
+														trmw.close.brl=trmw.close.brl, 
+														trmw.distant.brl=trmw.distant.brl, 
+														prior.keff=prior.keff, 
+														prior.neff=prior.neff, 
+														prior.calibrated.prob=prior.calibrated.prob, 
 														rel.likely.pair=TRUE, 
 														rel.likely.pair.by.distance.only=TRUE,
 														rel.likely.pair.by.topology.only=TRUE,
@@ -973,11 +1014,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																				zip=TRUE)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
-	#	if mem-save output delete: .*subtrees_[scr]_csv.zip  .*subtrees_[scr]_rda.zip .*DuplicateReadCounts.zip .*_blacklist.zip .*_duallist.zip .*_collapsed.zip .*_LikelyTransmissions.zip
+	#	if mem-save output delete: .*subtrees_[scfr]_csv.zip  .*subtrees_[scfr]_rda.zip .*DuplicateReadCounts.zip .*_blacklist.zip .*_duallist.zip .*_collapsed.zip .*_LikelyTransmissions.zip
 	#	
 	if(!is.null(mem.save) & mem.save==1)
 	{
-		tmp				<- c('*_subtrees_r.rda','*subtrees_[scr]_rda.zip','*DuplicateReadCounts.zip','*_blacklist.zip','*_duallist.zip','*_collapsed.zip','*_LikelyTransmissions.zip')
+		tmp				<- c('*_subtrees_r.rda','*subtrees_[scrf]_rda.zip','*DuplicateReadCounts.zip','*_blacklist.zip','*_duallist.zip','*_collapsed.zip','*_LikelyTransmissions.zip')
 		tmp				<- paste('rm ',tmp, sep='',collapse='\n')
 		cmd				<- paste(cmd, tmp, sep='\n')	
 	}	
@@ -1010,7 +1051,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.trees)
 	{
 		save.file		<- paste(save.file.base,'trees.rda',sep='')
-		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='subgraphs_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		tmp				<- phsc.read.trees(prefix.infiles, prefix.run='ptyr', regexpr.trees='subgraphs_[crsf]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		tmp				<- NULL		
 	}
 	#
@@ -1019,7 +1060,7 @@ phsc.read.processed.phyloscanner.output.in.directory<- function(prefix.infiles, 
 	if(read.subtrees)
 	{
 		save.file		<- paste(save.file.base,'subtrees_r.rda',sep='')
-		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='subgraphs_[crs]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
+		stat.subtrees	<- phsc.read.subtrees(prefix.infiles, prefix.run='ptyr', regexpr.subtrees='subgraphs_[crsf]_.*\\.rda$', prefix.wfrom='Window_', prefix.wto='Window_[0-9]+_to_', save.file=save.file, resume=resume, zip=zip)
 		stat.subtrees	<- NULL				
 	}
 	NULL
