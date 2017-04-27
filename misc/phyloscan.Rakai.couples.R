@@ -8440,14 +8440,9 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 	set(tmp, 130L, 'PTY_RUN', 129L)	
 	tmp			<- tmp[, list(IDCLU=IDCLU, CLU_SIZE=CLU_SIZE, PTY_SIZE=sum(CLU_SIZE)), by=c('PTY_RUN')]
 	rtc			<- merge(rtc, tmp, by=c('IDCLU','CLU_SIZE'))
-	
-	#	for each individual in transmission chain, find closest other individuals
-	#	find all runs for each individual
-	#load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
-	#pty.runs	<- unique(subset(pty.runs, select=c(PTY_RUN, RID)))
-	#setnames(pty.runs, 'RID', 'ID')
-	#rtc			<- merge(rtc, pty.runs, by='ID')
+	#
 	#	calculate min distances between all pairs once
+	#
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
@@ -8476,46 +8471,37 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 	#	up to 15 individuals
 	tmp		<- dcl[, list(ID_CLOSE=setdiff(ID_CLOSE, ID)), by='IDCLU']
 	tmp		<- merge(unique(subset(dcl, select=c('IDCLU','ID_CLOSE','CLU_SIZE','PATRISTIC_DISTANCE'))), tmp, by=c('IDCLU','ID_CLOSE'))
-	tmp		<- tmp[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('IDCLU','ID_CLOSE')]
+	tmp		<- tmp[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('IDCLU','ID_CLOSE','CLU_SIZE')]
+	tmp		<- merge( unique(subset(rtc, select=c('IDCLU','PTY_RUN','PTY_SIZE'))), tmp, by='IDCLU' )
+	setkey(tmp, PTY_RUN, IDCLU, PATRISTIC_DISTANCE)	
+	tmp		<- merge(tmp, tmp[, list(NCLU=length(unique(IDCLU))), by='PTY_RUN'], by='PTY_RUN')	
+	tmp		<- tmp[, {
+						z<- seq_len( ceiling((sn-PTY_SIZE[1])/NCLU[1]) )
+						list(ID_CLOSE=ID_CLOSE[z], PATRISTIC_DISTANCE=PATRISTIC_DISTANCE[z])
+					}, by=c('PTY_RUN','IDCLU','CLU_SIZE')]
+	setnames(tmp, 'ID_CLOSE', 'ID')
+	tmp[, ID_TYPE:='background']
+	rtc[, ID_TYPE:='target']
 	
-	setkey(tmp, IDCLU, PATRISTIC_DISTANCE)	
-	tmp		<- tmp[, list(	ID_CLOSE=ID_CLOSE[seq_len(sn-CLU_SIZE[1])], PATRISTIC_DISTANCE=PATRISTIC_DISTANCE[seq_len(sn-CLU_SIZE[1])], CLU_SIZE=CLU_SIZE[1]) , by='IDCLU']
-	
-	
-	rtc		<- unique(subset(rtc, select=c('ID','CLU_SIZE','IDCLU')))
-	
-	ID<- 'G105265'
-	
-	
-	rtc		<- merge(rtc, infiles, by='PTY_RUN')
+	rtc[, PTY_SIZE:=NULL]
+	rtc		<- rbind(rtc, tmp, fill=TRUE, use.names=TRUE)
+	rtc		<- merge(rtc, rtc[, list(PTY_SIZE=length(ID)), by='PTY_RUN'], by='PTY_RUN')	
 	#
-	
-	
-	
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
-	
-	rtp		<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed/ptyr1_pairwise_relationships.rda'
-				load(F)
-				rtp		<- subset(rplkl, GROUP==target.group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE==target.state)
-				rtp		<- merge(rtp, subset(rplkl, GROUP==conf.group & TYPE==conf.state), by=c('ID1','ID2'), all.x=1)	
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				rtp				
-			}, by=c('PTY_RUN')]	
-	
-	
-	
-	tmp2		<- melt(rtp, id.vars='PTY_RUN', measure.vars=c('ID1','ID2'), value.name='ID')
-	tmp2		<- unique(subset(tmp2, select=c('PTY_RUN','ID')))
-	rtc			<- merge(rtc, tmp2, by='ID')	
-	
-	setnames(tmp, 'IDPOP', 'IDREC')
-	df.trms		<- merge( df.trms, tmp, by='IDREC', all.x=TRUE )
-	stopifnot( nrow(subset(df.trms, is.na(IDCLU)))==0 )
-	cat(paste('\nFound transmission clusters, n=', df.trms[, length(unique(IDCLU))]))
-	
-	
+	#	set up new phyloscanner runs object
+	#	find Sanger IDs in previous pty.runs
+	#
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
+	tmp		<- copy(pty.runs)	
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	tmp		<- rbind(tmp, pty.runs)
+	set(tmp, NULL, c('BATCH','PTY_RUN'), NULL)
+	tmp		<- unique(tmp)
+	pty.runs<- NULL
+	setnames(rtc, c('IDCLU','CLU_SIZE','ID','ID_TYPE','PATRISTIC_DISTANCE','PTY_SIZE'), c('TRCLU_ID','TRCLU_SIZE','RID','RID_TYPE','RID_PATRISTIC_DISTANCE','PTY_SIZE_RID'))
+	pty.runs<- merge(rtc, tmp, by='RID')
+	setkey(pty.runs, PTY_RUN, RID_TYPE, RID)
+	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')
+	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_phclose.rda')
 }
 
 RakaiFull.preprocess.closepairs.comparetocouples.170421	<- function()

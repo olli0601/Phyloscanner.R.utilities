@@ -936,7 +936,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															readCountsMatterOnZeroBranches=split.readCountsMatterOnZeroBranches,
 															multifurcation.threshold=multifurcation.threshold,
 															branchLengthNormalisation=bl.normalising.file,
-															#tiesRule=ifelse(is.null(split.tiesRule)||is.na(split.tiesRule),'c',split.tiesRule), 
+															tiesRule=ifelse(!is.null(split.tiesRule) && !is.na(split.tiesRule),split.tiesRule,NA_character_), 
 															tipRegex=tip.regex, 
 															pdfwidth=30, pdfrelheight=0.15,
 															verbose=verbose)	

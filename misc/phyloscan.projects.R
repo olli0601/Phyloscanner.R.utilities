@@ -9,7 +9,7 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	#pty.pipeline.phyloscanner.160915.couples.rerun()
+	pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
@@ -19,7 +19,7 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various 
-	if(1)
+	if(0)
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -3059,6 +3059,9 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		df	<- data.table(F=readLines('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/all_files.txt'))
 		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',F))]
 		tmp	<- df[, list(DONE=any(grepl('pairwise',F))), by='PTY_RUN']
+		tmp	<- subset(tmp, !DONE)
+		merge(tmp, subset(pty.runs, SID=='15080_1_28', c('PTY_RUN','SID')), by='PTY_RUN', all=TRUE)
+		
 		subset(tmp, !DONE)[, cat(paste(sort(PTY_RUN), collapse='","'))]
 	}
 }
@@ -3190,7 +3193,7 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 		#out.dir				<- file.path(HOME,"Rakai_ptoutput_170405_couples_w270_d50_st20_trB_blNormed_rerun")
 		out.dir				<- file.path(HOME,"Rakai_ptoutput_170426_couples_w250_d50_p35_blNormed_rerun")
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'		
-		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'						
+		prog.pty			<- '/work/or105/libs/phylotypes_new/phyloscanner.py'						
 	}	
 	#
 	#	INPUT ARGS PHYLOSCANNER RUN
@@ -3227,7 +3230,8 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 										roguesubtree.kParam=20,
 										roguesubtree.prop.threshold=0,
 										roguesubtree.read.threshold=20,
-										dwns.maxReadsPerPatient=50,		
+										dwns.maxReadsPerPatient=50,	
+										multifurcation.threshold=1e-5,
 										split.rule='s',
 										split.kParam=20,
 										split.proximityThreshold=0.035,
@@ -3238,7 +3242,7 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 										pw.trmw.distant.brl=0.08,
 										pw.prior.keff=2,
 										pw.prior.neff=3,
-										pw.prior.calibrated.prob=0.5,										
+										pw.prior.calibrated.prob=0.5,
 										mem.save=0,
 										verbose=TRUE,
 										select=NA)
@@ -3589,6 +3593,11 @@ project.check.bam.integrity<- function()
 	
 	save(infiles, file=file.path(indir, 'bam_status.rda'))
 	
+	#load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/bam_status.rda')
+	#subset(infiles, STATUS!='ok')
+	#subset(pty.runs, SID=='15080_1_28')[, cat(paste(PTY_RUN, collapse="','"))]
+	#these are 61 runs:
+	#c('682','707','732','757','782','807','832','857','882','907','932','957','982','1007','1032','1057','1082','1107','1132','1157','1182','1207','1232','1257','1282','1307','1332','1357','1382','1407','1432','1457','1482','1507','1532','1557','1582','1606','1629','1651','1672','1692','1711','1729','1746','1762','1777','1791','1804','1816','1827','1837','1847','1848','1849','1850','1851','1852','1853','1854','1855')
 }
 
 project.readlength.count.bam.150218<- function()
