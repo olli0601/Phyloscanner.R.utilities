@@ -9,7 +9,7 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	pty.pipeline.phyloscanner.160915.couples.rerun()
+	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
@@ -19,11 +19,11 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various 
-	if(0)
+	if(1)
 	{
 		require(big.phylo)
 		cmd			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
-		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=40, hpc.mem="50000mb")
+		cmd			<- cmd.hpcwrapper(cmd, hpc.nproc= 1, hpc.q=NA, hpc.walltime=40, hpc.mem="5000mb")
 		cat(cmd)		
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
@@ -36,7 +36,8 @@ pty.various	<- function()
 	#project.scan.superinfections()
 	#project.scan.contaminants()
 	#project.readlength.count.all()
-	project.readlength.count.bam.150218()
+	#project.readlength.count.bam.150218()
+	project.check.bam.integrity()
 }
 
 project.dual.alignments.missing<- function()
@@ -3052,6 +3053,13 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
+	if(0)	#check failing runs
+	{
+		df	<- data.table(F=readLines('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/all_files.txt'))
+		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',F))]
+		tmp	<- df[, list(DONE=any(grepl('pairwise',F))), by='PTY_RUN']
+		subset(tmp, !DONE)[, cat(paste(sort(PTY_RUN), collapse='","'))]
+	}
 }
 
 pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function() 
@@ -3561,6 +3569,25 @@ project.readlength.count.all<- function()
 				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3, scales='free')
 		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)	
 	}
+}
+
+project.check.bam.integrity<- function()
+{
+	require(Rsamtools)
+	require(data.table)
+	
+	#indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/check1855/check1855'
+	indir	<- '/work/or105/PANGEA_mapout/data'
+	
+	infiles	<- data.table(F=list.files(indir, pattern='bam$', full.names=TRUE))
+	infiles	<- infiles[, {
+				#F<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/check1855/check1855/15080_1_28.bam'
+				tmp	<- suppressWarnings( try( scanBam(F, param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]], silent=TRUE ) )
+				list(STATUS= ifelse(class(tmp)=='try-error', 'corrupt', 'ok'))			
+			}, by='F']
+	
+	save(infiles, file.path(indir, 'bam_status.rda'))
+	
 }
 
 project.readlength.count.bam.150218<- function()

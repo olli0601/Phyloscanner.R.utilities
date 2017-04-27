@@ -8417,21 +8417,44 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 	
 	#	for each individual in transmission chain, find closest other individuals
 	#	find all runs for each individual
-	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
-	pty.runs	<- unique(subset(pty.runs, select=c(PTY_RUN, RID)))
-	setnames(pty.runs, 'RID', 'ID')
-	rtc			<- merge(rtc, pty.runs, by='ID')
+	#load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
+	#pty.runs	<- unique(subset(pty.runs, select=c(PTY_RUN, RID)))
+	#setnames(pty.runs, 'RID', 'ID')
+	#rtc			<- merge(rtc, pty.runs, by='ID')
 	#	calculate min distances between all pairs once
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	dmin	<- infiles[,{
-							F		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed/ptyr1_pairwise_relationships.rda'
+							#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed/ptyr1_pairwise_relationships.rda'
 							load(F)
 							tmp		<- dwin[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
 							tmp
 						}, by='PTY_RUN']
-	#	find 
+	save(dmin, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421_dmin.rda')
+	#	for every individual in a cluster
+	#	find 20 closest others
+	sn		<- 20
+	setkey(dmin, ID1, ID2)	
+	rtc		<- rtc[, {
+				tmp		<- subset(dmin, ID1==ID)
+				tmp2	<- subset(dmin, ID2==ID)
+				setnames(tmp2, c('ID1','ID2'), c('ID2','ID1'))
+				tmp		<- rbind(tmp, tmp2)
+				tmp		<- tmp[, list(PATRISTIC_DISTANCE=mean(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
+				setkey(tmp, PATRISTIC_DISTANCE)
+				tmp		<- tmp[seq_len(sn),]
+				list(ID_CLOSE= tmp[,ID2], PATRISTIC_DISTANCE=tmp[, PATRISTIC_DISTANCE])				
+			}, by=c('ID','CLU_SIZE','IDCLU')]
+	#	find as many close other individuals as needed to fill the phyloscanner run
+	tmp		<- rtc[, list(ID_CLOSE=setdiff(ID_CLOSE, ID)), by='IDCLU']
+	tmp		<- merge(subset(rtc, select=c('IDCLU','ID_CLOSE','CLU_SIZE','PATRISTIC_DISTANCE')), tmp, by=c('IDCLU','ID_CLOSE'))
+	setkey(tmp, IDCLU, PATRISTIC_DISTANCE)	
+	tmp		<- tmp[, list(	ID_CLOSE=ID_CLOSE[seq_len(sn-CLU_SIZE[1])], PATRISTIC_DISTANCE=PATRISTIC_DISTANCE[seq_len(sn-CLU_SIZE[1])], CLU_SIZE=CLU_SIZE[1]) , by='IDCLU']
+	rtc		<- unique(subset(rtc, select=c('ID','CLU_SIZE','IDCLU')))
+	
+	ID<- 'G105265'
+	
 	
 	rtc		<- merge(rtc, infiles, by='PTY_RUN')
 	#
