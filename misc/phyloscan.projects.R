@@ -3587,7 +3587,7 @@ project.check.bam.integrity<- function()
 				list(STATUS= ifelse(class(tmp)=='try-error', 'corrupt', 'ok'))			
 			}, by='F']
 	
-	save(infiles, file.path(indir, 'bam_status.rda'))
+	save(infiles, file=file.path(indir, 'bam_status.rda'))
 	
 }
 

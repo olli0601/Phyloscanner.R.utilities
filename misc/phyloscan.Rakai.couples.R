@@ -8415,6 +8415,32 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 	rtc[, CLU:=NULL]
 	setkey(rtc, IDCLU)
 	
+	#	merge up to 8 individuals into the same phyloscanner run
+	tn			<- 8
+	tmp			<- unique(subset(rtc, select=c(IDCLU, CLU_SIZE)))		
+	tmp[, PTY_RUN:= IDCLU]
+	tmp[, PTY_SIZE:= CLU_SIZE]
+	for(i in rev(seq_len(nrow(tmp))))
+	{
+		if(tmp[i,PTY_SIZE<tn])
+		{
+			for(j in 1:i)
+			{
+				if( (tmp[j,PTY_SIZE]+tmp[i,PTY_SIZE])<=tn)
+				{
+					set(tmp, i, 'PTY_RUN', tmp[j, PTY_RUN])					
+					set(tmp, j, 'PTY_SIZE',  tmp[i, PTY_SIZE]+ tmp[j, PTY_SIZE])
+					set(tmp, i, 'PTY_SIZE', 0L)
+					break
+				}
+			}
+		}
+	}
+	# manually add IDCLUD 130 to PTY_RUN 129
+	set(tmp, 130L, 'PTY_RUN', 129L)	
+	tmp			<- tmp[, list(IDCLU=IDCLU, CLU_SIZE=CLU_SIZE, PTY_SIZE=sum(CLU_SIZE)), by=c('PTY_RUN')]
+	rtc			<- merge(rtc, tmp, by=c('IDCLU','CLU_SIZE'))
+	
 	#	for each individual in transmission chain, find closest other individuals
 	#	find all runs for each individual
 	#load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
@@ -8433,10 +8459,10 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 						}, by='PTY_RUN']
 	save(dmin, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421_dmin.rda')
 	#	for every individual in a cluster
-	#	find 20 closest others
-	sn		<- 20
+	#	find 15 closest others
+	sn		<- 15
 	setkey(dmin, ID1, ID2)	
-	rtc		<- rtc[, {
+	dcl		<- rtc[, {
 				tmp		<- subset(dmin, ID1==ID)
 				tmp2	<- subset(dmin, ID2==ID)
 				setnames(tmp2, c('ID1','ID2'), c('ID2','ID1'))
@@ -8447,10 +8473,15 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 				list(ID_CLOSE= tmp[,ID2], PATRISTIC_DISTANCE=tmp[, PATRISTIC_DISTANCE])				
 			}, by=c('ID','CLU_SIZE','IDCLU')]
 	#	find as many close other individuals as needed to fill the phyloscanner run
-	tmp		<- rtc[, list(ID_CLOSE=setdiff(ID_CLOSE, ID)), by='IDCLU']
-	tmp		<- merge(subset(rtc, select=c('IDCLU','ID_CLOSE','CLU_SIZE','PATRISTIC_DISTANCE')), tmp, by=c('IDCLU','ID_CLOSE'))
+	#	up to 15 individuals
+	tmp		<- dcl[, list(ID_CLOSE=setdiff(ID_CLOSE, ID)), by='IDCLU']
+	tmp		<- merge(unique(subset(dcl, select=c('IDCLU','ID_CLOSE','CLU_SIZE','PATRISTIC_DISTANCE'))), tmp, by=c('IDCLU','ID_CLOSE'))
+	tmp		<- tmp[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('IDCLU','ID_CLOSE')]
+	
 	setkey(tmp, IDCLU, PATRISTIC_DISTANCE)	
 	tmp		<- tmp[, list(	ID_CLOSE=ID_CLOSE[seq_len(sn-CLU_SIZE[1])], PATRISTIC_DISTANCE=PATRISTIC_DISTANCE[seq_len(sn-CLU_SIZE[1])], CLU_SIZE=CLU_SIZE[1]) , by='IDCLU']
+	
+	
 	rtc		<- unique(subset(rtc, select=c('ID','CLU_SIZE','IDCLU')))
 	
 	ID<- 'G105265'
