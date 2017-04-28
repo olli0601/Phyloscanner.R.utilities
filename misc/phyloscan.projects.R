@@ -9,9 +9,9 @@ project.dual<- function()
 	#pty.pipeline.fasta()
 	#pty.pipeline.phyloscanner.160825()
 	#pty.pipeline.phyloscanner.160915.couples()
-	pty.pipeline.phyloscanner.160915.couples.rerun()
+	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
-	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()
+	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -2286,7 +2286,23 @@ pty.process.160901<- function()
 			invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 		}	
 	}
-	
+	#	170426
+	if(1)
+	{
+		infile.base		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170426_couples_w250'
+		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250'				
+		for(opt in c('d50_p10_blNormed_rerun','d50_p35_blNormed_rerun'))
+			for(trmw.min.reads in c(20))
+				for(trmw.close.brl in c(0.035))
+					for(trmw.distant.brl in c(0.08))
+					{
+						trmw.min.tips		<- 1
+						tmp.in		<- paste(infile.base, opt, sep='_')
+						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
+						cat('\n',tmp.in,' -> ',tmp.out)
+						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					}		
+	}
 }
 
 pty.pipeline.compress.phyloscanner.output<- function()
@@ -3066,7 +3082,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 	}
 }
 
-pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function() 
+pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function() 
 {
 	require(big.phylo)
 	require(phyloscan)
@@ -3081,7 +3097,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		hpc.mem				<- "5900mb"		
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed")		
+		#in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_secondbatch_sk20_tb_blnormed")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'				
 	}	
@@ -3117,20 +3134,24 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
-				sankhoff.k=20,
-				split.tiesRule='b',
+				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
 				dwns.maxReadsPerPatient=50,	
 				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0.035,
+				split.readCountsMatterOnZeroBranches=TRUE,
 				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
-				pw.trmw.close.brl=0.035,
+				pw.trmw.close.brl=0.05,
 				pw.trmw.distant.brl=0.08,
 				pw.prior.keff=2,
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
+				verbose=TRUE,				
 				select=NA
 				)		
 	}	
@@ -3141,7 +3162,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]		
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(575, 630))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(575, 630))
 		#pty.c	<- subset(pty.c, PTY_RUN%in%448:666)		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
@@ -3159,8 +3180,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					

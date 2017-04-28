@@ -2360,7 +2360,7 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 #' @param get.groups names of relationship groups  
 #' @param make.pretty.labels Logical   
 #' @return input data.table with new columns. Each new column defines relationship states for a specific relationship group. 
-phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
+phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIRSCORE_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
 {
 	#	
 	#	group to define likely pair just based on distance
@@ -2371,6 +2371,12 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'close')
 		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'distant')			
 	}
+	if('TYPE_PAIRSCORE_DI'%in%get.groups)
+	{
+		df[, TYPE_PAIRSCORE_DI:= NA_character_]
+		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'close')
+		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'distant')			
+	}	
 	#	
 	#	group to define likely pair just based on topology
 	#	
