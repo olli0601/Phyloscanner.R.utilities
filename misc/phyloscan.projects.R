@@ -11,8 +11,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
-	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	#pty.pipeline.phyloscanner.170301.secondbatchofall()
+	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
+	pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -2996,6 +2996,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		pty.select			<- c(1001, 1004, 1005, 1026, 1029, 1041, 1051, 1054, 1055, 1066, 1076, 1079, 1080, 1091, 1097, 1101, 1104, 1116, 1126, 1129, 1130, 1141, 1146, 1151, 1154, 1166, 1176, 1179, 1180, 1191, 1201, 1203, 1204, 1216, 1221, 1226, 1229, 1230, 1241, 1251, 1254, 1255, 1261, 1266, 1276, 1279, 1291, 1501, 1504, 1516, 1526, 1529, 1541, 1549, 1551, 1554, 1576, 1579, 1600, 1603, 1615, 1623, 1626, 1627, 1636, 1638, 1645, 1648, 1660, 1666, 1669, 1670, 1679, 1681, 1686, 1689, 1690, 1699)
 	}	
 	if(0)
 	{
@@ -3033,22 +3034,40 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				win=c(800,9400,125,250), 				
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
-				sankhoff.k=20,
-				split.tiesRule='b',
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',				
+				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
 				dwns.maxReadsPerPatient=50,	
 				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0.035,
+				split.readCountsMatterOnZeroBranches=TRUE,
 				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
-				pw.trmw.close.brl=0.035,
+				pw.trmw.close.brl=0.05,
 				pw.trmw.distant.brl=0.08,
 				pw.prior.keff=2,
 				pw.prior.neff=3,
 				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
-				select=1501:1891	#of 1891
+				verbose=TRUE,	
+				#sankhoff.k=20,
+				#split.tiesRule='b',
+				#roguesubtree.prop.threshold=0,
+				#roguesubtree.read.threshold=20,
+				#dwns.maxReadsPerPatient=50,	
+				#multifurcation.threshold=1e-5,
+				#pw.trmw.min.reads=20,									
+				#pw.trmw.min.tips=1,
+				#pw.trmw.close.brl=0.035,
+				#pw.trmw.distant.brl=0.08,
+				#pw.prior.keff=2,
+				#pw.prior.neff=3,
+				#pw.prior.calibrated.prob=0.5,
+				#mem.save=0,
+				select=pty.select	#of 1891
 				)		 
 	}	
 	#
@@ -3059,12 +3078,12 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
-							outfile		<- paste("scRA",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							outfile		<- paste("scRA2",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							#stop()
 						}, by='PTY_RUN'])
@@ -3190,7 +3209,19 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 							#stop()
 						}, by='PTY_RUN'])
 		quit('no')		
-	}	
+	}
+	if(0)	#check runs
+	{
+		df	<- data.table(F=list.files('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed', pattern='_pairwise_relationships.rda$', full.names=TRUE))
+		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
+		paste(setdiff( 1:1891, df[, PTY_RUN]), collapse=', ')
+		
+		tmp	<- df[, list(DONE=any(grepl('pairwise',F))), by='PTY_RUN']
+		tmp	<- subset(tmp, !DONE)
+		merge(tmp, subset(pty.runs, SID=='15080_1_28', c('PTY_RUN','SID')), by='PTY_RUN', all=TRUE)
+		
+		subset(tmp, !DONE)[, cat(paste(sort(PTY_RUN), collapse='","'))]
+	}
 }
 
 pty.pipeline.phyloscanner.160915.couples.rerun<- function() 

@@ -7514,7 +7514,7 @@ RakaiAll.addposteriors.pairs.170426<- function()
 	#
 	#	define relationship groups
 	#	
-	relationship.groups	<- c('TYPE_PAIR_DI','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI')
+	relationship.groups	<- c('TYPE_PAIR_DI','TYPE_PAIRSCORE_DI','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI')
 	rpw					<- phsc.get.pairwise.relationships(rpw, get.groups=relationship.groups, make.pretty.labels=TRUE)
 	rplkl				<- phsc.get.pairwise.relationships(rplkl, get.groups=relationship.groups, make.pretty.labels=TRUE)
 	#	melt relationship groups
@@ -8680,8 +8680,15 @@ RakaiFull.preprocess.closepairs.calculate.170421	<- function()
 				rtp		<- merge(rtp, subset(rplkl, GROUP==conf.group & TYPE==conf.state), by=c('ID1','ID2'), all.x=1)	
 				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				rtp				
-			}, by=c('PTY_RUN')]	
-	save(rtp, file=outfile)	
+			}, by=c('PTY_RUN')]		
+	dmin	<- infiles[,{
+				#F		<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed/ptyr1_pairwise_relationships.rda'
+				load(F)
+				tmp		<- dwin[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
+				tmp
+			}, by='PTY_RUN']
+	
+	save(rtp, dmin, file=outfile)	
 }
 
 RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
@@ -9726,10 +9733,10 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	tmp		<- dcast.data.table(rtp, MALE_SANGER_ID+FEMALE_SANGER_ID+PTY_RUN~RUN, value.var='RUN')
 	#subset(tmp, is.na(RCCS_170426_w250_d50_p10_blNormed_mr20_mt1_cl3.5_d8) | is.na(RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8))
 	rtp[, length(MALE_SANGER_ID), by='RUN']
-	#																RUN  V1
+	#                                                                RUN  V1
 	#1: RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8 207
-	#2:              RCCS_170426_w250_d50_p10_blNormed_mr20_mt1_cl3.5_d8 210
-	#3:              RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8 210
+	#2:              RCCS_170426_w250_d50_p10_blNormed_mr20_mt1_cl3.5_d8 208
+	#3:              RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8 208
 	
 	#	resolve direction
 	#	find likely pairs for whom 'mf' or 'fm' is most likely state
