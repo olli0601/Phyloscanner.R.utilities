@@ -1812,7 +1812,7 @@ phsc.drop.tip<- function (phy, tip, trim.internal = TRUE, subtree = FALSE, root.
 }
 
 #' @export
-#' @import data.table grid ggtree
+#' @import data.table grid ggtree colorspace
 #' @title Plot short read phylogenies and highlight individuals
 #' @description This function plots short read phylogenies and highlights the clades of two individuals in red and blue.  
 #' @param phs List of trees in ape format

@@ -11,8 +11,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
-	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondbatchofall()
+	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
+	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -3115,9 +3115,10 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"		
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
-		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25")
+		#in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25")
 		#in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_secondbatch_sk20_tb_blnormed")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed")		
+		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'				
 	}	
@@ -3164,7 +3165,7 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 				split.readCountsMatterOnZeroBranches=TRUE,
 				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
-				pw.trmw.close.brl=0.05,
+				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
 				pw.prior.keff=2,
 				pw.prior.neff=3,
@@ -3199,14 +3200,14 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							#stop()
+							stop()
 						}, by='PTY_RUN'])
 		quit('no')		
 	}
