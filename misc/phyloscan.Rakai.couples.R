@@ -9763,6 +9763,8 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	rfm[, PHSC_DIR:='f->m']
 	rtr		<- rbind(rmf, rfm)	
 	
+	subset(rtpd, PTY_RUN==1 & MALE_SANGER_ID=='15745_1_51' & FEMALE_SANGER_ID=='15105_1_15')
+	
 	#
 	rmf[, length(MALE_SANGER_ID), by='RUN']
 	#1: 1: RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8 76
@@ -9794,6 +9796,7 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 		plot.file	<- paste0(outfile.base,'_plot_for_',run,'_',group,'.pdf')	
 		phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file, cols=NULL, group=group)			
 	}
+		
 	
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
 	tmp			<- copy(rps)
