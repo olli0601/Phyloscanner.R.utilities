@@ -8839,6 +8839,8 @@ RakaiFull.preprocess.closepairs.findtransmissionchains.170421	<- function()
 	setnames(rtc, c('IDCLU','CLU_SIZE','ID','ID_TYPE','PATRISTIC_DISTANCE','PTY_SIZE'), c('TRCLU_ID','TRCLU_SIZE','RID','RID_TYPE','RID_PATRISTIC_DISTANCE','PTY_SIZE_RID'))
 	pty.runs<- merge(rtc, tmp, by='RID')
 	setkey(pty.runs, PTY_RUN, RID_TYPE, RID)
+	pty.runs<- unique(pty.runs, by=c('RID','SID','PTY_RUN'))
+	
 	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')
 	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
 }
