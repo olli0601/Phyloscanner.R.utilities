@@ -3123,7 +3123,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
-		pty.select			<- NA
+		pty.select			<- 2:180
 	}	
 	if(0)
 	{
@@ -3147,7 +3147,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
 				bl.normalising.reference.var='MEDIAN_PWD',														
 				window.automatic= '', 
-				merge.threshold=2, 
+				merge.threshold=0, 
 				min.read.count=1, 
 				quality.trim.ends=23, 
 				min.internal.quality=23, 
