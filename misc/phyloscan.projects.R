@@ -3123,7 +3123,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
-		pty.select			<- 2:180
+		pty.select			<- 181:240
 	}	
 	if(0)
 	{
@@ -3193,9 +3193,9 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.c				<- subset(pty.c, PTY_RUN!=1)
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRA3",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
