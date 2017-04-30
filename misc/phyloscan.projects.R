@@ -3124,6 +3124,12 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		pty.select			<- c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232)
+		pty.select			<- c(152, 186, 204, 205, 214)	# failed
+		#	pqeelab running 2:180
+		#	pqeph running 181:240
+		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
+		#	single node jobs req 4 proc 7.8GB started Sat 23:00 (PTY 149-180 & c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232) )
+		
 	}	
 	if(0)
 	{
@@ -3193,8 +3199,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.c				<- subset(pty.c, PTY_RUN!=1)
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
