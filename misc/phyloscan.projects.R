@@ -3117,7 +3117,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyr1<- function()
 	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_ptyr1'
 	infiles	<- data.table(FI=list.files(indir, pattern='fasta$', full.names=TRUE))
 	infiles[, FO:= gsub('fasta$','tree',FI)]
-	
+	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
+	infiles	<- subset(infiles, W_FROM>1500)	
 	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by='FI']
 	
 	invisible(df[,	{
