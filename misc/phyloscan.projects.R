@@ -3105,6 +3105,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 
 pty.pipeline.phyloscanner.170301.secondstage.ptyr1<- function() 
 {
+	require(data.table)
 	require(big.phylo)
 	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
