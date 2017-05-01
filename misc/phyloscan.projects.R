@@ -12,7 +12,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage() 
+	pty.pipeline.phyloscanner.170301.secondstage.ptyr1()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3102,6 +3103,37 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 	}
 }
 
+pty.pipeline.phyloscanner.170301.secondstage.ptyr1<- function() 
+{
+	require(big.phylo)
+	
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+	hpc.nproc			<- 8							
+	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42'))
+	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+	
+	#indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_ptyr1'
+	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_ptyr1'
+	infiles	<- data.table(FI=list.files(indir, pattern='fasta$', full.names=TRUE))
+	infiles[, FO:= gsub('fasta$','tree',FI)]
+	
+	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by='FI']
+	
+	invisible(df[,	{
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="10850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRA4",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+						}, by='FI'])
+	quit('no')	
+}
+
+	
+	
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
 {
 	require(big.phylo)
@@ -3126,7 +3158,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232)
 		pty.select			<- c(152, 186, 204, 205, 214)	# failed
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
-		pty.select			<- c(151, 198, 203, 213, 216, 219) # failed
+		pty.select			<- c(151, 198, 199, 203, 213, 216, 219) # failed
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
