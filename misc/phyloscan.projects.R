@@ -3126,12 +3126,14 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232)
 		pty.select			<- c(152, 186, 204, 205, 214)	# failed
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
+		pty.select			<- c(151, 198, 203, 213, 216, 219) # failed
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
 		#	single node jobs req 4 proc 7.8GB started Sat 23:00 (PTY 149-180 & c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232) )
 		#	fail 152 etc running on pqeelab
 		#	fail 119 etc running on pqeelab
+		#	fail 151 etc running on pqeelab
 	}	
 	if(0)
 	{
