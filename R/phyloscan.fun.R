@@ -2281,76 +2281,76 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 #' @return input data.table with new relationship column TYPE_BASIC. 
 phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distant.brl)
 {
-	dwin[, TYPE_BASIC:= TYPE_RAW]
+	df[, TYPE_BASIC:= TYPE_RAW]
 	
-	stopifnot(c('ADJACENT','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(dwin))
+	stopifnot(c('ADJACENT','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(df))
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE_BASIC=="anc_12" & ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="anc_12" & ADJACENT)]
 	cat('\nFound adjacent anc_12, n=', length(tmp),'--> chain with no intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
-	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_12" & ADJACENT)]
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & ADJACENT)]
 	cat('\nFound adjacent multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
 	#	chains with no intermediate
-	tmp		<- dwin[, which(TYPE_BASIC=="anc_21" & ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="anc_21" & ADJACENT)]
 	cat('\nFound adjacent anc_21, n=', length(tmp),'--> chain with no intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')
-	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_21" & ADJACENT)]
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & ADJACENT)]
 	cat('\nFound adjacent multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
 	#
 	#	chains with intermediate
 	#
-	tmp		<- dwin[, which(TYPE_BASIC=="anc_12" & !ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="anc_12" & !ADJACENT)]
 	cat('\nFound non-adjacent anc_12, n=', length(tmp),'--> chain with intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
-	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_12" & !ADJACENT)]
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & !ADJACENT)]
 	cat('\nFound non-adjacent multi_anc_12, n=', length(tmp),'--> chain with intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
 	#	chains with intermediate
-	tmp		<- dwin[, which(TYPE_BASIC=="anc_21" & !ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="anc_21" & !ADJACENT)]
 	cat('\nFound non-adjacent anc_21, n=', length(tmp),'--> chain with intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
-	tmp		<- dwin[, which(TYPE_BASIC=="multi_anc_21" & !ADJACENT)]
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & !ADJACENT)]
 	cat('\nFound non-adjacent multi_anc_21, n=', length(tmp),'--> chain with intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
 	#
 	#	intermingled with no intermediate
-	tmp		<- dwin[, which(TYPE_BASIC=="conflict" & ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="conflict" & ADJACENT)]
 	cat('\nFound adjacent conflict, n=', length(tmp),'--> intermingled with no intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
+	set(df, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
 	#	intermingled with intermediate
-	tmp		<- dwin[, which(TYPE_BASIC=="conflict" & !ADJACENT)]
+	tmp		<- df[, which(TYPE_BASIC=="conflict" & !ADJACENT)]
 	cat('\nFound non-adjacent conflict, n=', length(tmp),'--> intermingled with intermediate')
-	set(dwin, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
+	set(df, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
 	#
 	#	other	
-	tmp		<- dwin[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	tmp		<- df[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound adjacent with no paths, n=', length(tmp),'--> other')
-	set(dwin, tmp, 'TYPE_BASIC', 'other_nointermediate')
-	tmp		<- dwin[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
+	tmp		<- df[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
 	cat('\nFound non-adjacent with no assignment, n=', length(tmp),'--> other')
-	set(dwin, tmp, 'TYPE_BASIC', 'other_withintermediate')
+	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
 	#	check
-	stopifnot( !nrow(subset(dwin, TYPE_BASIC=='none'))	)
+	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
 	#
 	#	add distance as second dimension
 	#
 	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
 	{
 		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
-		tmp		<- dwin[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
+		tmp		<- df[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
 		cat('\nFound close, n=', length(tmp))
-		set(dwin, tmp, 'TYPE_BASIC', dwin[tmp, paste0(TYPE_BASIC,'_close')])		
+		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_close')])		
 	}
 	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
 	{
 		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
-		tmp		<- dwin[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
+		tmp		<- df[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
 		cat('\nFound distant, n=', length(tmp))
-		set(dwin, tmp, 'TYPE_BASIC', dwin[tmp, paste0(TYPE_BASIC,'_distant')])	
+		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_distant')])	
 	}
-	dwin
+	df
 }
 
 #' @title Calculate pairwise relationships
@@ -2404,16 +2404,19 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		df[, TYPE_DIR_TODI3:= NA_character_]	# non-NA: all relationships that are used for likely pair	
 		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
 		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
-		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
-		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+		set(df, df[, which(grepl('chain_',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')		
 		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
 		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '21')
 	}
 	if('TYPE_DIRSCORE_TODI3'%in%get.groups)
 	{
 		df[, TYPE_DIRSCORE_TODI3:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
 		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'fm')
 		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '21')
 	}
 	#
 	#	group to determine likely pairs
@@ -2499,8 +2502,8 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 	#
 	setnames(rplkl, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	#for backwards compatibility
 	rplkl	<- phsc.get.pairwise.relationships(rplkl, get.groups=get.groups, make.pretty.labels=FALSE)
-	for(x in get.groups)
-		set(rplkl, NULL, x, gsub('_',' ',rplkl[[x]]))
+	#for(x in get.groups)
+	#	set(rplkl, NULL, x, gsub('_',' ',rplkl[[x]]))
 	setnames(rplkl, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
 	#	melt relationship groups
 	rplkl	<- melt(rplkl, measure.vars=c(get.groups,'TYPE_BASIC'), variable.name='GROUP', value.name='TYPE')
@@ -2508,15 +2511,14 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 	#	sum K and KEFF of same relationship state
 	rplkl	<- rplkl[, list(V=sum(V)), by=c('ID1','ID2','GROUP','TYPE','STAT')]
 	#	add zero-count relationship states (change to wide table and set NA's to zero's)
-	rplkl	<- dcast.data.table(rplkl, ID1+ID2~GROUP+TYPE+STAT, value.var='V')
-	for(x in setdiff(colnames(rplkl),c('ID1','ID2','GROUP')))
-		set(rplkl, which(is.na(rplkl[[x]])), x, 0L)	
-	#	melt again
-	rplkl	<- melt(rplkl, id.vars=c('ID1','ID2'), variable.name='GROUP', value.name='V')
-	rplkl[, STAT:= gsub('.*_([^_]+)$','\\1',GROUP)]
-	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])	
-	rplkl[, TYPE:= gsub('.*_([^_]+)$','\\1',GROUP)]
-	set(rplkl, NULL, 'GROUP', rplkl[, gsub('(.*)_[^_]+$','\\1',GROUP)])
+	tmp		<- unique(subset(rplkl, select=c(GROUP,TYPE)))
+	tmp2	<- unique(subset(rplkl, select=c(ID1,ID2, STAT)))
+	tmp[, DUMMY:=1L]
+	tmp2[, DUMMY:=1L]
+	tmp		<- merge(tmp, tmp2, by='DUMMY',allow.cartesian=TRUE)
+	set(tmp, NULL, 'DUMMY', NULL)
+	rplkl	<- merge(tmp, rplkl, all.x=1, by=c('ID1','ID2','GROUP','TYPE','STAT'))
+	set(rplkl, rplkl[,which(is.na(V))], 'V', 0)	
 	#	expand KEFF and K columns now that everything is done
 	rplkl	<- dcast.data.table(rplkl, ID1+ID2+GROUP+TYPE~STAT, value.var='V')	
 	#	calculate N and NEFF
