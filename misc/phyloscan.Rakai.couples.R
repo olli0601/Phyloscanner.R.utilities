@@ -8657,76 +8657,6 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	Rakai.plot.directed.pairs.discrete1(tmp, cols, file.path(dir, paste(run,'-phsc-directionpairs_education.pdf',sep='')), 'Educational status', w=10, h=7)	
 }
 
-
-RakaiFull.preprocess.fix.170421	<- function()
-{
-	trmw.min.reads					<- 20
-	trmw.min.tips					<- 1
-	trmw.close.brl 					<- 0.035
-	trmw.distant.brl				<- 0.08		
-	prior.keff						<- 2
-	prior.neff						<- 3
-	prior.calibrated.prob			<- 0.5
-	relationship.types				<- c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI')
-	
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
-	infiles	<- data.table(FI=list.files(indir, pattern='_trmStatsPerWindow.rda$', full.names=TRUE))
-	infiles[, FO:=gsub('_trmStatsPerWindow.rda','_pairwise_relationships.rda',FI)]
-	
-	invisible(infiles[,{
-				#FI<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_trmStatsPerWindow.rda'
-				tmp		<- load(FI)
-				if(length(tmp)!=1)	stop("Unexpected length of loaded objects in infile")
-				eval(parse(text=paste("dwin<- copy(",tmp,")",sep='')))		
-				eval(parse(text=paste(tmp,"<- NULL",sep='')))
-				tmp		<- phsc.pairwise.relationships(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types)
-				dwin	<- copy(tmp$dwin)
-				rplkl	<- copy(tmp$rplkl)
-				cat('\nwrite to file', FO,'...')
-				save(dwin, rplkl, file=FO)
-				NULL
-			}, by='FI'])
-	
-	#
-	#	from every phyloscanner run, select pairs that are closely related 
-	#
-	mle.group	<- 
-			mle.state	<- 'close'
-	conf.group	<- 'TYPE_PAIR_DI'
-	conf.state	<- 'close'
-	
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170428.rda'
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
-	
-	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
-	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
-	setkey(infiles, PTY_RUN)
-	rtp	<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
-				#cat(PTY_RUN,'\n')
-				load(F)
-				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE=='close')
-				tmp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIRSCORE_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				rtp		<- rbind(rtp, tmp)				
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				rtp				
-			}, by=c('PTY_RUN')]			
-	dmin	<- infiles[,{
-				#cat(PTY_RUN,'\n')
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed/ptyr1_pairwise_relationships.rda'
-				load(F)
-				tmp		<- dwin[, list(PATRISTIC_DISTANCE_MIN=min(PATRISTIC_DISTANCE), PATRISTIC_DISTANCE_MEAN=mean(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
-				tmp
-			}, by='PTY_RUN']	
-	save(rtp, dmin, file=outfile)	
-}
-
 RakaiFull.preprocess.closepairs.calculate.170421	<- function()
 {
 	#
@@ -8788,24 +8718,28 @@ RakaiFull.preprocess.trmpairs.todi.170421<- function()
 				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
-				#	ML close pairs by distance
+				#	ML likely transmission pairs by distance
 				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='close')
 				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)			
 				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				ans		<- copy(rtp)
-				#	ML close pairs by distance + topology
+				#	ML likely transmission pairs by distance + topology
 				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_TODI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='likely pair')
 				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
 				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				ans		<- rbind(ans, rtp)
-				#	ML directed pairs by distance + topology
-				rtp		<- subset(rplkl, GROUP=='TYPE_DIR_TODI3')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				#	ML directed likely transmission pairs by distance + topology
+				#	among those pairs that are likely transmission pairs
+				rtp		<- merge(subset(rtp, select=c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_DIR_TODI3'), by=c('ID1','ID2'))
+				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
+				setnames(rtp, 'TYPE_MLE', 'TYPE')
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)			
 				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				ans		<- rbind(ans, rtp)
+				rtp[, TYPE_MLE:=TYPE]
+				ans		<- rbind(ans, rtp, use.names=TRUE)
 				ans				
 			}, by=c('PTY_RUN')]		
 	save(rtp.todi, file=outfile)	
@@ -8824,8 +8758,168 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
 	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda"
+	outfile.base			<- infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
 	load(infile.trmpairs.todi)
+	set(rtp.todi, NULL, 'TYPE_MLE', NULL)
+	#
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with lowest evidence
+	rtp		<- subset(rtp.todi, GROUP=='TYPE_PAIR_TODI')[, list(PTY_RUN=PTY_RUN[which.min(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- merge(rtp, subset(rtp.todi, GROUP=='TYPE_PAIR_TODI'), by=c('ID1','ID2','PTY_RUN'))
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 2710 pairs
+	rtp[, length(unique(c(ID1,ID2)))]							# 1558 individuals, this is a lot ...
+	#	
+	#	directed likely transmission pairs, using topology and distance	
+	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
+	rtpd	<- merge(tmp, subset(rtp.todi, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 1381 pairs
+	rtpd[, length(unique(c(ID1,ID2)))]							# 921 individuals
+	#
+	#	merge epi information to determine m2f, f2m
+	#	get epi info
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	tmp		<- unique(subset(rd, select=c(RID, SEX)))
+	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	setnames(tmp, 'ID1_RID', 'ID1')
+	setdiff(rtpd[, ID1], tmp[, ID1])
+	#	TODO 19 are missing in rd: "A051598" "B095818" "B096774" "B115386" "C020847" "C021410" "C094814" "C100818" "C115353" "E095358" "E115355" "E115389" "F096435" "F115356" "F115372" "G095075" "H095092" "H115382" "J096527"
+	rtpd	<- merge(rtpd, tmp, by='ID1')
+	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
+	setdiff(rtpd[, ID2], tmp[, ID2])
+	#	TODO 10 are missing in rd: "H095995" "A115393" "E115355" "C021410" "H094526" "H096194" "G095075" "K094324" "J188436" "J023513"
+	rtpd	<- merge(rtpd, tmp, by='ID2')	
+	subset(rtpd, ID1_SEX==ID2_SEX)[, table(ID1_SEX)]	
+	#433 F2F pairs and 189 M2M pairs   622/1347 = 46%
+	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					#	725 pairs
+	tmp		<- subset(rtpd, ID1_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
+	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
+	set(tmp, tmp[, which(TYPE=='12')], 'TYPE', 'mf')
+	set(tmp, tmp[, which(TYPE=='21')], 'TYPE', 'fm')
+	rtpd	<- subset(rtpd, ID1_SEX=='F')
+	setnames(rtpd, colnames(rtpd), gsub('ID1','FEMALE',colnames(rtpd)))
+	setnames(rtpd, colnames(rtpd), gsub('ID2','MALE',colnames(rtpd)))
+	set(rtpd, rtpd[, which(TYPE=='12')], 'TYPE', 'fm')
+	set(rtpd, rtpd[, which(TYPE=='21')], 'TYPE', 'mf')
+	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	# fm 310    mf 415 
+	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID')) 
+	#
+	#	make basic epi plot: when positive, when negative, when sequenced
+	#
+	t.posneg	<- unique(subset(rd, select=c(RID, LASTNEGDATE, FIRSTPOSDATE)))
+	t.seq		<- unique(subset(rs, !is.na(PID), select=c(RID, PID, DATE)))
+	setnames(t.seq, 'DATE', 'SEQ_DATE')
+	t.cd4		<- unique(subset(rd, !is.na(RECENTCD4DATE) & !is.na(RECENTCD4), select=c(RID, RECENTCD4DATE, RECENTCD4)))
+	set(t.cd4, NULL, 'RECENTCD4', t.cd4[, cut(RECENTCD4, breaks=c(-1,250,350,500,800,Inf), labels=c('<200','200-349','350-499','500-799','800+'))])
+	
+	df		<- rtpd[1:50,]
+	df[, PAIR:= paste('score',round(POSTERIOR_SCORE, d=2), 'm', MALE_RID, 'f', FEMALE_RID)]
+	#	prepare t.posneg for plotting
+	setnames(t.posneg, colnames(t.posneg), paste0('MALE_',colnames(t.posneg)))
+	tmp		<- merge(subset(df, select=c('MALE_RID','FEMALE_RID','PAIR')), t.posneg, by='MALE_RID')
+	setnames(t.posneg, colnames(t.posneg), gsub('MALE_','FEMALE_',colnames(t.posneg)))
+	t.posneg<- merge(tmp, t.posneg, by='FEMALE_RID')
+	#	prepare t.seq for plotting
+	setnames(t.seq, colnames(t.seq), paste0('MALE_',colnames(t.seq)))
+	t.seq.m	<- merge(unique(subset(df, select=c('MALE_RID','PAIR'))), t.seq, by='MALE_RID')
+	setnames(t.seq, colnames(t.seq), gsub('MALE_','FEMALE_',colnames(t.seq)))
+	t.seq.f	<- merge(unique(subset(df, select=c('FEMALE_RID','PAIR'))), t.seq, by='FEMALE_RID')
+	#	prepare t.cd4 for plotting
+	setnames(t.cd4, colnames(t.cd4), paste0('MALE_',colnames(t.cd4)))
+	t.cd4.m	<- merge(unique(subset(df, select=c('MALE_RID','PAIR'))), t.cd4, by='MALE_RID')
+	setnames(t.cd4, colnames(t.cd4), gsub('MALE_','FEMALE_',colnames(t.cd4)))
+	t.cd4.f	<- merge(unique(subset(df, select=c('FEMALE_RID','PAIR'))), t.cd4, by='FEMALE_RID')
+	
+		
+	tmp		<- t.posneg[, max( max(MALE_FIRSTPOSDATE, na.rm=TRUE), max(FEMALE_FIRSTPOSDATE, na.rm=TRUE))]	
+	set(t.posneg, NULL, c('MALE_DATE_MAX','FEMALE_DATE_MAX'), tmp)
+	tmp		<- t.posneg[, min( min(MALE_FIRSTPOSDATE, na.rm=TRUE), min(FEMALE_FIRSTPOSDATE, na.rm=TRUE), min(MALE_LASTNEGDATE, na.rm=TRUE), min(FEMALE_LASTNEGDATE, na.rm=TRUE))]
+	set(t.posneg, NULL, c('MALE_DATE_MIN','FEMALE_DATE_MIN'), tmp)
+	set(t.posneg, t.posneg[, which(is.na(MALE_LASTNEGDATE))], 'MALE_DATE_MIN', NA_real_)
+	set(t.posneg, t.posneg[, which(is.na(FEMALE_LASTNEGDATE))], 'FEMALE_DATE_MIN', NA_real_)
+	
+	t.posneg		<- melt(t.posneg, id.vars=c('PAIR','MALE_RID','FEMALE_RID'), measure.vars=c('MALE_FIRSTPOSDATE','FEMALE_FIRSTPOSDATE','FEMALE_LASTNEGDATE','MALE_LASTNEGDATE','MALE_DATE_MIN','FEMALE_DATE_MIN','MALE_DATE_MAX','FEMALE_DATE_MAX'))
+	t.posneg[, DRAW_POINT:= TRUE]
+	set(t.posneg, t.posneg[, which(grepl('DATE_MAX|DATE_MIN',variable))], 'DRAW_POINT', FALSE)
+	set(t.posneg, t.posneg[, which(variable%in%c('MALE_FIRSTPOSDATE','MALE_DATE_MAX'))], 'variable', 'male_pos')
+	set(t.posneg, t.posneg[, which(variable%in%c('FEMALE_FIRSTPOSDATE','FEMALE_DATE_MAX'))], 'variable', 'female_pos')	
+	set(t.posneg, t.posneg[, which(variable%in%c('MALE_LASTNEGDATE','MALE_DATE_MIN'))], 'variable', 'male_neg')
+	set(t.posneg, t.posneg[, which(variable%in%c('FEMALE_LASTNEGDATE','FEMALE_DATE_MIN'))], 'variable', 'female_neg')
+	ggplot(df) + 
+			geom_line(data=subset(t.posneg, grepl('^male',variable) & !is.na(value)), aes(x=value, y=PAIR, colour=variable), position=position_nudge(x=0, y=0.1), size=1) + 
+			geom_line(data=subset(t.posneg, grepl('^female',variable) & !is.na(value)), aes(x=value, y=PAIR, colour=variable), position=position_nudge(x=0, y=-0.1), size=1) +
+			geom_point(data=subset(t.posneg, grepl('^male',variable) & !is.na(value) & DRAW_POINT), aes(x=value, y=PAIR, colour=variable), position=position_nudge(x=0, y=0.1), size=2, pch=17) + 
+			geom_point(data=subset(t.posneg, grepl('^female',variable) & !is.na(value) & DRAW_POINT), aes(x=value, y=PAIR, colour=variable), position=position_nudge(x=0, y=-0.1), size=2, pch=17) +
+			geom_point(data=t.cd4.m, aes(x=MALE_RECENTCD4DATE, y=PAIR, fill=MALE_RECENTCD4), position=position_nudge(x=0, y=0.1), size=2, pch=23, colour='transparent') +
+			geom_point(data=t.cd4.f, aes(x=FEMALE_RECENTCD4DATE, y=PAIR, fill=FEMALE_RECENTCD4), position=position_nudge(x=0, y=-0.1), size=2, pch=23, colour='transparent') +
+			geom_point(data=subset(t.seq.m, !is.na(MALE_SEQ_DATE)), aes(x=MALE_SEQ_DATE, y=PAIR), position=position_nudge(x=0, y=0.1), size=2, pch=115) +
+			geom_point(data=subset(t.seq.f, !is.na(FEMALE_SEQ_DATE)), aes(x=FEMALE_SEQ_DATE, y=PAIR), position=position_nudge(x=0, y=-0.1), size=2, pch=115) +	# 115 for s			
+			scale_color_manual(values=c('male_pos'="#9970AB",'female_pos'="#C2A5CF",'male_neg'="#5AAE61",'female_neg'="#A6DBA0")) +
+			scale_fill_manual(values=c('<200'="#DEEBF7", '200-349'="#9ECAE1",'350-499'="#6BAED6",'500-799'="#4292C6",'800+'="#2171B5")) +			
+			scale_x_continuous(breaks=seq(1900,2200,2),minor_breaks=seq(1900,2200,1)) +
+			coord_cartesian(xlim=t.posneg[, range(value, na.rm=TRUE)]) +
+			theme_bw() +
+			facet_grid(TYPE~.) +
+			labs(x='', y='', colour='', fill='CD4 cells/mm3')
+	ggsave(file=paste0(outfile.base,'epilines.pdf'), w=10, h=30, limitsize=FALSE)
+	
+	rtpd[, list(), by=c('MALE_RID','FEMALE_RID')]
+	tmp		<- subset(rtpd, TYPE=='fm')
+	
+	
+	#load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	#load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")	
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	rs		<- subset(rs, !is.na(VISIT))		
+	#	get epi info
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#	add sequence dates to rd
+	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, DATE)),by='PID')
+	setnames(tmp, 'DATE','SEQDATE')
+	rd		<- merge(rd, tmp, by='PID',all.x=1)
+	#	focus on those with PANGEA seqs
+	rd		<- subset(rd, !is.na(PID))
+	#	focus on clinical data and location data closest to time of diagnosis
+	tmp		<- rd[, list(VISIT= VISIT[which.min(abs(DATE-FIRSTPOSDATE))]), by='RID']
+	ri		<- subset(merge(unique(rd, by=c('RID','VISIT')), tmp, by=c('RID','VISIT')), select=c(RID, VISIT, DATE, BIRTHDATE, RELIGION, REGION, COMM_NUM, HH_NUM, SEX, LASTNEGDATE, FIRSTPOSDATE, RECENTCD4, RECENTCD4DATE, RECENTVL, RECENTVLDATE, ARVSTARTDATE))
+	#	add all PANGEA sequences
+	ri		<- merge(ri, unique(subset(rd, select=c(RID, PID, SEQDATE))), by='RID')
+	#	focus on behaviour data closest to time of diagnosis
+	tmp		<- unique(subset(ri, select=c(RID, VISIT)))
+	setnames(tmp, 'VISIT','VISIT_DIAG')
+	tmp		<- merge(rh, tmp, by=c('RID'))
+	tmp		<- merge(tmp[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_DIAG))]), by='RID'], tmp, by=c('RID','VISIT'))
+	setnames(tmp, c('VISIT','VISIT_DIAG'),c('VISIT_H','VISIT'))
+	set(tmp, NULL, c('SEX','COMM_NUM'), NULL)
+	ri		<- merge(ri, tmp, by=c('RID','VISIT'))
+	setnames(ri, 'DATE', 'VISIT_DATE')
+	#	merge with rd
+	tmp		<- copy(ri)            
+	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	setnames(tmp, 'ID1_RID', 'ID1')
+	
+	dwin	<- merge(dwin, tmp, by='MALE_PID')
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	dwin	<- merge(dwin, tmp, by='FEMALE_PID')						
+	#	reduce likely pairs to male-1 and female-2
+	dwin	<- subset(dwin, MALE_SEX=='M' & FEMALE_SEX=='F')
+	set(dwin, NULL, 'TYPE', dwin[, gsub('12','mf',TYPE)])						
+	set(dwin, NULL, 'TYPE', dwin[, gsub('21','fm',TYPE)])
+	set(dwin, NULL, 'TYPE', dwin[, as.character(TYPE)])
+	setnames(dwin, colnames(dwin), gsub('ID1','MALE_SANGER_ID',colnames(dwin)))
+	setnames(dwin, colnames(dwin), gsub('ID2','FEMALE_SANGER_ID',colnames(dwin)))
+	set(dwin, NULL, 'RUN', RUN)
+	
+	
+	
+	
 	subset(rtp.todi, GROUP=='TYPE_PAIR_TODI')
+	
+	'TYPE_DIRSCORE_TODI3'
 	
 	
 	run		<- 'RCCS_170410_w250_trB_blNormedOnFly_dirlklprs_'
@@ -14187,7 +14281,7 @@ RakaiCouples.process.couples.160930<- function()
 	run		<- 'RCCS_160930_w270'
 	dir		<- subset(rps, RUN==run)[1,DIR]
 	cat('\ndir is',dir,'\trun is',run)
-	df		<- subset(rps, RUN==run)
+	df		<-t.posnegubset(rps, RUN==run)
 	setkey(df, MALE_SANGER_ID, FEMALE_SANGER_ID, PAIR_ID)					
 	#
 	#	plot evidence

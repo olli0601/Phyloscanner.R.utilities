@@ -12,9 +12,9 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	#pty.pipeline.phyloscanner.170301.secondstage() 
+	pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()
-	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
+	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3252,6 +3252,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 
 pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix	<- function()
 {
+	require(big.phylo)
 	require(phyloscan)
 	
 	trmw.min.reads					<- 20
@@ -3348,11 +3349,12 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
-		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		pty.select			<- c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232)
 		pty.select			<- c(152, 186, 204, 205, 214)	# failed
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed
+		pty.select			<- c(185, 201)	# failed 
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3360,6 +3362,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	fail 152 etc running on pqeelab
 		#	fail 119 etc running on pqeelab
 		#	fail 151 etc running on pqeelab
+		#	fail 185 etc running on pqeelab
 	}	
 	if(0)
 	{
