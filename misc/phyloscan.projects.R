@@ -2669,7 +2669,39 @@ pty.pipeline.phyloscanner.test<- function()
 									verbose=TRUE,
 									select=pty.select)														
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
-		pty.c[1,cat(CMD)]				
+		pty.c[1,cat(CMD)]	
+		
+		
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
+				alignments.root='REF_CPX_AF460972', 
+				bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
+				bl.normalising.reference.var='MEDIAN_PWD',
+				alignments.pairwise.to='REF_B_K03455',
+				window.automatic= '', 
+				merge.threshold=1, 
+				min.read.count=1, 
+				quality.trim.ends=20, 
+				min.internal.quality=2, 
+				merge.paired.reads=TRUE, 
+				no.trees=TRUE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(2500,3000,250,250), 
+				keep.overhangs=FALSE,					
+				verbose=TRUE,
+				mem.save=0,
+				select=pty.select)														
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
+		pty.c[1,cat(CMD)]	
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -3356,8 +3388,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed
 		pty.select			<- c(185, 201)	# failed 
-		pty.select			<- c(210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165)
-		#pty.select			<- c(166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
+		pty.select			<- c(210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157, 158, 159)
+		#pty.select			<- c(160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3366,8 +3398,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	fail 119 etc running on pqeelab
 		#	fail 151 etc running on pqeelab
 		#	fail 185 etc running on pqeelab
-		#	timeout 210 etc running on pqeelab
-		#	timeout 166 etc running on pqeph
+		#	timeout 210 etc running on pqeelab read alignments only
+		#	timeout 166 etc running on pqeph read alignments only
 	}	
 	if(0)
 	{
@@ -3377,7 +3409,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	INPUT ARGS PHYLOSCANNER RUN
 	#	
-	if(1)
+	if(0)	#run read alignments+trees+Rscripts
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3428,13 +3460,43 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
+	if(1)	#run read alignments
+	{				
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=TRUE, 
+				dont.check.duplicates=FALSE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,25,250),				 				
+				keep.overhangs=FALSE,
+				mem.save=0,
+				verbose=TRUE,					
+				select=pty.select	#of 240
+		)		 
+	}	
 	#
 	#	RUN PHYLOSCANNER
 	#
 	if(1)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
-		pty.c				<- subset(pty.c, PTY_RUN!=1)
+		#pty.c				<- subset(pty.c, PTY_RUN!=1)
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
@@ -3442,7 +3504,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
-							outfile		<- paste("scRA3",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							outfile		<- paste("scRAa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							#stop()
 						}, by='PTY_RUN'])

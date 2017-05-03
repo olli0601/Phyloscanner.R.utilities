@@ -597,7 +597,10 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 		cmd	<- paste(cmd, ' --num-bootstraps ', num.bootstraps, sep='')
 	if(!is.na(keep.overhangs))
 		cmd	<- paste(cmd, keep.overhangs)
-	cmd		<- paste(cmd, '--x-raxml',prog.raxml,'--x-mafft',prog.mafft,'\n')
+	cmd		<- paste(cmd, '--x-mafft',prog.mafft)
+	if(is.na(no.trees))
+		cmd	<- paste(cmd, '--x-raxml',prog.raxml)	
+	cmd		<- paste(cmd, '\n')
 	run.id	<- gsub('_bam.txt','',basename(file.bam))
 	#	process RAxML files
 	if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
@@ -607,26 +610,32 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	#cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 	if(!is.na(alignments.file) & !is.na(keep.overhangs))
 	{
-		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
-		#cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\tcp "$file" "${file//NoRefAlignedReads/NoRef',run.id,'_}"\n\tmv NoRef', run.id,'*fasta "',out.dir,'"\ndone\n',sep='')
+		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')		
 		cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',phsc.cmd.mafft.add(alignments.file,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree --retree 1'),'\ndone\n',sep='')		
 		cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')		
 	}
 	if(is.na(alignments.file) || is.na(keep.overhangs))
 	{
 		cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',run.id,'_}"\ndone\n',sep='')	
-	}
-	#	move Duplicate Read Counts
-	cmd		<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id,'_DuplicateReadCounts_}"\ndone',sep='')
+	}	
+	#	move Duplicate Read Counts - only for backward compatibility
+	#cmd	<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id,'_DuplicateReadCounts_}"\ndone',sep='')
 	#	run phyloscanner tools and compress output
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), sep='\n')
+	if(is.na(no.trees))
+		cmd	<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), sep='\n')
 	#
-	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir,'"\n',sep='')	
+	out.dir2<- out.dir	
+	if(!is.na(no.trees))
+	{
+		out.dir2<- file.path(out.dir,paste0(run.id,'_trees'))
+		cmd		<- paste(cmd,'\nmkdir ',out.dir2)		
+	}
+	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir2,'"\n',sep='')	
 	#	zip up everything else
 	if(is.null(mem.save) || is.na(mem.save) || mem.save==0)
 	{
 		cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
-		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir,'"\n',sep='')		
+		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir2,'"\n',sep='')		
 	}
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
