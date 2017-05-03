@@ -3356,7 +3356,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed
 		pty.select			<- c(185, 201)	# failed 
-		pty.select			<- c(210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
+		pty.select			<- c(210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165)
+		#pty.select			<- c(166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3366,6 +3367,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	fail 151 etc running on pqeelab
 		#	fail 185 etc running on pqeelab
 		#	timeout 210 etc running on pqeelab
+		#	timeout 166 etc running on pqeph
 	}	
 	if(0)
 	{
@@ -3437,7 +3439,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		invisible(pty.c[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=99, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRA3",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
