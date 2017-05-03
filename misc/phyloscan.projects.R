@@ -3349,12 +3349,14 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
-		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		pty.select			<- c(45,85,97,111,118,119,147,184,187,189,199,200,206,221,223,230,232)
 		pty.select			<- c(152, 186, 204, 205, 214)	# failed
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed
 		pty.select			<- c(185, 201)	# failed 
+		pty.select			<- c(210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3363,6 +3365,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	fail 119 etc running on pqeelab
 		#	fail 151 etc running on pqeelab
 		#	fail 185 etc running on pqeelab
+		#	timeout 210 etc running on pqeelab
 	}	
 	if(0)
 	{
