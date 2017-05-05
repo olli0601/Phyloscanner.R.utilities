@@ -3556,6 +3556,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	if(1)
 	{
 		pty.select	<- 4
+		pty.select	<- c(11, 14, 17, 20, 215)
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
@@ -3600,7 +3601,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#stop()		
 		invisible(pty.c[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
