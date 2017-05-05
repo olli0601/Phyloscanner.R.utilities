@@ -3557,6 +3557,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
+		pty.select	<- c(27, 31, 32, 34, 35, 154, 156, 46, 48, 50, 53, 54, 58, 60, 157, 184)
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
