@@ -14,7 +14,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
 	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
-	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
+	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
+	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3336,9 +3337,9 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
 	hpc.nproc			<- 1							
-	#raxml.pr			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
-	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
-	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+	raxml.pr			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+	#raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 	out.dir				<- in.dir
 	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
@@ -3351,17 +3352,20 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
 	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
 	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
-	infiles	<- subset(infiles, is.na(FT))
-	setkey(infiles, PTY_RUN, W_FROM)		
-		
-	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
-	df[1, cat(CMD)]
+	infiles	<- subset(infiles, is.na(FT))	
+	setkey(infiles, PTY_RUN, W_FROM)	
 	
+	print(infiles)
+	
+	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+	#df[1, cat(CMD)]	
 	invisible(df[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
-							cat(cmd)					
+							cat(cmd)
+							stop()
 							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
