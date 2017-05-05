@@ -3336,7 +3336,15 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	
 	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-	hpc.nproc			<- 1							
+	if(0)	#first lightweight run to handle most read alignments
+	{
+		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"
+	}
+	if(1)	#second heavyweight run to handle the remaining read alignments
+	{
+		hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"
+	}
+	
 	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
 	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
@@ -3356,16 +3364,15 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	setkey(infiles, PTY_RUN, W_FROM)	
 	
 	print(infiles)
-	
+	stop()
 	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 	#df[1, cat(CMD)]	
 	invisible(df[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=3, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=NA, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
-							cat(cmd)
-							stop()
+							cat(cmd)							
 							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()

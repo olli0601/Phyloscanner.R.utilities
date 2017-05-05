@@ -8792,36 +8792,14 @@ RakaiFull.preprocess.couples.todi.170421<- function()
 {
 	#
 	#	load couples to search for in phyloscanner output
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
-	
-	#
-	#	prepare demographic info on 
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
-	rs		<- subset(rs, !is.na(VISIT))		
-	#	get epi info
-	tmp		<- RakaiCirc.epi.get.info.170208()
-	rh		<- tmp$rh
-	rd		<- tmp$rd
-	#	add sequence dates to rd
-	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, DATE)),by='PID')
-	setnames(tmp, 'DATE','SEQDATE')
-	rd		<- merge(rd, tmp, by='PID',all.x=1)
-	#	focus on those with PANGEA seqs
-	rd		<- subset(rd, !is.na(PID))
-	#	focus on clinical data and location data closest to time of diagnosis
-	tmp		<- rd[, list(VISIT= VISIT[which.min(abs(DATE-FIRSTPOSDATE))]), by='RID']
-	ri		<- subset(merge(unique(rd, by=c('RID','VISIT')), tmp, by=c('RID','VISIT')), select=c(RID, VISIT, DATE, BIRTHDATE, RELIGION, REGION, COMM_NUM, HH_NUM, SEX, LASTNEGDATE, FIRSTPOSDATE, RECENTCD4, RECENTCD4DATE, RECENTVL, RECENTVLDATE, ARVSTARTDATE))
-	#	add all PANGEA sequences
-	ri		<- merge(ri, unique(subset(rd, select=c(RID, PID, SEQDATE))), by='RID')
-	#	focus on behaviour data closest to time of diagnosis
-	tmp		<- unique(subset(ri, select=c(RID, VISIT)))
-	setnames(tmp, 'VISIT','VISIT_DIAG')
-	tmp		<- merge(rh, tmp, by=c('RID'))
-	tmp		<- merge(tmp[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_DIAG))]), by='RID'], tmp, by=c('RID','VISIT'))
-	setnames(tmp, c('VISIT','VISIT_DIAG'),c('VISIT_H','VISIT'))
-	set(tmp, NULL, c('SEX','COMM_NUM'), NULL)
-	ri		<- merge(ri, tmp, by=c('RID','VISIT'))
-	setnames(ri, 'DATE', 'VISIT_DATE')
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+	rps		<- unique(subset(rp, !is.na(FEMALE_SANGER_ID) & !is.na(MALE_SANGER_ID), select=c(FEMALE_RID, MALE_RID, COUPID)))
+	rc		<- melt(rps, id.vars='COUPID', measure.vars=c('FEMALE_RID','MALE_RID'), value.name='RID', variable.name='SEX')
+	set(rc, NULL, 'SEX', rc[, substr(SEX,1,1)])
+	tmp		<- subset(rps, select=c('FEMALE_RID','MALE_RID'))
+	setnames(tmp, c('FEMALE_RID','MALE_RID'), c('MALE_RID','FEMALE_RID'))
+	rps		<- rbind(subset(rps, select=c('FEMALE_RID','MALE_RID')), tmp)
+	setnames(rps, c('FEMALE_RID','MALE_RID'), c('ID1','ID2'))
 	#
 	#	from every phyloscanner run, select pairs that are closely related 
 	#
@@ -8831,35 +8809,44 @@ RakaiFull.preprocess.couples.todi.170421<- function()
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
-	rtp.todi<- infiles[, {
+	rtp.todi2	<- infiles[, {
 				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
-				#cat(PTY_RUN,'\n')
+				cat(PTY_RUN,'\n')
 				load(F)
-				#	ML likely transmission pairs by distance
-				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE=='close')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				#	search for couples in this run, and keep if these are most likely not a couple
+				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2'))
+				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE_MLE=='other')
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='other'), by=c('ID1','ID2'), all.x=1)			
+				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]				
+				rtp[, SELECT:= 'couple most likely not a pair']
 				ans		<- copy(rtp)
-				#	ML likely transmission pairs by distance + topology
-				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_TODI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				#	find most likely trm pairs based on TODI2
+				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='likely pair')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				ans		<- rbind(ans, rtp)
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
+				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]				
+				#	keep if one of the two individuals is part of a couple
+				tmp		<- subset(rtp, ID1%in%rc$RID)
+				tmp2	<- subset(rtp, ID2%in%rc$RID)
+				tmp		<- unique(rbind(tmp, tmp2), by=c('ID1','ID2','GROUP','TYPE'))
+				tmp[, SELECT:= 'most likely a pair involving couple']
+				ans		<- rbind(ans, tmp)
 				#	ML directed likely transmission pairs by distance + topology
 				#	among those pairs that are likely transmission pairs
-				rtp		<- merge(subset(rtp, select=c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_DIR_TODI3'), by=c('ID1','ID2'))
+				rtp		<- merge(subset(tmp, select=c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_DIR_TODI3'), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
-				setnames(rtp, 'TYPE_MLE', 'TYPE')
+				rtp[, TYPE:=TYPE_MLE]				
 				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)			
 				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				rtp[, TYPE_MLE:=TYPE]
+				rtp[, SELECT:= 'most likely a pair involving couple']				
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				ans				
 			}, by=c('PTY_RUN')]		
-	save(rtp.todi, file=outfile)
+	#	re-arrange to male-female
+
+	save(rp, rtp.todi2, file=outfile)
 	
 	
 	
@@ -15828,15 +15815,15 @@ RakaiCouples.save.couples.to.rda<- function()
 	require(data.table)
 	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples"
 	#	get epi info
-	tmp		<- RakaiCirc.epi.get.info()
+	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
 	#	get sequence info and add to recipients
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda')		
 	rs		<- subset(rs, !is.na(VISIT))	
 	
 	#	load combination of all couples sequences
-	infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda'
+	#infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda'
 	#	load Kates couple data
 	infile	<- '~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Pangea_Couples.csv'
 	rc		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
@@ -15849,12 +15836,23 @@ RakaiCouples.save.couples.to.rda<- function()
 	set(rc, NULL, 'FEMALE_LASTNEGDATE', rc[, hivc.db.Date2numeric(as.Date(FEMALE_LASTNEGDATE))])	
 	set(rc, NULL, 'MALE_FIRSTPOSDATE', rc[, hivc.db.Date2numeric(as.Date(MALE_FIRSTPOSDATE))])
 	set(rc, NULL, 'FEMALE_FIRSTPOSDATE', rc[, hivc.db.Date2numeric(as.Date(FEMALE_FIRSTPOSDATE))])
-	#	486 couples
+	#	update sequence info on visits
+	set(rc, NULL, c('FEMALE_PANGEA_ID','FEMALE_SANGER_ID','FEMALE_TAXA','MALE_PANGEA_ID','MALE_SANGER_ID','MALE_TAXA'), NULL)
+	rc		<- unique(rc)
+	setnames(rs, colnames(rs), paste0('MALE_',colnames(rs)))
+	setnames(rs, 'MALE_VISIT', 'VISIT')
+	rc		<- merge(rc, rs, by=c('MALE_RID','VISIT'), all.x=1)
+	setnames(rs, colnames(rs), gsub('MALE_','FEMALE_',colnames(rs)))
+	rc		<- merge(rc, rs, by=c('FEMALE_RID','VISIT'), all.x=1)
+	setnames(rc, c('MALE_SID','FEMALE_SID','MALE_PIDF','FEMALE_PIDF'), c('MALE_SANGER_ID','FEMALE_SANGER_ID','MALE_TAXA','FEMALE_TAXA'))
+	set(rc, NULL, c('FEMALE_RCCS_SHIP_BATCH','MALE_RCCS_SHIP_BATCH','MALE_SEQDAT','FEMALE_SEQDAT'), NULL)
+	setnames(rs, colnames(rs), gsub('FEMALE_','',colnames(rs)))
+	rc[, length(unique(COUPID))]	#	486 couples
 	#
 	#	get all possible unique pairings of SANGER_IDs from couples
-	#	347
-	rp		<- subset(rc, !is.na(MALE_SANGER_ID), c(COUPID, MALE_RID, MALE_SANGER_ID, MALE_TAXA ))
-	tmp		<- subset(rc, !is.na(FEMALE_SANGER_ID), c(COUPID, FEMALE_RID, FEMALE_SANGER_ID, FEMALE_TAXA ))	
+	#	422
+	rp		<- unique(subset(rc, !is.na(MALE_SANGER_ID), c(COUPID, MALE_RID, MALE_SANGER_ID, MALE_TAXA )))
+	tmp		<- unique(subset(rc, !is.na(FEMALE_SANGER_ID), c(COUPID, FEMALE_RID, FEMALE_SANGER_ID, FEMALE_TAXA )))	
 	rp		<- merge(rp, tmp, by='COUPID')
 	rp		<- unique(rp, by=c('FEMALE_SANGER_ID','MALE_SANGER_ID'))
 	cat('\nnumber of pairs with sequence from both partners=',rp[, length(unique(COUPID))])	
@@ -15909,14 +15907,40 @@ RakaiCouples.save.couples.to.rda<- function()
 	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'], paste('FEMALE_',colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'],sep=''))
 	rp		<- merge(rp,tmp,by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'))
 	#
-	#	get info on sequences: date of sampling
+	#	add RH info closest to first +/+ positive
 	#	for males
-	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)), by='SID')
-	setnames(tmp, c('SID','DATE'), c('MALE_SANGER_ID','MALE_SEQDATE'))
+	tmp		<- unique(rh)
+	set(tmp, NULL, c('COMM_NUM','SEX'), NULL)
+	tmp2	<- unique(subset(rp, select=c('MALE_RID','VISIT_FIRSTCONCPOS')))
+	setnames(tmp2, 'MALE_RID', 'RID')
+	tmp		<- merge(tmp, tmp2, by='RID')
+	tmp2	<- tmp[, list(VISIT= VISIT[which.min(abs(VISIT_FIRSTCONCPOS-VISIT))]), by=c('RID','VISIT_FIRSTCONCPOS')]
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT_FIRSTCONCPOS','VISIT'))
+	set(tmp, NULL, 'VISIT', NULL)	
+	tmp		<- unique(tmp, by=c('RID','VISIT_FIRSTCONCPOS'))
+	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'], paste('MALE_',colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'],sep=''))
+	rp		<- merge(rp,tmp,by=c('MALE_RID','VISIT_FIRSTCONCPOS'))
+	#	for females
+	tmp		<- unique(rh)
+	set(tmp, NULL, c('COMM_NUM','SEX'), NULL)
+	tmp2	<- unique(subset(rp, select=c('FEMALE_RID','VISIT_FIRSTCONCPOS')))
+	setnames(tmp2, 'FEMALE_RID', 'RID')
+	tmp		<- merge(tmp, tmp2, by='RID')
+	tmp2	<- tmp[, list(VISIT= VISIT[which.min(abs(VISIT_FIRSTCONCPOS-VISIT))]), by=c('RID','VISIT_FIRSTCONCPOS')]
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT_FIRSTCONCPOS','VISIT'))
+	set(tmp, NULL, 'VISIT', NULL)	
+	tmp		<- unique(tmp, by=c('RID','VISIT_FIRSTCONCPOS'))
+	setnames(tmp, colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'], paste('FEMALE_',colnames(tmp)[colnames(tmp)!='VISIT_FIRSTCONCPOS'],sep=''))
+	rp		<- merge(rp,tmp,by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'))
+	#
+	#	get info on sequences: date of sampling
+	#	for males	
+	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, SAMPLE_DATE)), by='SID')
+	setnames(tmp, c('SID','SAMPLE_DATE'), c('MALE_SANGER_ID','MALE_SEQDATE'))
 	rp		<- merge(rp, tmp, by='MALE_SANGER_ID', all.x=1)
-	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, DATE)), by='SID')
-	setnames(tmp, c('SID','DATE'), c('FEMALE_SANGER_ID','FEMALE_SEQDATE'))	
-	rp		<- merge(rp, tmp, by='FEMALE_SANGER_ID', all.x=1)				
+	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID, SAMPLE_DATE)), by='SID')
+	setnames(tmp, c('SID','SAMPLE_DATE'), c('FEMALE_SANGER_ID','FEMALE_SEQDATE'))	
+	rp		<- merge(rp, tmp, by='FEMALE_SANGER_ID', all.x=1)	
 	#
 	#	define direction based on seroconversion dates
 	#
@@ -15924,15 +15948,15 @@ RakaiCouples.save.couples.to.rda<- function()
 	set(rp, rp[, which(MALE_LASTNEGDATE>=FEMALE_FIRSTPOSDATE)],'COUP_SC','F->M')
 	set(rp, rp[, which(FEMALE_LASTNEGDATE>=MALE_FIRSTPOSDATE)],'COUP_SC','M->F')
 	set(rp, rp[, which(FEMALE_FIRSTPOSDATE==MALE_FIRSTPOSDATE)],'COUP_SC','seroinc')
+	rp[, table(COUP_SC)]
 	#	F->M    M->F seroinc seropos 
-	#	20      31      69     417 
+	#	20      32      79     426 
 
 	#	link individual household data from most recent visit
 	set(rp, rp[, which(PAIR_TYPE=='no joint household data' & FEMALE_HH_NUM==MALE_HH_NUM)], 'PAIR_TYPE', 'stable cohabiting')
-	set(rp, rp[, which(PAIR_TYPE=='no joint household data' & FEMALE_HH_NUM!=MALE_HH_NUM)], 'PAIR_TYPE', 'not always cohabiting')
-	
+	set(rp, rp[, which(PAIR_TYPE=='no joint household data' & FEMALE_HH_NUM!=MALE_HH_NUM)], 'PAIR_TYPE', 'not always cohabiting')	
 	#	save
-	save(rp, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")	
+	save(rp, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")	
 }
 
 RakaiCirc.circ.dev160907<- function()
