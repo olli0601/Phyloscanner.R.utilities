@@ -628,14 +628,17 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	if(!is.na(no.trees))
 	{
 		out.dir2<- file.path(out.dir,paste0(run.id,'_trees'))
-		cmd		<- paste(cmd,'\nmkdir ',out.dir2)		
+		cmd		<- paste(cmd,'\nmkdir -p ',out.dir2)		
 	}
 	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir2,'"\n',sep='')	
 	#	zip up everything else
+	tmp		<- ''
+	if(length(window.coord)==2)
+		tmp	<- window.coord[1]
 	if(is.null(mem.save) || is.na(mem.save) || mem.save==0)
 	{
-		cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff.zip',sep=''),' "$file"\ndone\n',sep='')
-		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff.zip',sep=''),' "',out.dir2,'"\n',sep='')		
+		cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
+		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
 	}
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')

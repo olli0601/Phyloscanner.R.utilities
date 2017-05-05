@@ -2624,55 +2624,8 @@ pty.pipeline.phyloscanner.test<- function()
 	#
 	#	INPUT ARGS TEST RUN
 	#	
-	pty.args			<- list(	prog.pty=prog.pty, 
-									prog.mafft='mafft', 
-									prog.raxml=prog.raxml, 
-									data.dir=pty.data.dir, 
-									work.dir=work.dir, 
-									out.dir=out.dir, 
-									alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
-									alignments.root='REF_CPX_AF460972', 
-									bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
-									bl.normalising.reference.var='MEDIAN_PWD',
-									alignments.pairwise.to='REF_B_K03455',
-									window.automatic= '', 
-									merge.threshold=1, 
-									min.read.count=1, 
-									quality.trim.ends=20, 
-									min.internal.quality=2, 
-									merge.paired.reads=TRUE, 
-									no.trees=FALSE, 
-									dont.check.duplicates=FALSE,
-									num.bootstraps=1,
-									all.bootstrap.trees=TRUE,
-									strip.max.len=350, 
-									min.ureads.individual=NA, 
-									win=c(2500,3000,250,250), 
-									keep.overhangs=FALSE,	
-									use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-									roguesubtree.kParam=20,
-									roguesubtree.prop.threshold=0,
-									roguesubtree.read.threshold=20,
-									dwns.maxReadsPerPatient=50,	
-									multifurcation.threshold=1e-5,
-									split.rule='s',
-									split.kParam=20,
-									split.proximityThreshold=0.035,
-									split.readCountsMatterOnZeroBranches=TRUE,
-									pw.trmw.min.reads=20,									
-									pw.trmw.min.tips=1,
-									pw.trmw.close.brl=0.035,
-									pw.trmw.distant.brl=0.08,
-									pw.prior.keff=2,
-									pw.prior.neff=3,
-									pw.prior.calibrated.prob=0.5,
-									mem.save=0,
-									verbose=TRUE,
-									select=pty.select)														
-		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
-		pty.c[1,cat(CMD)]	
-		
-		
+	if(1)
+	{
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
 				prog.raxml=prog.raxml, 
@@ -2690,19 +2643,79 @@ pty.pipeline.phyloscanner.test<- function()
 				quality.trim.ends=20, 
 				min.internal.quality=2, 
 				merge.paired.reads=TRUE, 
-				no.trees=TRUE, 
+				no.trees=FALSE, 
 				dont.check.duplicates=FALSE,
 				num.bootstraps=1,
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
 				win=c(2500,3000,250,250), 
-				keep.overhangs=FALSE,					
-				verbose=TRUE,
+				keep.overhangs=FALSE,	
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0.035,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				pw.trmw.min.reads=20,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.035,
+				pw.trmw.distant.brl=0.08,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.calibrated.prob=0.5,
 				mem.save=0,
+				verbose=TRUE,
 				select=pty.select)														
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		pty.c[1,cat(CMD)]	
+	}
+	if(0)
+	{
+		ptyi	<- seq(2500,2525,25) 
+		pty.c	<- lapply(seq_along(ptyi), function(i){
+					pty.args			<- list(	prog.pty=prog.pty, 
+							prog.mafft='mafft', 
+							prog.raxml=prog.raxml, 
+							data.dir=pty.data.dir, 
+							work.dir=work.dir, 
+							out.dir=out.dir, 
+							alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
+							alignments.root='REF_CPX_AF460972', 
+							bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
+							bl.normalising.reference.var='MEDIAN_PWD',
+							alignments.pairwise.to='REF_B_K03455',
+							window.automatic= '', 
+							merge.threshold=1, 
+							min.read.count=1, 
+							quality.trim.ends=20, 
+							min.internal.quality=2, 
+							merge.paired.reads=TRUE, 
+							no.trees=TRUE, 
+							dont.check.duplicates=FALSE,
+							num.bootstraps=1,
+							all.bootstrap.trees=TRUE,
+							strip.max.len=350, 
+							min.ureads.individual=NA, 
+							#win=c(2500,3000,250,250),
+							win=c(ptyi[i],ptyi[i]+250,25,250),
+							keep.overhangs=FALSE,					
+							verbose=TRUE,
+							mem.save=0,
+							select=pty.select)														
+					pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+					pty.c[, W_FROM:= ptyi[i]]
+					pty.c
+				})
+		pty.c	<- do.call('rbind', pty.c)		
+		pty.c[1,cat(CMD)]	
+	}
+		
+		
 }
 
 pty.pipeline.phyloscanner.160825<- function() 
@@ -3415,7 +3428,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(119, 188, 189, 191, 215, 217)	# failed
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed		 
 		pty.select			<- c(185, 201, 210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157) 
-		#pty.select			<- c(158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
+		pty.select			<- c(158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
+		pty.select			<- c(158, 159, 160, 161, 162, 163, 166, 167, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3486,7 +3500,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(1)	#run read alignments
+	if(0)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3519,7 +3533,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(1)
+	if(0)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
@@ -3536,6 +3550,50 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
+	#
+	#	run read alignments, one run per window
+	#
+	if(1)
+	{
+		pty.select	<- 4
+		ptyi		<- seq(800,9150,25) 
+		pty.c		<- lapply(seq_along(ptyi), function(i)
+				{
+					pty.args			<- list(	prog.pty=prog.pty, 
+													prog.mafft='mafft', 
+													prog.raxml=prog.raxml, 
+													data.dir=pty.data.dir, 
+													work.dir=work.dir, 
+													out.dir=out.dir, 
+													alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+													alignments.root='REF_CPX_AF460972', 
+													alignments.pairwise.to='REF_B_K03455',
+													window.automatic= '', 
+													merge.threshold=0, 
+													min.read.count=1, 
+													quality.trim.ends=23, 
+													min.internal.quality=23, 
+													merge.paired.reads=TRUE, 
+													no.trees=TRUE, 
+													dont.check.duplicates=FALSE,
+													num.bootstraps=1,
+													all.bootstrap.trees=TRUE,
+													strip.max.len=350, 
+													min.ureads.individual=NA, 
+													win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+													keep.overhangs=FALSE,
+													mem.save=0,
+													verbose=TRUE,					
+													select=pty.select	#of 240
+													)											
+					pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+					pty.c[, W_FROM:= ptyi[i]]
+					pty.c
+				})
+		pty.c	<- do.call('rbind', pty.c)	
+		
+										
+	}
 	if(0)	#check failing runs
 	{
 		df	<- data.table(F=readLines('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/all_files.txt'))
