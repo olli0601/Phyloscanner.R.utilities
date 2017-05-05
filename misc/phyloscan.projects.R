@@ -12,9 +12,9 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondstage() 
-	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()
-	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
+	#pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
+	pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3294,10 +3294,10 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix	<- function()
 	prior.keff						<- 2
 	prior.neff						<- 3
 	prior.calibrated.prob			<- 0.5
-	relationship.types				<- c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI')
+	relationship.types				<- c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI2','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI')
 	
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
-	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
+	#indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
 	infiles	<- data.table(FI=list.files(indir, pattern='_trmStatsPerWindow.rda$', full.names=TRUE))
 	infiles[, FO:=gsub('_trmStatsPerWindow.rda','_pairwise_relationships.rda',FI)]
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
@@ -3328,34 +3328,44 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix	<- function()
 	quit('no')	
 }
 
-pty.pipeline.phyloscanner.170301.secondstage.ptyr1<- function() 
+pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function() 
 {
 	require(data.table)
 	require(big.phylo)
 	
+	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-	hpc.nproc			<- 8							
+	hpc.nproc			<- 1							
+	#raxml.pr			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
-	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42'))
+	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
+	out.dir				<- in.dir
 	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 	
-	#indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_ptyr1'
-	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_ptyr1'
-	infiles	<- data.table(FI=list.files(indir, pattern='fasta$', full.names=TRUE))
+	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
 	infiles[, FO:= gsub('fasta$','tree',FI)]
-	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
-	infiles	<- subset(infiles, W_FROM>1500)	
-	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by='FI']
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
+	tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+	infiles	<- subset(infiles, is.na(FT))
+	setkey(infiles, PTY_RUN, W_FROM)		
+		
+	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+	df[1, cat(CMD)]
 	
 	invisible(df[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="10850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
-							outfile		<- paste("scRA4",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
-						}, by='FI'])
+						}, by=c('PTY_RUN','W_FROM')])
 	quit('no')	
 }
 
@@ -3757,6 +3767,44 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 						}, by='PTY_RUN'])
 		quit('no')
 	}	
+	#
+	#
+	#
+	if(1)
+	{
+		trmw.min.reads					<- 20
+		trmw.min.tips					<- 1
+		trmw.close.brl 					<- 0.035
+		trmw.distant.brl				<- 0.08		
+		prior.keff						<- 2
+		prior.neff						<- 3
+		prior.calibrated.prob			<- 0.5
+		relationship.types				<- c('TYPE_PAIR_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI2','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI')
+		
+		indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170426_couples_w250_d50_p35_blNormed_rerun'
+		indir	<- '/Volumes/exfat/PANGEA/PANGEA_phyloscanner/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'		
+		infiles	<- data.table(FI=list.files(indir, pattern='_trmStatsPerWindow.rda$', full.names=TRUE))
+		infiles[, FO:=gsub('_trmStatsPerWindow.rda','_pairwise_relationships.rda',FI)]
+		infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+		setkey(infiles, PTY_RUN)
+		
+		invisible(infiles[, {	
+								#FI	<- '/Volumes/exfat/PANGEA/PANGEA_phyloscanner/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_trmStatsPerWindow.rda'
+								cat('\nprocess file', FI,'...')
+								tmp		<- load(FI)
+								if(length(tmp)!=1)	stop("Unexpected length of loaded objects in infile")
+								eval(parse(text=paste("dwin<- copy(",tmp,")",sep='')))		
+								eval(parse(text=paste(tmp,"<- NULL",sep='')))
+								tmp		<- phsc.pairwise.relationships(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types)
+								dwin	<- copy(tmp$dwin)
+								rplkl	<- copy(tmp$rplkl)
+								cat('\nwrite to file', FO,'...')								
+								save(dwin, rplkl, file=FO)
+								NULL
+							}, by='PTY_RUN'])
+		
+	}
+
 }
 
 pty.scan.explore	<- function()

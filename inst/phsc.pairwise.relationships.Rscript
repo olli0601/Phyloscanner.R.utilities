@@ -32,7 +32,7 @@ prior.neff				<- as.numeric(args$prior.neff)
 prior.calibrated.prob	<- as.numeric(args$prior.calibrated.prob)
 relationship.types		<- c()
 if(args$rel.likely.pair)
-	relationship.types	<- c(relationship.types,'TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI')	
+	relationship.types	<- c(relationship.types,'TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_PAIR_TODI2')	
 if(args$rel.likely.pair.by.distance.only)
 	relationship.types	<- c(relationship.types,'TYPE_PAIR_DI','TYPE_PAIRSCORE_DI')
 if(args$rel.likely.pair.by.topology.only)
@@ -88,7 +88,6 @@ phsc.pairwise.relationships<- function(dwin, trmw.min.reads, trmw.min.tips, trmw
 	#
 	setnames(dwin, 'TYPE', 'TYPE_RAW')
 	cat('\nCalculate basic pairwise relationships for windows n=',nrow(dwin),'...')
-	print(dwin)
 	dwin	<- phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)
 	#
 	#	derive other relationship types

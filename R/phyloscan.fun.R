@@ -1162,15 +1162,19 @@ phsc.plot.default.colours.for.relationtypes<- function()
 {
 	cols.type	<- list()
 	tmp2		<- do.call('rbind',list(
-					data.table(	TYPE= c("chain fm\nno intermediate\nclose","chain fm\nno intermediate","chain fm\nno intermediate\ndistant"),
+					data.table(	TYPE= c("chain fm\nno intermediate\nclose","chain fm\nno intermediate","chain fm\nno intermediate\ndistant",
+										"chain 21\nno intermediate\nclose","chain 21\nno intermediate","chain 21\nno intermediate\ndistant"),
 							COLS= brewer.pal(11, 'PiYG')[c(1,2,4)]),
-					data.table(	TYPE= c("chain mf\nno intermediate\nclose","chain mf\nno intermediate","chain mf\nno intermediate\ndistant"),
+					data.table(	TYPE= c("chain mf\nno intermediate\nclose","chain mf\nno intermediate","chain mf\nno intermediate\ndistant",
+										"chain 12\nno intermediate\nclose","chain 12\nno intermediate","chain 12\nno intermediate\ndistant"),
 							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
 					data.table(	TYPE= c("intermingled\nno intermediate\nclose","intermingled\nno intermediate","intermingled\nno intermediate\ndistant"),
 							COLS= brewer.pal(11, 'PRGn')[c(1,2,4)]),
-					data.table(	TYPE= c("chain fm\nwith intermediate\nclose","chain fm\nwith intermediate","chain fm\nwith intermediate\ndistant"),
+					data.table(	TYPE= c("chain fm\nwith intermediate\nclose","chain fm\nwith intermediate","chain fm\nwith intermediate\ndistant",
+										"chain 21\nwith intermediate\nclose","chain 21\nwith intermediate","chain 21\nwith intermediate\ndistant"),
 							COLS= rev(brewer.pal(11, 'BrBG'))[c(3,4,5)]),
-					data.table(	TYPE= c("chain mf\nwith intermediate\nclose","chain mf\nwith intermediate","chain mf\nwith intermediate\ndistant"),
+					data.table(	TYPE= c("chain mf\nwith intermediate\nclose","chain mf\nwith intermediate","chain mf\nwith intermediate\ndistant",
+										"chain 12\nwith intermediate\nclose","chain 12\nwith intermediate","chain 12\nwith intermediate\ndistant"),
 							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
 					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
 							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
@@ -1216,6 +1220,10 @@ phsc.plot.default.colours.for.relationtypes<- function()
 			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TO']]	<- tmp2
+	tmp2		<- data.table(	TYPE= c("likely pair", "other"),
+			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_PAIR_TODI2']]	<- tmp2
 	
 	cols.type
 }
@@ -1355,7 +1363,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 			heights	<- unit(c(2, 3.5, 4, 3.75), "null")
 			height	<- 8
 		}
-		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_CHAIN_TODI'))
+		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_CHAIN_TODI','TYPE_PAIR_TODI2'))
 		{
 			heights	<- unit(c(2, 3.5, 4, 3.5), "null")
 			height	<- 7
@@ -1408,7 +1416,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 				labs(x='', y='\nposterior probability\n', fill='phylogenetic\nrelationship\n')				
 		grid.newpage()
 		pushViewport(viewport(layout = grid.layout(4, 2, heights=heights, widths=widths)))   
-		grid.text(tmp[1,LABEL], gp=gpar(fontsize=10), vp=viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+		grid.text(plot.select[i,LABEL], gp=gpar(fontsize=10), vp=viewport(layout.pos.row = 1, layout.pos.col = 1:2))
 		print(p1, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:2))
 		print(p2, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:2))         
 		print(p3, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
@@ -2369,7 +2377,7 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 #' @param get.groups names of relationship groups  
 #' @param make.pretty.labels Logical   
 #' @return input data.table with new columns. Each new column defines relationship states for a specific relationship group. 
-phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIRSCORE_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
+phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIRSCORE_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_PAIR_TODI2','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
 {
 	#	
 	#	group to define likely pair just based on distance
@@ -2427,6 +2435,15 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '12')
 		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '21')
 	}
+	#
+	#	group to determine likely pairs - only 2 states, likely pair / no
+	#
+	if('TYPE_PAIR_TODI2'%in%get.groups)
+	{
+		df[, TYPE_PAIR_TODI2:= 'other']	
+		#	this counts 'other_close' as 'distant' since this is typically broken by a reference		
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'likely pair')
+	}	
 	#
 	#	group to determine likely pairs
 	#
