@@ -3337,9 +3337,9 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
 	hpc.nproc			<- 1							
-	raxml.pr			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
 	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
-	#raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 	out.dir				<- in.dir
 	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
