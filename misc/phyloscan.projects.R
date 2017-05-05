@@ -3590,18 +3590,14 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 					pty.c[, W_FROM:= ptyi[i]]
 					pty.c
 				})
-		pty.c	<- do.call('rbind', pty.c)	
-		print(pty.c) 
-		
+		pty.c	<- do.call('rbind', pty.c)			
 		tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
 		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
 		pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
-		pty.c	<- subset(pty.c, is.na(FO))
-		
+		pty.c	<- subset(pty.c, is.na(FO))		
 		print(pty.c)
-		stop()
-		
+		#stop()		
 		invisible(pty.c[,	{
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
