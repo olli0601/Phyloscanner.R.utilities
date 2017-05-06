@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3349,13 +3349,14 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	
 	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-	if(1)	#first lightweight run to handle most read alignments
+	if(0)	#first lightweight run to handle most read alignments
 	{
 		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
 	}
-	if(0)	#second midweight run to handle the remaining read alignments
+	if(1)	#second midweight run to handle the remaining read alignments
 	{
-		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 571; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
+		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 571; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
+		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
 		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
 	}
 	if(0)	#third heavyweight run to handle the remaining read alignments
@@ -3363,8 +3364,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"; hpc.q<- NA
 	}
 	
-	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 	out.dir				<- in.dir
