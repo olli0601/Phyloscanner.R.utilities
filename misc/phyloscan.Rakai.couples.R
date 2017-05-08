@@ -9752,14 +9752,48 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	
 	
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
-	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda"
-	outfile.base			<- infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
+	#infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
 	load(infile.trmpairs.todi)
-	set(rtp.todi, NULL, 'TYPE_MLE', NULL)
+	#	
+	rtp.tpairs<- rtp.todi2
+	group <- 'TYPE_PAIR_TODI2'
+	set(rtp.tpairs, NULL, 'TYPE_MLE', NULL)	
+	set(rtp.tpairs, NULL, 'ID1', rtp.tpairs[, as.character(ID1)])
+	set(rtp.tpairs, NULL, 'ID2', rtp.tpairs[, as.character(ID2)])
+	set(rtp.tpairs, NULL, 'ID1_SEX', rtp.tpairs[, as.character(ID1_SEX)])
+	set(rtp.tpairs, NULL, 'ID2_SEX', rtp.tpairs[, as.character(ID2_SEX)])	
+	set(rtp.tpairs, NULL, 'GROUP', rtp.tpairs[, as.character(GROUP)])
 	#
 	#	likely transmission pairs, using topology and distance
 	#	select one patient pairing across runs: that with lowest evidence
-	rtp		<- subset(rtp.todi, GROUP=='TYPE_PAIR_TODI')[, list(PTY_RUN=PTY_RUN[which.min(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- subset(rtp.tpairs, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- subset(rtp, ID1!=ID2)
+	rtp		<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 252 pairs with TYPE_PAIR_TODI; 214 with TYPE_PAIR_TODI2; 218 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
+	rtp[, length(unique(c(ID1,ID2)))]							# 389 individuals with TYPE_PAIR_TODI; 360 with TYPE_PAIR_TODI2; 366 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
+	#	
+	#	directed likely transmission pairs, using topology and distance	
+	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
+	rtpd	<- merge(tmp, subset(rtp.tpairs, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 149 pairs with TYPE_PAIR_TODI; 134 with TYPE_PAIR_TODI2; 136 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
+	rtpd[, length(unique(c(ID1,ID2)))]							# 250 individuals with TYPE_PAIR_TODI; 236 with TYPE_PAIR_TODI2; 237 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	#
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with lowest evidence
+	rtp		<- subset(rtp.todi, GROUP=='TYPE_PAIR_TODI')[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 	rtp		<- merge(rtp, subset(rtp.todi, GROUP=='TYPE_PAIR_TODI'), by=c('ID1','ID2','PTY_RUN'))
 	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 2710 pairs
 	rtp[, length(unique(c(ID1,ID2)))]							# 1558 individuals, this is a lot ...

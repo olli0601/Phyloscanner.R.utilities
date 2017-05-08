@@ -3554,7 +3554,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(1)
+	if(0)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
@@ -3623,10 +3623,12 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#   	A) re-run with "--dont-check-recombination"
 	#	or 	B) instead of merging-threshold 0 use merging-threshold 1
 	#
-	if(0)
+	if(1) 
 	{
 		infile.xlong	<- '/Users/Oliver/duke/tmp/scRaa_extralong.txt'
 		indir.qsub		<- '/Users/Oliver/duke/tmp'
+		infile.xlong	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/scRaa_extralong.txt'
+		indir.qsub		<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_work_170301'
 		df				<- data.table(FQ=gsub(' ','',readLines(infile.xlong)))
 		set(df, NULL, 'FQ', df[, file.path(indir.qsub,FQ)])
 		#df[, FO:= gsub('scRaa','smt1',FQ)]
