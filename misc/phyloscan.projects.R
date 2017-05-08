@@ -3641,7 +3641,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 					cat(z, file=FO)
 					cat(z)
 					cmd	<- paste("qsub",FO,'\n')					
-					#cat( system(cmd, intern=TRUE) )
+					cat( system(cmd, intern=TRUE) )
+					stop()					
 					Sys.sleep(1)
 					NULL					
 				}, by='FQ']
