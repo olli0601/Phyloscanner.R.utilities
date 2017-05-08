@@ -9757,71 +9757,81 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
 	load(infile.trmpairs.todi)
 	#	
-	rtp.tpairs<- rtp.todi2
-	group <- 'TYPE_PAIR_TODI2'
+	rtp.tpairs	<- rtp.todi2
+	group 		<- 'TYPE_PAIR_TODI2'
 	set(rtp.tpairs, NULL, 'TYPE_MLE', NULL)	
 	set(rtp.tpairs, NULL, 'ID1', rtp.tpairs[, as.character(ID1)])
 	set(rtp.tpairs, NULL, 'ID2', rtp.tpairs[, as.character(ID2)])
 	set(rtp.tpairs, NULL, 'ID1_SEX', rtp.tpairs[, as.character(ID1_SEX)])
 	set(rtp.tpairs, NULL, 'ID2_SEX', rtp.tpairs[, as.character(ID2_SEX)])	
 	set(rtp.tpairs, NULL, 'GROUP', rtp.tpairs[, as.character(GROUP)])
+	set(rd, NULL, 'RID', rd[, as.character(RID)])
+	#	fixup rd: 
+	#	remove controls
+	rd			<- subset(rd, !(HIVPREV==0 & PANGEA==1))
+	#	fixup rd: 
+	#	missing first pos date
+	tmp			<- rd[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]
+	set(rd, tmp, 'FIRSTPOSDATE', rd[tmp, RECENTVLDATE])	
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+				ans	<- is.na(FIRSTPOSDATE)	
+				if(any(!is.na(ARVSTARTDATE)))
+					ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE	
+				list(DUMMY=DUMMY, DELETE=ans)		
+			}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	#rd[, DUMMY:= paste(RID, '-', VISIT)]
+	#z		<- merge(rd, tmp, by='RID')
+	#z[, DUMMY:= paste(RID, '-', VISIT)]
+	#setdiff(rd[, DUMMY], z[, DUMMY])
+	
+	#
+	#	select only individuals that have valid meta data 
+	#
+	rtp.tpairs	<- subset(rtp.tpairs, ID1%in%rd$RID & ID2%in%rd$RID)
+
 	#
 	#	likely transmission pairs, using topology and distance
 	#	select one patient pairing across runs: that with lowest evidence
 	rtp		<- subset(rtp.tpairs, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 	rtp		<- subset(rtp, ID1!=ID2)
 	rtp		<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 252 pairs with TYPE_PAIR_TODI; 214 with TYPE_PAIR_TODI2; 218 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
-	rtp[, length(unique(c(ID1,ID2)))]							# 389 individuals with TYPE_PAIR_TODI; 360 with TYPE_PAIR_TODI2; 366 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 218 on couples run; 697 now
+	rtp[, length(unique(c(ID1,ID2)))]							# 366 on couples run; 760 now
 	#	
 	#	directed likely transmission pairs, using topology and distance	
 	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
 	rtpd	<- merge(tmp, subset(rtp.tpairs, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
-	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 149 pairs with TYPE_PAIR_TODI; 134 with TYPE_PAIR_TODI2; 136 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
-	rtpd[, length(unique(c(ID1,ID2)))]							# 250 individuals with TYPE_PAIR_TODI; 236 with TYPE_PAIR_TODI2; 237 with TYPE_PAIR_TODI2 and which.max(POSTERIOR_SCORE)
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 136 on couples run; 285 now
+	rtpd[, length(unique(c(ID1,ID2)))]							# 237 on couples run; 394 now
 	
 	#
-	#	likely transmission pairs, using topology and distance
-	#	select one patient pairing across runs: that with lowest evidence
-	rtp		<- subset(rtp.todi, GROUP=='TYPE_PAIR_TODI')[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
-	rtp		<- merge(rtp, subset(rtp.todi, GROUP=='TYPE_PAIR_TODI'), by=c('ID1','ID2','PTY_RUN'))
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 2710 pairs
-	rtp[, length(unique(c(ID1,ID2)))]							# 1558 individuals, this is a lot ...
+	#	select only m->f, f->m
 	#	
-	#	directed likely transmission pairs, using topology and distance	
-	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
-	rtpd	<- merge(tmp, subset(rtp.todi, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
-	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 1381 pairs
-	rtpd[, length(unique(c(ID1,ID2)))]							# 921 individuals
-	#
-	#	determine m->f, f->m
-	#	
-	tmp		<- RakaiCirc.epi.get.info.170208()
-	rh		<- tmp$rh
-	rd		<- tmp$rd
-	tmp		<- unique(subset(rd, select=c(RID, SEX)))
-	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
-	setnames(tmp, 'ID1_RID', 'ID1')
-	setdiff(rtpd[, ID1], tmp[, ID1])
-	#	TODO 19 are missing in rd: "A051598" "B095818" "B096774" "B115386" "C020847" "C021410" "C094814" "C100818" "C115353" "E095358" "E115355" "E115389" "F096435" "F115356" "F115372" "G095075" "H095092" "H115382" "J096527"
-	rtpd	<- merge(rtpd, tmp, by='ID1')
-	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
-	setdiff(rtpd[, ID2], tmp[, ID2])
-	#	TODO 10 are missing in rd: "H095995" "A115393" "E115355" "C021410" "H094526" "H096194" "G095075" "K094324" "J188436" "J023513"
-	rtpd	<- merge(rtpd, tmp, by='ID2')	
-	subset(rtpd, ID1_SEX==ID2_SEX)[, table(ID1_SEX)]	
-	#433 F2F pairs and 189 M2M pairs   622/1347 = 46%
-	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					#	725 pairs
+	rtpd[, table(ID1_SEX, ID2_SEX)]	
+	# on couples run:
+	#            ID2_SEX
+	#	ID1_SEX  F  M
+	#		  F 17 95
+	#		  M 92 13		30/217= 13.8%
+	# now on stage 1:
+	#			ID2_SEX
+	#ID1_SEX  F  M
+	#		F 61 96
+	#		M 76 52			113/285= 39.6%
+	rtpd.all<- copy(rtpd)
+	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
+	#	172 pairs
 	tmp		<- subset(rtpd, ID1_SEX=='M')
 	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
 	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
@@ -9832,8 +9842,33 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	setnames(rtpd, colnames(rtpd), gsub('ID2','MALE',colnames(rtpd)))
 	set(rtpd, rtpd[, which(TYPE=='12')], 'TYPE', 'fm')
 	set(rtpd, rtpd[, which(TYPE=='21')], 'TYPE', 'mf')
-	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	# fm 310    mf 415 
-	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID')) 
+	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	 
+	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
+	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
+	#
+	#	select only pairs with consistent sero-history
+	#
+	rtpd.hsx<- copy(rtpd)	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	rtpd	<- merge(rtpd, tmp, by='MALE_RID')	
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	rtpd	<- merge(rtpd, tmp, by='FEMALE_RID')			
+	rtpd[, SDC_TYPE:=NA_character_]
+	set(rtpd, rtpd[, which(TYPE=='fm' & FEMALE_LASTNEGDATE>MALE_FIRSTPOSDATE)], 'SDC_TYPE', 'incorrect')
+	set(rtpd, rtpd[, which(TYPE=='fm' & FEMALE_FIRSTPOSDATE<=MALE_LASTNEGDATE)], 'SDC_TYPE', 'correct')	
+	set(rtpd, rtpd[, which(TYPE=='mf' & MALE_LASTNEGDATE>FEMALE_FIRSTPOSDATE)], 'SDC_TYPE', 'incorrect')
+	set(rtpd, rtpd[, which(TYPE=='mf' & MALE_FIRSTPOSDATE<=FEMALE_LASTNEGDATE)], 'SDC_TYPE', 'correct')
+	subset(rtpd, !is.na(SDC_TYPE))[, table(TYPE, SDC_TYPE)]
+	#		 correct 	incorrect
+	#  fm      7          1
+	#  mf      10         0
+	#--> pretty good	
+	rtpd	<- subset(rtpd, is.na(SDC_TYPE) | SDC_TYPE=='correct')
+
+	
+	
 	#
 	#	make basic epi plot: when positive, when negative, when sequenced
 	#	

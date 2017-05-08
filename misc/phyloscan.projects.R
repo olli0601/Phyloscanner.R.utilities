@@ -3430,7 +3430,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(151, 147, 198, 199, 203, 213, 216, 219) # failed		 
 		pty.select			<- c(185, 201, 210, 45, 85, 97, 111, 184, 187, 200, 221, 230, 232, 149, 150, 154, 155, 156, 157) 
 		pty.select			<- c(158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
-		pty.select			<- c(158, 159, 160, 161, 162, 163, 166, 167, 170, 171, 173, 174, 175, 176, 177, 178, 179)		
+		pty.select			<- c(158, 159, 160, 161, 162, 163, 166, 167, 170, 171, 173, 174, 175, 176, 177, 178, 179)
+		pty.select			<- c(21, 45, 85, 97, 111, 149, 159, 160, 161, 163, 167, 170, 171, 174, 175, 176)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3441,6 +3442,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	fail 185 etc running on pqeelab
 		#	timeout 185 etc running on pqeelab read alignments only
 		#	timeout 158 etc running on pqeph read alignments only
+		#	abort 21 etc and run without recombinant check
 	}	
 	if(0)
 	{
@@ -3501,7 +3503,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(0)	#run read alignments
+	if(1)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3520,6 +3522,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				merge.paired.reads=TRUE, 
 				no.trees=TRUE, 
 				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
 				num.bootstraps=1,
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
@@ -3534,15 +3537,15 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(0)
+	if(1)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -3554,7 +3557,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(1)
+	if(0)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
