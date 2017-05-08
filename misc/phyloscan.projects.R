@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	#pty.pipeline.phyloscanner.170301.secondstage() 
+	pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3557,7 +3557,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(0)
+	if(1)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
@@ -3566,6 +3566,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(84, 86, 96, 100, 101, 117, 124, 200, 221)
 		pty.select	<- c(105, 106, 109, 112, 115, 116, 120, 122, 123)
 		pty.select	<- c(136, 148, 232, 126, 127, 129, 130, 131, 132, 133, 134, 135, 137, 138, 141, 143, 145)
+		pty.select	<- c(25, 33, 155, 42, 56, 79, 187, 83, 230)
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
@@ -3623,10 +3624,9 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	}
 	#
 	#	resubmit extra long jobs to create read fasta files:
-	#   	A) re-run with "--dont-check-recombination"
-	#	or 	B) instead of merging-threshold 0 use merging-threshold 1
+	#   re-run with "--dont-check-recombination"
 	#
-	if(1) 
+	if(0) 
 	{ 
 		infile.xlong	<- '/Users/Oliver/duke/tmp/scRaa_extralong.txt'
 		indir.qsub		<- '/Users/Oliver/duke/tmp'
