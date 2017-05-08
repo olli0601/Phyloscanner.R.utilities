@@ -3554,7 +3554,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(0)
+	if(1)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
@@ -3612,9 +3612,9 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
-							outfile		<- paste("scRaa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							outfile		<- paste("snorc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
-							stop()
+							#stop()
 						}, by=c('PTY_RUN','W_FROM')])
 		quit('no')										
 	}
@@ -3623,7 +3623,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#   	A) re-run with "--dont-check-recombination"
 	#	or 	B) instead of merging-threshold 0 use merging-threshold 1
 	#
-	if(1) 
+	if(0) 
 	{
 		infile.xlong	<- '/Users/Oliver/duke/tmp/scRaa_extralong.txt'
 		indir.qsub		<- '/Users/Oliver/duke/tmp'
