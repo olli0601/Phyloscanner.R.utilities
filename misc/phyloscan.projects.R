@@ -3503,7 +3503,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(1)	#run read alignments
+	if(0)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3537,7 +3537,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(1)
+	if(0)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
@@ -3626,8 +3626,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#   	A) re-run with "--dont-check-recombination"
 	#	or 	B) instead of merging-threshold 0 use merging-threshold 1
 	#
-	if(0) 
-	{
+	if(1) 
+	{ 
 		infile.xlong	<- '/Users/Oliver/duke/tmp/scRaa_extralong.txt'
 		indir.qsub		<- '/Users/Oliver/duke/tmp'
 		infile.xlong	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/scRaa_extralong.txt'
