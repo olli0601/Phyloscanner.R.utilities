@@ -559,6 +559,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	no.trees					<- ifelse(!is.na(no.trees) & no.trees, '--no-trees', NA_character_)
 	num.bootstraps				<- ifelse(is.na(no.trees) & !is.na(num.bootstraps) & is.numeric(num.bootstraps) & num.bootstraps>1, as.integer(num.bootstraps), NA_integer_)
 	dont.check.duplicates		<- ifelse(!is.na(dont.check.duplicates) & dont.check.duplicates, '--dont-check-duplicates', NA_character_)
+	dont.check.recombination	<- ifelse(!is.na(dont.check.recombination) & dont.check.recombination, '--dont-check-recombination', NA_character_)	
 	#	create local tmp dir
 	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
 	cmd		<- paste(cmd,"echo $CWD\n",sep='')
@@ -579,6 +580,8 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 		cmd	<- paste(cmd,' ',merge.paired.reads,sep='')	
 	if(!is.na(dont.check.duplicates))
 		cmd	<- paste(cmd,' ',dont.check.duplicates,sep='')
+	if(!is.na(dont.check.recombination))
+		cmd	<- paste(cmd,' ',dont.check.recombination,sep='')	
 	if(!is.na(file.rename))	
 		cmd	<- paste(cmd,' --renaming-file "',basename(file.rename),'"',sep='')
 	if(!is.na(alignments.pairwise.to))		

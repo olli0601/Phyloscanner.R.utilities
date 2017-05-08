@@ -3561,7 +3561,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(27, 31, 32, 34, 35, 154, 156, 46, 48, 50, 53, 54, 58, 60, 157, 184)
 		pty.select	<- c(63, 69, 71, 73, 74, 76, 77, 78, 80)
 		pty.select	<- c(84, 86, 96, 100, 101, 117, 124, 200, 221)
-		pty.select	<- c(105, 106, 109, 112, 115, 116, 120, 122, 123, 136, 148, 232, 126, 127, 129, 130, 131, 132, 133, 134, 135, 137, 138, 141, 143, 145)
+		pty.select	<- c(105, 106, 109, 112, 115, 116, 120, 122, 123)
+		pty.select	<- c(136, 148, 232, 126, 127, 129, 130, 131, 132, 133, 134, 135, 137, 138, 141, 143, 145)
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
@@ -3582,6 +3583,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 													merge.paired.reads=TRUE, 
 													no.trees=TRUE, 
 													dont.check.duplicates=FALSE,
+													dont.check.recombination=TRUE,
 													num.bootstraps=1,
 													all.bootstrap.trees=TRUE,
 													strip.max.len=350, 
@@ -3612,9 +3614,35 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 							cat(cmd)					
 							outfile		<- paste("scRaa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
-							#stop()
+							stop()
 						}, by=c('PTY_RUN','W_FROM')])
 		quit('no')										
+	}
+	#
+	#	resubmit extra long jobs to create read fasta files:
+	#   	A) re-run with "--dont-check-recombination"
+	#	or 	B) instead of merging-threshold 0 use merging-threshold 1
+	#
+	if(0)
+	{
+		infile.xlong	<- '/Users/Oliver/duke/tmp/scRaa_extralong.txt'
+		indir.qsub		<- '/Users/Oliver/duke/tmp'
+		df				<- data.table(FQ=gsub(' ','',readLines(infile.xlong)))
+		set(df, NULL, 'FQ', df[, file.path(indir.qsub,FQ)])
+		#df[, FO:= gsub('scRaa','smt1',FQ)]
+		df[, FO:= gsub('scRaa','snorc',FQ)]
+		df[, {
+					#FQ<- '/Users/Oliver/duke/tmp/scRaa.Fri_May__5_23:38:32_2017.qsub'
+					z	<- paste(readLines(FQ), collapse='\n')
+					#z	<- gsub('--merging-threshold 0','--merging-threshold 1',z)
+					z	<- gsub('--merging-threshold 0','--merging-threshold 0 --dont-check-recombination',z)
+					cat(z, file=FO)
+					cat(z)
+					cmd	<- paste("qsub",FO,'\n')					
+					#cat( system(cmd, intern=TRUE) )
+					Sys.sleep(1)
+					NULL					
+				}, by='FQ']
 	}
 	if(0)	#check failing runs
 	{
