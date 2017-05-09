@@ -3371,7 +3371,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	out.dir				<- in.dir
 	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 	
-	infiles	<- data.table(FI=list.files(in.dir, pattern='.*ptyr.*fasta$', full.names=TRUE, recursive=TRUE))
+	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
 	infiles[, FO:= gsub('fasta$','tree',FI)]
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
 	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
@@ -3381,7 +3381,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
 	infiles	<- subset(infiles, is.na(FT))	
 	setkey(infiles, PTY_RUN, W_FROM)	
-	 
+	
+	print(infiles)
 	infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(130, 131, 132, 133, 134, 135, 136, 137, 138, 141, 143, 145, 148))
 	print(infiles)
