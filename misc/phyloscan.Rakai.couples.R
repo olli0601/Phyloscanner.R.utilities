@@ -9799,15 +9799,23 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	#	select only individuals that have valid meta data 
 	#
 	rtp.tpairs	<- subset(rtp.tpairs, ID1%in%rd$RID & ID2%in%rd$RID)
-
+	rex			<- subset(rtp.tpairs, SELECT== 'couple most likely not a pair' & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rex			<- subset(rex, ID1!=ID2)
+	rex			<- merge(rex, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
+	rex			<- subset(rex, POSTERIOR_SCORE>confidence.cut)		# 83 now
+	rex[, length(unique(c(ID1,ID2)))]								# 166 
+		
 	#
 	#	likely transmission pairs, using topology and distance
 	#	select one patient pairing across runs: that with lowest evidence
-	rtp		<- subset(rtp.tpairs, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- subset(rtp.tpairs, SELECT=='most likely a pair involving couple' & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 	rtp		<- subset(rtp, ID1!=ID2)
 	rtp		<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 218 on couples run; 697 now
-	rtp[, length(unique(c(ID1,ID2)))]							# 366 on couples run; 760 now
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 218 on couples run; 614 now
+	rtp[, length(unique(c(ID1,ID2)))]							# 366 on couples run; 671 now
+	stopifnot(!nrow(merge(subset(rtp, select=c(ID1,ID2)), subset(rex, select=c(ID1,ID2)), by=c('ID1','ID2'))))
+	
+	
 	#	
 	#	directed likely transmission pairs, using topology and distance	
 	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
@@ -9829,7 +9837,7 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	#ID1_SEX  F  M
 	#		F 61 96
 	#		M 76 52			113/285= 39.6%
-	rtpd.all<- copy(rtpd)
+	rtpd.all<- copy(rtpd)	
 	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
 	#	172 pairs
 	tmp		<- subset(rtpd, ID1_SEX=='M')
@@ -9844,7 +9852,7 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	set(rtpd, rtpd[, which(TYPE=='21')], 'TYPE', 'mf')
 	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	 
 	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
-	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
+	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)	
 	#
 	#	select only pairs with consistent sero-history
 	#
@@ -9866,7 +9874,23 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	#  mf      10         0
 	#--> pretty good	
 	rtpd	<- subset(rtpd, is.na(SDC_TYPE) | SDC_TYPE=='correct')
-
+	#
+	#	for transmissions, define 
+	#	incidence pair (either -+, +-, -- at enrollment)
+	#	within couple trm, couple source to other, infected from outside
+	tmp		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, PAIR_TYPE, COUP_SC)))
+	rtpd	<- merge(rtpd, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	setnames(rtpd, c('SELECT', 'COUP_SC'), c('TRM_TYPE1','TRM_TYPE2'))
+	set(rtpd, rtpd[, which(!is.na(PAIR_TYPE))], 'TRM_TYPE1', 'within couple')
+	set(rtpd, rtpd[, which(is.na(PAIR_TYPE))], 'TRM_TYPE1', 'extra couple')
+	tmp		<- rtpd[, which(!is.na(TRM_TYPE2))]
+	set(rtpd, tmp, 'TRM_TYPE2', rtpd[tmp, paste(TRM_TYPE2,'at enrollment')])
+	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple source')
+	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple source')
+	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple sink')
+	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple sink')
+	set(rtpd, NULL, c('SDC_TYPE','PAIR_TYPE'), NULL)
+	
 	
 	
 	#
