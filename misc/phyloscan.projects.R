@@ -1139,6 +1139,52 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
 	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
 }
 
+project.RakaiAll.forTanya<- function()
+{
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
+	tmp		<- copy(pty.runs)	
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	pty.runs<- rbind(tmp, pty.runs)
+	
+	dc
+	
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()	
+	rd		<- tmp$rd
+	rn		<- tmp$rn	
+	rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	
+	#	remove controls
+	rd			<- subset(rd, !(HIVPREV==0 & PANGEA==1))
+	#	fixup rd: 
+	#	missing first pos date
+	tmp			<- rd[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]
+	set(rd, tmp, 'FIRSTPOSDATE', rd[tmp, RECENTVLDATE])	
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE	
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	rd		<- unique(subset(rd, select=c("RID","VISIT","DATE","SEX","LASTNEGVIS","RECENTCD4","RECENTCD4DATE","RECENTVL","RECENTVLDATE","SELFREPORTART","EVERSELFREPORTART","FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
+	 
+	
+	save(rd, dc, pty.runs, file='/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_forTanya.rda')
+	
+	
+	
+}
+
 project.RakaiAll.setup.phyloscanner.170301<- function()
 {
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301'
@@ -3356,16 +3402,16 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	if(1)	#second midweight run to handle the remaining read alignments
 	{
 		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 571; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
-		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
-		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
+		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
+		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
 	}
 	if(0)	#third heavyweight run to handle the remaining read alignments
 	{
 		hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"; hpc.q<- NA
 	}
 	
-	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 	out.dir				<- in.dir
@@ -3382,9 +3428,9 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	infiles	<- subset(infiles, is.na(FT))	
 	setkey(infiles, PTY_RUN, W_FROM)	
 	
-	print(infiles)
-	infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
+	#infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(130, 131, 132, 133, 134, 135, 136, 137, 138, 141, 143, 145, 148))
+	infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
 	print(infiles)
 	
 	#infiles	<- infiles[1:100,]

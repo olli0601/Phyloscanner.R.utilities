@@ -8788,7 +8788,7 @@ RakaiFull.preprocess.closepairs.calculate.170421	<- function()
 	save(rtp, dmin, file=outfile)	
 }
 
-RakaiFull.preprocess.couples.todi.170421<- function()
+RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 {
 	#
 	#	load couples to search for in phyloscanner output
@@ -9740,7 +9740,7 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	Rakai.plot.directed.pairs.discrete1(tmp, cols, file.path(dir, paste(run,'-phsc-directionpairs_education.pdf',sep='')), 'Educational status', w=10, h=7)	
 }
 
-RakaiFull.analyze.couples.todi.170421<- function()
+RakaiFull.preprocess.couples.todi.addingmetadata.170421<- function()
 {
 	require(data.table)
 	require(scales)
@@ -9752,9 +9752,10 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	
 	
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
-	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'	
 	#infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_"
+	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	load(infile.trmpairs.todi)
 	#	
 	rtp.tpairs	<- rtp.todi2
@@ -9852,7 +9853,23 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	set(rtpd, rtpd[, which(TYPE=='21')], 'TYPE', 'mf')
 	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	 
 	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
-	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)	
+	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
+	#	same for rtp
+	rtp.all	<- copy(rtp)	
+	rtp	<- subset(rtp, ID1_SEX!=ID2_SEX)					
+	tmp		<- subset(rtp, ID1_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
+	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
+	set(tmp, tmp[, which(TYPE=='12')], 'TYPE', 'mf')
+	set(tmp, tmp[, which(TYPE=='21')], 'TYPE', 'fm')
+	rtp	<- subset(rtp, ID1_SEX=='F')
+	setnames(rtp, colnames(rtp), gsub('ID1','FEMALE',colnames(rtp)))
+	setnames(rtp, colnames(rtp), gsub('ID2','MALE',colnames(rtp)))
+	set(rtp, rtp[, which(TYPE=='12')], 'TYPE', 'fm')
+	set(rtp, rtp[, which(TYPE=='21')], 'TYPE', 'mf')
+	rtp	<- rbind(rtp, tmp, use.names=TRUE)	 
+	setnames(rtp, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
+	set(rtp, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
 	#	same for rex
 	tmp		<- subset(rex, ID1_SEX=='M')
 	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
@@ -9885,28 +9902,192 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	#  mf      10         0
 	#--> pretty good	
 	rtpd	<- subset(rtpd, is.na(SDC_TYPE) | SDC_TYPE=='correct')
+	rtpd	<- subset(rtpd, select=c(FEMALE_RID, MALE_RID, PTY_RUN, GROUP, TYPE, K, KEFF, N, NEFF, N_TYPE, PAR_PRIOR, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE, SELECT))
+	# not possible for rtp because we don t know direction
+	# just add those in rtp that are not in rtpd
+	tmp		<- subset(rtpd, select=c(FEMALE_RID, MALE_RID))
+	tmp[, DUMMY:='Y']
+	rtp		<- merge(rtp, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	rtp		<- subset(rtp, is.na(DUMMY))
+	set(rtp, NULL, 'SELECT', 'within couple')
+	rtp[, DUMMY:=NULL]
+	
 	#
-	#	for transmissions, define 
+	#	for directed transmissions, likely pairs and unlinked couples 
+	#	define 
 	#	incidence pair (either -+, +-, -- at enrollment)
 	#	within couple trm, couple source to other, infected from outside
+	rca		<- rbind(rtpd, rtp, use.names=TRUE, fill=TRUE)
+	set(rex, NULL, 'SELECT', 'extra couple')
+	rca		<- rbind(rca, rex, use.names=TRUE, fill=TRUE)
 	tmp		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, PAIR_TYPE, COUP_SC)))
-	rtpd	<- merge(rtpd, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
-	setnames(rtpd, c('SELECT', 'COUP_SC'), c('TRM_TYPE1','TRM_TYPE2'))
-	set(rtpd, rtpd[, which(!is.na(PAIR_TYPE))], 'TRM_TYPE1', 'within couple')
-	set(rtpd, rtpd[, which(is.na(PAIR_TYPE))], 'TRM_TYPE1', 'extra couple')
-	tmp		<- rtpd[, which(!is.na(TRM_TYPE2))]
-	set(rtpd, tmp, 'TRM_TYPE2', rtpd[tmp, paste(TRM_TYPE2,'at enrollment')])
-	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple source')
-	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple source')
-	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple sink')
-	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple sink')
-	set(rtpd, NULL, c('SDC_TYPE','PAIR_TYPE'), NULL)
-	set(rtpd, NULL, 'COUPLE', rtpd[, as.integer(TRM_TYPE1=='within couple')])
-	rtpd	<- subset(rtpd, select=c(FEMALE_RID, MALE_RID, PTY_RUN, COUPLE, GROUP, TYPE, K, KEFF, N, NEFF, N_TYPE, PAR_PRIOR, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE, TRM_TYPE1, TRM_TYPE2))
-	rex[, COUPLE:=1L]
-	rex[, TRM_TYPE1:='extra couple']
-	rex[, TRM_TYPE2:='couple unlinked']
-	rbind(rtpd, rex, use.names=TRUE, fill=TRUE)
+	rca		<- merge(rca, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	setnames(rca, c('SELECT', 'COUP_SC'), c('TRM_TYPE1','TRM_TYPE2'))
+	set(rca, NULL, 'COUPLE', rca[, as.integer(!is.na(PAIR_TYPE))])
+	set(rca, rca[, which(!is.na(PAIR_TYPE) & TYPE%in%c('mf','fm','likely pair'))], 'TRM_TYPE1', 'within couple')
+	set(rca, rca[, which(!is.na(PAIR_TYPE) & TYPE%in%c('other'))], 'TRM_TYPE1', 'extra couple')
+	set(rca, rca[, which(is.na(PAIR_TYPE))], 'TRM_TYPE1', 'extra couple')
+	tmp		<- rca[, which(!is.na(TRM_TYPE2))]
+	set(rca, tmp, 'TRM_TYPE2', rca[tmp, paste(TRM_TYPE2,'at enrollment')])
+	tmp		<- rca[, which(grepl('M->F|F->M',TRM_TYPE2))]
+	set(rca, tmp, 'TRM_TYPE2', rca[tmp, paste('serodiscordant',TRM_TYPE2)])	
+	set(rca, rca[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple source')
+	set(rca, rca[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple source')
+	set(rca, rca[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple sink')
+	set(rca, rca[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple sink')
+	set(rca, NULL, c('PAIR_TYPE'), NULL)	
+	
+	#
+	#	add unclear couples that we could not resolve with phyloscanner 
+	#	(includes very little sequence)
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
+	tmp		<- copy(pty.runs)	
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	tmp		<- rbind(tmp, pty.runs)
+	set(tmp, NULL, c('BATCH','PTY_RUN'), NULL)
+	tmp		<- unique(tmp)
+	tmp		<- subset(rp, MALE_RID%in%tmp$RID & FEMALE_RID%in%tmp$RID, c(MALE_RID, FEMALE_RID, COUP_SC) )
+	tmp		<- subset(merge(tmp, rca, by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN), c(MALE_RID, FEMALE_RID, COUP_SC))	
+	setnames(tmp, c('COUP_SC'), c('TRM_TYPE2'))
+	set(tmp, NULL, 'TRM_TYPE2', tmp[, paste(TRM_TYPE2,'at enrollment')])
+	set(tmp, tmp[, which(grepl('M->F|F->M',TRM_TYPE2))], 'TRM_TYPE2', tmp[which(grepl('M->F|F->M',TRM_TYPE2)), paste('serodiscordant',TRM_TYPE2)])	
+	tmp[, COUPLE:=1L]
+	tmp[, TRM_TYPE1:='neither likely pair nor unlinked']
+	rca		<- rbind(rca, tmp, use.names=TRUE, fill=TRUE)
+	
+	#
+	#	determine first concordant pos visit
+	#	add metadata at first concordant pos visit
+	tmp		<- unique(subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	rca		<- merge(rca, tmp, by='MALE_RID')	
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	rca		<- merge(rca, tmp, by='FEMALE_RID')			
+	rca[, VISIT_FIRSTCONCPOS:= rca[, pmax(MALE_FIRSTPOSVIS,FEMALE_FIRSTPOSVIS)]]
+	set(rca, NULL, c('MALE_FIRSTPOSVIS','MALE_FIRSTPOSDATE','FEMALE_FIRSTPOSVIS','FEMALE_FIRSTPOSDATE'), NULL)
+	# male rd
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'MALE_RID')
+	tmp		<- unique(merge(rca, tmp, by='MALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='MALE_RID'])
+	setnames(tmp, 'MALE_RID', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "DATE", "REGION", "COMM_NUM", "HH_NUM", "RECENTCD4","RECENTCD4DATE", "RECENTVL", "RECENTVLDATE", "SELFREPORTART", "EVERSELFREPORTART", "FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	setnames(tmp, 'MALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'MALE_VISIT', NULL)	
+	rca		<- merge(rca, tmp, by=c('MALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# male rh
+	tmp		<- unique(subset(rh, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'MALE_RID')
+	tmp		<- unique(merge(rca, tmp, by='MALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='MALE_RID'])
+	setnames(tmp, 'MALE_RID', 'RID')
+	tmp2	<- unique(subset(rh, select=c("RID","VISIT","CIRCUM","MARSTAT","EDUCAT","RELCAT","OCAT","OCCUP_OLLI","SEXP1YR","SEXP1OUT","COMM_TYPE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	setnames(tmp, 'MALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'MALE_VISIT', NULL)	
+	rca		<- merge(rca, tmp, by=c('MALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# female rd
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'FEMALE_RID')
+	tmp		<- unique(merge(rca, tmp, by='FEMALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='FEMALE_RID'])
+	setnames(tmp, 'FEMALE_RID', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "DATE", "REGION", "COMM_NUM", "HH_NUM", "RECENTCD4","RECENTCD4DATE", "RECENTVL", "RECENTVLDATE", "SELFREPORTART", "EVERSELFREPORTART", "FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('FEMALE_',colnames(tmp)))
+	setnames(tmp, 'FEMALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'FEMALE_VISIT', NULL)	
+	rca		<- merge(rca, tmp, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# female rh
+	tmp		<- unique(subset(rh, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'FEMALE_RID')
+	tmp		<- unique(merge(rca, tmp, by='FEMALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='FEMALE_RID'])
+	setnames(tmp, 'FEMALE_RID', 'RID')
+	tmp2	<- unique(subset(rh, select=c("RID","VISIT","CIRCUM","MARSTAT","EDUCAT","RELCAT","OCAT","OCCUP_OLLI","SEXP1YR","SEXP1OUT","COMM_TYPE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('FEMALE_',colnames(tmp)))
+	setnames(tmp, 'FEMALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'FEMALE_VISIT', NULL)	
+	rca		<- merge(rca, tmp, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	
+	save(rca, rp, rd, rh, ra, rtp.todi2, rplkl, rpw, rtpd.hsx, rtp.all, rtp, rex, rtpd, file=outfile.save)
+}
+
+
+RakaiFull.analyze.couples.todi.170421<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_withmetadata.rda"		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_"	
+	load(infile)	
+		
+	
+	#	extra couple transmission among stable couples
+	#	COUPLE==1 means both male or female form stable couple
+	#	All RIDs in this data.table are part of a stable couple
+			
+	# extra couple transmission involving stable couples
+	# count: within couple transmission vs transmission to someone else vs transmission from someone else	
+	#	- fisherfolk vs agrarian
+	z	<- subset(rca, TRM_TYPE1!='neither likely pair nor unlinked')
+	z[, DUMMY:=NA_character_]
+	set(z, z[, which(TRM_TYPE1=='within couple' & TYPE%in%c('mf','fm'))], 'DUMMY', 'within couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('mf','fm') & TRM_TYPE2=='couple sink')], 'DUMMY', 'extra couple, transmission into couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('mf','fm') & TRM_TYPE2=='couple source')], 'DUMMY', 'extra couple, transmission from couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('other'))], 'DUMMY', 'extra couple, transmission into couple, unsampled transmitter')
+	subset(z, !is.na(DUMMY) & FEMALE_COMM_TYPE==MALE_COMM_TYPE)[, table(DUMMY, FEMALE_COMM_TYPE)]
+	#																 COMM_TYPE
+	#DUMMY                                                           agrarian fisherfolk trading
+	#extra couple, transmission from couple, direction resolved           1         33       0
+	#extra couple, transmission into couple, direction resolved           1         16       0
+	#extra couple, transmission into couple, unsampled transmitter       10         67       2
+	#within couple, direction resolved                                   17         42       1
+	subset(z, !is.na(DUMMY) & FEMALE_COMM_TYPE==MALE_COMM_TYPE & !grepl('from couple',DUMMY))[, round(prop.table(table(DUMMY, FEMALE_COMM_TYPE), 2), d=3)]
+	#																 COMM_TYPE
+	#DUMMY                                                           agrarian fisherfolk trading
+	#extra couple, transmission into couple, direction resolved       0.036      0.128   0.000
+	#extra couple, transmission into couple, unsampled transmitter    0.357      0.536   0.667
+	#within couple, direction resolved                                0.607      0.336   0.333
+	#
+	#--> 	we found much less transmission within stable couples in fisherfolk communities
+	#		note that "unsampled transmitter" may mean that two infected individuals then formed a couple
+
+	
+	# exclude couples with ++ individuals
+	tmp	<- subset(rp, COUP_SC!='seropos')
+	z	<- subset(rca, TRM_TYPE1!='neither likely pair nor unlinked' & (MALE_RID%in%tmp$MALE_RID | FEMALE_RID%in%tmp$FEMALE_RID) )
+	z[, DUMMY:=NA_character_]
+	set(z, z[, which(TRM_TYPE1=='within couple' & TYPE%in%c('mf','fm'))], 'DUMMY', 'within couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('mf','fm') & TRM_TYPE2=='couple sink')], 'DUMMY', 'extra couple, transmission into couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('mf','fm') & TRM_TYPE2=='couple source')], 'DUMMY', 'extra couple, transmission from couple, direction resolved')
+	set(z, z[, which(TRM_TYPE1=='extra couple' & TYPE%in%c('other'))], 'DUMMY', 'extra couple, transmission into couple, unsampled transmitter')
+	subset(z, !is.na(DUMMY) & FEMALE_COMM_TYPE==MALE_COMM_TYPE)[, table(DUMMY, FEMALE_COMM_TYPE)]
+	#																 FEMALE_COMM_TYPE
+	#DUMMY                                                           agrarian fisherfolk trading
+	#extra couple, transmission from couple, direction resolved           1          7       0
+	#extra couple, transmission into couple, direction resolved           0          5       0
+	#extra couple, transmission into couple, unsampled transmitter        2         13       1
+	#within couple, direction resolved                                    4         11       0
+	subset(z, !is.na(DUMMY) & FEMALE_COMM_TYPE==MALE_COMM_TYPE & !grepl('from couple',DUMMY))[, round(prop.table(table(DUMMY, FEMALE_COMM_TYPE), 2), d=3)]
+	#																 FEMALE_COMM_TYPE
+	#DUMMY                                                           agrarian fisherfolk trading
+	#extra couple, transmission into couple, direction resolved       0.000      0.172   0.000
+	#extra couple, transmission into couple, unsampled transmitter    0.333      0.448   1.000
+	#within couple, direction resolved                                0.667      0.379   0.000
+	#
+	#--> 	same overall conclusion
+
+
+	
+
+	subset(rca, COUPLE==1 & FEMALE_COMM_TYPE=='trading')[, table(TRM_TYPE1, FEMALE_COMM_TYPE)]
 	
 	#
 	#	make basic epi plot: when positive, when negative, when sequenced
