@@ -9853,6 +9853,17 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	 
 	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
 	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)	
+	#	same for rex
+	tmp		<- subset(rex, ID1_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
+	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
+	rex	<- subset(rex, ID1_SEX=='F')
+	setnames(rex, colnames(rex), gsub('ID1','FEMALE',colnames(rex)))
+	setnames(rex, colnames(rex), gsub('ID2','MALE',colnames(rex)))
+	rex	<- rbind(rex, tmp, use.names=TRUE)	 
+	setnames(rex, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
+	set(rex, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)	
+
 	#
 	#	select only pairs with consistent sero-history
 	#
@@ -9890,8 +9901,12 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & MALE_RID%in%rp$MALE_RID & TYPE=='fm')], 'TRM_TYPE2', 'couple sink')
 	set(rtpd, rtpd[, which(is.na(TRM_TYPE2) & FEMALE_RID%in%rp$FEMALE_RID & TYPE=='mf')], 'TRM_TYPE2', 'couple sink')
 	set(rtpd, NULL, c('SDC_TYPE','PAIR_TYPE'), NULL)
-	
-	
+	set(rtpd, NULL, 'COUPLE', rtpd[, as.integer(TRM_TYPE1=='within couple')])
+	rtpd	<- subset(rtpd, select=c(FEMALE_RID, MALE_RID, PTY_RUN, COUPLE, GROUP, TYPE, K, KEFF, N, NEFF, N_TYPE, PAR_PRIOR, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE, TRM_TYPE1, TRM_TYPE2))
+	rex[, COUPLE:=1L]
+	rex[, TRM_TYPE1:='extra couple']
+	rex[, TRM_TYPE2:='couple unlinked']
+	rbind(rtpd, rex, use.names=TRUE, fill=TRUE)
 	
 	#
 	#	make basic epi plot: when positive, when negative, when sequenced
