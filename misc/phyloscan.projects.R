@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	#pty.pipeline.phyloscanner.170301.secondstage() 
+	pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3392,52 +3392,56 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 {
 	require(data.table)
 	require(big.phylo)
-	
-	#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
-	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-	if(0)	#first lightweight run to handle most read alignments
+	#
+	#	produce trees
+	#
+	if(1)
 	{
-		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
-	}
-	if(1)	#second midweight run to handle the remaining read alignments
-	{
-		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
-		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
-		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
-	}
-	if(0)	#third heavyweight run to handle the remaining read alignments
-	{
-		hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"; hpc.q<- NA
-	}
-	
-	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
-	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
-	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
-	out.dir				<- in.dir
-	work.dir			<- file.path(HOME,"RakaiAll_work_170301")
-	
-	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
-	infiles[, FO:= gsub('fasta$','tree',FI)]
-	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
-	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
-	tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
-	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
-	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
-	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
-	infiles	<- subset(infiles, is.na(FT))	
-	setkey(infiles, PTY_RUN, W_FROM)	
-	
-	#infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
-	#infiles	<- subset(infiles, PTY_RUN%in%c(130, 131, 132, 133, 134, 135, 136, 137, 138, 141, 143, 145, 148))
-	#infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
-	#infiles	<- subset(infiles, PTY_RUN%in%c(163, 167, 170, 171))
-	#infiles	<- subset(infiles, PTY_RUN%in%c(173, 174))	#for pqeph
-	infiles	<- subset(infiles, PTY_RUN%in%c(175, 176, 179, 187, 200, 221, 230, 232)) #for serial
-	print(infiles)	
-	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
-	#df[1, cat(CMD)]	
-	invisible(df[,	{
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
+		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+		if(0)	#first lightweight run to handle most read alignments
+		{
+			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
+		}
+		if(1)	#second midweight run to handle the remaining read alignments
+		{
+			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
+			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
+			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
+		}
+		if(0)	#third heavyweight run to handle the remaining read alignments
+		{
+			hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"; hpc.q<- NA
+		}
+		
+		raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+		in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
+		out.dir				<- in.dir
+		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		
+		infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+		infiles[, FO:= gsub('fasta$','tree',FI)]
+		infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+		infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
+		tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+		infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		infiles	<- subset(infiles, is.na(FT))	
+		setkey(infiles, PTY_RUN, W_FROM)	
+		
+		#infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
+		#infiles	<- subset(infiles, PTY_RUN%in%c(130, 131, 132, 133, 134, 135, 136, 137, 138, 141, 143, 145, 148))
+		#infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
+		#infiles	<- subset(infiles, PTY_RUN%in%c(163, 167, 170, 171))
+		#infiles	<- subset(infiles, PTY_RUN%in%c(173, 174))	#for pqeph
+		infiles	<- subset(infiles, PTY_RUN%in%c(175, 176, 179, 187, 200, 221, 230, 232)) #for serial
+		print(infiles)	
+		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+		#df[1, cat(CMD)]	
+		invisible(df[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)							
@@ -3445,6 +3449,60 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
 						}, by=c('PTY_RUN','W_FROM')])
+	}
+	#
+	#	combine all the data
+	#	
+	if(0)
+	{
+		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		indir	<- indirs[1]
+		#	check if we have all fasta and tree files
+		infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+		infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+		infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+		tmp		<- subset(infiles, is.na(F))[, W_FROM]
+		if(length(tmp))
+			cat('In',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
+		infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+		infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+		infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+		tmp2	<- subset(infiles, is.na(F))[, W_FROM]
+		if(length(tmp2))
+			cat('In',indir,'Found missing tree files for',paste(tmp2,collapse=', '))
+		if(!length(tmp) & !length(tmp2))
+		{
+			cat('In',indir,'Found all fasta and tree files')
+			#	first combine all zip files into ptyrXXX_otherstuff.zip
+			infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+			stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+			cat('\nZip to file', tmp,'...\n')
+			suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+			invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+			#	now zip fasta files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+			invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+			#	now zip tree files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+			invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+			#	remove tmp dir
+			invisible( file.remove( file.path(indir,'tmp42') ) )
+			#	move one level down
+			infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+			invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+			cat('In',indir,'done')
+		}				
+	}
 	quit('no')	
 }
 
@@ -3616,6 +3674,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(136, 148, 232, 126, 127, 129, 130, 131, 132, 133, 134, 135, 137, 138, 141, 143, 145)
 		pty.select	<- c(25, 33, 155, 42, 56, 79, 187, 83, 230)
 		pty.select	<- c(103, 107, 179)
+		pty.select	<- 143
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
