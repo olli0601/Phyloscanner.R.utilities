@@ -3402,16 +3402,16 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	if(1)	#second midweight run to handle the remaining read alignments
 	{
 		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 571; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
-		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
-		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
+		hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
+		#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
 	}
 	if(0)	#third heavyweight run to handle the remaining read alignments
 	{
 		hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "10850mb"; hpc.q<- NA
 	}
 	
-	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+	#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+	raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 	raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 	in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 	out.dir				<- in.dir
@@ -3430,16 +3430,12 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	
 	#infiles	<- subset(infiles, PTY_RUN%in%c(103, 107, 111, 126, 127, 129))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(130, 131, 132, 133, 134, 135, 136, 137, 138, 141, 143, 145, 148))
-	infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
-	print(infiles)
-	
-	#infiles	<- infiles[1:100,]
-	#stop()
+	#infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
+	infiles	<- subset(infiles, PTY_RUN%in%c(163, 167, 170, 171))
+	print(infiles)	
 	df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 	#df[1, cat(CMD)]	
 	invisible(df[,	{
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)							
