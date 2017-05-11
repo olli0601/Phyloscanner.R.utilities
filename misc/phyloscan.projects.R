@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3399,11 +3399,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-		if(0)	#first lightweight run to handle most read alignments
+		if(1)	#first lightweight run to handle most read alignments
 		{
 			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
 		}
-		if(1)	#second midweight run to handle the remaining read alignments
+		if(0)	#second midweight run to handle the remaining read alignments
 		{
 			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
 			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
@@ -3437,7 +3437,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		#infiles	<- subset(infiles, PTY_RUN%in%c(149, 150, 155, 158, 159, 160, 161))
 		#infiles	<- subset(infiles, PTY_RUN%in%c(163, 167, 170, 171))
 		#infiles	<- subset(infiles, PTY_RUN%in%c(173, 174))	#for pqeph
-		infiles	<- subset(infiles, PTY_RUN%in%c(175, 176, 179, 187, 200, 221, 230, 232)) #for serial
+		#infiles	<- subset(infiles, PTY_RUN%in%c(175, 176, 179, 187, 200, 221, 230, 232)) #for serial
 		print(infiles)	
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 		#df[1, cat(CMD)]	
@@ -3611,7 +3611,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(1)	#run read alignments
+	if(0)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3645,7 +3645,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(1)
+	if(0)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
@@ -3665,7 +3665,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(0)
+	if(1)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
