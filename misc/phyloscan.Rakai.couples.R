@@ -9198,7 +9198,17 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 			scale_size(range = c(5, 50)) +
 			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
 			guides(size='none')
-	ggsave(file=paste0(outfile.base,'_direction-numbers-commtype.pdf'), w=5, h=5)
+	ggsave(file=paste0(outfile.base,'_commtype_3x3.pdf'), w=5, h=5)
+	#
+	#	geography transmitter flows
+	ggplot(tmp, aes(x=REC_COMM_TYPE, y=P_TR, fill=TR_COMM_TYPE)) + 
+			geom_bar(stat='identity', position='dodge') +
+			theme_bw() + 
+			scale_y_continuous(labels=scales::percent, limits=c(0,1), expand=c(0,0), breaks=seq(0,1,0.2)) +			
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n',fill='transmitter from') 
+	ggsave(file=paste0(outfile.base,'_commtype_barplottransmitters.pdf'), w=6, h=5)
+	
+	
 	#
 	#	geography transmitters from outside community
 	z	<- copy(rtr2)
@@ -9212,7 +9222,9 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 			theme_bw() + 
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
 			labs(x='\ncommunity type of recipient', y='transmitters\n', fill='transmitter from')
-	ggsave(file=paste0(outfile.base,'_extra_community_props.pdf'), w=5, h=5)	
+	ggsave(file=paste0(outfile.base,'_extra_community_props.pdf'), w=5, h=5)
+	#
+	#	odds for unequal transmission flows agrarian/fisherfolk
 	z	<- z[, list(N=length(REC_RID)), by=c('REC_COMM_TYPE','FROM_OUTSIDE')]
 	tmp	<- dcast.data.table(subset(z, REC_COMM_TYPE!='trading'), FROM_OUTSIDE~REC_COMM_TYPE, value.var='N')
 	zz	<- as.matrix(tmp[, 2:3, with=FALSE])
@@ -9290,8 +9302,100 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	#	couples that are likely pairswith evidence F->M, n= 43
 	
 	
+	#
+	#	Tulio mixing matrix, stratifying by female, male transmitters
+	#
+	z	<- copy(rtpdm)
+	z[, MALE_AGE_AT_CONCPOS:= pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE]
+	z[, FEMALE_AGE_AT_CONCPOS:= pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE]
+	#	there are 19 with missing birth dates
+	z	<- subset(z, !is.na(FEMALE_AGE_AT_CONCPOS) & !is.na(MALE_AGE_AT_CONCPOS))
+	z[, MALE_AGE_AT_CONCPOS_C:= cut(MALE_AGE_AT_CONCPOS, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z[, FEMALE_AGE_AT_CONCPOS_C:= cut(FEMALE_AGE_AT_CONCPOS, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z	<- z[,list(N=length(unique(PAIR_ID))), by=c('MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C','TYPE')]
+	z	<- merge(z, z[, list(P_CELL= N/sum(N), MALE_AGE_AT_CONCPOS_C=MALE_AGE_AT_CONCPOS_C, FEMALE_AGE_AT_CONCPOS_C=FEMALE_AGE_AT_CONCPOS_C), by='TYPE'], by=c('TYPE','MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C'))
+	z[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
+	set(z, NULL, 'TYPE', z[, gsub('mf','direction of transmission m->f',gsub('fm','direction of transmission f->m',TYPE))])	
+	ggplot(z, aes(x=MALE_AGE_AT_CONCPOS_C, y=FEMALE_AGE_AT_CONCPOS_C, colour=TYPE)) + 
+			geom_point(aes(size=N)) +
+			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
+			theme_bw() + 
+			scale_size(range = c(5, 50)) +
+			labs(x='\nage likely recipient\n(at time concordant positive)',y='age likely transmitter\n(at time concordant positive)\n') +
+			facet_grid(~TYPE) +
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_age_3x3_bygender.pdf'), w=10, h=5)
+	#	--> looks like there is way more transmitters <25 into older groups than from older groups into <25 years recipients 
+	#	--> no substantial difference in M->F vs F->M
+
+	#
+	#	Tulio mixing matrix, stratifying by casual pair / couple
+	#
+	z	<- subset(rtpdm, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE))
+	z[, MALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z[, FEMALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z	<- z[,list(N=length(unique(PAIR_ID))), by=c('MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C','FEMALE_COMM_TYPE')]
+	z	<- merge(z, z[, list(P_CELL= N/sum(N), MALE_AGE_AT_CONCPOS_C=MALE_AGE_AT_CONCPOS_C, FEMALE_AGE_AT_CONCPOS_C=FEMALE_AGE_AT_CONCPOS_C), by='FEMALE_COMM_TYPE'], by=c('FEMALE_COMM_TYPE','MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C'))
+	z[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
+	set(z, NULL, 'TYPE', z[, paste0('location of female ',FEMALE_COMM_TYPE)])
+	ggplot(z, aes(x=MALE_AGE_AT_CONCPOS_C, y=FEMALE_AGE_AT_CONCPOS_C, colour=FEMALE_COMM_TYPE)) + 
+			geom_point(aes(size=N)) +
+			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
+			theme_bw() + 
+			scale_size(range = c(5, 50)) +
+			labs(x='\nage likely recipient\n(at time concordant positive)',y='age likely transmitter\n(at time concordant positive)\n') +
+			facet_grid(~FEMALE_COMM_TYPE) +
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_age_3x3_bylocationfemale.pdf'), w=15, h=5)
+
+
+
+	#
+	#	Tulio mixing matrix, stratifying by location female
+	#
+	z	<- subset(rtpdm, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE))
+	z[, MALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z[, FEMALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
+	z	<- z[,list(N=length(unique(PAIR_ID))), by=c('MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C','FEMALE_COMM_TYPE')]
+	z	<- merge(z, z[, list(P_CELL= N/sum(N), MALE_AGE_AT_CONCPOS_C=MALE_AGE_AT_CONCPOS_C, FEMALE_AGE_AT_CONCPOS_C=FEMALE_AGE_AT_CONCPOS_C), by='FEMALE_COMM_TYPE'], by=c('FEMALE_COMM_TYPE','MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C'))
+	z[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
+	set(z, NULL, 'TYPE', z[, paste0('location of female ',FEMALE_COMM_TYPE)])
+	ggplot(z, aes(x=MALE_AGE_AT_CONCPOS_C, y=FEMALE_AGE_AT_CONCPOS_C, colour=FEMALE_COMM_TYPE)) + 
+			geom_point(aes(size=N)) +
+			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
+			theme_bw() + 
+			scale_size(range = c(5, 50)) +
+			labs(x='\nage likely recipient\n(at time concordant positive)',y='age likely transmitter\n(at time concordant positive)\n') +
+			facet_grid(~FEMALE_COMM_TYPE) +
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_age_3x3_bylocationfemale.pdf'), w=15, h=5)
+	#	--> no substantial difference location female
+
 	
 	
+	tmp		<- rtr2[,list(N=length(unique(PAIR_ID))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
+	tmp[, P_CELL:= N/sum(N)]
+	tmp		<- merge(tmp, tmp[, list(P_REC= N/sum(N), REC_COMM_TYPE=REC_COMM_TYPE), by='TR_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
+	tmp		<- merge(tmp, tmp[, list(P_TR= N/sum(N), TR_COMM_TYPE=TR_COMM_TYPE), by='REC_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
+	#tmp[, LABEL:= paste0(N, ' (',round(P_CELL,d=2)*100,'%)\ntransmitters: ',round(P_TR,d=2)*100,'%\nrecipients: ',round(P_REC,d=2)*100,'%')]
+	tmp[, LABEL:= paste0(N, '\n(',round(P_TR,d=2)*100,'%)')]
+	#tmp[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
+	ggplot(tmp, aes(x=factor(REC_COMM_TYPE),y=factor(TR_COMM_TYPE))) + 
+			geom_point(aes(size=N), colour='grey80') +
+			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
+			theme_bw() + 
+			scale_size(range = c(5, 50)) +
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
+			guides(size='none')
+	ggsave(file=paste0(outfile.base,'_commtype_3x3.pdf'), w=5, h=5)
+	#
+	#	geography transmitter flows
+	ggplot(tmp, aes(x=REC_COMM_TYPE, y=P_TR, fill=TR_COMM_TYPE)) + 
+			geom_bar(stat='identity', position='dodge') +
+			theme_bw() + 
+			scale_y_continuous(labels=scales::percent, limits=c(0,1), expand=c(0,0), breaks=seq(0,1,0.2)) +			
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n',fill='transmitter from') 
+	ggsave(file=paste0(outfile.base,'_commtype_barplottransmitters.pdf'), w=6, h=5)
 	
 	
 	#
