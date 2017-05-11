@@ -3438,6 +3438,9 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		#infiles	<- subset(infiles, PTY_RUN%in%c(163, 167, 170, 171))
 		#infiles	<- subset(infiles, PTY_RUN%in%c(173, 174))	#for pqeph
 		#infiles	<- subset(infiles, PTY_RUN%in%c(175, 176, 179, 187, 200, 221, 230, 232)) #for serial
+		infiles		<- subset(infiles, PTY_RUN%in%c(162, 181, 182, 183, 190, 192, 193, 194, 195, 196))
+		#infiles		<- subset(infiles, PTY_RUN%in%c(197, 202, 206, 207, 208, 209, 211, 212, 218, 220)) 
+		#infiles		<- subset(infiles, PTY_RUN%in%c(222, 223, 224, 225, 226, 227, 228, 229, 231, 233, 234, 235, 236, 237, 238, 239))
 		print(infiles)	
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 		#df[1, cat(CMD)]	
