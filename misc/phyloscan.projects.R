@@ -3676,8 +3676,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(103, 107, 179)
 		pty.select	<- 143
 		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)
-		print(pty.select)
-		stop()
+		print(pty.select)		
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
