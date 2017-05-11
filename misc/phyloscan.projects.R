@@ -3538,6 +3538,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select			<- c(158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		pty.select			<- c(158, 159, 160, 161, 162, 163, 166, 167, 170, 171, 173, 174, 175, 176, 177, 178, 179)
 		pty.select			<- c(21, 45, 85, 97, 111, 149, 159, 160, 161, 163, 167, 170, 171, 174, 175, 176)
+		pty.select			<- c(162, 181, 182, 183, 190, 192, 193, 194, 195, 196, 197, 202, 206, 207, 208, 209, 211, 212, 218, 220, 222, 223, 224, 225, 226, 227, 228, 229, 231, 233, 234, 235, 236, 237, 238, 239)
 		#	pqeelab running 2:180
 		#	pqeph running 181:240
 		#	single node jobs req 12 proc 10.8GB started Sat 13:00 (PTY 1)
@@ -3549,6 +3550,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#	timeout 185 etc running on pqeelab read alignments only
 		#	timeout 158 etc running on pqeph read alignments only
 		#	abort 21 etc and run without recombinant check
+		#	162 etc run without recombinant check
 	}	
 	if(0)
 	{
@@ -3609,7 +3611,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(0)	#run read alignments
+	if(1)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -3643,7 +3645,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(0)
+	if(1)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
@@ -3663,7 +3665,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(1)
+	if(0)
 	{
 		pty.select	<- 4
 		pty.select	<- c(11, 14, 17, 20, 215)
@@ -3675,7 +3677,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(25, 33, 155, 42, 56, 79, 187, 83, 230)
 		pty.select	<- c(103, 107, 179)
 		pty.select	<- 143
-		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)
+		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)		
 		print(pty.select)		
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
