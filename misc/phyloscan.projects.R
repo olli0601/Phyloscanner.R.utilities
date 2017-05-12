@@ -15,7 +15,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -3395,7 +3396,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	produce trees
 	#
-	if(1)
+	if(0)
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -3459,13 +3460,15 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	combine all the data
 	#	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
-		allwin	<- data.table(W_FROM=seq(800,9150,25))		
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		
+		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
 		for(i in seq_along(indirs))
 		{
 			indir	<- indirs[i]
@@ -3484,7 +3487,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				cat('\nIn',indir,'Found missing tree files for',paste(tmp2,collapse=', '))
 			if(!length(tmp) & !length(tmp2))
 				cat('\nIn',indir,'Found all fasta and tree files')
-			if(0 & !length(tmp) & !length(tmp2))
+			if(!length(tmp) & !length(tmp2))
 			{			
 				cat('\nProcess',indir)
 				#	first combine all zip files into ptyrXXX_otherstuff.zip
@@ -3513,6 +3516,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				#	move one level down
 				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
 				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				#	remove indir
+				invisible( file.remove( indir ) )				
 				cat('\nDone',indir)
 			}	
 		}					
@@ -3786,6 +3791,124 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		
 		subset(tmp, !DONE)[, cat(paste(sort(PTY_RUN), collapse='","'))]
 	}
+}
+
+pty.pipeline.phyloscanner.170301.secondstage.rerun<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'				
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
+		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 1
+		hpc.mem				<- "5900mb"
+		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
+		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'		
+		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+	}	
+	if(0)
+	{
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'		
+	}			
+	#
+	#	INPUT ARGS PHYLOSCANNER RERUN
+	#	
+	if(1)	
+	{	
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft=NA, 
+				prog.raxml=NA, 
+				data.dir=NA, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=2, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,125,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0.035,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				pw.trmw.min.reads=20,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.035,
+				pw.trmw.distant.brl=0.08,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.calibrated.prob=0.5,
+				mem.save=0,
+				verbose=TRUE,				
+				select=NA
+				)					 
+	}
+	#
+	#	RERUN PHYLOSCANNER
+	#	
+	if(1)
+	{
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
+		pty.c	<- subset(pty.c, !PTY_RUN%in%c(97))
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+		setkey(pty.c, PTY_RUN)		
+		pty.c	<- pty.c[, {
+					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#cat('\n',FILE_BAM)
+					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
+					print(prefix.infiles)
+					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
+					list(CMD=cmd)
+				}, by='PTY_RUN']		
+		pty.c[1,cat(CMD)]
+		stop()
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							stop()
+						}, by='PTY_RUN'])
+		quit('no')		
+	}		
 }
 
 pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function() 
