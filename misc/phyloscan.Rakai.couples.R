@@ -8964,6 +8964,19 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
 	
 	#
+	#	from every phyloscanner run, select all individuals that had minimum data 
+	#	(we need this for sequence sampling bias)
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	setkey(infiles, PTY_RUN)
+	rpng.ok <- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
+				load(F)
+				list(ID=rplkl[, unique(c(ID1,ID2))])							
+			}, by=c('PTY_RUN')]		
+	
+	
+	#
 	#	from every phyloscanner run, select pairs that are closely related 
 	#	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
