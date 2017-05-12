@@ -3809,7 +3809,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
 		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
-		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'		
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
 	}	
 	if(0)
@@ -3878,7 +3878,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
-		pty.c	<- subset(pty.c, !PTY_RUN%in%c(97))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(97))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
