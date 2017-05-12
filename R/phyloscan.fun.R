@@ -494,16 +494,16 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patients.txt',sep=''), full.names=TRUE)
 	stopifnot(length(file.patient)==1)	
 	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
-	if(1)	#OLD CODE (as long as we work with prev generated zip files)
-	{
-		tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*otherstuff.zip',sep=''), full.names=TRUE)	
-	}	
-	if(0)	#NEW CODE TODO 
-	{
-		tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.zip',sep=''), full.names=TRUE)	
-	}
-	stopifnot(length(tmp)==1)
-	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
+	#if(1)	#OLD CODE (as long as we work with prev generated zip files)
+	#{
+	#	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*otherstuff.zip',sep=''), full.names=TRUE)	
+	#}	
+	#if(0)	#NEW CODE TODO 
+	#{
+	#	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*DuplicateReadCounts.zip',sep=''), full.names=TRUE)	
+	#}
+	#stopifnot(length(tmp)==1)
+	#cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
 	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
 	stopifnot(length(tmp)==1)
 	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
@@ -798,10 +798,10 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	cmd					<- ''
 	#
-	if(1)	# OLD CODE (as long as we work with prev generated zip files) TODO: swith off
-	{
-		cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
-	}	
+	#if(1)	# OLD CODE (as long as we work with prev generated zip files) TODO: swith off
+	#{
+	#	cmd				<- paste(cmd, 'for file in DuplicateReadCountsProcessed_*.csv; do\n\tmv "$file" "${file//DuplicateReadCountsProcessed_/',run.id_,'DuplicateReadCounts_}"\ndone',sep='')	
+	#}	
 	#
 	#	bash command to define normalising constants, if
 	#		a reference file and a reference column name in that file are specified
