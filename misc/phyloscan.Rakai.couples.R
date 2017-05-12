@@ -9133,6 +9133,7 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
+	require(ggmap)
 	require(grid)
 	require(gridExtra)
 	require(RColorBrewer)
@@ -9162,11 +9163,17 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	rtpdm	<- merge(rtpdm, tmp, by='FEMALE_RID', all.x=1)
 	rtpdm	<- merge(rtpdm, tmp2, by='MALE_RID', all.x=1)
 	rtpdm	<- subset(rtpdm, MALE_N_TR==1 | FEMALE_N_TR==1)
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM==23)], 'FEMALE_COMM_TYPE', 'agrarian')
+	set(rtpdm, rtpdm[, which(MALE_COMM_NUM==23)], 'MALE_COMM_TYPE', 'agrarian')
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM==38)], 'FEMALE_COMM_TYPE', 'fisherfolk')
+	set(rtpdm, rtpdm[, which(MALE_COMM_NUM==38)], 'MALE_COMM_TYPE', 'fisherfolk')	
 	set(rtpdm, NULL, c('FEMALE_N_TR','MALE_N_TR'), NULL)
 	set(rtpdm, NULL, 'AGEDIFF', rtpdm[, FEMALE_BIRTHDATE-MALE_BIRTHDATE])
 	set(rtpdm, NULL, 'PAIR_ID', rtpdm[, paste0(MALE_RID,'-',FEMALE_RID)])
 	set(rtpdm, NULL, 'MALE_SEX', 'M')
-	set(rtpdm, NULL, 'FEMALE_SEX', 'F')
+	set(rtpdm, NULL, 'FEMALE_SEX', 'F')	
+	rtpdm[, MALE_COMM_NUM2:= gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(MALE_COMM_NUM)))))]
+	rtpdm[, FEMALE_COMM_NUM2:= gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(FEMALE_COMM_NUM)))))]
 	#	307 transmissions with direction resolved to 307 recipients with unique transmitter
 	
 	#
@@ -9212,7 +9219,7 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	#
 	#	geography transmitters from outside community
 	z	<- copy(rtr2)
-	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM!=TR_COMM_NUM, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
+	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM2!=TR_COMM_NUM2, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
 	set(z, NULL, 'REC_COMM_TYPE', z[, factor(REC_COMM_TYPE)])
 	ggplot(z, aes(x=REC_COMM_TYPE, fill=FROM_OUTSIDE)) + geom_bar() + 
 			theme_bw() + 
@@ -9242,7 +9249,7 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	#
 	#	geography recipients in different community
 	z	<- copy(rtr2)
-	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM!=TR_COMM_NUM, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
+	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM2!=TR_COMM_NUM2, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
 	set(z, NULL, 'TR_COMM_TYPE', z[, factor(TR_COMM_TYPE)])
 	ggplot(z, aes(x=TR_COMM_TYPE, fill=FROM_OUTSIDE)) + geom_bar() + 
 			theme_bw() + 
@@ -9267,13 +9274,13 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	#		odds ratio 
 	#1.719531
 
+
 	#
 	#	geography transmitters from outside community by gender of recipients
 	z	<- copy(rtr2)
-	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM!=TR_COMM_NUM, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
+	z[, FROM_OUTSIDE:= factor(REC_COMM_NUM2!=TR_COMM_NUM2, levels=c(TRUE,FALSE), labels=c('outside community','same community'))]
 	set(z, NULL, 'REC_COMM_TYPE', z[, factor(REC_COMM_TYPE)])
-	set(z, NULL, 'REC_SEX', z[, paste0('gender recipient: ',REC_SEX)])
-	
+	set(z, NULL, 'REC_SEX', z[, paste0('gender recipient: ',REC_SEX)])	
 	ggplot(z, aes(x=REC_COMM_TYPE, fill=FROM_OUTSIDE)) + geom_bar(position='fill') + 
 			theme_bw() + 
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), breaks=seq(0,1,0.2)) +
@@ -9281,26 +9288,79 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 			facet_grid(~REC_SEX)
 	ggsave(file=paste0(outfile.base,'_extra_community_bygender_props.pdf'), w=7, h=5)	
 
-
-
-	#	info		
-	cat('\ncouples with phyloscanner assessment, n=',				nrow(unique(rplkl, by='COUPID')))	
-	cat('\ncouples not implicated in transmission, n=',				nrow(unique(rex, by='COUPID')))
-	unique(rex,by='COUPID')[, table(PAIR_TYPE)]
-	cat('\ncouples that are likely pairs, n=',						nrow(unique(rtp, by='COUPID')))
-	cat('\ncouples that are likely pairs with evidence M->F, n=',	nrow(unique(rmf, by='COUPID')))
-	cat('\ncouples that are likely pairswith evidence F->M, n=',	nrow(unique(rfm, by='COUPID')))
-	#	pairings assessed, n= 1741
-	#	couples not implicated in transmission, n= 1402
-	#		    f or m not in couple m and f not in couple not always cohabiting     stable cohabiting 
-	#             1311                    16                     8                    67  
-	#	couples that are likely pairs, n= 209
-	#	likely direction resolved, n= 127
-	#	   not always cohabiting 			   not registered as couple        stable cohabiting 
-	#                  2                       41                              85
-	#	couples that are likely pairs with evidence M->F, n= 84
-	#	couples that are likely pairswith evidence F->M, n= 43
+	#
+	#	community locations
+	#	
+	zm	<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	zc	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_spatialLoc.csv'))
+	zc	<- merge(zc, unique(subset(rh, select=c(COMM_NUM, COMM_TYPE))), by='COMM_NUM')
+	zc[, COMM_NUM2:= gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(COMM_NUM)))))]
+	ggmap(zm) +
+			geom_point(data=unique(zc, by='COMM_NUM2'), aes(x=longitude, y=latitude, pch=COMM_TYPE, colour=COMM_TYPE), size=8, alpha=0.8) +
+			geom_text(data=unique(zc, by='COMM_NUM2'), aes(x=longitude, y=latitude, label=COMM_NUM2), nudge_x=0, nudge_y=0, size=3, colour='black')
+	ggsave(file=paste0(outfile.base,'_hubs_comm_locations.pdf'), w=10, h=10)
+	#
+	#	transmission hubs
+	#	among transmitters how many have a recipient outside community
+	z	<- copy(rtr2)
+	z	<- z[, list(REC_OUTSIDE_COMM=length(which(REC_COMM_NUM2!=TR_COMM_NUM2)), REC_IN_COMM=length(which(REC_COMM_NUM2==TR_COMM_NUM2)) ), by=c('TR_COMM_NUM2','TR_COMM_TYPE')]
+	z[, REC_N:=REC_OUTSIDE_COMM+REC_IN_COMM]
+	setnames(z, 'TR_COMM_NUM2', 'COMM_NUM2')
+	z	<- merge(unique(zc, by='COMM_NUM2'), z, by='COMM_NUM2')
+	ggmap(zm) +
+			geom_point(data=z, aes(x=longitude, y=latitude, pch=COMM_TYPE, colour=COMM_TYPE, size=REC_N, fill=100*REC_OUTSIDE_COMM/REC_N), stroke=1.5, alpha=0.8) + 
+			scale_fill_distiller(palette = "RdBu") +
+			scale_size(range=c(5,30))+
+			scale_shape_manual(values=c('agrarian'=21, 'trading'=22, 'fisherfolk'=23)) +
+			theme(legend.position='bottom', legend.box = "vertical") +
+			labs(	size="transmissions with transmitters from community", 
+					fill="proportion of transmitters from the community\nthat have a recipient outside the community")
+	ggsave(file=paste0(outfile.base,'_hubs_transmitters.pdf'), w=10, h=10)
+	#
+	#	recipient hubs
+	#	among recipients (sink) how many have a transmitter from same community
+	z	<- copy(rtr2)
+	z	<- z[, list(TR_OUTSIDE_COMM=length(which(REC_COMM_NUM2!=TR_COMM_NUM2)), TR_IN_COMM=length(which(REC_COMM_NUM2==TR_COMM_NUM2)) ), by=c('REC_COMM_NUM2','REC_COMM_TYPE')]
+	z[, TR_N:=TR_OUTSIDE_COMM+TR_IN_COMM]
+	setnames(z, 'REC_COMM_NUM2', 'COMM_NUM2')
+	z	<- merge(unique(zc, by='COMM_NUM2'), z, by='COMM_NUM2')
+	ggmap(zm) +
+			geom_point(data=z, aes(x=longitude, y=latitude, pch=COMM_TYPE, colour=COMM_TYPE, size=TR_N, fill=100*TR_IN_COMM/TR_N), stroke=1.5, alpha=0.8) + 
+			scale_fill_distiller(palette = "RdBu") +			
+			scale_size(range=c(5,30))+
+			scale_shape_manual(values=c('agrarian'=21, 'trading'=22, 'fisherfolk'=23)) +
+			theme(legend.position='bottom', legend.box = "vertical") +
+			labs(	size="transmissions with recipients from community", 
+					fill="proportion of recipients from the community\nthat have a transmitter from the community")
+	ggsave(file=paste0(outfile.base,'_hubs_recipients.pdf'), w=10, h=10)
 	
+	
+	
+	
+	
+	
+	if(0)
+	{
+		set.seed(123) 
+		long <- rnorm(50, sd=100) 
+		lat <- rnorm(50, sd=50) 
+		d <- data.frame(long=long, lat=lat) 
+		d <- with(d, d[abs(long) < 150 & abs(lat) < 70,]) 
+		n <- nrow(d) 
+		d$region <- factor(1:n) 
+		d$A <- abs(rnorm(n, sd=1)) 
+		d$B <- abs(rnorm(n, sd=2)) 
+		d$C <- abs(rnorm(n, sd=3)) 
+		d$D <- abs(rnorm(n, sd=4)) 
+		d$radius <- 6 * abs(rnorm(n)) 
+		world <- map_data('world') 
+		p <- ggplot(world, aes(long, lat)) + 
+				geom_map(map=world, aes(map_id=region), fill=NA, color="black") + 
+				coord_quickmap() 
+		p + geom_scatterpie(aes(x=long, y=lat, group=region, r=radius), data=d, cols=LETTERS[1:4], color=NA, alpha=.8) + 
+				geom_scatterpie_legend(d$radius, x=-160, y=-55) 
+		
+	}
 	
 	#
 	#	Tulio mixing matrix, stratifying by female, male transmitters
@@ -9334,19 +9394,19 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	z	<- subset(rtpdm, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE))
 	z[, MALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
 	z[, FEMALE_AGE_AT_CONCPOS_C:= cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE, breaks=c(0,25,40,100), labels=c('<25 years','25-40 years','40-52 years'))]
-	z	<- z[,list(N=length(unique(PAIR_ID))), by=c('MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C','FEMALE_COMM_TYPE')]
-	z	<- merge(z, z[, list(P_CELL= N/sum(N), MALE_AGE_AT_CONCPOS_C=MALE_AGE_AT_CONCPOS_C, FEMALE_AGE_AT_CONCPOS_C=FEMALE_AGE_AT_CONCPOS_C), by='FEMALE_COMM_TYPE'], by=c('FEMALE_COMM_TYPE','MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C'))
-	z[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
-	set(z, NULL, 'TYPE', z[, paste0('location of female ',FEMALE_COMM_TYPE)])
-	ggplot(z, aes(x=MALE_AGE_AT_CONCPOS_C, y=FEMALE_AGE_AT_CONCPOS_C, colour=FEMALE_COMM_TYPE)) + 
+	z[, COUPLE_C:= gsub(' seroinc',' serodisc/seroinc',gsub('M->F|F->M','serodisc/seroinc',COUPLE))]
+	z	<- z[,list(N=length(unique(PAIR_ID))), by=c('MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C','COUPLE_C')]
+	z	<- merge(z, z[, list(P_CELL= N/sum(N), MALE_AGE_AT_CONCPOS_C=MALE_AGE_AT_CONCPOS_C, FEMALE_AGE_AT_CONCPOS_C=FEMALE_AGE_AT_CONCPOS_C), by='COUPLE_C'], by=c('COUPLE_C','MALE_AGE_AT_CONCPOS_C','FEMALE_AGE_AT_CONCPOS_C'))
+	z[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]		
+	ggplot(z, aes(x=MALE_AGE_AT_CONCPOS_C, y=FEMALE_AGE_AT_CONCPOS_C, colour=COUPLE_C)) + 
 			geom_point(aes(size=N)) +
 			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
 			theme_bw() + 
 			scale_size(range = c(5, 50)) +
 			labs(x='\nage likely recipient\n(at time concordant positive)',y='age likely transmitter\n(at time concordant positive)\n') +
-			facet_grid(~FEMALE_COMM_TYPE) +
+			facet_grid(~COUPLE_C) +
 			guides(size='none', colour='none')
-	ggsave(file=paste0(outfile.base,'_age_3x3_bylocationfemale.pdf'), w=15, h=5)
+	ggsave(file=paste0(outfile.base,'_age_3x3_bycouplestatus.pdf'), w=15, h=5)
 
 
 
@@ -9371,31 +9431,29 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	ggsave(file=paste0(outfile.base,'_age_3x3_bylocationfemale.pdf'), w=15, h=5)
 	#	--> no substantial difference location female
 
-	
-	
-	tmp		<- rtr2[,list(N=length(unique(PAIR_ID))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
-	tmp[, P_CELL:= N/sum(N)]
-	tmp		<- merge(tmp, tmp[, list(P_REC= N/sum(N), REC_COMM_TYPE=REC_COMM_TYPE), by='TR_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
-	tmp		<- merge(tmp, tmp[, list(P_TR= N/sum(N), TR_COMM_TYPE=TR_COMM_TYPE), by='REC_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
-	#tmp[, LABEL:= paste0(N, ' (',round(P_CELL,d=2)*100,'%)\ntransmitters: ',round(P_TR,d=2)*100,'%\nrecipients: ',round(P_REC,d=2)*100,'%')]
-	tmp[, LABEL:= paste0(N, '\n(',round(P_TR,d=2)*100,'%)')]
-	#tmp[, LABEL:= paste0(N, '\n(',round(P_CELL,d=2)*100,'%)')]
-	ggplot(tmp, aes(x=factor(REC_COMM_TYPE),y=factor(TR_COMM_TYPE))) + 
-			geom_point(aes(size=N), colour='grey80') +
-			geom_text(aes(label=LABEL), nudge_x=0, nudge_y=0, size=3, colour='black') +			
-			theme_bw() + 
-			scale_size(range = c(5, 50)) +
-			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
-			guides(size='none')
-	ggsave(file=paste0(outfile.base,'_commtype_3x3.pdf'), w=5, h=5)
+
 	#
-	#	geography transmitter flows
-	ggplot(tmp, aes(x=REC_COMM_TYPE, y=P_TR, fill=TR_COMM_TYPE)) + 
-			geom_bar(stat='identity', position='dodge') +
-			theme_bw() + 
-			scale_y_continuous(labels=scales::percent, limits=c(0,1), expand=c(0,0), breaks=seq(0,1,0.2)) +			
-			labs(x='\nlocation likely recipient',y='location likely transmitter\n',fill='transmitter from') 
-	ggsave(file=paste0(outfile.base,'_commtype_barplottransmitters.pdf'), w=6, h=5)
+	#	age difference
+	#
+	bw=4; dotsize=1; w=10; h=7; legend.factor= 'age difference\n(years female younger)'
+	tmp		<- subset(rtpdm, !is.na(AGEDIFF))
+	setnames(tmp, c('AGEDIFF'), c('MALE_FACTOR'))
+	tmp[, COUPLE_C:= gsub(' seroinc',' serodisc/seroinc',gsub('M->F|F->M','serodisc/seroinc',COUPLE))]
+	tmp[, FEMALE_FACTOR:= MALE_FACTOR]
+	ggplot(tmp, aes(x=as.character(factor(TYPE, levels=c('fm','mf'), labels=c('female is\nlikely transmitter','female is\nlikely recipient'))), y=FEMALE_FACTOR)) + 
+			geom_violin(bw=bw, fill='LightBlue', trim=TRUE, draw_quantiles=0.5) + 
+			geom_dotplot(binaxis='y', binwidth=1, stackdir='center', fill='DarkBlue', dotsize=dotsize, width =0.8, stackratio = 1) +
+			facet_grid(COUPLE_C~FEMALE_COMM_TYPE) +
+			scale_y_continuous() +				
+			theme_bw() + theme(legend.position='bottom', plot.title = element_text(hjust = 0.5)) +
+			guides(fill=guide_legend(ncol=2)) +
+			labs(x='', y=paste0(legend.factor,'\n'))
+	ggsave(file=paste0(outfile.base,'_agediff_by_commtype_couplestatus.pdf'), w=10, h=10)
+	#	--> female recipients are much younger in casual pairs than male partners
+	#		whereas female transmitters are of similar age compare to male partners
+	
+	
+	
 	
 	
 	#

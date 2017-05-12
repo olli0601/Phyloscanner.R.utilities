@@ -3395,7 +3395,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	produce trees
 	#
-	if(1)
+	if(0)
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -3456,55 +3456,63 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	combine all the data
 	#	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
-		allwin	<- data.table(W_FROM=seq(800,9150,25))
-		indir	<- indirs[1]
-		#	check if we have all fasta and tree files
-		infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
-		infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
-		infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
-		tmp		<- subset(infiles, is.na(F))[, W_FROM]
-		if(length(tmp))
-			cat('In',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
-		infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
-		infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
-		infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
-		tmp2	<- subset(infiles, is.na(F))[, W_FROM]
-		if(length(tmp2))
-			cat('In',indir,'Found missing tree files for',paste(tmp2,collapse=', '))
-		if(!length(tmp) & !length(tmp2))
+		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
+		#
+		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
+		allwin	<- data.table(W_FROM=seq(800,9150,25))		
+		for(i in seq_along(indirs))
 		{
-			cat('In',indir,'Found all fasta and tree files')
-			#	first combine all zip files into ptyrXXX_otherstuff.zip
-			infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
-			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
-			stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
-			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
-			cat('\nZip to file', tmp,'...\n')
-			suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
-			invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
-			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
-			#	now zip fasta files
+			indir	<- indirs[i]
+			#	check if we have all fasta and tree files
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
-			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
-			invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
-			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
-			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
-			#	now zip tree files
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			tmp		<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(tmp))
+				cat('\nIn',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
-			infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
-			invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
-			tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
-			invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
-			#	remove tmp dir
-			invisible( file.remove( file.path(indir,'tmp42') ) )
-			#	move one level down
-			infiles	<- data.table(F=list.files(indir, full.names=TRUE))
-			invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
-			cat('In',indir,'done')
-		}				
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			tmp2	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(tmp2))
+				cat('\nIn',indir,'Found missing tree files for',paste(tmp2,collapse=', '))
+			if(!length(tmp) & !length(tmp2))
+				cat('\nIn',indir,'Found all fasta and tree files')
+			if(0 & !length(tmp) & !length(tmp2))
+			{			
+				cat('\nProcess',indir)
+				#	first combine all zip files into ptyrXXX_otherstuff.zip
+				infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+				cat('\nZip to file', tmp,'...\n')
+				suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+				invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip fasta files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip tree files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	remove tmp dir
+				invisible( file.remove( file.path(indir,'tmp42') ) )
+				#	move one level down
+				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				cat('\nDone',indir)
+			}	
+		}					
 	}
 	quit('no')	
 }
