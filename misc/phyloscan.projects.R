@@ -3802,9 +3802,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	#	
 	if(1)
 	{	
-		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'				
-		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
-		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'								
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"
