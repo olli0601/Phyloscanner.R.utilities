@@ -8916,10 +8916,10 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
-	rn		<- tmp$rn
+	#rn		<- tmp$rn
 	ra		<- tmp$ra
-	set(rn, NULL, 'RID', rn[, as.character(RID)])
-	rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
 	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
 	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
 	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
@@ -8974,8 +8974,7 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				load(F)
 				list(ID=rplkl[, unique(c(ID1,ID2))])							
 			}, by=c('PTY_RUN')]		
-	
-	
+	rpng.ok	<- unique(subset(rpng.ok, select='ID'))	
 	#
 	#	from every phyloscanner run, select pairs that are closely related 
 	#	
@@ -9050,7 +9049,7 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				ans			
 			}, by='PTY_RUN']
 	
-	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)	
+	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, rpng.ok, file=outfile)	
 }
 
 RakaiFull.plot.epitimeline<- function(df, t.posneg, t.cd4, t.vl, t.seq, age.adult=14)
@@ -9185,8 +9184,6 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	set(rtpdm, NULL, 'PAIR_ID', rtpdm[, paste0(MALE_RID,'-',FEMALE_RID)])
 	set(rtpdm, NULL, 'MALE_SEX', 'M')
 	set(rtpdm, NULL, 'FEMALE_SEX', 'F')	
-	rtpdm[, MALE_COMM_NUM2:= gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(MALE_COMM_NUM)))))]
-	rtpdm[, FEMALE_COMM_NUM2:= gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(FEMALE_COMM_NUM)))))]
 	#	307 transmissions with direction resolved to 307 recipients with unique transmitter
 	
 	#
@@ -10171,7 +10168,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	# male rd
 	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
 	setnames(tmp, 'RID', 'MALE_RID')
-	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='MALE_RID'])
+	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('MALE_RID','VISIT_FIRSTCONCPOS')])
 	setnames(tmp, 'MALE_RID', 'RID')
 	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "DATE", "REGION", "COMM_NUM", "HH_NUM", "RECENTCD4","RECENTCD4DATE", "RECENTVL", "RECENTVLDATE", "SELFREPORTART", "EVERSELFREPORTART", "FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
 	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
@@ -10182,7 +10179,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	# male rh
 	tmp		<- unique(subset(rh, select=c(RID, VISIT)))
 	setnames(tmp, 'RID', 'MALE_RID')
-	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT_FIRSTCONCPOS=VISIT_FIRSTCONCPOS[1], VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by='MALE_RID'])
+	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('MALE_RID','VISIT_FIRSTCONCPOS')])
 	setnames(tmp, 'MALE_RID', 'RID')
 	tmp2	<- unique(subset(rh, select=c("RID","VISIT","CIRCUM","MARSTAT","EDUCAT","RELCAT","OCAT","OCCUP_OLLI","SEXP1YR","SEXP1OUT","COMM_TYPE")), by=c('RID','VISIT'))
 	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
@@ -10213,7 +10210,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	set(tmp, NULL, 'FEMALE_VISIT', NULL)	
 	rtpdm	<- merge(rtpdm, tmp, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
 	
-	save(rtpdm, rp, rs, rd, rh, ra, rtp.todi2, rplkl, rpw, rtpd.hsx, rtp.all, rtp, rtpd, file=outfile.save)
+	save(rtpdm, rp, rs, rd, rh, ra, rtp.todi2, rplkl, rpw, rtpd.hsx, rtp.all, rtp, rtpd, rpng.ok, file=outfile.save)
 }
 
 
