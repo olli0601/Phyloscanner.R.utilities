@@ -30,7 +30,7 @@ project.dual<- function()
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
 		cmd		<- paste(cmd,tmp,sep='\n')
-		cat(cmd)									
+		cat(cmd)	 								
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
 		quit("no")	
@@ -3489,8 +3489,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			if(!length(tmp) & !length(misstrs))
 				cat('\nIn',indir,'Found all fasta and tree files')
 			zipit	<- !length(tmp) & !length(misstrs)
-			if(pty.run!=120)
-			{
+			zipit	<- 1
 			if(zipit)
 			{			
 				cat('\nProcess',indir)
@@ -3531,7 +3530,6 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
 				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
-			}
 			}
 		}					
 	}
@@ -3709,8 +3707,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.select	<- c(25, 33, 155, 42, 56, 79, 187, 83, 230)
 		pty.select	<- c(103, 107, 179)
 		pty.select	<- 143
-		pty.select	<- 120
-		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)		
+		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)
 		print(pty.select)		
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
