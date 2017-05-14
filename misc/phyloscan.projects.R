@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun()
-	pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()	
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
+	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
@@ -3472,24 +3472,25 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		for(i in seq_along(indirs))
 		{
 			indir	<- indirs[i]
+			pty.run	<- as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(indir)))
 			#	check if we have all fasta and tree files
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
-			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
-			pty.run	<- infiles[1, as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
 			tmp		<- subset(infiles, is.na(F))[, W_FROM]
 			if(length(tmp))
 				cat('\nIn',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
-			alltrs	<- subset(infiles, is.na(F))[, W_FROM]
-			if(length(alltrs))
-				cat('\nIn',indir,'Found missing tree files for',paste(alltrs,collapse=', '))
-			if(!length(tmp) & !length(alltrs))
+			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(misstrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
+			if(!length(tmp) & !length(misstrs))
 				cat('\nIn',indir,'Found all fasta and tree files')
-			zipit	<- !length(tmp) & !length(alltrs)
-			zipit	<- 1
+			zipit	<- !length(tmp) & !length(misstrs)
+			if(pty.run!=120)
+				zipit <- 1
 			if(zipit)
 			{			
 				cat('\nProcess',indir)
@@ -3521,10 +3522,10 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
 				cat('\nDone',indir)
 			}
-			if(!length(alltrs))
+			if(!length(misstrs))
 				invisible(unlink(indir, recursive=TRUE))
 			#	expand again if asked to
-			if(length(alltrs))
+			if(length(misstrs))
 			{
 				cat('\nExract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
