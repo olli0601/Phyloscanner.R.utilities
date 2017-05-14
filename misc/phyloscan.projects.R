@@ -23,7 +23,7 @@ project.dual<- function()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
-	#	various 
+	#	various  
 	if(0)
 	{
 		require(big.phylo)
@@ -3396,7 +3396,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	produce trees
 	#
-	if(1)
+	if(0)
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -3461,7 +3461,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	combine all the data
 	#	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
@@ -3477,18 +3477,23 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			pty.run	<- infiles[1, as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 			tmp		<- subset(infiles, is.na(F))[, W_FROM]
 			if(length(tmp))
 				cat('\nIn',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
-			tmp2	<- subset(infiles, is.na(F))[, W_FROM]
-			if(length(tmp2))
-				cat('\nIn',indir,'Found missing tree files for',paste(tmp2,collapse=', '))
-			if(!length(tmp) & !length(tmp2))
+			alltrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(alltrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(alltrs,collapse=', '))
+			if(!length(tmp) & !length(alltrs))
 				cat('\nIn',indir,'Found all fasta and tree files')
-			if(0 & !length(tmp) & !length(tmp2))
+			zipit	<- !length(tmp) & !length(alltrs)
+			zipit	<- 1
+			print(pty.run)
+			stop()
+			if(zipit)
 			{			
 				cat('\nProcess',indir)
 				#	first combine all zip files into ptyrXXX_otherstuff.zip
@@ -3517,10 +3522,16 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				#	move one level down
 				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
 				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
-				#	remove indir
-				invisible( file.remove( indir ) )				
 				cat('\nDone',indir)
-			}	
+			}
+			if(alltrs)
+				invisible(unlink(indir, recursive=TRUE))
+			#	expand again if asked to
+			if(!alltrs)
+			{
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
 		}					
 	}
 	quit('no')	
