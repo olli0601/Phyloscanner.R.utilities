@@ -3490,7 +3490,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				cat('\nIn',indir,'Found all fasta and tree files')
 			zipit	<- !length(tmp) & !length(misstrs)
 			if(pty.run!=120)
-				zipit <- 1
+			{
 			if(zipit)
 			{			
 				cat('\nProcess',indir)
@@ -3527,10 +3527,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			#	expand again if asked to
 			if(length(misstrs))
 			{
-				cat('\nExract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
-				cat('\nExract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
 			}
 		}					
 	}
