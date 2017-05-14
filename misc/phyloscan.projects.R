@@ -3467,9 +3467,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
-		allwin	<- data.table(W_FROM=seq(800,9150,25))
-		
-		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
+		allwin	<- data.table(W_FROM=seq(800,9150,25))		
+		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
 		for(i in seq_along(indirs))
 		{
 			indir	<- indirs[i]
