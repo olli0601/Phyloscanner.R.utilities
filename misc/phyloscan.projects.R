@@ -3477,6 +3477,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			print(infiles)
 			pty.run	<- infiles[1, as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 			tmp		<- subset(infiles, is.na(F))[, W_FROM]
 			if(length(tmp))
