@@ -504,10 +504,10 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	#}
 	#stopifnot(length(tmp)==1)
 	#cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
+	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
 	stopifnot(length(tmp)==1)
 	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*newick.zip',sep=''), full.names=TRUE)
+	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*newick.zip',sep=''), full.names=TRUE)
 	stopifnot(length(tmp)==1)
 	cmd		<- paste(cmd,'unzip "',tmp,'" -d "',tmpdir,'"\n',sep='')
 	#	cd to tmp dir

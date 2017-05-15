@@ -9505,53 +9505,64 @@ RakaiFull.analyze.trmpairs.todi.170421<- function()
 	set(z, NULL, 'TYPE', z[, gsub('mf','direction of transmission m->f',gsub('fm','direction of transmission f->m',TYPE))])	
 	p1	<- ggplot(subset(z, TYPE=='direction of transmission m->f'), aes(x=MALE_AGE_AT_CONCPOS, y=FEMALE_AGE_AT_CONCPOS)) +
 			geom_bin2d(aes(alpha = ..count..), breaks=list(x=seq(0,55,5), y=seq(0,55,5))) +
-			geom_density_2d(aes(colour=COUPLE_C), bins=3) +
-			geom_point(aes(pch=COUPLE_C, colour=COUPLE_C)) +			
+			geom_density_2d(aes(colour=MALE_COMM_TYPE), bins=3) +
+			geom_point(aes(pch=MALE_COMM_TYPE, colour=MALE_COMM_TYPE)) +			
 			geom_abline(intercept=0, slope=1, colour='black', linetype='dotted') +
 			scale_x_continuous(breaks=seq(0,55,5), limits=c(15, 55), expand=c(0,0)) +
 			scale_y_continuous(breaks=seq(0,55,5), limits=c(15, 55), expand=c(0,0)) +
-			scale_colour_manual(values=c('married couple'='black', 'casual pair'='DarkRed')) +
+			scale_colour_manual(values=c('fisherfolk'='black', 'trading'='DarkRed', 'agrarian'='DarkGreen')) +
 			theme_bw() + theme(legend.position='bottom', legend.box="vertical") +
-			labs(x='\nage of female likely recipient\n(at time concordant positive)', y='age of male likely transmitter\n(at time concordant positive)\n', colour='couple status') +
+			labs(x='\nage of female likely recipient\n(at time concordant positive)', y='age of male likely transmitter\n(at time concordant positive)\n', colour='location likely transmitter') +
 			guides(alpha='none', pch='none')
 	p1	<- ggExtra::ggMarginal(p1, type="histogram", binwidth=2.5)
-	ggsave(p1, file=paste0(outfile.base,'_age_dots_bygender_M_bycouplestatus.pdf'), w=5, h=5)	
+	ggsave(p1, file=paste0(outfile.base,'_age_dots_bygender_M_byloctransmitter.pdf'), w=5, h=5)	
 	p1	<- ggplot(subset(z, TYPE=='direction of transmission f->m'), aes(x=MALE_AGE_AT_CONCPOS, y=FEMALE_AGE_AT_CONCPOS)) +
 			geom_bin2d(aes(alpha = ..count..), breaks=list(x=seq(0,55,5), y=seq(0,55,5))) +
-			geom_density_2d(aes(colour=COUPLE_C), bins=3) +
-			geom_point(aes(pch=COUPLE_C, colour=COUPLE_C)) +			
+			geom_density_2d(aes(colour=FEMALE_COMM_TYPE), bins=3) +
+			geom_point(aes(pch=FEMALE_COMM_TYPE, colour=FEMALE_COMM_TYPE)) +			
 			geom_abline(intercept=0, slope=1, colour='black', linetype='dotted') +
 			scale_x_continuous(breaks=seq(0,55,5), limits=c(15, 55), expand=c(0,0)) +
 			scale_y_continuous(breaks=seq(0,55,5), limits=c(15, 55), expand=c(0,0)) +
-			scale_colour_manual(values=c('married couple'='black', 'casual pair'='DarkRed')) +
+			scale_colour_manual(values=c('fisherfolk'='black', 'trading'='DarkRed', 'agrarian'='DarkGreen')) +
 			theme_bw() + theme(legend.position='bottom', legend.box="vertical") +
-			labs(x='\nage of male likely recipient\n(at time concordant positive)', y='age of female likely transmitter\n(at time concordant positive)\n', colour='couple status') +
+			labs(x='\nage of male likely recipient\n(at time concordant positive)', y='age of female likely transmitter\n(at time concordant positive)\n', colour='location likely transmitter') +
 			guides(alpha='none', pch='none')
 	p1	<- ggExtra::ggMarginal(p1, type="histogram", binwidth=2.5)
-	ggsave(p1, file=paste0(outfile.base,'_age_dots_bygender_F_bycouplestatus.pdf'), w=5, h=5)
+	ggsave(p1, file=paste0(outfile.base,'_age_dots_bygender_F_byloctransmitter.pdf'), w=5, h=5)
 
 
 	#
 	#	age difference
 	#
-	bw=4; dotsize=1; w=10; h=7; legend.factor= 'age difference\n(years female younger)'
-	tmp		<- subset(rtpdm, !is.na(AGEDIFF))
-	setnames(tmp, c('AGEDIFF'), c('MALE_FACTOR'))
-	tmp[, COUPLE_C:= gsub(' seroinc',' serodisc/seroinc',gsub('M->F|F->M','serodisc/seroinc',COUPLE))]
-	tmp[, FEMALE_FACTOR:= MALE_FACTOR]
-	ggplot(tmp, aes(x=as.character(factor(TYPE, levels=c('fm','mf'), labels=c('female is\nlikely transmitter','female is\nlikely recipient'))), y=FEMALE_FACTOR)) + 
-			geom_violin(bw=bw, fill='LightBlue', trim=TRUE, draw_quantiles=0.5) + 
-			geom_dotplot(binaxis='y', binwidth=1, stackdir='center', fill='DarkBlue', dotsize=dotsize, width =0.8, stackratio = 1) +
+	z		<- subset(rtpdm, !is.na(AGEDIFF))	
+	z[, MALE_AGE_AT_CONCPOS:= pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE]
+	z[, FEMALE_AGE_AT_CONCPOS:= pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE]		
+	z[, COUPLE_C:= gsub('couple F->M at enrollment|couple M->F at enrollment|couple seroinc at enrollment|couple seropos at enrollment','married couple',gsub('no couple','casual pair',COUPLE))]	
+	z[, FEMALE_FACTOR:= MALE_FACTOR]
+	ggplot(z, aes(x=as.character(factor(TYPE, levels=c('fm','mf'), labels=c('female is\nlikely transmitter','female is\nlikely recipient'))), y=AGEDIFF)) + 
+			geom_violin(bw=4, fill='LightBlue', trim=TRUE, draw_quantiles=0.5) + 
+			geom_dotplot(binaxis='y', binwidth=1, stackdir='center', fill='DarkBlue', dotsize=1, width =0.8, stackratio = 1) +
 			facet_grid(COUPLE_C~FEMALE_COMM_TYPE) +
 			scale_y_continuous() +				
 			theme_bw() + theme(legend.position='bottom', plot.title = element_text(hjust = 0.5)) +
 			guides(fill=guide_legend(ncol=2)) +
-			labs(x='', y=paste0(legend.factor,'\n'))
+			labs(x='', y=paste0('age difference\n(years female younger)','\n'))
 	ggsave(file=paste0(outfile.base,'_agediff_by_commtype_couplestatus.pdf'), w=10, h=10)
 	#	--> female recipients are much younger in casual pairs than male partners
 	#		whereas female transmitters are of similar age compare to male partners
 	
-	
+	ggplot(subset(z, TYPE=='fm'), aes(x=FEMALE_AGE_AT_CONCPOS, y=AGEDIFF)) +
+		geom_bin2d(aes(alpha = ..count..), breaks=list(x=seq(0,55,5), y=seq(-20,20,5))) +
+		#geom_density_2d(bins=3) +	
+		geom_point() +
+		geom_abline(intercept=0, slope=0, colour='black', linetype='dotted') +
+		scale_x_continuous(breaks=seq(0,55,5), limits=c(15, 55), expand=c(0,0)) +
+		scale_y_continuous(breaks=seq(-20,20,5), limits=c(-20, 20), expand=c(0,0)) +
+		#scale_colour_manual(values=c('fisherfolk'='black', 'trading'='DarkRed', 'agrarian'='DarkGreen')) +
+		theme_bw() + theme(legend.position='bottom', legend.box="vertical") +
+		labs(x='\nage of female likely transmitter\n(at time concordant positive)', y='age difference\n(years female younger)\n', colour='location likely transmitter') +
+		guides(alpha='none', pch='none')
+
 	
 	
 	
