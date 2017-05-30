@@ -1187,6 +1187,7 @@ phsc.plot.default.colours.for.relationtypes<- function()
 					data.table(	TYPE= c("other\nno intermediate\nclose","other close","other","other distant"),
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(9,3,4,5)])))
 	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_BASIC']]		<- cols.type[['TYPE_DIR_TODI7x3']]
 	tmp2		<- do.call('rbind',list(
 					data.table(	TYPE= c("pair close","pair","pair distant"),
 							COLS= brewer.pal(11, 'PuOr')[c(1,2,4)]),
@@ -1358,7 +1359,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 	#	re-define dimensions if group specified
 	if(!is.na(group))
 	{
-		if(group%in%c('TYPE_DIR_TODI7x3'))
+		if(group%in%c('TYPE_DIR_TODI7x3','TYPE_BASIC'))
 		{
 			widths	<- unit(c(4, 6), "null")
 			heights	<- unit(c(2, 3.5, 4, 15), "null")
@@ -1881,7 +1882,7 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 		set(cols, cols[, which(grepl(ids[i], ID))], 'COL', plot.cols[i])
 	#	
 	phps	<- lapply(seq_len(nrow(tmp)), function(i){
-				cat(i,'\n')
+				#cat(i,'\n')
 				ph.title	<- NULL
 				if('TITLE'%in%colnames(tmp))
 					ph.title	<- tmp[i, TITLE]										
