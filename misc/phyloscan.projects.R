@@ -879,6 +879,42 @@ project.RakaiAll.setup.prior.170301<- function()
 	pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), n0/N_TYPE+KEFF, n0*(1-1/N_TYPE)+NEFF-KEFF, lower.tail=FALSE)
 }
 
+project.RakaiAll.setup.consensuses<- function()
+{
+	#get data to Tanya to calculate missing consensuses
+	indir	<- '/Volumes/exfat/PANGEA/PANGEA_mapout/RCCS_597_FastQZ'
+	infiles	<- data.table(F=list.files(indir))
+	infiles[, SID:= gsub('^([0-9]+_[0-9]+_[0-9]+)_.*','\\1',F)]
+	tmp		<- unique(subset(infiles, select=SID))
+		
+	
+	indir	<- '/Volumes/exfat/PANGEA/PANGEA_mapout/data_csvetc'
+	infiles	<- data.table(F=list.files(indir, full.names=TRUE, pattern='BaseFreqs|coords'))
+	infiles	<- subset(infiles, grepl('^[0-9]+_[0-9]+_[0-9]+', basename(F)) & !grepl('remap',basename(F)) )
+	infiles[, SID:= gsub('^([0-9]+_[0-9]+_[0-9]+)_.*','\\1',basename(F))]
+	infiles[, BASEFREQ:= factor(grepl('BaseFreqs', basename(F)), levels=c(TRUE,FALSE), labels=c('BaseFreq','Coord'))]
+	#	missing BaseFreq files
+	tmp2	<- data.table(SID=sort(unique(setdiff(tmp[, SID], infiles[, SID]))))
+	#	all Rakai 597 BaseFreq files that I have locally
+	infiles	<- merge(tmp, infiles, by='SID')
+	
+	#	check missing have no bam
+	indir	<- '/Volumes/exfat/PANGEA/PANGEA_mapout/data'
+	tmp		<- data.table(F=list.files(indir, full.names=TRUE, pattern='bam$'))
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]+_[0-9]+', basename(F)) & !grepl('remap',basename(F)) )
+	tmp[, SID:= gsub('^([0-9]+_[0-9]+_[0-9]+).*','\\1',basename(F))]
+	stopifnot(!nrow(merge(tmp2, tmp, by='SID')))
+	
+	#	zip
+	outfile	<- '/Volumes/exfat/PANGEA/PANGEA_mapout/RCCS_597_BaseFreqs.zip'
+	invisible( subset(infiles, BASEFREQ=='BaseFreq')[, file.copy(F, file.path(dirname(outfile),'tmp42',basename(F))), by='F'] )
+	invisible( zip( outfile, file.path(dirname(outfile),'tmp42'), flags = "-umr9XTjq") )
+	outfile	<- '/Volumes/exfat/PANGEA/PANGEA_mapout/RCCS_597_Coord.zip'
+	invisible( subset(infiles, BASEFREQ=='Coord')[, file.copy(F, file.path(dirname(outfile),'tmp42',basename(F))), by='F'] )
+	invisible( zip( outfile, file.path(dirname(outfile),'tmp42'), flags = "-umr9XTjq") )
+	
+}
+
 project.RakaiAll.setup.batchno.170301<- function()
 {
 	require(big.phylo)
@@ -1138,6 +1174,164 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
 	
 	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')
 	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
+}
+
+project.RakaiAll.setup.phyloscanner.170301.stagethree	<- function()
+{
+	require(igraph)
+	
+	#	load dmin for filling close pairs
+	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
+	load(infile)	
+	#	look at run 1
+	infile		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun/ptyr1_pairwise_relationships.rda'
+	load(infile)	
+	group		<- 'TYPE_PAIR_TO'
+	state.ml	<- 'ancestral/\nintermingled'
+	
+	rtp			<- subset(rplkl, GROUP==group)
+	#tmp			<- rtp[, which(TYPE==state.ml)]
+	#set(rtp, tmp, 'KEFF', rtp[tmp, KEFF*1.25])
+	#	determine most likely relationship type
+	rtp			<- rtp[, 	{
+								z<- which.max(KEFF)
+								list(N=N[1], NEFF=NEFF[1], TYPE=TYPE[z], K=K[z], KEFF=KEFF[z])
+							}, by=c('ID2','ID1')]
+	rtp			<- subset(rtp, TYPE==state.ml)
+	
+	#	get transmission chains with igraph
+	tmp			<- subset(rtp, select=c(ID1, ID2))			
+	tmp			<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc			<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2		<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc			<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)
+		
+	#	add in couples that were in run1 and are now disconnected
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")	
+	rp		<- unique(subset(rp, select=c(FEMALE_RID,MALE_RID)))
+	setnames(rp, c('FEMALE_RID', 'MALE_RID'), c('ID2', 'ID1'))
+	tmp		<- copy(rp)
+	setnames(tmp, c('ID2', 'ID1'), c('ID1', 'ID2'))
+	rp		<- rbind(rp, tmp)
+	rp		<- merge(rp, unique(subset(rplkl, select=c(ID1,ID2))), by=c('ID1', 'ID2'))
+	setnames(rp, 'ID1', 'ID')
+	rp		<- merge(rp, subset(rtc, select=c(ID, IDCLU)), all.x=1, by='ID')
+	setnames(rp, c('ID','IDCLU','ID2'), c('ID1', 'ID1_IDCLU','ID'))
+	rp		<- merge(rp, subset(rtc, select=c(ID, IDCLU)), all.x=1, by='ID')
+	setnames(rp, c('ID','IDCLU'), c('ID2', 'ID2_IDCLU'))
+	tmp		<- rp[, which(is.na(ID2_IDCLU) & !is.na(ID1_IDCLU))]
+	set(rp, tmp, 'ID2_IDCLU', rp[tmp, ID1_IDCLU])
+	tmp		<- rp[, which(is.na(ID1_IDCLU) & !is.na(ID2_IDCLU))]
+	set(rp, tmp, 'ID1_IDCLU', rp[tmp, ID2_IDCLU])	
+	tmp		<- rp[, which(is.na(ID1_IDCLU) & is.na(ID2_IDCLU))]
+	set(rp, tmp, c('ID1_IDCLU','ID2_IDCLU'), rtc[, max(IDCLU)]+seq_along(tmp))	
+	setnames(rp, c('ID1_IDCLU'), c('IDCLU'))
+	rp		<- subset(melt(rp, id.vars=c('IDCLU'), measure.vars=c('ID1','ID2'), value.name='ID'), select=c(ID, IDCLU))
+	set(rtc, NULL, 'CLU_SIZE', NULL)
+	rtc		<- unique(rbind(rtc, rp))
+	tmp		<- rtc[, list(CLU_SIZE=length(ID)), by='IDCLU']
+	setkey(tmp, CLU_SIZE)
+	tmp[, IDCLU2:=rev(seq_len(nrow(tmp)))]	
+	rtc		<- merge(rtc, tmp, by='IDCLU')
+	rtc[, IDCLU:=NULL]
+	setnames(rtc, 'IDCLU2', 'IDCLU')
+	
+	#	85 individuals that are most likely ancestral/intermingled 
+	#	added 6 couples back in that are not most likely ancestral/intermingled 
+	
+	#	merge up to 8 individuals into the same phyloscanner run
+	tn			<- 9
+	tmp			<- unique(subset(rtc, select=c(IDCLU, CLU_SIZE)))		
+	tmp[, PTY_RUN:= IDCLU]
+	tmp[, PTY_SIZE:= CLU_SIZE]
+	setkey(tmp, PTY_RUN)
+	for(i in rev(seq_len(nrow(tmp))))
+	{
+		if(tmp[i,PTY_SIZE<tn])
+		{
+			for(j in 1:i)
+			{
+				if( (tmp[j,PTY_SIZE]+tmp[i,PTY_SIZE])<=tn)
+				{
+					set(tmp, i, 'PTY_RUN', tmp[j, PTY_RUN])					
+					set(tmp, j, 'PTY_SIZE',  tmp[i, PTY_SIZE]+ tmp[j, PTY_SIZE])
+					set(tmp, i, 'PTY_SIZE', 0L)
+					break
+				}
+			}
+		}
+	}
+	# manually add IDCLUD 9 to PTY_RUN 8	
+	set(tmp, tmp[, which(PTY_RUN==9)], 'PTY_RUN', 8L)	
+	tmp			<- tmp[, list(IDCLU=IDCLU, CLU_SIZE=CLU_SIZE, PTY_SIZE=sum(CLU_SIZE)), by=c('PTY_RUN')]
+	rtc			<- merge(rtc, tmp, by=c('IDCLU','CLU_SIZE'))
+	#	for every individual in a cluster
+	#	find 15 closest others
+	sn		<- 15
+	setkey(dmin, ID1, ID2)	
+	dcl		<- rtc[, {
+				tmp		<- subset(dmin, ID1==ID)
+				tmp2	<- subset(dmin, ID2==ID)
+				setnames(tmp2, c('ID1','ID2'), c('ID2','ID1'))
+				tmp		<- rbind(tmp, tmp2)
+				tmp		<- tmp[, list(PATRISTIC_DISTANCE=mean(PATRISTIC_DISTANCE_MIN)), by=c('ID1','ID2')]
+				setkey(tmp, PATRISTIC_DISTANCE)
+				tmp		<- tmp[seq_len(sn),]
+				list(ID_CLOSE= tmp[,ID2], PATRISTIC_DISTANCE=tmp[, PATRISTIC_DISTANCE])				
+			}, by=c('ID','CLU_SIZE','IDCLU')]
+	#	find as many close other individuals as needed to fill the phyloscanner run
+	#	up to 15 individuals
+	dcl		<- subset(dcl, !is.na(ID_CLOSE))
+	tmp		<- dcl[, list(ID_CLOSE=setdiff(ID_CLOSE, ID)), by='IDCLU']
+	tmp		<- merge(unique(subset(dcl, select=c('IDCLU','ID_CLOSE','CLU_SIZE','PATRISTIC_DISTANCE'))), tmp, by=c('IDCLU','ID_CLOSE'))
+	tmp		<- tmp[, list(PATRISTIC_DISTANCE=min(PATRISTIC_DISTANCE)), by=c('IDCLU','ID_CLOSE','CLU_SIZE')]
+	tmp		<- merge( unique(subset(rtc, select=c('IDCLU','PTY_RUN','PTY_SIZE'))), tmp, by='IDCLU' )
+	setkey(tmp, PTY_RUN, IDCLU, PATRISTIC_DISTANCE)	
+	tmp		<- merge(tmp, tmp[, list(NCLU=length(unique(IDCLU))), by='PTY_RUN'], by='PTY_RUN')	
+	tmp		<- tmp[, {
+				z<- seq_len( max(0,ceiling((sn-PTY_SIZE[1])/NCLU[1])) )
+				list(ID_CLOSE=ID_CLOSE[z], PATRISTIC_DISTANCE=PATRISTIC_DISTANCE[z])
+			}, by=c('PTY_RUN','IDCLU','CLU_SIZE')]
+	setnames(tmp, 'ID_CLOSE', 'ID')
+	tmp[, ID_TYPE:='background']
+	rtc[, ID_TYPE:='target']
+	
+	rtc[, PTY_SIZE:=NULL]
+	rtc		<- rbind(rtc, tmp, fill=TRUE, use.names=TRUE)
+	rtc		<- merge(rtc, rtc[, list(PTY_SIZE=length(ID)), by='PTY_RUN'], by='PTY_RUN')
+	tmp		<- unique(subset(rtc, select=c(PTY_RUN, PTY_SIZE)))
+	tmp[, PTY_RUN2:= seq_len(nrow(tmp))]
+	rtc		<- merge(rtc, subset(tmp, select=c('PTY_RUN','PTY_RUN2')), by='PTY_RUN' )
+	rtc[, PTY_RUN:=NULL]
+	setnames(rtc, 'PTY_RUN2', 'PTY_RUN')
+	
+	#	in total 143 individuals
+	
+	#
+	#	set up new phyloscanner runs object
+	#	find Sanger IDs in previous pty.runs
+	#
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75.rda')
+	tmp		<- copy(pty.runs)	
+	load('/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	tmp		<- rbind(tmp, pty.runs)
+	set(tmp, NULL, c('BATCH','PTY_RUN'), NULL)
+	tmp		<- unique(tmp)
+	pty.runs<- NULL
+	setnames(rtc, c('IDCLU','CLU_SIZE','ID','ID_TYPE','PATRISTIC_DISTANCE','PTY_SIZE'), c('TRCLU_ID','TRCLU_SIZE','RID','RID_TYPE','RID_PATRISTIC_DISTANCE','PTY_SIZE_RID'))
+	pty.runs<- merge(rtc, tmp, by='RID')
+	setkey(pty.runs, PTY_RUN, RID_TYPE, RID)
+	pty.runs<- unique(pty.runs, by=c('RID','SID','PTY_RUN'))	
+	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')
+	
+	#
+	#	add 240 so we continue previous enumeration
+	set(pty.runs, NULL, 'PTY_RUN', pty.runs[,PTY_RUN+240L])
+	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagethree.rda')
 }
 
 project.RakaiAll.forTanya<- function()
@@ -3792,6 +3986,123 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 					NULL					
 				}, by='FQ']
 	}
+	if(0)	#check failing runs
+	{		
+		df		<- data.table(F=readLines('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/all_files.txt'))
+		df		<- data.table(F=list.files('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun', pattern='^ptyr',full.names=TRUE))
+		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
+		tmp	<- df[, list(DONE=any(grepl('pairwise',F))), by='PTY_RUN']
+		setdiff(1:240, tmp[, PTY_RUN])
+		tmp	<- subset(tmp, !DONE)
+		merge(tmp, subset(pty.runs, SID=='15080_1_28', c('PTY_RUN','SID')), by='PTY_RUN', all=TRUE)
+		
+		subset(tmp, !DONE)[, cat(paste(sort(PTY_RUN), collapse='","'))]
+	}
+}
+
+pty.pipeline.phyloscanner.170301.thirdstage<- function() 
+{
+	require(big.phylo)
+	require(phyloscan)
+	#
+	#	INPUT ARGS PLATFORM
+	#	
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
+		in.dir				<- file.path(HOME,"RakaiAll_input_170301")
+		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")		
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagethree.rda') )
+		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 1							
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		pty.select			<- NA		
+	}	
+	if(0)
+	{
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'		
+	}			
+	#
+	#	INPUT ARGS PHYLOSCANNER RUN
+	#	
+	if(1)	#run read alignments+trees+Rscripts
+	{				
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft='mafft', 
+				prog.raxml=prog.raxml, 
+				data.dir=pty.data.dir, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,25,250),
+				#win=c(800,9400,125,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',				
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0.035,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				pw.trmw.min.reads=20,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.035,
+				pw.trmw.distant.brl=0.08,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.calibrated.prob=0.5,
+				mem.save=0,
+				verbose=TRUE,					
+				select=pty.select	#of 8
+		)		 
+	}		
+	#
+	#	RUN PHYLOSCANNER
+	#
+	if(1)
+	{
+		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+		#pty.c				<- subset(pty.c, PTY_RUN!=1)
+		#pty.c[1,cat(CMD)]		
+		invisible(pty.c[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAa",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							#stop()
+						}, by='PTY_RUN'])
+		quit('no')
+	}	
 	if(0)	#check failing runs
 	{		
 		df		<- data.table(F=readLines('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/all_files.txt'))

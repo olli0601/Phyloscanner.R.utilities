@@ -9199,9 +9199,39 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	tmp			<- rtp.todi2[, which(TYPE=='21')]
 	set(rtp.todi2, tmp, 'TYPE', rtp.todi2[tmp, tolower(paste0(ID2_SEX,ID1_SEX))])
 	set(rtp.todi2, NULL, 'ID1_SEX', rtp.todi2[, as.character(ID1_SEX)])
-	set(rtp.todi2, NULL, 'ID2_SEX', rtp.todi2[, as.character(ID2_SEX)])		
+	set(rtp.todi2, NULL, 'ID2_SEX', rtp.todi2[, as.character(ID2_SEX)])
 	#
-	#	prepare just the dwin and rplkl that we need for further analysis
+	#	prepare all dwin and rplkl and save separately
+	#
+	rplkl	<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				rplkl			
+			}, by='PTY_RUN']
+	rpw		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				dwin			
+			}, by='PTY_RUN']
+	#	add male female
+	tmp			<- unique(subset(rd, select=c('RID','SEX')))
+	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	setnames(tmp, c('ID1_RID'), c('ID1'))	
+	rplkl		<- merge(rplkl, tmp, by=c('ID1'))
+	rpw			<- merge(rpw, tmp, by=c('ID1'))
+	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))		
+	rplkl		<- merge(rplkl, tmp, by=c('ID2'))
+	rpw			<- merge(rpw, tmp, by=c('ID2'))
+	#	melt rpw
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_PAIR_DI","TYPE_PAIRSCORE_DI","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_PAIR_TODI2","TYPE_PAIR_TODI","TYPE_PAIRSCORE_TODI", "TYPE_CHAIN_TODI"))
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])	
+	#	save
+	save(rplkl, rpw, file=gsub('\\.rda','_allwindows.rda',outfile))
+	#
+	#	prepare just the dwin and rplkl that we need for further analysis of the pairs
 	#
 	tmp			<- unique( subset(rtp.todi2, select=c(ID1, ID2, PTY_RUN)) )	
 	infiles		<- subset(infiles, PTY_RUN%in%tmp$PTY_RUN)
@@ -12230,6 +12260,197 @@ RakaiFull.analyze.trmpairs.todi.170522.demographic.table<- function()
 	write.csv(subset(tmp, select=c(COMM_TYPE, FACTOR, participated, infected_l, sequenced_l)), row.names=FALSE, file=paste0(outfile.base,'RCCS_demographics.csv'))
 }
 
+RakaiFull.analyze.ffpairs.todi.170522<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '"~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3_allwindows.rda"'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170516_"	
+	load(infile)
+	#	per window:
+	#	make window topology assignments: TYPE_PAIR_TO ancestral/intermingled; withintermediate; other (include adjacent other here)
+	#	make boxplot
+	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')
+	rpw2[, TYPE_TO:= 'disconnected']
+	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE))], 'TYPE_TO', 'ancestral/intermingled')
+	set(rpw2, rpw2[,which(grepl('with intermediate', TYPE))], 'TYPE_TO', 'with intermediate')
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'sibling')
+	rpw2[, PATRISTIC_DISTANCE_LOG:= log10(PATRISTIC_DISTANCE)]
+	rpw2[, PATRISTIC_DISTANCE_LOGC:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, 0.0075, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-0.75%', '0.75%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
+	rpw2[, PATRISTIC_DISTANCE_LOGC2:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.035, 0.08, 2e3)),labels=c('<3.5%', '3.5%-8%', '>8%'))]	
+	rpw2[, TYPE_PAIR:= tolower(paste0(ID1_SEX, ID2_SEX))]
+	set(rpw2, rpw2[, which(TYPE_PAIR%in%c('fm','mf'))], 'TYPE_PAIR', 'hsx')
+	rpw2	<- subset(rpw2, TYPE_PAIR!='mm')
+	tmp		<- rpw2[, list(N=length(W_FROM)), by=c('TYPE_PAIR','PATRISTIC_DISTANCE_LOGC','TYPE_TO')]
+	#
+	#	plot topology assignment by distance across all windows
+	#
+	cols.typet			<- c(brewer.pal(11, 'PuOr')[2], rev(brewer.pal(11, 'PuOr'))[c(3,4)], rev(brewer.pal(11, 'RdGy'))[4])
+	names(cols.typet)	<- c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected")
+	set(tmp, NULL, 'TYPE_TO', tmp[, factor(TYPE_TO, levels=c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected"))])
+	ggplot(tmp, aes(x=PATRISTIC_DISTANCE_LOGC, y=N, fill=TYPE_TO)) +
+			geom_bar(stat='identity', position='stack') +
+			#scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			facet_grid(~TYPE_PAIR) +
+			labs(x='\npatristic distance between within-host clades of different individuals\n(subst/site)', y='genomic windows\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_counts.pdf'), w=10, h=5)
+	ggplot(tmp, aes(x=PATRISTIC_DISTANCE_LOGC, y=N, fill=TYPE_TO)) +
+			geom_bar(stat='identity', position='fill') +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			facet_grid(~TYPE_PAIR) +
+			labs(x='\npatristic distance between within-host clades of different individuals\n(subst/site)', y='genomic windows\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_prop.pdf'), w=10, h=5)
+	#
+	#	wash out and look at MLE and mean distance
+	#
+	rplkl2	<- subset(rplkl, GROUP=='TYPE_BASIC')
+	rplkl2[, TYPE_TO:= 'disconnected']
+	set(rplkl2, rplkl2[,which(grepl('no intermediate', TYPE) & grepl('chain|intermingled', TYPE))], 'TYPE_TO', 'ancestral/intermingled')
+	set(rplkl2, rplkl2[,which(grepl('with intermediate', TYPE))], 'TYPE_TO', 'with intermediate')
+	set(rplkl2, rplkl2[,which(grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'sibling')
+	rplkl2	<- rplkl2[, list(N=N[1], NEFF=NEFF[1], K=sum(K), KEFF=sum(KEFF)), by=c('ID2','ID1','PTY_RUN','ID1_SEX','ID2_SEX','TYPE_TO')]
+	#	select pairings from those runs with most data
+	pairings<- unique(subset(rplkl2, select=c(ID1,ID2,PTY_RUN,NEFF)))[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID2','ID1')]
+	rplkl2	<- merge(pairings, rplkl2, by=c('ID2','ID1','PTY_RUN'))
+	#	determine most likely state
+	rplkl2	<- rplkl2[, {
+				z<- which.max(KEFF)
+				list(N=N[1], NEFF=NEFF[1], TYPE_TO=TYPE_TO[z], K=K[z], KEFF=KEFF[z])
+			}, by=c('ID2','ID1','PTY_RUN','ID1_SEX','ID2_SEX')]
+	#	select hsx and ff
+	rplkl2[, TYPE_PAIR:= tolower(paste0(ID1_SEX, ID2_SEX))]
+	set(rplkl2, rplkl2[, which(TYPE_PAIR%in%c('fm','mf'))], 'TYPE_PAIR', 'hsx')
+	rplkl2	<- subset(rplkl2, TYPE_PAIR!='mm')
+	#	add average distance
+	tmp		<- subset(rpw, GROUP=='TYPE_BASIC')[, list(PD_MEAN=mean(PATRISTIC_DISTANCE), PD_IQL=quantile(PATRISTIC_DISTANCE,p=0.25), PD_IQU=quantile(PATRISTIC_DISTANCE,p=0.75)), by=c('ID2','ID1','PTY_RUN')]
+	rplkl2	<- merge(rplkl2, tmp, by=c('ID2','ID1','PTY_RUN'))	
+	rplkl2[, PD_MEAN_LOGC:= cut(log10(PD_MEAN), breaks=log10(c(1e-12, 0.005, 0.0075, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-0.75%', '0.75%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
+	rplkl2[, PD_MEAN_LOGC2:= cut(log10(PD_MEAN), breaks=log10(c(1e-12, 0.035, 0.08, 2e3)),labels=c('<3.5%', '3.5%-8%', '>8%'))]	
+	#	plot	
+	set(rplkl2, NULL, 'TYPE_TO', rplkl2[, factor(TYPE_TO, levels=c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected"))])
+	ggplot(rplkl2, aes(x=PD_MEAN_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='stack') +			
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			facet_grid(~TYPE_PAIR) +
+			labs(x='\npatristic distance between within-host clades of different individuals\n(average across genomic windows, in subst/site)', y='most likely topology classification\n(#pairings)\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_counts_MLE.pdf'), w=10, h=5)
+	ggplot(rplkl2, aes(x=PD_MEAN_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='fill') +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			facet_grid(~TYPE_PAIR) +
+			labs(x='\npatristic distance between within-host clades of different individuals\n(average across genomic windows, in subst/site)', y='most likely topology classification\n(to pairs of individuals)\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_prop_MLE.pdf'), w=10, h=5)
+	
+	
+	
+	
+	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
+	group 					<- 'TYPE_PAIR_TODI2'
+	
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_"	
+	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
+	#	now load second stage output
+	load(infile.trmpairs.todi)
+	
+	#
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with lowest evidence		
+	rtp		<- subset(rtp.todi2, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- subset(rtp, ID1!=ID2)
+	rtp		<- merge(rtp, subset(rtp.todi2, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		
+	rtp[, length(unique(c(ID1,ID2)))]								
+	#	
+	#	directed likely transmission pairs, using topology and distance	
+	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
+	rtpd	<- merge(tmp, subset(rtp.todi2, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		
+	rtpd[, length(unique(c(ID1,ID2)))]							
+	
+	#
+	#	select only m->f, f->m
+	#	
+	rtpd[, table(ID1_SEX, ID2_SEX)]	
+	# on stage 1:
+	#            ID2_SEX
+	#	ID1_SEX  F  M
+	#			F 507 496
+	#			M 317 216		723/1511= 47%
+	
+	# on stage 2:
+	#            ID2_SEX
+	#	ID1_SEX  F  M
+	#		  F  51 140
+	#		  M 117  56			107/364= 29%
+	
+	rtpd.all<- copy(rtpd)	
+	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
+	
+	
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"	
+	load(infile)
+	#	per pair:
+	#	make pair topology assignments: TYPE_PAIR_TO ancestral/intermingled; other; ambiguous as usual
+	#	stratify mean patristic distance
+	#	make boxplot
+	#	OK if not too coarse, just a pain
+	
+	#	per window:
+	#	make window topology assignments: TYPE_PAIR_TO ancestral/intermingled; withintermediate; other (include adjacent other here)
+	#	make boxplot
+	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')
+	rpw2[, TYPE_TO:= 'disconnected']
+	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE))], 'TYPE_TO', 'ancestral/intermingled')
+	set(rpw2, rpw2[,which(grepl('with intermediate', TYPE))], 'TYPE_TO', 'with intermediate')
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'sibling')
+	rpw2[, PATRISTIC_DISTANCE_LOG:= log10(PATRISTIC_DISTANCE)]
+	rpw2[, PATRISTIC_DISTANCE_LOGC:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, 0.0075, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-0.75%', '0.75%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
+	rpw2[, PATRISTIC_DISTANCE_LOGC2:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.035, 0.08, 2e3)),labels=c('<3.5%', '3.5%-8%', '>8%'))]	
+	
+	#
+	#	plot topology assignment by distance
+	#
+	cols.typet			<- c(brewer.pal(11, 'PuOr')[2], rev(brewer.pal(11, 'PuOr'))[c(3,4)], rev(brewer.pal(11, 'RdGy'))[4])
+	names(cols.typet)	<- c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected")
+	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected"))])
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='fill') +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\npatristic distance between WH clades\n(subst/site)', y='genomic windows\nacross couples\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_prop.pdf'), w=7, h=4.5)
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='stack') +
+			scale_y_continuous(breaks=seq(0,20e3,1e3), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\npatristic distance between WH clades\n(subst/site)', y='genomic windows\nacross couples\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count.pdf'), w=7, h=4.5)
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC2, fill=TYPE_TO)) +
+			geom_bar(position='fill') +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\npatristic distance between WH clades\n(subst/site)', y='genomic windows\nacross couples\n', fill='pairwise\ntopological relationship')
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_prop_3diststrat.pdf'), w=4, h=5)
+}
+
 RakaiFull.analyze.couples.todi.170522.DI.vs.TODI.vs.DIR<- function()
 {	
 	require(data.table)
@@ -12489,6 +12710,9 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
 	load(infile)	#loads sq.gd
 	setnames(sq.gd, 'PD', 'GD')
+	#	load PANGEA sequence info
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
+	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
 	
 	#
 	#	load couples and add TAXA + SIDs
@@ -12562,12 +12786,12 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 			theme_bw() + theme(legend.position='bottom') +			
 			labs(x='\nsubst/site', y='', colour='')
 	ggsave(file=paste0(outfile.base,'_distances_consGenetic_bimodal.pdf'), w=5, h=5)
-	tmp		<- subset(dfd, PHSC_W=='all' & !is.na(PD) & !is.na(PHSC_PD_MEAN))
-	tmp		<- melt(tmp, id.vars=c('MALE_RID','FEMALE_RID','PTY_RUN'), measure.vars=c('PHSC_PD_MEAN','GD'))
-	set(tmp, NULL, 'variable', tmp[, as.character(factor(as.character(variable), levels=c('PHSC_PD_MEAN','GD'), labels=c('patristic distance between WH clades','patristic distance between consensus sequences')))])
-	set(tmp, tmp[, which(value<1e-3)], 'value', 1e-3)	
-	#tmp		<- subset(tmp, variable=='PHSC_PD_MEAN')
-	ggplot(tmp, aes(x=log10(value), colour=variable)) +
+	dfds	<- subset(dfd, PHSC_W=='all' & !is.na(PD) & !is.na(PHSC_PD_MEAN))
+	dfds	<- melt(dfds, id.vars=c('MALE_RID','FEMALE_RID','PTY_RUN'), measure.vars=c('PHSC_PD_MEAN','GD'))
+	set(dfds, NULL, 'variable', dfds[, as.character(factor(as.character(variable), levels=c('PHSC_PD_MEAN','GD'), labels=c('patristic distance between WH clades','patristic distance between consensus sequences')))])
+	set(dfds, dfds[, which(value<1e-3)], 'value', 1e-3)	
+	#dfds	<- subset(dfds, variable=='PHSC_PD_MEAN')
+	ggplot(dfds, aes(x=log10(value), colour=variable)) +
 			geom_vline(xintercept=log10(c(0.035,0.08)), colour='grey70') +
 			geom_density(adjust=1.2, kernel='epanechnikov') +
 			scale_colour_brewer(palette='Set1') +			
@@ -12578,6 +12802,45 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 			theme_bw() + theme(legend.position='bottom') +			
 			labs(x='\nsubst/site', y='', colour='')
 	ggsave(file=paste0(outfile.base,'_distances_consPatristic_bimodal.pdf'), w=5, h=5)
+	
+	#
+	#	fit 2 component mixture model
+	#	
+	require(mclust)
+	dfds	<- subset(dfd, PHSC_W=='all' & !is.na(PD) & !is.na(PHSC_PD_MEAN) & PHSC_PD_MEAN>1e-5 & PHSC_PD_MEAN<1)
+	m1		<- densityMclust( log(dfds$PHSC_PD_MEAN), G=2)
+	plot(m1, what='density', data= log(dfds$PHSC_PD_MEAN), breaks=50)
+	densityMclust.diagnostic(m1, type='cdf')	
+	#	mean and variance of first component	
+	tmp		<- log(seq(1e-4,1,0.0001))
+	th1		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance)[c(1,3)])
+	dens1	<- data.table(X=tmp, Y=dnorm(tmp, mean=th1[1], sd=sqrt(th1[2])))
+	th2		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance)[c(2,4)])
+	dens2	<- data.table(X=tmp, Y=dnorm(tmp, mean=th2[1], sd=sqrt(th2[2])))
+	
+	#	3.5% threshold corresponds to 9.14% quantile of the LogNormal
+	pnorm(log(0.035), mean=th1[1], sd=sqrt(th1[2]), lower.tail=FALSE)
+	#	10% quantile is 3.3% threshold
+	exp(qnorm(0.9, mean=th1[1], sd=sqrt(th1[2])))
+	#tmp		<- seq(1e-4,0.1,0.0001)
+	#tmp		<- data.table(X=tmp, Y=dlnorm(tmp, meanlog=th1[1], sdlog=sqrt(th1[2]), log=FALSE))
+	
+	ggplot(dfds) +
+			geom_vline(xintercept=log(c(0.035,0.08)), colour='grey70') +
+			geom_vline(xintercept=qnorm(c(1e-3, 0.005, 0.01), mean=th2[1], sd=sqrt(th2[2])), colour='blue') +
+			geom_vline(xintercept=qnorm(c(0.8,0.9,0.95), mean=th1[1], sd=sqrt(th1[2])), colour='red') +
+			geom_histogram(aes(x=log(PHSC_PD_MEAN), y=..density..), binwidth=0.2) +
+			geom_line(data=dens2, aes(x=X, y=Y*0.43), colour='blue') +
+			geom_line(data=dens1, aes(x=X, y=Y*0.57), colour='red') +			
+			#scale_colour_brewer(palette='Set1') +			
+			scale_y_continuous(expand=c(0,0), limits=c(0,0.6)) + 
+			scale_x_continuous(limits=log(c(0.0009, 1)), expand=c(0,0), 
+					breaks=log(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nsubst/site', y='', colour='')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted.pdf'), w=5, h=5)
+	
 	
 	#
 	#	correlation plot genetic distance
