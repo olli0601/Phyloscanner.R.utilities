@@ -4012,7 +4012,7 @@ pty.pipeline.phyloscanner.170301.thirdstage<- function()
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
 		in.dir				<- file.path(HOME,"RakaiAll_input_170301")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")		
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagethree")		
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagethree.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
