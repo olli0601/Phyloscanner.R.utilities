@@ -1338,8 +1338,7 @@ project.RakaiAll.setup.phyloscanner.170301.stagethree	<- function()
 
 ######################################################################################
 project.Rakai.ExaMLTree.170601<- function()
-{
-	infile.fa		<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017',)
+{	
 	require(big.phylo)
 	if(0)	#	MAC
 	{
