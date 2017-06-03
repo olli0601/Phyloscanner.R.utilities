@@ -17,7 +17,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees()
 	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
-	pty.pipeline.phyloscanner.170301.thirdstage()
+	#pty.pipeline.phyloscanner.170301.thirdstage()
+	project.Rakai.ExaMLTree.170601()
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
@@ -4139,7 +4140,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	if(0)
 	{
 		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
-		pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'		
+		in.dir				<- '/Users/Oliver/duke/tmp'
+		out.dir				<- '/Users/Oliver/duke/tmp'
+		work.dir			<- '/Users/Oliver/duke/tmp'
 	}			
 	#
 	#	INPUT ARGS PHYLOSCANNER RERUN
@@ -4170,7 +4173,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
-				win=c(800,9400,125,250), 				
+				win=c(800,9400,25,250), 				
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
 				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
@@ -4202,7 +4205,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(69, 80, 126, 132, 149, 179, 232, 238))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(69, 80, 126, 132, 149, 179, 232, 238))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)

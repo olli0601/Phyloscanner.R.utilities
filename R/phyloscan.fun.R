@@ -229,7 +229,7 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 
-phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, proximityThreshold=NA, readCountsMatterOnZeroBranches=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, proximityThreshold=NA, readCountsMatterOnZeroBranches=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, outputAsRDA=1, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
 {	
 	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
 	if(!is.na(blacklistFiles))
@@ -256,7 +256,9 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
 		cmd	<- paste(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"',sep='')
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
-		cmd	<- paste(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation, sep='')	
+		cmd	<- paste(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation, sep='')
+	if(!is.na(outputAsRDA) & outputAsRDA==TRUE)
+		cmd	<- paste(cmd, ' --outputAsRDA ', sep='')
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -2377,6 +2379,62 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	df
 }
 
+#' @title Wrapper script to calculate pairwise relationships and likelihoods
+#' @export
+phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types, verbose=TRUE)
+{
+	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'),
+					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
+	set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
+	#
+	#	selection windows
+	#	
+	if(verbose) cat('\nReducing transmission window stats to windows with at least',trmw.min.reads,'reads and at least',trmw.min.tips,'tips ...')
+	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
+	if(verbose) cat('\nTotal number of windows with trm assignments is',nrow(dwin),'...')		
+	#
+	#	define basic relationship types
+	#
+	setnames(dwin, 'TYPE', 'TYPE_RAW')
+	if(verbose) cat('\nCalculate basic pairwise relationships for windows n=',nrow(dwin),'...')
+	dwin	<- phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)
+	#
+	#	derive other relationship types
+	#
+	if(verbose) cat('\nCalculate derived pairwise relationships for windows n=',nrow(dwin),'...')
+	setnames(dwin, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	#for backwards compatibility
+	dwin	<- phsc.get.pairwise.relationships(dwin, get.groups=relationship.types, make.pretty.labels=FALSE)
+	setnames(dwin, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
+	#
+	#	calculate effective K. 
+	#	this is based on windows and contiguous chunks of windows
+	#
+	#	guess W_FROM W_TO from SUFFIX
+	if(verbose) cat('\nCalculate KEFF and NEFF for windows n=',nrow(dwin),'...')
+	set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
+	set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
+	rplkl	<- phsc.get.pairwise.relationships.keff.and.neff(dwin, relationship.types)
+	#
+	#	calculate marginal posterior for each pairwise relationship state 
+	#	this needs a prior which is calibrated as desired.   
+	#	the default calibration is KEFF=2 out of NEFF=3 windows are of type t so that the pair is selected to be of type t with posterior probability=50%
+	#
+	if(verbose) cat('\nCalculate posterior state probabilities for pairs and relationship groups n=',nrow(rplkl),'...')
+	rplkl	<- phsc.get.pairwise.relationships.posterior(rplkl, n.type=prior.keff, n.obs=prior.neff, confidence.cut=prior.calibrated.prob)
+	#
+	#	make TYBE_BASIC labels nice
+	#
+	tmp		<- rplkl[, which(GROUP=='TYPE_BASIC')]
+	set(rplkl, tmp, 'TYPE', rplkl[tmp, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE)))))])	
+	set(rplkl, tmp, 'TYPE', rplkl[tmp, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE))))))])
+	set(rplkl, tmp, 'TYPE', rplkl[tmp, gsub('_',' ',TYPE)])
+	set(dwin, NULL, 'TYPE_BASIC', dwin[, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE_BASIC)))))])	
+	set(dwin, NULL, 'TYPE_BASIC', dwin[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE_BASIC))))))])
+	set(dwin, NULL, 'TYPE_BASIC', dwin[, gsub('_',' ',TYPE_BASIC)])
+	
+	list(dwin=dwin, rplkl=rplkl)
+}
+
 #' @title Calculate pairwise relationships
 #' @description This function calculates pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.
 #' @export    
@@ -2448,7 +2506,7 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 	if('TYPE_PAIR_TODI2'%in%get.groups)
 	{
 		df[, TYPE_PAIR_TODI2:= 'other']	
-		#	this counts 'other_close' as 'distant' since this is typically broken by a reference		
+		#	this counts 'other_close' as 'other' 		
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'likely pair')
 	}	
 	#
@@ -2456,11 +2514,11 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 	#
 	if('TYPE_PAIR_TODI'%in%get.groups)
 	{
-		df[, TYPE_PAIR_TODI:= 'distant']	
-		#	this counts 'other_close' as 'distant' since this is typically broken by a reference
-		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'chain')
-		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')
+		df[, TYPE_PAIR_TODI:= 'distant/disconnected']	
+		#	this counts 'other_close' as 'distant/disconnected'
 		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'distant/disconnected')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')		
 	}
 	#	same as TYPE_PAIR_TODI but do not count ambiguous distance
 	if('TYPE_PAIRSCORE_TODI'%in%get.groups)
