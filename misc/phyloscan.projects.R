@@ -1461,6 +1461,14 @@ project.Rakai.FastTree.170601<- function()
 	outfile.ft		<- gsub('\\.fasta',paste0(sprintf("%03d",bs.id),'_ft.newick'),infile.fasta)	
 	tmp				<- cmd.fasttree.one.bootstrap(infile.fasta, bs.id, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
 	
+	#	rm UG501871 and mafft again to check if alignment error
+	sq				<- read.dna('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4232_Imperial_v170601_UgandaAlignment_minCov700.fasta', format='fa')
+	tmp				<- which(grepl('UG501871',rownames(sq)))
+	z				<- gsub('\\?|\\-','',paste0(as.character(sq[tmp,]), collapse=''))
+	cat(paste0('>',rownames(sq)[tmp],'\n',z,'\n'), file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_UG501871.fasta')
+	z				<- seq.replace(sq[-tmp,], code.from='?', code.to='-', verbose=0)
+	write.dna(z, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4231_Imperial_v170601_UgandaAlignment_minCov700.fasta', format='fa')
+	
 }
 
 project.RakaiAll.forTanya<- function()
@@ -1640,7 +1648,22 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	#	define Sampling Time
 	set(dc, NULL, 'WTSI_SUBMITTED_DATE', dc[, as.Date(WTSI_SUBMITTED_DATE)])	
 	stopifnot(!nrow(subset(dc, HPC_BAM!=HPC_REF)))
+	#	add column consensus available + length consensus	
+	tmp		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/PANGEA_HIV_n5014_Imperial_v170601_UgandaAlignment.fasta'
+	sq		<- read.dna(tmp, format='fasta')	
+	sqi		<- data.table(PIDF=rownames(sq))	
+	tmp		<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, IMPERIAL_LEN:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum)]
+	dc		<- merge(dc, sqi, by='PIDF', all.x=1)	
+	save(dc, file=file.path(indir,'Rakai_phyloscanner_170301_assemblystatus.rda'))
 	
+	if(0)	#consensus stats
+	{
+		subset(dc, !is.na(SID) & is.na(IMPERIAL_LEN))	#213
+		subset(dc, !is.na(SID) & !is.na(IMPERIAL_LEN) & IMPERIAL_LEN<700) #766
+		subset(dc, !is.na(SID) & IMPERIAL_LEN*1.2<UCL_LEN)	#1493
+		subset(dc, !is.na(SID) & IMPERIAL_LEN>UCL_LEN*1.2)	#19
+	}
 	if(0)
 	{
 		#	add PANGEA2 IDs

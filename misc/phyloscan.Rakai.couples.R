@@ -12643,6 +12643,111 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	
 }
 
+RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"	
+	load(infile)	
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]
+	
+	#	for each pair:
+	#	get posterior prob for likely pair
+	rpp					<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair')
+	#	merge PAIRID
+	rpp					<- merge(rpp,unique(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))),by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	#	sort by posterior median highest for likely pair
+	rpp					<- rpp[order(qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)),]
+	set(rpp, NULL, 'PAIRID',rpp[, factor(PAIRID, levels=rpp$PAIRID)])	
+	p3	<- ggplot(rpp, aes(x=PAIRID)) +
+			geom_segment(aes(xend=PAIRID, y=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA),yend=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='grey50') +
+			geom_point(aes(y=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='black') +			
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.25), labels=scales::percent) +					
+			theme_bw() + 			
+			theme(axis.text.x=element_blank()) +
+			theme(axis.ticks.x=element_blank()) +
+			theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank()) +
+			labs(x='',y='',fill='')
+	#	for each pair:
+	#	make pair topology assignments: ancestral, intermingled, sibling, disconnected
+	rplkl2				<- subset(rplkl, GROUP=='TYPE_BASIC')
+	rplkl2[, TYPE_TO:= 'disconnected/ not close']
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('chain', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'close intermingled')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	rplkl2				<- rplkl2[, list(N=N[1],NEFF=NEFF[1],K=sum(K),KEFF=sum(KEFF)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+	set(rplkl2, NULL, 'TYPE_TO', rplkl2[, factor(TYPE_TO, levels=c('close ancestral','close intermingled','close sibling','disconnected/ not close'))])
+	#	copy sorted PAIRID to rplkl2
+	rplkl2				<- merge(rplkl2, unique(subset(rpp, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	#
+	p2	<- ggplot(rplkl2, aes(x=PAIRID, y=KEFF, fill=TYPE_TO)) +
+			geom_bar(stat='identity',position='stack') +
+			scale_y_continuous(expand=c(0,0)) +
+			scale_fill_manual(values=c("close ancestral"=brewer.pal(11, 'PuOr')[2], "close intermingled"=brewer.pal(11, 'PuOr')[4], 'close sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected/ not close"=rev(brewer.pal(11, 'RdGy'))[4])) +
+			labs(x='', y='', fill='') +
+			theme_bw() + 
+			theme(legend.position='bottom') +
+			theme(axis.ticks.x=element_blank()) +
+			theme(panel.border=element_blank()) +
+			theme(axis.text.x=element_blank()) +
+			theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
+	#	for each pair:
+	#	get phyloscanner distances confidence intervals and median values
+	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')[, list(	PD_CL=quantile(PATRISTIC_DISTANCE,p=0.025),
+														PD_IL=quantile(PATRISTIC_DISTANCE,p=0.25),
+														PD_M=mean(PATRISTIC_DISTANCE),
+														PD_IU=quantile(PATRISTIC_DISTANCE,p=0.75),
+														PD_CU=quantile(PATRISTIC_DISTANCE,p=0.975)
+														),by=c('MALE_RID','FEMALE_RID','PTY_RUN')]
+	rpw2	<- merge(rpw2, unique(subset(rpp, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	set(rpw2, rpw2[, which(PD_M>0.2)], 'PD_M', 0.2)
+	p1		<- ggplot(rpw2, aes(x=PAIRID)) +
+			geom_segment(aes(xend=PAIRID, y=PD_CL,yend=PD_CU), colour='grey50') +
+			geom_point(aes(y=PD_M), colour='black') +
+			scale_y_continuous(expand=c(0,0), labels=scales::percent) +
+			theme_bw() + 
+			theme(axis.text.x=element_blank()) +
+			theme(axis.ticks.x=element_blank()) +
+			theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank()) +
+			labs(x='',y='',fill='') +	
+			coord_cartesian(ylim=c(0,0.201))
+	#	for each pair:
+	#	ambiguity measure -- proportion of windows that are not assigned the most likely relationship type 
+	rpa		<- rplkl2[, list(TYPE_MLE=TYPE_TO[which.max(KEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN')]	
+	rpa		<- merge(rpa, rplkl2, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	rpa[, TYPE_AGREE:= factor(TYPE_TO==TYPE_MLE, levels=c(TRUE,FALSE), labels=c('y','n'))]
+	rpa		<- rpa[, list(N=N[1], NEFF=NEFF[1], K=sum(K), KEFF=sum(KEFF), PEFF=sum(KEFF)/NEFF[1]), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_AGREE','PAIRID')]
+	rpa		<- subset(rpa, TYPE_AGREE=='n')
+	p4		<- ggplot(rpa, aes(x=PAIRID)) +			
+			geom_point(aes(y=PEFF), colour='black') +
+			scale_y_continuous(expand=c(0,0), limits=c(-5e-3,1), labels=scales::percent, breaks=seq(0,1,0.25)) +
+			theme_bw() + 
+			theme(axis.text.x=element_blank()) +
+			theme(axis.ticks.x=element_blank()) +
+			theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank()) +
+			labs(x='',y='',fill='') +
+			coord_cartesian(ylim=c(0,0.751))
+	plot.file	<- paste0(outfile.base, 'birdseyeview.pdf')
+	pdf(file=plot.file, h=8.27*1.25, w=11.69*1.5, useDingbats=FALSE)
+	grid.newpage()	
+	pushViewport(viewport(layout=grid.layout(4, 1, heights=unit(c(3.5,2,2,1.5), "null"))))   	
+	print(p1, vp=viewport(layout.pos.row=2, layout.pos.col=1))
+	print(p2, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+	print(p3, vp=viewport(layout.pos.row=3, layout.pos.col=1))
+	print(p4, vp=viewport(layout.pos.row=4, layout.pos.col=1))
+	#grid.draw(p3)
+	dev.off()	
+	
+}
+	
 RakaiFull.analyze.couples.todi.170522.DI.vs.TODI.vs.DIR<- function()
 {	
 	require(data.table)
@@ -13105,8 +13210,7 @@ RakaiFull.analyze.couples.todi.170522.DIRext<- function()
 }
 
 RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
-{
-	
+{	
 	require(data.table)
 	require(scales)
 	require(ggplot2)
@@ -13193,25 +13297,19 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 	#
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
 	tmp		<- unique(subset(rp, select=c(FEMALE_RID, FEMALE_MARSTAT, FEMALE_ALC, FEMALE_SEXP1YR, FEMALE_SEXP1OUT, FEMALE_COMM_TYPE, MALE_RID, MALE_MARSTAT, MALE_ALC, MALE_SEXP1YR, MALE_SEXP1OUT, MALE_COMM_TYPE, COUP_SC)))
-	dfd		<- merge(dfd, tmp, by=c('MALE_RID','FEMALE_RID'))
-	
+	dfd		<- merge(dfd, tmp, by=c('MALE_RID','FEMALE_RID'))	
 	dfd[, EXTRA_PARTNERS:=NA_character_]
 	set(dfd, dfd[, which(grepl('Monogamous$',MALE_MARSTAT) | grepl('Monogamous$',FEMALE_MARSTAT))], 'EXTRA_PARTNERS', 'none')
 	set(dfd, dfd[, which(grepl('Monogamous \\+ casual',MALE_MARSTAT) | grepl('Monogamous \\+ casual',FEMALE_MARSTAT))], 'EXTRA_PARTNERS', 'at least one')
 	set(dfd, dfd[, which(grepl('Monogamous \\+ casual',MALE_MARSTAT) & grepl('Monogamous \\+ casual',FEMALE_MARSTAT))], 'EXTRA_PARTNERS', 'both')
-	set(dfd, NULL, 'EXTRA_PARTNERS', dfd[, factor(EXTRA_PARTNERS, levels=c('both','at least one','none'))])
-	
+	set(dfd, NULL, 'EXTRA_PARTNERS', dfd[, factor(EXTRA_PARTNERS, levels=c('both','at least one','none'))])	
 	dfd[, ALC:='no']
-	set(dfd, dfd[, which(ID1_ALC=='Y'|ID2_ALC=='Y')],'ALC','yes')
+	set(dfd, dfd[, which(MALE_ALC=='Y'|FEMALE_ALC=='Y')],'ALC','yes')
 	dfd[, SEXP1OUT:='unknown']
-	set(dfd, dfd[, which(ID1_SEXP1OUT=='0'&ID2_SEXP1OUT=='0')],'SEXP1OUT','no')
-	set(dfd, dfd[, which(ID1_SEXP1OUT!='0'|ID2_SEXP1OUT!='0')],'SEXP1OUT','yes')	
-	set(dfd, NULL, 'SELECT_AS_LKL_PAIR', dfd[, factor(SELECT_AS_LKL_PAIR, levels=c(0,1), labels=c('no','yes'))])	
+	set(dfd, dfd[, which(MALE_SEXP1OUT=='0'& FEMALE_SEXP1OUT=='0')],'SEXP1OUT','no')
+	set(dfd, dfd[, which(MALE_SEXP1OUT!='0'| FEMALE_SEXP1OUT!='0')],'SEXP1OUT','yes')			
 	set(dfd, NULL, 'SEXP1OUT', dfd[, factor(SEXP1OUT, levels=c('yes','no'))])
 				
-	
-	
-
 	#
 	#	bimodality
 	#	
@@ -13271,36 +13369,49 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 	require(mclust)
 	dfds	<- subset(dfd, PHSC_W=='all' & !is.na(PD) & !is.na(PHSC_PD_MEAN) & PHSC_PD_MEAN>1e-5 & PHSC_PD_MEAN<1)
 	m1		<- densityMclust( log(dfds$PHSC_PD_MEAN), G=2)
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_pdf.pdf'), w=5, h=5)
 	plot(m1, what='density', data= log(dfds$PHSC_PD_MEAN), breaks=50)
+	dev.off()
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_cdf.pdf'), w=5, h=5)
 	densityMclust.diagnostic(m1, type='cdf')	
+	dev.off()
 	#	mean and variance of first component	
 	tmp		<- log(seq(1e-4,1,0.0001))
-	th1		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance)[c(1,3)])
+	th1		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(1,3,5)])
 	dens1	<- data.table(X=tmp, Y=dnorm(tmp, mean=th1[1], sd=sqrt(th1[2])))
-	th2		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance)[c(2,4)])
+	th2		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(2,4,6)])
 	dens2	<- data.table(X=tmp, Y=dnorm(tmp, mean=th2[1], sd=sqrt(th2[2])))
+	densm	<- data.table(X=tmp, Y=predict.densityMclust(m1, tmp))
 	
 	#	3.5% threshold corresponds to 9.14% quantile of the LogNormal
 	pnorm(log(0.035), mean=th1[1], sd=sqrt(th1[2]), lower.tail=FALSE)
+	#	3.5% threshold corresponds to 0.6% quantile of the LogNormal
+	pnorm(log(0.035), mean=th2[1], sd=sqrt(th2[2]), lower.tail=TRUE)	
+	#	8% threshold corresponds to 6.936269e-07 quantile of the LogNormal
+	pnorm(log(0.08), mean=th2[1], sd=sqrt(th2[2]), lower.tail=TRUE)
+	
 	#	10% quantile is 3.3% threshold
 	exp(qnorm(0.9, mean=th1[1], sd=sqrt(th1[2])))
 	#tmp		<- seq(1e-4,0.1,0.0001)
 	#tmp		<- data.table(X=tmp, Y=dlnorm(tmp, meanlog=th1[1], sdlog=sqrt(th1[2]), log=FALSE))
 	
 	ggplot(dfds) +
-			geom_vline(xintercept=log(c(0.035,0.08)), colour='grey70') +
-			geom_vline(xintercept=qnorm(c(1e-3, 0.005, 0.01), mean=th2[1], sd=sqrt(th2[2])), colour='blue') +
-			geom_vline(xintercept=qnorm(c(0.8,0.9,0.95), mean=th1[1], sd=sqrt(th1[2])), colour='red') +
-			geom_histogram(aes(x=log(PHSC_PD_MEAN), y=..density..), binwidth=0.2) +
-			geom_line(data=dens2, aes(x=X, y=Y*0.43), colour='blue') +
-			geom_line(data=dens1, aes(x=X, y=Y*0.57), colour='red') +			
+			annotate("rect", xmin=log(2e-4), xmax=log(0.035), ymin=-Inf, ymax=Inf, fill=brewer.pal(11, 'PuOr')[2], alpha=0.5) +
+			annotate("rect", xmin=log(0.08), xmax=log(1), ymin=-Inf, ymax=Inf, fill=rev(brewer.pal(11, 'RdGy'))[4], alpha=0.5) +
+			#geom_vline(xintercept=log(c(0.035,0.08)), colour='grey70') +
+			#geom_vline(xintercept=qnorm(c(1e-3, 0.005, 0.01), mean=th2[1], sd=sqrt(th2[2])), colour='blue') +
+			#geom_vline(xintercept=qnorm(c(0.8,0.9,0.95), mean=th1[1], sd=sqrt(th1[2])), colour='red') +
+			geom_histogram(aes(x=log(PHSC_PD_MEAN), y=..density..), binwidth=0.2, colour='white', fill='skyblue3') +
+			geom_line(data=densm, aes(x=X, y=Y), lwd=0.8, colour='black') +			
+			#geom_line(data=dens1, aes(x=X, y=Y*0.57), lwd=1.25, colour=brewer.pal(11, 'PuOr')[2]) +
+			#geom_line(data=dens2, aes(x=X, y=Y*0.432), lwd=1.25, colour=rev(brewer.pal(11, 'RdGy'))[4]) +			
 			#scale_colour_brewer(palette='Set1') +			
-			scale_y_continuous(expand=c(0,0), limits=c(0,0.6)) + 
-			scale_x_continuous(limits=log(c(0.0009, 1)), expand=c(0,0), 
-					breaks=log(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
-					labels=paste0(100*c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			scale_y_continuous(expand=c(0,0), limits=c(0,0.52)) + 
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
 			theme_bw() + theme(legend.position='bottom') +			
-			labs(x='\nsubst/site', y='', colour='')
+			labs(x='\npatristic distance between within-host subtrees of spouses\n( subst/site )', y='density', colour='')
 	ggsave(file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted.pdf'), w=5, h=5)
 	
 	
