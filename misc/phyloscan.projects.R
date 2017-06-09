@@ -879,6 +879,25 @@ project.RakaiAll.setup.prior.170301<- function()
 	
 	N_TYPE<-3; NEFF<- 3; KEFF<- NEFF*2/3; n0<- c(0.1,0.5,1,2,3,4)
 	pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), n0/N_TYPE+KEFF, n0*(1-1/N_TYPE)+NEFF-KEFF, lower.tail=FALSE)
+	
+	
+	n0	<- 1; T<- 3; n<- seq(3,6,.5); k<- n-1	
+	pbeta(1/T, (n0+T*k)/T, ((T-1)*n0+T*(n-k))/T, lower.tail=FALSE)
+	
+	n0	<- 2; T<- 2; n<- seq(3,6,1); k<- n-1
+	a<- (n0+T*k)/T
+	b<- ((T-1)*n0+T*(n-k))/T
+	(a-1)/(a+b-2)
+	(n0+T*(k-1))/ (T*(n+n0-2))
+	
+	n.states<- 2; keff<- 3; neff<- 4; confidence.cut<- 0.66
+	phsc.find.n0.aux<- function(n0, n.states, keff, neff, confidence.cut)
+	{
+		abs( (n0+n.states*(keff-1))/ (n.states*(neff+n0-2)) - confidence.cut )
+	}	
+	ans	<- optimize(phsc.find.n0.aux, c(.001,100), n.states=n.states, keff=keff, neff=neff, confidence.cut=confidence.cut)
+	ans	<- round(ans$minimum, d=4)
+	plot(seq(0,1,1e-3), dbeta(seq(0,1,1e-3),1/n.states*ans,1/n.states*ans), type='l')
 }
 
 project.RakaiAll.setup.consensuses<- function()
@@ -4282,7 +4301,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1		
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
+		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
@@ -4340,9 +4360,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
-				pw.prior.keff=2,
-				pw.prior.neff=3,
-				pw.prior.calibrated.prob=0.5,
+				pw.prior.keff=3,
+				pw.prior.neff=4,
+				pw.prior.calibrated.prob=0.66,
 				mem.save=0,
 				verbose=TRUE,				
 				select=NA
@@ -4355,6 +4375,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
+		pty.c	<- subset(pty.c, PTY_RUN!=1)
 		#pty.c	<- subset(pty.c, PTY_RUN%in%c(69, 80, 126, 132, 149, 179, 232, 238))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]

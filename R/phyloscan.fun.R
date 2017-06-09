@@ -128,6 +128,8 @@ phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outpu
 		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
+	if(!is.na(tipRegex))
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')	
 	if(!is.na(seed))
 		cmd	<- paste(cmd, '--seed', seed)
 	if(!is.na(verbose) & verbose)
@@ -1233,7 +1235,11 @@ phsc.plot.default.colours.for.relationtypes<- function()
 			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI2']]	<- tmp2
-	
+	tmp2		<- data.table(	TYPE= c("mf","12","fm","21",'ambiguous'),
+			COLS= c('steelblue2','steelblue2', 'hotpink2','hotpink2','grey50'))					
+	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
+	cols.type[['TYPE_DIRSCORE_TODI3']]	<- tmp2	
+	cols.type[['TYPE_DIR_TODI3']]		<- cols.type[['TYPE_DIRSCORE_TODI3']]	
 	cols.type
 }
 
@@ -1372,7 +1378,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 			heights	<- unit(c(2, 3.5, 4, 3.75), "null")
 			height	<- 8
 		}
-		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_CHAIN_TODI','TYPE_PAIR_TODI2'))
+		if(group%in%c('TYPE_PAIR_TODI3','TYPE_PAIR_DI','TYPE_CHAIN_TODI','TYPE_PAIR_TODI2','TYPE_DIRSCORE_TODI3','TYPE_DIR_TODI3'))
 		{
 			heights	<- unit(c(2, 3.5, 4, 3.5), "null")
 			height	<- 7
@@ -2459,6 +2465,12 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'close')
 		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'distant')			
 	}	
+	if('TYPE_PAIR_DI2'%in%get.groups)
+	{
+		df[, TYPE_PAIR_DI2:= 'not close']
+		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI2', 'close')			
+	}
+	
 	#	
 	#	group to define likely pair just based on topology
 	#	
@@ -2500,6 +2512,16 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '12')
 		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '21')
 	}
+	if('TYPE_DIR_TODI4'%in%get.groups)
+	{				
+		df[, TYPE_DIR_TODI4:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
+		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'ambiguous')
+		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'ambiguous')				
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', '21')
+	}	
 	#
 	#	group to determine likely pairs - only 2 states, likely pair / no
 	#
@@ -2624,7 +2646,18 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 #' @param n.obs Minimum number of windows to select a pair of individuals with confidence at least confidence.cut. 
 #' @param confidence.cut Confidence cut off.  
 #' @return Prior parameter n0 
-phsc.get.prior.parameter.n0<- function(n.states, n.type=2, n.obs=3, confidence.cut=0.5)
+phsc.get.prior.parameter.n0<- function(n.states, keff=3, neff=4, confidence.cut=0.75)
+{
+	phsc.find.n0.aux<- function(n0, n.states, keff, neff, confidence.cut)
+	{
+		abs( (n0+n.states*(keff-1))/ (n.states*(neff+n0-2)) - confidence.cut )
+	}	
+	ans	<- optimize(phsc.find.n0.aux, c(.001,1e2), n.states=n.states, keff=keff, neff=neff, confidence.cut=confidence.cut)
+	ans	<- round(ans$minimum, d=4)
+	ans
+}
+
+phsc.get.prior.parameter.n0.old<- function(n.states, n.type=2, n.obs=3, confidence.cut=0.5)
 {
 	phsc.find.n0.aux<- function(n0, n.states=3, n.type=2, n.obs=3, confidence.cut=0.5)
 	{
@@ -2634,6 +2667,7 @@ phsc.get.prior.parameter.n0<- function(n.states, n.type=2, n.obs=3, confidence.c
 	ans	<- round(ans$minimum, d=4)
 	ans
 }
+
 
 #' @title Calculate marginal posterior probability for two individuals being in a particular relationship state
 #' @description This function calculates the parameters that specify the marginal posterior probability for two individuals being in a particular relationship state. The marginal posterior is Beta distributed and this function calculates the ALPHA and BETA parameters.
@@ -2647,7 +2681,7 @@ phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, conf
 {
 	stopifnot(c('GROUP','TYPE')%in%colnames(df))
 	tmp		<- unique(subset(df, select=c('GROUP','TYPE')))[, list(N_TYPE=length(TYPE)), by=c('GROUP')]
-	tmp		<- tmp[, list(PAR_PRIOR=phsc.get.prior.parameter.n0(N_TYPE, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)), by=c('GROUP','N_TYPE')]
+	tmp		<- tmp[, list(PAR_PRIOR=phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)), by=c('GROUP','N_TYPE')]
 	df		<- merge(df, tmp, by=c('GROUP'))
 	df[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
 	df[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]	
