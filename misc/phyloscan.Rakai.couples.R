@@ -9289,6 +9289,8 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda'
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'
 	
 	#
 	#	load couples to search for in phyloscanner output
@@ -11467,16 +11469,20 @@ RakaiFull.analyze.trmpairs.community.anonymize.170522<- function()
 	#
 	#	anonymize locations
 	#
+	require(ggmap)
 	zm					<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
 	infile.comms		<- '~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
-	infile.loc			<- '~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_spatialLoc.csv'
+	infile.loc.a		<- '~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_spatialLoc.csv'
+	infile.loc			<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_geography.rda"
 	outfile.base		<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_"
 	#	original locations	
-	dc	<- as.data.table(read.csv(infile.comms))
-	zc	<- as.data.table(read.csv(infile.loc))
-	setnames(zc, 'COMM_NUM', 'COMM_NUM_RAW')
-	dc	<- merge(dc, zc, by='COMM_NUM_RAW')
-	
+	dc		<- as.data.table(read.csv(infile.comms))
+	zc		<- as.data.table(read.csv(infile.loc.a))
+	load(infile.loc)
+	comgps	<- as.data.table(comgps)
+	setnames(comgps, 'COMM_NUM', 'COMM_NUM_RAW')
+	set(comgps, NULL, 'COMM_NUM_RAW', comgps[, as.integer(as.character(COMM_NUM_RAW))])
+	dc		<- merge(dc, comgps, by='COMM_NUM_RAW',all.x=1)
 	set.seed(42L)
 	tmp	<- unique(subset(dc, select=c(COMM_NUM, longitude, latitude)), by='COMM_NUM')
 	tmp[, LONG_A:= rnorm(nrow(tmp), mean=longitude, sd=0.1)]

@@ -1258,6 +1258,18 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 	}
 }	
 
+phsc.get.prior.parameter.n0.old<- function(n.states, n.type=2, n.obs=3, confidence.cut=0.5)
+{
+	phsc.find.n0.aux<- function(n0, n.states=3, n.type=2, n.obs=3, confidence.cut=0.5)
+	{
+		abs( pbeta(1/n.states+(1-1/n.states)/(n.states+1), (n0+n.states*n.type)/n.states, ((n.states-1)*n0+n.states*(n.obs-n.type))/n.states, lower.tail=FALSE)-confidence.cut ) 	
+	}	
+	ans	<- optimize(phsc.find.n0.aux, c(.01,100), n.states=n.states, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)
+	ans	<- round(ans$minimum, d=4)
+	ans
+}
+
+
 pty.evaluate.tree.plot.ph<- function(ph, df, col, max.node.height, ph.title)
 {
 	#	with ggtree, extra info can be supplied in a data.frame through the %<+% operator

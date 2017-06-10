@@ -2657,18 +2657,6 @@ phsc.get.prior.parameter.n0<- function(n.states, keff=3, neff=4, confidence.cut=
 	ans
 }
 
-phsc.get.prior.parameter.n0.old<- function(n.states, n.type=2, n.obs=3, confidence.cut=0.5)
-{
-	phsc.find.n0.aux<- function(n0, n.states=3, n.type=2, n.obs=3, confidence.cut=0.5)
-	{
-		abs( pbeta(1/n.states+(1-1/n.states)/(n.states+1), (n0+n.states*n.type)/n.states, ((n.states-1)*n0+n.states*(n.obs-n.type))/n.states, lower.tail=FALSE)-confidence.cut ) 	
-	}	
-	ans	<- optimize(phsc.find.n0.aux, c(.01,100), n.states=n.states, n.type=n.type, n.obs=n.obs, confidence.cut=confidence.cut)
-	ans	<- round(ans$minimum, d=4)
-	ans
-}
-
-
 #' @title Calculate marginal posterior probability for two individuals being in a particular relationship state
 #' @description This function calculates the parameters that specify the marginal posterior probability for two individuals being in a particular relationship state. The marginal posterior is Beta distributed and this function calculates the ALPHA and BETA parameters.
 #' @export  

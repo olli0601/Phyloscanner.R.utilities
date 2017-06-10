@@ -4376,7 +4376,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=1)
-		#pty.c	<- subset(pty.c, PTY_RUN%in%c(69, 80, 126, 132, 149, 179, 232, 238))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(2,5,11,39,58,69,77,80,111,119,126,132,152,170,172,176,179,197,232,238,240,241,244))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
