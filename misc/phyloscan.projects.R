@@ -29,7 +29,7 @@ project.dual<- function()
 	if(0) 
 	{
 		require(big.phylo)
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
 		cmd		<- paste(cmd,tmp,sep='\n')
 		cat(cmd)	 								
@@ -960,7 +960,7 @@ project.RakaiAll.setup.RAxMLmodel.submit.170301<- function()
 {
 	require(big.phylo)
 	require(data.table)
-	hpc.load	<- "module load intel-suite/2015.1 mpi R/3.2.0"
+	hpc.load	<- "module load intel-suite/2015.1 mpi R/3.3.2"
 	hpc.nproc	<- 8
 	hpc.mem		<- "5900mb"	
 	hpc.walltime<- 300 
@@ -2355,14 +2355,14 @@ pty.pipeline.examl<- function()
 		work.dir		<- file.path(HOME,"coinf_ptinput")
 		#out.dir			<- file.path(HOME,"coinf_ptoutput_150121")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_150201")
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.3.2"		
 	}
 	if(1)	#coinfections UG on HPC
 	{			
 		pty.infile		<- file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")		
 		work.dir		<- file.path(HOME,"coinf_ptinput_UG60")
 		out.dir			<- file.path(HOME,"coinf_ptoutput_UG60")
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0"		
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.3.2"		
 	}	
 	#	get alignment rda files
 	if(0)
@@ -2501,7 +2501,7 @@ pty.pipeline.fasta.160217<- function()
 		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	if(0)	#coinfections ZA on Mac
 	{
@@ -2534,7 +2534,7 @@ pty.pipeline.fasta.160217<- function()
 		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	if(0)	#coinfections ZA on HPC
 	{
@@ -2545,7 +2545,7 @@ pty.pipeline.fasta.160217<- function()
 		prog.pty		<- '/work/or105/libs/phylotypes/phylotypes.py'
 		prog.raxml		<- 'raxml'
 		no.trees		<- '-T'
-		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
+		hpc.load		<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.4 mafft/7.271 anaconda/2.3.0 samtools"
 	}
 	#
 	#	set up all temporary files and create bash commands
@@ -2883,7 +2883,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 	}
 	if(1)	#HPC
 	{
-		hpc.load		<- "module load R/3.2.0"
+		hpc.load		<- "module load R/3.3.2"
 		work.dir		<- file.path(HOME,"Rakai_ptinput_160825")
 		ptyf			<- data.table(DIR= c(	# '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250_done',
 												# '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220_done',
@@ -3154,7 +3154,7 @@ pty.pipeline.phyloscanner.160825<- function()
 	if(1)	#coinfections UG on HPC
 	{		
 		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160825")		
@@ -3430,7 +3430,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 		#load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 		load( file.path(HOME,"data","Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda") )
 		setnames(pty.runs, 'FILE_ID', 'IND_ID')
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 4
 		hpc.mem				<- "5900mb"
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
@@ -3511,7 +3511,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall<- function()
 		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 4
 		hpc.mem				<- "5900mb"						
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
@@ -3598,7 +3598,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75_part2.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
@@ -3743,7 +3743,7 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix	<- function()
 	infiles[, BATCH:=ceiling(PTY_RUN/20)]										
 	invisible(infiles[,	{
 						#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-						cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=0, hpc.q=NA, hpc.mem="1899mb",  hpc.nproc=1, hpc.load="module load R/3.2.0")							
+						cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=0, hpc.q=NA, hpc.mem="1899mb",  hpc.nproc=1, hpc.load="module load R/3.3.2")							
 						cmd			<- paste(cmd, paste(CMD, collapse='\n'),sep='\n')
 						cat(cmd)	
 						stop()
@@ -3919,7 +3919,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
@@ -4186,7 +4186,7 @@ pty.pipeline.phyloscanner.170301.thirdstage<- function()
 		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagethree")		
 		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagethree.rda') )
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1							
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
@@ -4298,7 +4298,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	if(1)
 	{	
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'								
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1		
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
@@ -4417,7 +4417,7 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 	if(1)
 	{	
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"		
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
@@ -4543,7 +4543,7 @@ pty.pipeline.phyloscanner.160915.couples.rerun<- function()
 	if(1)
 	{		
 		#HOME<<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.2.0 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
 		hpc.mem				<- "5900mb"
 		work.dir			<- file.path(HOME,"Rakai_ptinput_160915_couples")
@@ -4853,7 +4853,7 @@ pty.pipeline.coinfection.statistics<- function()
 	#indir			<- file.path(HOME,"coinf_ptoutput_150121")
 	indir			<- file.path(HOME,"coinf_ptoutput_150201")
 	work.dir		<- file.path(HOME,"coinf_ptinput")
-	hpc.load		<- "module load R/3.2.0"
+	hpc.load		<- "module load R/3.3.2"
 	resume			<- 1
 	
 	infiles			<- data.table(FILE=list.files(indir, pattern='preprtr.rda$'))
