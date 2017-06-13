@@ -150,7 +150,7 @@ phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, s
 	cmd
 }
 
-phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.5, 
+phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.keff.dir=2, prior.neff.dir=3, prior.calibrated.prob=0.5, 
 												rel.likely.pair=TRUE, rel.likely.pair.by.distance.only=FALSE,rel.likely.pair.by.topology.only=FALSE,rel.likely.pair.by.cross.table=FALSE,rel.direction=TRUE,rel.chain=FALSE, verbose=NA,  
 												pr=PR.pairwise.relationships)	
 {
@@ -167,6 +167,10 @@ phsc.cmd.pairwise.relationships<- function(infile, outfile, trmw.min.reads=20, t
 		cmd	<- paste0(cmd, ' --prior.keff ', prior.keff)
 	if(!is.na(prior.neff))
 		cmd	<- paste0(cmd, ' --prior.neff ', prior.neff)
+	if(!is.na(prior.keff.dir))
+		cmd	<- paste0(cmd, ' --prior.keff.dir ', prior.keff.dir)
+	if(!is.na(prior.neff.dir))
+		cmd	<- paste0(cmd, ' --prior.neff.dir ', prior.neff.dir)	
 	if(!is.na(prior.calibrated.prob))
 		cmd	<- paste0(cmd, ' --prior.calibrated.prob ', prior.calibrated.prob)	
 	if(rel.likely.pair)
@@ -754,7 +758,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	trmw.close.brl					<- pty.args[['pw.trmw.close.brl']] 
 	trmw.distant.brl				<- pty.args[['pw.trmw.distant.brl']] 
 	prior.keff						<- pty.args[['pw.prior.keff']] 
-	prior.neff						<- pty.args[['pw.prior.neff']] 
+	prior.neff						<- pty.args[['pw.prior.neff']]
+	prior.keff.dir					<- pty.args[['pw.prior.keff.dir']] 
+	prior.neff.dir					<- pty.args[['pw.prior.neff.dir']] 	
 	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
 	verbose							<- pty.args[['verbose']]
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
@@ -1013,6 +1019,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 														trmw.distant.brl=trmw.distant.brl, 
 														prior.keff=prior.keff, 
 														prior.neff=prior.neff, 
+														prior.keff.dir=prior.keff.dir,
+														prior.neff.dir=prior.neff.dir,
 														prior.calibrated.prob=prior.calibrated.prob, 
 														rel.likely.pair=TRUE, 
 														rel.likely.pair.by.distance.only=TRUE,
@@ -2387,7 +2395,7 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 
 #' @title Wrapper script to calculate pairwise relationships and likelihoods
 #' @export
-phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types, verbose=TRUE)
+phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types, prior.keff.dir=prior.keff, prior.neff.dir=prior.neff, verbose=TRUE)
 {
 	setnames(dwin, 	c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'),
 					c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'))
@@ -2426,7 +2434,7 @@ phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trm
 	#	the default calibration is KEFF=2 out of NEFF=3 windows are of type t so that the pair is selected to be of type t with posterior probability=50%
 	#
 	if(verbose) cat('\nCalculate posterior state probabilities for pairs and relationship groups n=',nrow(rplkl),'...')
-	rplkl	<- phsc.get.pairwise.relationships.posterior(rplkl, n.type=prior.keff, n.obs=prior.neff, confidence.cut=prior.calibrated.prob)
+	rplkl	<- phsc.get.pairwise.relationships.posterior(rplkl, n.type=prior.keff, n.obs=prior.neff, n.type.dir=prior.keff.dir, n.obs.dir=prior.neff.dir, confidence.cut=prior.calibrated.prob)
 	#
 	#	make TYBE_BASIC labels nice
 	#
@@ -2665,11 +2673,17 @@ phsc.get.prior.parameter.n0<- function(n.states, keff=3, neff=4, confidence.cut=
 #' @param n.obs Calibration parameter for the prior: total number of windows. 
 #' @param confidence.cut Calibration parameter for the prior: confidence cut off.  
 #' @return Input data.table with two additional columns POSTERIOR_ALPHA and POSTERIOR_BETA
-phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, confidence.cut=0.5)
+phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, n.type.dir=n.type, n.obs.dir=n.obs, confidence.cut=0.5)
 {
 	stopifnot(c('GROUP','TYPE')%in%colnames(df))
 	tmp		<- unique(subset(df, select=c('GROUP','TYPE')))[, list(N_TYPE=length(TYPE)), by=c('GROUP')]
-	tmp		<- tmp[, list(PAR_PRIOR=phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)), by=c('GROUP','N_TYPE')]
+	tmp		<- tmp[, {
+				if(!grepl('_DIR',GROUP))
+					z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)
+				if(grepl('_DIR',GROUP))
+					z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type.dir, neff=n.obs.dir, confidence.cut=confidence.cut)
+				list(PAR_PRIOR=z)
+			}, by=c('GROUP','N_TYPE')]
 	df		<- merge(df, tmp, by=c('GROUP'))
 	df[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
 	df[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]	

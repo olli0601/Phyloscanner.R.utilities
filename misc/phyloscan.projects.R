@@ -4302,7 +4302,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		hpc.nproc			<- 1		
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")
+		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
@@ -4362,6 +4363,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				pw.trmw.distant.brl=0.08,
 				pw.prior.keff=3,
 				pw.prior.neff=4,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
 				pw.prior.calibrated.prob=0.66,
 				mem.save=0,
 				verbose=TRUE,				
@@ -4376,7 +4379,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
 		pty.c	<- subset(pty.c, PTY_RUN!=1)
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(2,5,11,39,58,69,77,80,111,119,126,132,152,170,172,176,179,197,232,238,240,241,244))
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(2,5,11,39,58,69,77,80,111,119,126,132,152,170,172,176,179,197,232,238,240,241,244))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -4394,9 +4397,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		pty.c[1,cat(CMD)]
 		#stop()
 		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q=NA, hpc.mem="63000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q=NA, hpc.mem="24000mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

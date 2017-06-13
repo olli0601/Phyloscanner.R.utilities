@@ -8793,7 +8793,8 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 	#	load sequence data
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
 	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
-	
+	use.posterior.mode		<- 1
+	use.direction.prior.23	<- 1
 	#
 	#	load demographic info on all individuals
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -8859,46 +8860,59 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 	#
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
-	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3_dir23.rda'
 		
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp.todi2.basic	<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun/ptyr2_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34/ptyr106_pairwise_relationships.rda'
 				cat(PTY_RUN,'\n')
 				load(F)
 				#	search for couples in this run, and keep if these are most likely not a couple
 				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='other')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='other'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]				
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='other'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]																
 				rtp[, SELECT:= 'couple most likely not a pair']
 				ans		<- copy(rtp)
 				#	ML likely transmission pairs by distance
 				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_DI'), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='close')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]																
 				rtp[, SELECT:= 'couple most likely a pair']
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				#	ML likely transmission pairs by topology
 				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TO'), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='ancestral/\nintermingled')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TO' & TYPE=='ancestral/\nintermingled'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TO' & TYPE=='ancestral/\nintermingled'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]																
 				rtp[, SELECT:= 'couple most likely a pair']
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				#	find most likely trm pairs based on TODI2
 				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='likely pair')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]				
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]																
 				rtp[, SELECT:= 'couple most likely a pair']
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				#	ML directed likely transmission pairs by distance + topology
@@ -8907,8 +8921,18 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
 				rtp[, TYPE:=TYPE_MLE]				
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)
+				if(use.direction.prior.23)
+				{
+					set(rtp, NULL, c('PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
+					rtp[, PAR_PRIOR:= phsc.get.prior.parameter.n0(2, keff=2, neff=3, confidence.cut=0.66)]					
+					rtp[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
+					rtp[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]						
+				}									
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]																
 				rtp[, SELECT:= 'couple most likely a pair with resolved direction']				
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				ans				
@@ -8946,6 +8970,9 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 				ans	<- merge(unique(subset(rps, select=c('ID1','ID2'))), dwin, by=c('ID1','ID2'))
 				ans			
 			}, by='PTY_RUN']
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_DIR_TODI4","TYPE_PAIR_TODI2","TYPE_CHAIN_TODI","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2"))
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])			
 	#	save
 	save(rp, rd, rh, ra, rs, rtp.todi2.basic, rtp.todi2, rplkl, rpw, file=outfile)	
 }
@@ -9290,8 +9317,10 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'
-	
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'	
+	use.posterior.mode		<- 1
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170611_cl3_run34_dir23.rda'
+	use.direction.prior.23	<- 1
 	#
 	#	load couples to search for in phyloscanner output
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
@@ -9358,20 +9387,26 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp.todi2<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34/ptyr106_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
 				#	ML likely transmission pairs by distance
 				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='close')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]								
 				ans		<- copy(rtp)
 				#	ML likely transmission pairs by distance + topology
 				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='likely pair')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
 				ans		<- rbind(ans, rtp)
 				#	ML directed likely transmission pairs by distance + topology
 				#	among those pairs that are likely transmission pairs
@@ -9379,8 +9414,16 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
 				setnames(rtp, 'TYPE_MLE', 'TYPE')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)			
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)
+				if(use.direction.prior.23)
+				{
+					set(rtp, NULL, c('N_TYPE','PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
+					rtp	<- phsc.get.pairwise.relationships.posterior(rtp, n.type=2, n.obs=3, confidence.cut=0.66)
+				}					
+				if(!use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				if(use.posterior.mode)
+					rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]				
 				rtp[, TYPE_MLE:=TYPE]
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				ans				
@@ -9430,7 +9473,7 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	rplkl		<- merge(rplkl, tmp, by=c('ID2'))
 	rpw			<- merge(rpw, tmp, by=c('ID2'))
 	#	melt rpw
-	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_PAIR_DI","TYPE_PAIRSCORE_DI","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_PAIR_TODI2","TYPE_PAIR_TODI","TYPE_PAIRSCORE_TODI", "TYPE_CHAIN_TODI"))
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_DIR_TODI4","TYPE_PAIR_TODI2","TYPE_CHAIN_TODI","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2"))
 	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
 	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])	
 	#	save
@@ -9454,7 +9497,9 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				ans	<- merge(unique(subset(tmp, select=c('ID1','ID2'))), dwin, by=c('ID1','ID2'))
 				ans			
 			}, by='PTY_RUN']
-		
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_DIR_TODI4","TYPE_PAIR_TODI2","TYPE_CHAIN_TODI","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2"))
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
 	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)	
 }
 
@@ -10849,11 +10894,13 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	
 	
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
+	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
 	#infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
 	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
-	#infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_cl3.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3_dir23.rda"
 	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_"
 	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	load(infile.trmpairs.todi)
 	#	
@@ -10870,7 +10917,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 		rex			<- subset(rtp.tpairs, SELECT== 'couple most likely not a pair' & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 		rex			<- subset(rex, ID1!=ID2)
 		rex			<- merge(rex, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-		rex			<- subset(rex, POSTERIOR_SCORE>confidence.cut)		# sep16: 83; stage 2: 91 
+		rex			<- subset(rex, POSTERIOR_SCORE>=confidence.cut)		# sep16: 83; stage 2: 91 
 		rex[, length(unique(c(ID1,ID2)))]								# sep16: 166; stage 2: 182 
 		
 		#
@@ -10879,7 +10926,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 		rtp		<- subset(rtp.tpairs, grepl('most likely a pair',SELECT) & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 		rtp		<- subset(rtp, ID1!=ID2)
 		rtp		<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-		rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 218 on couples run; stage1 614; stage2 125
+		rtp		<- subset(rtp, POSTERIOR_SCORE>=confidence.cut)		# 218 on couples run; stage1 614; stage2 125
 		rtp[, length(unique(c(ID1,ID2)))]							# 366 on couples run; stage1 671; stage2 248
 		stopifnot(!nrow(merge(subset(rtp, select=c(ID1,ID2)), subset(rex, select=c(ID1,ID2)), by=c('ID1','ID2'))))
 		
@@ -10888,7 +10935,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 		#	directed likely transmission pairs, using topology and distance	
 		tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
 		rtpd	<- merge(tmp, subset(rtp.tpairs, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
-		rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# 136 on couples run; stage1 285; stage2 75
+		rtpd	<- subset(rtpd, POSTERIOR_SCORE>=confidence.cut)		# 136 on couples run; stage1 285; stage2 75
 		rtpd[, length(unique(c(ID1,ID2)))]							# 237 on couples run; stage1 394; stage2 149
 		
 		#
@@ -10933,13 +10980,13 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	set(rplkl, NULL, 'TYPE', rplkl[, gsub('21','mf',TYPE)])	
 	rplkl		<- rbind(rplkl, tmp)
 	rplkl		<- merge(rplkl, unique(subset(rp, select=c(MALE_RID, FEMALE_RID))), by=c('MALE_RID','FEMALE_RID'))	
-	rpw			<- melt(rpw, id.vars=c('PTY_RUN','ID1','ID2','W_FROM','W_TO','SUFFIX','TYPE_RAW','PATRISTIC_DISTANCE','ADJACENT','CONTIGUOUS','PATHS_12','PATHS_21','ID1_L','ID1_R','ID2_L','ID2_R'), variable.name='GROUP', value.name='TYPE')	
+	#rpw		<- melt(rpw, id.vars=c('PTY_RUN','ID1','ID2','W_FROM','W_TO','SUFFIX','TYPE_RAW','PATRISTIC_DISTANCE','ADJACENT','CONTIGUOUS','PATHS_12','PATHS_21','ID1_L','ID1_R','ID2_L','ID2_R'), variable.name='GROUP', value.name='TYPE')	
 	tmp			<- copy(rpw)
 	setnames(tmp, colnames(tmp), gsub('21','FM',gsub('12','MF',gsub('ID2','FEMALE',gsub('ID1','MALE',colnames(tmp))))))	
 	set(tmp, NULL, 'TYPE', tmp[, gsub('12','mf',TYPE)])
 	set(tmp, NULL, 'TYPE', tmp[, gsub('21','fm',TYPE)])	
-	set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('12','mf',TYPE_RAW)])
-	set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('21','fm',TYPE_RAW)])	
+	#set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('12','mf',TYPE_RAW)])
+	#set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('21','fm',TYPE_RAW)])	
 	setnames(rpw, colnames(rpw), gsub('21','MF',gsub('12','FM',gsub('ID2','MALE',gsub('ID1','FEMALE',colnames(rpw))))))
 	set(rpw, NULL, 'TYPE', rpw[, gsub('12','fm',TYPE)])
 	set(rpw, NULL, 'TYPE', rpw[, gsub('21','mf',TYPE)])	
@@ -10952,13 +10999,13 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	group 		<- 'TYPE_PAIR_TODI2'
 	rex			<- subset(rtp.tpairs, SELECT=='couple most likely not a pair' & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
 	rex			<- merge(rex, subset(rtp.tpairs, GROUP==group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
-	rex			<- subset(rex, POSTERIOR_SCORE>confidence.cut)		 
+	rex			<- subset(rex, POSTERIOR_SCORE>=confidence.cut)		 
 	rtp			<- subset(rtp.tpairs, grepl('most likely a pair',SELECT) & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
 	rtp			<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
-	rtp			<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# 218 on couples run; stage1 614; stage2 125
+	rtp			<- subset(rtp, POSTERIOR_SCORE>=confidence.cut)		# 218 on couples run; stage1 614; stage2 125
 	tmp			<- unique(subset(rtp, select=c('MALE_RID','FEMALE_RID','PTY_RUN')))		
 	rtpd		<- merge(tmp, subset(rtp.tpairs, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
-	rtpd		<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		
+	rtpd		<- subset(rtpd, POSTERIOR_SCORE>=confidence.cut)		
 	rtpa		<- unique(subset(rplkl, select=c(FEMALE_RID, MALE_RID)))
 	rtpa		<- subset(merge(rtpa, subset(rtp, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
 	rtpa		<- subset(merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rex, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
@@ -11123,6 +11170,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	require(Hmisc)
 		
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
+	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
 	group 					<- 'TYPE_PAIR_TODI2'
 	#load rsmpl data.tables
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/community_sampling_170522.rda')
@@ -11139,15 +11187,15 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	rtp		<- subset(rtp.todi2, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 	rtp		<- subset(rtp, ID1!=ID2)
 	rtp		<- merge(rtp, subset(rtp.todi2, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# first stage 2723, second stage 628
-	rtp[, length(unique(c(ID1,ID2)))]							# first stage 1511, second stage 1098
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# first stage 2723, second stage 628, p mode 530	
+	rtp[, length(unique(c(ID1,ID2)))]							# first stage 1511, second stage 1098, p mode 974 
 	
 	#	
 	#	directed likely transmission pairs, using topology and distance	
 	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
 	rtpd	<- merge(tmp, subset(rtp.todi2, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
-	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# first stage 1536, second stage 364
-	rtpd[, length(unique(c(ID1,ID2)))]							# first stage 936, second stage 668
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# first stage 1536, second stage 364, p mode 260
+	rtpd[, length(unique(c(ID1,ID2)))]							# first stage 936, second stage 668, p mode 492
 	
 	#
 	#	select only m->f, f->m
@@ -11165,9 +11213,13 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#		  F  51 140
 	#		  M 117  56			107/364= 29%
 
+	#ID1_SEX   F   M
+    #  	   F  34 105
+    #  	   M  87  34			68/260= 26%
+
 	rtpd.all<- copy(rtpd)	
 	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
-	#	first stage 824 pairs, second stage 257
+	#	first stage 824 pairs, second stage 257, pmode 192
 	tmp		<- subset(rtpd, ID1_SEX=='M')
 	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
 	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
@@ -11226,6 +11278,11 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#mf      12         1				3/31= 0.096
 	#--> OK-ish	
 
+	#	p mode
+	#TYPE correct incorrect
+	#fm      15         1
+	#mf      11         1				2/28= 0.071
+
 	#	plot
 	t.posneg	<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
 	setnames(t.posneg, c('BIRTHDATE','EST_DATEDIED'), c('DOB','DOD'))
@@ -11256,7 +11313,10 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#  171   97 
 	#stage 2
 	#FALSE  TRUE 
-	#147     1 
+	#147     1
+	#p mode
+	#FALSE 
+	#115 
 	tmp2<- subset(rtpd, TYPE=='fm')[, list(MALE_N_TR=length(FEMALE_RID)), by='MALE_RID']
 	tmp2[, table(MALE_N_TR>1)]
 	#stage 1
@@ -11265,6 +11325,9 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#stage 2
 	#FALSE 
 	#105 
+	#p mode
+	#FALSE 
+	#   77 
 	#--> stage 2 is awesome
 	rtpd	<- merge(rtpd, tmp, by='FEMALE_RID', all.x=1)
 	rtpd	<- merge(rtpd, tmp2, by='MALE_RID', all.x=1)
@@ -11285,7 +11348,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	rtpd[, table(COUPLE)]
 	#	stage 1: 731 not within stable couples, 79 directed pairs among couples 
 	#	stage 2: 167 not within stable couples, 87 directed pairs among couples			
-
+	#	pmode:	 125 not within stable couples, 67 directed pairs among couples 
 	#
 	#	determine first concordant pos visit
 	#	add metadata at first concordant pos visit
@@ -12278,7 +12341,8 @@ RakaiFull.analyze.couples.todi.170522.demographic.table<- function()
 	require(Hmisc)
 	
 	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"	
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
 	load(infile)
 	#	table
 	#	location female (community type)
@@ -12816,7 +12880,7 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	#	OK now do in earnest on pairs that are actually selected with
 	#	TYPE_PAIR_DI and TYPE_PAIR_TODI
 	#	at different distances
-	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'	
+	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'	
 	infiles		<- data.table(F=list.files(indir, pattern='trmStatsPerWindow.rda$', full.names=TRUE))
 	for(close in seq(0.01,0.04,0.005))
 	{		
@@ -12986,7 +13050,8 @@ RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
 	require(Hmisc)
 	
 	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"	
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
 	load(infile)	
 	setkey(rca, MALE_RID, FEMALE_RID)
 	rca[, PAIRID:=seq_len(nrow(rca))]
@@ -13554,7 +13619,8 @@ RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 	require(Hmisc)
 	
 			
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"			
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
 	#	
 	#	load patristic distance matrix
 	#	we only have this at present for a subset of couples -- never mind
