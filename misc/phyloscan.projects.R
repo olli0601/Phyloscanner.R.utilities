@@ -4303,8 +4303,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")
-		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23")
+		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
@@ -4362,8 +4362,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
-				pw.prior.keff=2,
-				pw.prior.neff=3,
+				pw.prior.keff=3,
+				pw.prior.neff=4,
 				pw.prior.keff.dir=2,
 				pw.prior.neff.dir=3,				
 				pw.prior.calibrated.prob=0.66,
@@ -4379,8 +4379,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
-		pty.c	<- subset(pty.c, PTY_RUN!=1)
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(35,60,69,117,131,149,163,164,165,166,167,169,170,171,173,174,175,177,178,180,181,182,183,184,185,196,235,243))
+		#pty.c	<- subset(pty.c, PTY_RUN!=1)
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(35,60,69,117,131,149,163,164,165,166,167,169,170,171,173,174,175,177,178,180,181,182,183,184,185,196,235,243))
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(80))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
