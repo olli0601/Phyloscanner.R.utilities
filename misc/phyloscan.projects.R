@@ -4393,7 +4393,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
 					print(prefix.infiles)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
-					list(CMD=cmd)
+					list(CMD=cmd) 
 				}, by='PTY_RUN']		
 		pty.c[1,cat(CMD)]
 		#stop()
