@@ -4369,7 +4369,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				pw.prior.calibrated.prob=0.66,
 				mem.save=0,
 				verbose=TRUE,				
-				select=NA
+				select=NA 
 				)					 
 	}
 	#
