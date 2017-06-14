@@ -4314,7 +4314,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
 		in.dir				<- '/Users/Oliver/duke/tmp'
 		out.dir				<- '/Users/Oliver/duke/tmp'
-		work.dir			<- '/Users/Oliver/duke/tmp'
+		work.dir			<- '/Users/Oliver/duke/tmp' 
 	}			
 	#
 	#	INPUT ARGS PHYLOSCANNER RERUN
