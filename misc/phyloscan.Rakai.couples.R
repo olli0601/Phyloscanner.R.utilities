@@ -471,7 +471,7 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
 	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
 	use.posterior.mode		<- 1
-	use.direction.prior.23	<- 1
+	#use.direction.prior.23	<- 1
 	#
 	#	load demographic info on all individuals
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -599,13 +599,13 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
 				rtp[, TYPE:=TYPE_MLE]				
 				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)
-				if(use.direction.prior.23)
-				{
-					set(rtp, NULL, c('PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
-					rtp[, PAR_PRIOR:= phsc.get.prior.parameter.n0(2, keff=2, neff=3, confidence.cut=0.66)]					
-					rtp[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
-					rtp[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]						
-				}									
+				#if(use.direction.prior.23)
+				#{
+				#	set(rtp, NULL, c('PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
+				#	rtp[, PAR_PRIOR:= phsc.get.prior.parameter.n0(2, keff=2, neff=3, confidence.cut=0.66)]					
+				#	rtp[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
+				#	rtp[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]						
+				#}									
 				if(!use.posterior.mode)
 					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				if(use.posterior.mode)
@@ -994,10 +994,13 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'	
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23.rda'	
+	
 	use.posterior.mode		<- 1
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170611_cl3_run34_dir23.rda'
-	use.direction.prior.23	<- 1
+	#use.direction.prior.23	<- 1
 	#
 	#	load couples to search for in phyloscanner output
 	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
@@ -1092,11 +1095,11 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				rtp		<- subset(rtp, TYPE_MLE!='ambiguous')
 				setnames(rtp, 'TYPE_MLE', 'TYPE')
 				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','TYPE'), all.x=1)
-				if(use.direction.prior.23)
-				{
-					set(rtp, NULL, c('N_TYPE','PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
-					rtp	<- phsc.get.pairwise.relationships.posterior(rtp, n.type=2, n.obs=3, confidence.cut=0.66)
-				}					
+				#if(use.direction.prior.23)
+				#{
+				#	set(rtp, NULL, c('N_TYPE','PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
+				#	rtp	<- phsc.get.pairwise.relationships.posterior(rtp, n.type=2, n.obs=3, confidence.cut=0.66)
+				#}					
 				if(!use.posterior.mode)
 					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				if(use.posterior.mode)
