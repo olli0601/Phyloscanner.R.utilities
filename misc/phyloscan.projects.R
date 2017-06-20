@@ -1437,10 +1437,39 @@ project.Rakai.FastTree.170601<- function()
 	sqi				<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
 	#	select
 	sq				<- sq[ sqi$TAXA, ]
-	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))		
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	#
+	#	update stragglers
+	infile			<- '~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/stragglers_GlobalAlignment_10040.fasta'
+	sn				<- read.dna(infile, format='fa')
+	rownames(sn)	<- gsub('_consensus_MinCov_10_50','',rownames(sn))	
+	#	keep only longest straggler for each PANGEA ID
+	stg				<- data.table(SID=rownames(sn), DUMMY=seq_len(nrow(sn)))
+	tmp				<- sapply(seq_len(nrow(sn)), function(i) base.freq(sn[i,], all=TRUE, freq=TRUE))
+	stg[, COV:=ncol(sn)-apply( tmp[c('-','?'),], 2, sum	)]		
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_assemblystatus.rda')
+	tmp				<- merge(sqi, subset(dc, !is.na(SID), select=c(PIDF, SID)), by='PIDF',all.x=TRUE)
+	stg				<- merge(stg, subset(tmp, select=c(SID, PIDF)), by='SID',all.x=1)
+	stg				<- merge(stg, stg[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	add to re-processed stragglers those taxa that are now junk
+	tmp				<- data.table(PIDF=c('PG14-UG501871-S03875','PG14-UG500718-S02722','PG14-UG503751-S05755','PG14-UG501956-S03960','PG14-UG503966-S05970','PG14-UG503944-S05948','PG14-UG503322-S05326','PG14-UG501838-S03842','PG14-UG503896-S05900','PG14-UG500743-S02747','PG14-UG503259-S05263','PG14-UG502371-S04375','PG14-UG503509-S05513','PG14-UG503648-S05652','PG14-UG503750-S05754','PG14-UG503518-S05522','PG14-UG501117-S03121','PG14-UG501506-S03510','PG14-UG503995-S05999','PG14-UG502131-S04135','PG14-UG501758-S03762','PG14-UG503968-S05972','PG14-UG503565-S05569','PG14-UG502024-S04028','PG14-UG503929-S05933','PG14-UG503673-S05677','PG14-UG502418-S04422','PG14-UG503643-S05647','PG14-UG501140-S03144','PG14-UG503190-S05194','PG14-UG500711-S02715','PG14-UG503891-S05895','PG14-UG503697-S05701','PG14-UG501743-S03747','PG14-UG503596-S05600','PG14-UG502370-S04374','PG14-UG501271-S03275','PG14-UG503555-S05559','PG14-UG502472-S04476','PG14-UG503500-S05504'))
+	stg				<- merge(tmp, stg, by='PIDF', all.x=1)
+	write.csv(stg, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no1.csv')
+	#	reduce central alignment to taxa not in stg	
+	sq				<- sq[setdiff(rownames(sq),stg[, PIDF]),]
+	tmp				<- subset(stg, !is.na(SID))
+	sn				<- sn[tmp[,SID],]
+	rownames(sn)	<- tmp[,PIDF]
+	sq				<- rbind(sq,sn)	
+	sqi				<- merge(sqi,data.table(PIDF=rownames(sq)), by='PIDF')	
+	sqi[, COV:=NULL]
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	
+	#	
 	#	
 	#	save all
-	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5626_Imperial_v170601_GlobalAlignment.fasta')
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5602_Imperial_v170601_GlobalAlignment.fasta')
 	write.dna(sq, file=tmp, format='fa')	
 	#
 	#	save UG
@@ -1453,41 +1482,42 @@ project.Rakai.FastTree.170601<- function()
 	tmp				<- gsub('.*_([^_]+)$','\\1',tmp[!grepl('CPX',tmp)])
 	sqi				<- merge(sqi,data.table(GENBANK=c(tmp,'PANGEA')),by='GENBANK')		
 	sq				<- sq[sqi$PIDF,]
-	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5014_Imperial_v170601_UgandaAlignment.fasta')
+	sqi				<- subset(sqi, PNG=='N' | (PNG=='Y' & grepl('^PG[0-9][0-9]-UG.*',TAXA)))
+	sq				<- sq[sqi$PIDF,]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4990_Imperial_v170601_UgandaAlignment.fasta')
 	write.dna(sq, file=tmp, format='fa')	
 	
 	#
-	#	set up FastTree
-	infile.fasta	<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5014_Imperial_v170601_UgandaAlignment.fasta')
+	#	first check FastTree
+	if(0)
+	{
+		infile.fasta	<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5014_Imperial_v170601_UgandaAlignment.fasta')
+		outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+		tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+		outfile.ft		<- gsub('\\.fasta','_ft-pseudo.newick',infile.fasta)
+		tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma -pseudo')
+		outfile.ft		<- gsub('\\.fasta','_ft-pseudo-spr4-mlacc2-slownni.newick',infile.fasta)
+		tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma -pseudo -spr 4 -mlacc 2 -slownni')
+		#	not much difference between the options, with standard tree having reasonable LKL
+		#	all trees show very long branches sticking out, which could be due to missing nucleotides		
+	}
+	
+	tmp2			<- sq[subset(sqi, COV>700)[,PIDF],]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4199_Imperial_v170601_UgandaAlignment_minCov700.fasta')	
+	write.dna(tmp2, file=tmp, format='fa')	
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4199_Imperial_v170601_UgandaAlignment_minCov700.fasta'
 	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
 	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
-	outfile.ft		<- gsub('\\.fasta','_ft-pseudo.newick',infile.fasta)
-	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma -pseudo')
-	outfile.ft		<- gsub('\\.fasta','_ft-pseudo-spr4-mlacc2-slownni.newick',infile.fasta)
-	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma -pseudo -spr 4 -mlacc 2 -slownni')
-	#	not much difference between the options, with standard tree having reasonable LKL
-	#	all trees show very long branches sticking out, which could be due to missing nucleotides
 	
-	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4232_Imperial_v170601_UgandaAlignment_minCov700.fasta')
-	write.dna(sq[subset(sqi, COV>700)[,PIDF],], file=tmp, format='fa')	
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4232_Imperial_v170601_UgandaAlignment_minCov700.fasta'
-	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
-	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
-	
-	
-	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4232_Imperial_v170601_UgandaAlignment_minCov700.fasta'
-	bs.id			<- 1
-	outfile.ft		<- gsub('\\.fasta',paste0(sprintf("%03d",bs.id),'_ft.newick'),infile.fasta)	
-	tmp				<- cmd.fasttree.one.bootstrap(infile.fasta, bs.id, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
-	
-	#	rm UG501871 and mafft again to check if alignment error
-	sq				<- read.dna('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4232_Imperial_v170601_UgandaAlignment_minCov700.fasta', format='fa')
-	tmp				<- which(grepl('UG501871',rownames(sq)))
-	z				<- gsub('\\?|\\-','',paste0(as.character(sq[tmp,]), collapse=''))
-	cat(paste0('>',rownames(sq)[tmp],'\n',z,'\n'), file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_UG501871.fasta')
-	z				<- seq.replace(sq[-tmp,], code.from='?', code.to='-', verbose=0)
-	write.dna(z, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4231_Imperial_v170601_UgandaAlignment_minCov700.fasta', format='fa')
-	
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4199_Imperial_v170601_UgandaAlignment_minCov700_ft.newick'
+	ph				<- read.tree(infile)
+	tmp				<- as.numeric(ph$node.label)
+	tmp[is.na(tmp)]	<- 0
+	ph$node.label	<- tmp
+	ph				<- ladderize(ph)
+	pdf(gsub('newick','pdf',infile), w=15, h=500)
+	plot(ph, cex=0.5, show.node.label=TRUE)
+	dev.off()
 }
 
 project.RakaiAll.forTanya<- function()

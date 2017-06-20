@@ -2553,8 +2553,8 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 	#	same as TYPE_PAIR_TODI but do not count ambiguous distance
 	if('TYPE_PAIRSCORE_TODI'%in%get.groups)
 	{
-		df[, TYPE_PAIRSCORE_TODI:= 'distant']
-		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'chain')
+		df[, TYPE_PAIRSCORE_TODI:= 'distant/disconnected']
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'distant/disconnected')
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'likely pair')	
 		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', NA_character_)
 	}
@@ -2580,6 +2580,27 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 			set(df, NULL, x, gsub('_',' ',df[[x]]))
 	}	
 	df
+}
+
+phsc.get.pairwise.relationships.numbers<- function()
+{
+	tmp	<- matrix(c('TYPE_PAIR_DI','3',
+					'TYPE_PAIRSCORE_DI','2',
+					'TYPE_PAIR_DI2','2',
+					'TYPE_PAIR_TO','2',
+					'TYPE_PAIR_TODI2x2','4',
+					'TYPE_DIR_TODI3','3',
+					'TYPE_DIRSCORE_TODI3','2',
+					'TYPE_DIR_TODI4','4',
+					'TYPE_PAIR_TODI2','2',
+					'TYPE_PAIR_TODI','3', 
+					'TYPE_PAIRSCORE_TODI','2',
+					'TYPE_CHAIN_TODI','3',
+					'TYPE_BASIC','24'), ncol=2,byrow=TRUE)
+	colnames(tmp)	<- c('GROUP','N_TYPE')
+	tmp				<- as.data.table(tmp)
+	set(tmp, NULL, 'N_TYPE', tmp[, as.integer(N_TYPE)])
+	tmp
 }
 
 #' @title Count observed relationship states
@@ -2675,8 +2696,8 @@ phsc.get.prior.parameter.n0<- function(n.states, keff=3, neff=4, confidence.cut=
 #' @return Input data.table with two additional columns POSTERIOR_ALPHA and POSTERIOR_BETA
 phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, n.type.dir=n.type, n.obs.dir=n.obs, confidence.cut=0.5)
 {
-	stopifnot(c('GROUP','TYPE')%in%colnames(df))
-	tmp		<- unique(subset(df, select=c('GROUP','TYPE')))[, list(N_TYPE=length(TYPE)), by=c('GROUP')]
+	stopifnot(c('GROUP')%in%colnames(df))
+	tmp		<- phsc.get.pairwise.relationships.numbers()	
 	tmp		<- tmp[, {
 				if(!grepl('_DIR',GROUP))
 					z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)

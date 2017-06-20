@@ -539,8 +539,12 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3_dir23.rda'
-		
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23.rda'
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23.rda'
+	
+	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
@@ -996,13 +1000,12 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3.rda'
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior34d23.rda'	
-	
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior34d23.rda'		
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23.rda'	
 	
 	use.posterior.mode		<- 1
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170611_cl3_run34_dir23.rda'
+	
 	#use.direction.prior.23	<- 1
 	#
 	#	load couples to search for in phyloscanner output
@@ -1070,7 +1073,7 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp.todi2<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34/ptyr106_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23/ptyr106_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
 				#	ML likely transmission pairs by distance
@@ -2576,14 +2579,17 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	require(Hmisc)
 	
 	
-	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
+	confidence.cut			<- 0.5	# this was used previously for the probability mass selection criterion that is now replaced with the posterior mode criterion
 	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
 	#infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
-	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
-	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3_dir23.rda"
 	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170428_"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
+	#infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23.rda"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"
+	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23.rda"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23_"
+	
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	load(infile.trmpairs.todi)
 	#	
@@ -2693,7 +2699,8 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	rtpa		<- subset(merge(rtpa, subset(rtp, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
 	rtpa		<- subset(merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rex, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
 	rtpa		<- merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rplkl, GROUP==group & TYPE=='likely pair'), by=c('MALE_RID','FEMALE_RID'))
-	rtpa[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]	
+	#rtpa[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+	rtpa[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]	
 	rtpa		<- merge(rtpa, rtpa[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')], by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	rtpa[, SELECT:= 'couple ambiguous if pair or not pair']
 	#
@@ -2724,7 +2731,10 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170522<- function()
 	tmp		<- subset(tmp, is.na(PTY_RUN), c(MALE_RID, FEMALE_RID))
 	tmp[, SELECT:='insufficient deep sequence data for at least one partner of couple']
 	rca		<- rbind(rca, tmp, use.names=TRUE, fill=TRUE)
-		
+	#	if couples have less than 750 nt then call insufficient data:
+	#	for our 250nt genomic windows, this is NEFF=3
+	tmp		<- rca[, which(!grepl('insufficient',SELECT) & NEFF<3)]
+	set(rca, tmp, 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
 	#
 	#	add couple status
 	tmp		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, COUP_SC)))
@@ -2852,14 +2862,18 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 		
-	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
-	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
+	confidence.cut			<- 0.5	
+	confidence.cut			<- 0.66	
+	neff.cut				<- 3
 	group 					<- 'TYPE_PAIR_TODI2'
 	#load rsmpl data.tables
 	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/community_sampling_170522.rda')
 	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
-	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_"	
+	#infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'		
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_"
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23_"	
+	
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	#	now load second stage output
 	load(infile.trmpairs.todi)
@@ -2870,14 +2884,14 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	rtp		<- subset(rtp.todi2, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
 	rtp		<- subset(rtp, ID1!=ID2)
 	rtp		<- merge(rtp, subset(rtp.todi2, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
-	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# first stage 2723, second stage 628, p mode 530	
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut & NEFF>=neff.cut)		# first stage 2723, second stage 628, p mode 530	
 	rtp[, length(unique(c(ID1,ID2)))]							# first stage 1511, second stage 1098, p mode 974 
 	
 	#	
 	#	directed likely transmission pairs, using topology and distance	
 	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
 	rtpd	<- merge(tmp, subset(rtp.todi2, GROUP=='TYPE_DIRSCORE_TODI3'), by=c('ID1','ID2','PTY_RUN'))
-	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# first stage 1536, second stage 364, p mode 260
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut & NEFF>=neff.cut)		# first stage 1536, second stage 364, p mode 260
 	rtpd[, length(unique(c(ID1,ID2)))]							# first stage 936, second stage 668, p mode 492
 	
 	#
@@ -2896,9 +2910,10 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#		  F  51 140
 	#		  M 117  56			107/364= 29%
 
-	#ID1_SEX   F   M
-    #  	   F  34 105
-    #  	   M  87  34			68/260= 26%
+	# on stage 2 using 23 and neff>=3
+	#	ID1_SEX   F   M    
+    #  F  55 121
+    #  M  95  44 				99/315= 31%
 
 	rtpd.all<- copy(rtpd)	
 	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
@@ -2961,29 +2976,32 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#mf      12         1				3/31= 0.096
 	#--> OK-ish	
 
-	#	p mode
+	#	on stage 2 using 23 and neff>=3
 	#TYPE correct incorrect
-	#fm      15         1
-	#mf      11         1				2/28= 0.071
+  	#fm      14         0
+  	#mf       8         1				1/23= 0.0434
 
 	#	plot
-	t.posneg	<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
-	setnames(t.posneg, c('BIRTHDATE','EST_DATEDIED'), c('DOB','DOD'))
-	t.seq		<- unique(subset(rs, !is.na(PID), select=c(RID, PID, SEQ_DATE)))
-	t.cd4		<- unique(subset(rd, !is.na(RECENTCD4DATE) & !is.na(RECENTCD4), select=c(RID, RECENTCD4DATE, RECENTCD4)))
-	set(t.cd4, NULL, 'RECENTCD4', t.cd4[, cut(RECENTCD4, breaks=c(-1,250,350,500,800,Inf), labels=c('<200','200-349','350-499','500-799','800+'))])
-	t.vl		<- unique(subset(rd, !is.na(RECENTVLDATE) & !is.na(RECENTVL), select=c(RID, RECENTVLDATE, RECENTVL)))
-	set(t.vl, NULL, 'RECENTVL', t.vl[, cut(RECENTVL, breaks=c(-1,200,1e3,1e5,Inf), labels=c('<200','200-1,000','1,000-100,000','100,000+'))])
-	df			<- subset(rtpd, SDC_TYPE=='incorrect')
-	p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
-	pdf(file=paste0(outfile.base,'epilines_pairs_with_inconsistent_serohistory.pdf'), w=8, h=5)
-	print(p)
-	dev.off()
-	df			<- subset(rtpd, SDC_TYPE=='correct')
-	p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
-	pdf(file=paste0(outfile.base,'epilines_pairs_with_consistent_serohistory.pdf'), w=8, h=20)
-	print(p)
-	dev.off()
+	if(0)
+	{
+		t.posneg	<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+		setnames(t.posneg, c('BIRTHDATE','EST_DATEDIED'), c('DOB','DOD'))
+		t.seq		<- unique(subset(rs, !is.na(PID), select=c(RID, PID, SEQ_DATE)))
+		t.cd4		<- unique(subset(rd, !is.na(RECENTCD4DATE) & !is.na(RECENTCD4), select=c(RID, RECENTCD4DATE, RECENTCD4)))
+		set(t.cd4, NULL, 'RECENTCD4', t.cd4[, cut(RECENTCD4, breaks=c(-1,250,350,500,800,Inf), labels=c('<200','200-349','350-499','500-799','800+'))])
+		t.vl		<- unique(subset(rd, !is.na(RECENTVLDATE) & !is.na(RECENTVL), select=c(RID, RECENTVLDATE, RECENTVL)))
+		set(t.vl, NULL, 'RECENTVL', t.vl[, cut(RECENTVL, breaks=c(-1,200,1e3,1e5,Inf), labels=c('<200','200-1,000','1,000-100,000','100,000+'))])
+		df			<- subset(rtpd, SDC_TYPE=='incorrect')
+		p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
+		pdf(file=paste0(outfile.base,'epilines_pairs_with_inconsistent_serohistory.pdf'), w=8, h=5)
+		print(p)
+		dev.off()
+		df			<- subset(rtpd, SDC_TYPE=='correct')
+		p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
+		pdf(file=paste0(outfile.base,'epilines_pairs_with_consistent_serohistory.pdf'), w=8, h=20)
+		print(p)
+		dev.off()
+	}
 	rtpd	<- subset(rtpd, is.na(SDC_TYPE) | SDC_TYPE=='correct')
 	rtpd	<- subset(rtpd, select=c(FEMALE_RID, MALE_RID, PTY_RUN, GROUP, TYPE, K, KEFF, N, NEFF, N_TYPE, PAR_PRIOR, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE))
 	#
@@ -2997,9 +3015,9 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#stage 2
 	#FALSE  TRUE 
 	#147     1
-	#p mode
+	#on stage 2 using 23 and neff>=3
 	#FALSE 
-	#115 
+	#126
 	tmp2<- subset(rtpd, TYPE=='fm')[, list(MALE_N_TR=length(FEMALE_RID)), by='MALE_RID']
 	tmp2[, table(MALE_N_TR>1)]
 	#stage 1
@@ -3008,9 +3026,9 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	#stage 2
 	#FALSE 
 	#105 
-	#p mode
-	#FALSE 
-	#   77 
+	#on stage 2 using 23 and neff>=3
+	#FALSE TRUE
+	#   87 1 
 	#--> stage 2 is awesome
 	rtpd	<- merge(rtpd, tmp, by='FEMALE_RID', all.x=1)
 	rtpd	<- merge(rtpd, tmp2, by='MALE_RID', all.x=1)
@@ -3152,7 +3170,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
 		
 		group		<- 'TYPE_BASIC'
-		#group		<- 'TYPE_PAIR_TODI'					
+		#group		<- 'TYPE_PAIR_TODI2'					
 		rpw2		<- subset(rpw, GROUP==group)
 		rplkl2		<- subset(rplkl, GROUP==group)	
 		plot.file	<- paste0(outfile.base,'windows_summary_',group,'.pdf')
@@ -4425,7 +4443,9 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	require(Hmisc)
 	
 	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3_allwindows.rda"		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170516_"	
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170516_"
+	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23_allwindows.rda"		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170610_cl3_prior23_"	
 	load(infile)
 	
 	#	add to rpw and rplkl if ID is part of couple	
@@ -4550,21 +4570,24 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	#	proportion of disconnected / with intermediate pairs among FF pairs with avg distance <3.5%
 	subset(rplkl2, PD_MEAN<0.035 & TYPE_PAIR=='ff')[, table(TYPE_TO)]
 	#	ancestral      intermingled with intermediate           sibling      disconnected 
-	#		   46                 2                 5                 3                63 
-	#	68/119=57% reduction in false positive FF pairs through topology
+	#		   42                 6                 4                 2                66 
+	#	70/120=58% reduction in false positive FF pairs through topology
 
 	subset(rplkl2, PD_MEAN<0.035 & TYPE_PAIR=='hsx')[, table(TYPE_TO)]
 	#	ancestral      intermingled with intermediate           sibling      disconnected 
-	#		  251                13                 3                 5               111
-	#	114/383=29.7% reduction in hsx pairs
+	#		  236                30                 7                 7               134
+	#	141/414=34% reduction in hsx pairs
 
 
 	#
 	#	OK now do in earnest on pairs that are actually selected with
 	#	TYPE_PAIR_DI and TYPE_PAIR_TODI
 	#	at different distances
-	indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'	
-	infiles		<- data.table(F=list.files(indir, pattern='trmStatsPerWindow.rda$', full.names=TRUE))
+	prior.neff		<- 3
+	prior.keff		<- 2
+	confidence.cut	<- 0.66
+	indir			<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'	
+	infiles			<- data.table(F=list.files(indir, pattern='trmStatsPerWindow.rda$', full.names=TRUE))
 	for(close in seq(0.01,0.04,0.005))
 	{		
 		ans.rplkl	<- vector('list', nrow(infiles))
@@ -4594,13 +4617,13 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 			set(tt, tt[, which(ID2%in%rp$FEMALE_RID)], 'ID2_COUPLE', 1L)		
 			tt			<- subset(tt, (ID1_COUPLE==1L | ID2_COUPLE==1L) & !(ID1_SEX=='M' & ID2_SEX=='M'))
 			setnames(tt, 	c('ID1','ID2','ID1_L','ID2_L','ID1_R','ID2_R','PATHS_12','PATHS_21'),
-							c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'))
+							c('PAT.1','PAT.2','PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS','PATHS.12','PATHS.21'))					
 			if(nrow(tt))
 			{
 				#	redo relationships + likelihood at new distance threshold		
-				tmp			<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=20, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.5, relationship.types=c('TYPE_PAIR_DI','TYPE_PAIR_TODI','TYPE_PAIR_TODI2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3'), verbose=FALSE)
+				tmp			<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=20, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI','TYPE_PAIR_TODI','TYPE_PAIR_TODI2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3'), verbose=FALSE)
 				rpw			<- tmp$dwin	
-				rplkl		<- tmp$rplkl
+				rplkl		<- tmp$rplkl				
 				#	mop up
 				rplkl		<- merge(rplkl, unique(subset(rpw, select=c(ID1,ID2,ID1_SEX,ID2_SEX,ID1_COUPLE,ID2_COUPLE))), by=c('ID1','ID2'))
 				rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c('TYPE_PAIR_DI','TYPE_PAIR_TODI','TYPE_PAIR_TODI2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3'))
@@ -4625,11 +4648,12 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	}
 	#
 	#	select likely pairs 
-	confidence.cut	<- 0.5			
+	confidence.cut	<- 0.5
+	confidence.cut	<- 0.66
 	indir		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run'	
-	infiles		<- data.table(F=list.files(indir, pattern='close[0-9]+.rda$', full.names=TRUE))
+	infiles		<- data.table(F=list.files(indir, pattern='todi_ff_170610_.*close[0-9]+.rda$', full.names=TRUE))
 	rtp			<- infiles[, {
-				#infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170516_close10.rda'
+				#F			<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170610_cl3_prior23_close10.rda'
 				load(F)
 				#	select pairings from those runs with most data
 				pairings		<- unique(subset(rplkl, select=c(ID1,ID2,PTY_RUN,NEFF)))[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID2','ID1')]
@@ -4637,13 +4661,15 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 				#	likely transmission pairs, using distance
 				rtp			<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2','PTY_RUN')]
 				rtp			<- merge(subset(rtp, TYPE_MLE=='close', c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]			
+				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]						
 				rtp			<- subset(rtp, POSTERIOR_SCORE>confidence.cut)
 				tmp			<- copy(rtp)
 				#	likely transmission pairs, using distance+topoloy
 				rtp			<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2','PTY_RUN')]
 				rtp			<- merge(subset(rtp, TYPE_MLE=='likely pair', c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair'), by=c('ID1','ID2'), all.x=1)
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]			
+				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
+				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]			
 				rtp			<- subset(rtp, POSTERIOR_SCORE>confidence.cut)
 				rtp			<- rbind(rtp, tmp)	
 				rtp
@@ -4653,12 +4679,14 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	rtp[, TYPE_PAIR:= tolower(paste0(ID1_SEX, ID2_SEX))]
 	set(rtp, rtp[, which(TYPE_PAIR%in%c('fm','mf'))], 'TYPE_PAIR', 'hsx')
 	#	exclude PTY_RUN 1 for now 
-	rtp		<- subset(rtp, PTY_RUN!=1)
+	#rtp		<- subset(rtp, PTY_RUN!=1)
 	ffs		<- rtp[, list(N=length(ID1)), by=c('GROUP','TYPE_PAIR','CLOSE_BRL')]
 	ffs		<- rbind(ffs, ffs[, list(N=sum(N), TYPE_PAIR='ff_hsx'), by=c('GROUP','CLOSE_BRL')])
-	#	how many individuals in total did we run stage2 phyloscanner on:
-	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
+	#	how many individuals in total did we run stage3 phyloscanner on:
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagethree.rda')
 	tmp		<- unique(subset(pty.runs, select=RID))
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
+	tmp		<- unique(rbind(subset(pty.runs, PTY_RUN!=1, RID),tmp))
 	tmp		<- merge(tmp, unique(subset(rd, select=c(RID,SEX))),by='RID')
 	ffs[, N_FEMALE:= nrow(subset(tmp, SEX=='F'))]
 	ffs[, N_MALE:= nrow(subset(tmp, SEX=='M'))]
@@ -4734,7 +4762,8 @@ RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
 	
 	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
 	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"
 	load(infile)	
 	setkey(rca, MALE_RID, FEMALE_RID)
 	rca[, PAIRID:=seq_len(nrow(rca))]
