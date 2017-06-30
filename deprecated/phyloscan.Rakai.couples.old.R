@@ -10168,7 +10168,7 @@ RakaiCouples.analyze.couples.161219.distances<- function()
 	require(scales)
 	require(ggplot2)
 	require(ape)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	# load pty.run
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"

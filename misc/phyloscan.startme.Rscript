@@ -19,7 +19,7 @@ require(data.table)
 require(grid)
 require(reshape2)
 require(ggplot2)
-require(phyloscan)
+require(Phyloscanner.R.utilities)
 
 
 CODE.HOME	<<- "/Users/Oliver/git/phyloscan"

@@ -230,7 +230,7 @@ roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
 roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
 library(help='igraph')
 ?graph.dfs
-library(phyloscan)#
+library(Phyloscanner.R.utilities)#
 load( infile )		# loads pty.runs#
 #pty.evaluate.tree(indir, pty.runs, outdir=outdir, select=select, outgroup=outgroup)#
 tmp		<- data.table(FILE=list.files(outdir, pattern='examl.rda$'))

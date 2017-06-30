@@ -78,7 +78,7 @@ if(0)
 ###############################################################################
 #	run script
 ###############################################################################
-suppressMessages(library(phyloscan))
+suppressMessages(library(Phyloscanner.R.utilities))
 #	load detailed summary file
 tmp		<- load(infile)
 if(length(tmp)!=1)	stop("Unexpected length of loaded objects in infile")

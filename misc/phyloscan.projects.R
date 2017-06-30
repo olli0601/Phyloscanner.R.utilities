@@ -2900,7 +2900,7 @@ pty.process.160901<- function()
 pty.pipeline.compress.phyloscanner.output<- function()
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -2942,7 +2942,7 @@ pty.pipeline.compress.phyloscanner.output<- function()
 pty.pipeline.dualparameter<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
 	#
@@ -3048,7 +3048,7 @@ pty.pipeline.dualparameter<- function()
 
 pty.pipeline.phyloscanner.test<- function() 
 {
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -3163,7 +3163,7 @@ pty.pipeline.phyloscanner.test<- function()
 pty.pipeline.phyloscanner.160825<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -3406,7 +3406,7 @@ pty.pipeline.phyloscanner.160915.example<- function()
 	save(runs_rakai_couples, file='~/git/phyloscan/data/runs_rakai_couples.rda')
 	
 	# 	load data.table of predefined phyloscanner runs
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	data(runs_rakai_couples)
 	#	setup input, output and working directories
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
@@ -3451,7 +3451,7 @@ pty.pipeline.phyloscanner.160915.example<- function()
 pty.pipeline.phyloscanner.160915.couples<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -3528,7 +3528,7 @@ pty.pipeline.phyloscanner.160915.couples<- function()
 pty.pipeline.phyloscanner.170301.firstbatchofall<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -3615,7 +3615,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall<- function()
 pty.pipeline.phyloscanner.170301.secondbatchofall<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -3741,7 +3741,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix	<- function()
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	
 	trmw.min.reads					<- 20
 	trmw.min.tips					<- 1
@@ -3936,7 +3936,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -4204,7 +4204,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 pty.pipeline.phyloscanner.170301.thirdstage<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -4321,7 +4321,7 @@ pty.pipeline.phyloscanner.170301.thirdstage<- function()
 pty.pipeline.phyloscanner.170301.secondstage.rerun<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -4445,7 +4445,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)
+	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -4571,7 +4571,7 @@ pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.rerun<- function()
 pty.pipeline.phyloscanner.160915.couples.rerun<- function() 
 {
 	require(big.phylo)
-	require(phyloscan)  
+	require(Phyloscanner.R.utilities)  
 	#
 	#	INPUT ARGS PLATFORM
 	#	

@@ -1,6 +1,6 @@
-Package: phyloscan
-Version: 0.4-0
-Date: 2017/04/20
+Package: Phyloscanner.R.utilities
+Version: 0.5-0
+Date: 2017/06/30
 Title: 
 Author: {Oliver Ratmann}
 Maintainer: Oliver Ratmann <oliver.ratmann@imperial.ac.uk>
@@ -19,7 +19,9 @@ Suggests:
     ggplot2,
     ggtree,
     zoo
-Description: Utility functions for phyloscanner
+Description: Please see https://github.com/BDI-pathogens/phyloscanner for the PHYLOSCANNER package.
+    Phyloscanner.R.utilities is a set of functions used to help apply phyloscanner to very large datasets, and analyse and merge outputs from multiple runs.
+    Please go to the PHYLOSCANNER page for access to the main software package.
 License: GPL (>=2)
 LazyLoad: yes
 RoxygenNote: 5.0.1
