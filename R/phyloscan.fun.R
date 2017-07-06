@@ -1,7 +1,7 @@
 PR.PACKAGE			<- "phyloscan" 
 PR.read.processed.phyloscanner.output.in.directory		<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.read.processed.phyloscanner.output.in.directory.Rscript"))
 PR.pairwise.relationships								<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.pairwise.relationships.Rscript"))
-#PR.pairwise.relationships								<- paste('Rscript', '/Users/Oliver/git/phyloscan/inst/phsc.pairwise.relationships.Rscript')
+#PR.pairwise.relationships								<- paste('Rscript', '/Users/Oliver/git/Phyloscanner.R.utilities/inst/phsc.pairwise.relationships.Rscript')
 
 .onAttach <- function(...) 
 {
@@ -537,16 +537,14 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 #' @export
 #' @title Generate bash command for a single phyloscanner run
 #' @param pty.args List of phyloscanner input variables. See examples.
-#' @param file.bam File name of the file that contains the list of bam files.
-#' @param file.ref File name of the file that contains the list of reference files.
-#' @param file.patient File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit.
-#' @param file.rename File name of the file that contains new ID names for each bam/ref file. Can be set to NA. 
+#' @param file.input File name of the file that contains the list of bam files, reference files, and potentially aliases
+#' @param file.patient File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit. 
 #' @return Character string of phyloscanner commands.
 #' @description This function generates bash commands for a single phyloscanner run, that can be called via 'system' in R, or written to file to run on a UNIX system.
 #' @example example/ex.cmd.phyloscanner.one.R    
-phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient, file.rename=NA)
+phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 {	
-	stopifnot(is.character(file.bam),is.character(file.ref),is.character(file.patient))
+	stopifnot(is.character(file.input),is.character(file.patient))
 	#	copy input variables into namespace	 
 	attach(pty.args)	
 	#	sense checks
@@ -567,7 +565,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	no.trees					<- ifelse(!is.na(no.trees) & no.trees, '--no-trees', NA_character_)
 	num.bootstraps				<- ifelse(is.na(no.trees) & !is.na(num.bootstraps) & is.numeric(num.bootstraps) & num.bootstraps>1, as.integer(num.bootstraps), NA_integer_)
 	dont.check.duplicates		<- ifelse(!is.na(dont.check.duplicates) & dont.check.duplicates, '--dont-check-duplicates', NA_character_)
-	dont.check.recombination	<- ifelse(!is.na(dont.check.recombination) & dont.check.recombination, '--dont-check-recombination', NA_character_)	
+	dont.check.recombination	<- ifelse(!is.na(dont.check.recombination) & dont.check.recombination==FALSE, '--check-recombination', NA_character_)	
 	#	create local tmp dir
 	cmd		<- paste("CWD=$(pwd)\n",sep='\n')
 	cmd		<- paste(cmd,"echo $CWD\n",sep='')
@@ -575,23 +573,18 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	tmpdir	<- paste("$CWD/",tmpdir,sep='')
 	cmd		<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
 	#	copy files to local tmp dir
-	cmd		<- paste(cmd,'cp "',file.bam,'" "',tmpdir,'"\n',sep='')
-	cmd		<- paste(cmd,'cp "',file.ref,'" "',tmpdir,'"\n',sep='')
+	cmd		<- paste(cmd,'cp "',file.input,'" "',tmpdir,'"\n',sep='')	
 	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')
-	if(!is.na(file.rename))
-		cmd	<- paste(cmd,'cp "',file.rename,'" "',tmpdir,'"\n',sep='')
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
-	cmd		<- paste(cmd, prog.pty,' "',basename(file.bam),'" "',basename(file.ref),'" ',sep='')	
-	cmd		<- paste(cmd, '--merging-threshold', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality)
+	cmd		<- paste(cmd, prog.pty,' "',basename(file.input),'" ',sep='')	
+	cmd		<- paste(cmd, '--merging-threshold', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality,'--keep-output-together')
 	if(!is.na(merge.paired.reads))
 		cmd	<- paste(cmd,' ',merge.paired.reads,sep='')	
 	if(!is.na(dont.check.duplicates))
 		cmd	<- paste(cmd,' ',dont.check.duplicates,sep='')
 	if(!is.na(dont.check.recombination))
 		cmd	<- paste(cmd,' ',dont.check.recombination,sep='')	
-	if(!is.na(file.rename))	
-		cmd	<- paste(cmd,' --renaming-file "',basename(file.rename),'"',sep='')
 	if(!is.na(alignments.pairwise.to))		
 		cmd	<- paste(cmd,' --pairwise-align-to ',alignments.pairwise.to,sep='')
 	if(nchar(window.automatic))
@@ -600,8 +593,6 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 		cmd	<- paste(cmd,' --windows ', paste(as.character(window.coord), collapse=','),sep='')
 	if(!is.na(alignments.file))
 		cmd	<- paste(cmd,' --alignment-of-other-refs ',alignments.file,sep='')	
-	if(!is.na(alignments.root))
-		cmd	<- paste(cmd,' --ref-for-rooting ',alignments.root,sep='')	
 	if(!is.na(no.trees))		
 		cmd	<- paste(cmd, no.trees)
 	if(!is.na(num.bootstraps))
@@ -612,7 +603,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.bam, file.ref, file.patient,
 	if(is.na(no.trees))
 		cmd	<- paste(cmd, '--x-raxml',prog.raxml)	
 	cmd		<- paste(cmd, '\n')
-	run.id	<- gsub('_bam.txt','',basename(file.bam))
+	run.id	<- gsub('_input.csv','',basename(file.input))
 	#	process RAxML files
 	if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
 		cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',run.id,'_}"\ndone\n',sep='')
@@ -690,27 +681,20 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	#	write pty.run files and get pty command lines
 	#
 	pty.c		<- ptyd[, {
-				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]									
-				file.bam		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_bam.txt',sep=''))
-				file.ref		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_ref.txt',sep=''))				
-				cat( paste(BAM[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.bam	)
-				cat( paste(REF[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.ref	)				
-				file.rename		<- NA_character_
+				#	PTY_RUN<- z <- 22; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]									
+				file.input		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_input.csv',sep=''))
+				tmp				<- cbind(BAM[!is.na(BAM)&!is.na(REF)], REF[!is.na(BAM)&!is.na(REF)])
 				if(exists('RENAME_ID'))
-				{
-					file.rename	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_rename.txt',sep=''))
-					cat( paste(RENAME_ID[!is.na(BAM)&!is.na(REF)],collapse='\n'), file= file.rename	)					
-				}	
+					tmp			<- cbind(tmp, RENAME_ID[!is.na(BAM)&!is.na(REF)])
+				write.table(tmp, file=file.input, row.names=FALSE, col.names=FALSE, quote=FALSE, sep=',')
 				file.patient	<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_patients.txt',sep=''))
 				tmp				<- paste0(SAMPLE_ID[!is.na(BAM)&!is.na(REF)],'.bam')
 				if(exists('UNIT_ID'))
 					tmp			<- unique(UNIT_ID[!is.na(BAM)&!is.na(REF)])
 				cat( paste(tmp,collapse='\n'), file= file.patient	)
 				cmd			<- phsc.cmd.phyloscanner.one(	pty.args, 
-															file.bam, 
-															file.ref,
-															file.patient,
-															file.rename)
+															file.input, 
+															file.patient)
 				#cmd			<- paste(cmd, pty.cmd.evaluate.fasta(pty.args[['out.dir']], strip.max.len=pty.args[['strip.max.len']], select=paste('^ptyr',PTY_RUN,'_In',sep=''), min.ureads.individual=pty.args[['min.ureads.individual']]), sep='')
 				#cat(cmd)
 				list(CMD= cmd)				
@@ -763,7 +747,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prior.neff.dir					<- pty.args[['pw.prior.neff.dir']] 	
 	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
 	verbose							<- pty.args[['verbose']]
-	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
+	pty.tools.dir					<- file.path(dirname(prog.pty),'deprecated')
+	#pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir,'NormalisationLookupWriter.R'),sep='')
 	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
 	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'ParsimonyBasedBlacklister.R'),sep='')
@@ -853,7 +838,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff, 
 																pty.tools.dir,
 																file.path(tmp.dir,paste0(run.id_,'InWindow_')),
-																file.path(tmp.dir,paste0(run.id_,'blacklistsank_InWindow_')),																 
+																file.path(tmp.dir,paste0(run.id_,'blacklistsank_')),																 
 																dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow_')),
 																blackListFileName=blacklistFiles,
 																rawThreshold=roguesubtree.read.threshold, 

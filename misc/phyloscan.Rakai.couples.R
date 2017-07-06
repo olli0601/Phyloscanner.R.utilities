@@ -4767,18 +4767,21 @@ RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
 	load(infile)	
 	setkey(rca, MALE_RID, FEMALE_RID)
 	rca[, PAIRID:=seq_len(nrow(rca))]
-	
+	rca					<- subset(rca, !grepl('insufficient',SELECT))
 	#	for each pair:
 	#	get posterior prob for likely pair
 	rpp					<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='likely pair')
 	#	merge PAIRID
 	rpp					<- merge(rpp,unique(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))),by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	#	sort by posterior median highest for likely pair
-	rpp					<- rpp[order(qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)),]
+	#rpp					<- rpp[order(qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)),]
+	#	sort by posterior mode highest for likely pair
+	rpp					<- rpp[order((POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)),]	
 	set(rpp, NULL, 'PAIRID',rpp[, factor(PAIRID, levels=rpp$PAIRID)])	
 	p3	<- ggplot(rpp, aes(x=PAIRID)) +
 			geom_segment(aes(xend=PAIRID, y=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA),yend=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='grey50') +
-			geom_point(aes(y=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='black') +			
+			#geom_point(aes(y=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='black') +
+			geom_point(aes(y=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)), colour='black') +
 			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.25), labels=scales::percent) +					
 			theme_bw() + 			
 			theme(axis.text.x=element_blank()) +
@@ -4787,32 +4790,58 @@ RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
 			labs(x='',y='',fill='')
 	#	for each pair:
 	#	make pair topology assignments: ancestral, intermingled, sibling, disconnected
-	rplkl2				<- subset(rplkl, GROUP=='TYPE_BASIC')
-	rplkl2[, TYPE_TO:= 'disconnected/ not close']
-	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('chain', TYPE))], 'TYPE_TO', 'close ancestral')
-	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'close intermingled')
-	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
-	rplkl2				<- rplkl2[, list(N=N[1],NEFF=NEFF[1],K=sum(K),KEFF=sum(KEFF)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
-	set(rplkl2, NULL, 'TYPE_TO', rplkl2[, factor(TYPE_TO, levels=c('close ancestral','close intermingled','close sibling','disconnected/ not close'))])
-	#	copy sorted PAIRID to rplkl2
-	rplkl2				<- merge(rplkl2, unique(subset(rpp, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
-	#
-	p2	<- ggplot(rplkl2, aes(x=PAIRID, y=KEFF, fill=TYPE_TO)) +
-			geom_bar(stat='identity',position='stack') +
-			scale_y_continuous(expand=c(0,0)) +
-			scale_fill_manual(values=c("close ancestral"=brewer.pal(11, 'PuOr')[2], "close intermingled"=brewer.pal(11, 'PuOr')[4], 'close sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected/ not close"=rev(brewer.pal(11, 'RdGy'))[4])) +
-			labs(x='', y='', fill='') +
-			theme_bw() + 
-			theme(legend.position='bottom') +
-			theme(axis.ticks.x=element_blank()) +
-			theme(panel.border=element_blank()) +
-			theme(axis.text.x=element_blank()) +
-			theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
+	if(1)
+	{
+		rplkl2				<- subset(rplkl, GROUP=='TYPE_BASIC')
+		rplkl2[, TYPE_TO:= 'disconnected or with intermediate']
+		set(rplkl2, rplkl2[,which(grepl('no intermediate', TYPE) & grepl('chain', TYPE))], 'TYPE_TO', 'ancestral & no intermediate')
+		set(rplkl2, rplkl2[,which(grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled & no intermediate')
+		set(rplkl2, rplkl2[,which(grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'adjacent & no intermediate')
+		rplkl2				<- rplkl2[, list(N=N[1],NEFF=NEFF[1],K=sum(K),KEFF=sum(KEFF)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+		set(rplkl2, NULL, 'TYPE_TO', rplkl2[, factor(TYPE_TO, levels=c('ancestral & no intermediate','intermingled & no intermediate','adjacent & no intermediate','disconnected or with intermediate'))])
+		#	copy sorted PAIRID to rplkl2
+		rplkl2				<- merge(rplkl2, unique(subset(rpp, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+		p2	<- ggplot(rplkl2, aes(x=PAIRID, y=KEFF, fill=TYPE_TO)) +
+				geom_bar(stat='identity',position='stack') +
+				scale_y_continuous(expand=c(0,0)) +
+				scale_fill_manual(values=c("ancestral & no intermediate"=brewer.pal(11, 'PuOr')[2], "intermingled & no intermediate"=brewer.pal(11, 'PuOr')[4], 'adjacent & no intermediate'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected or with intermediate"=rev(brewer.pal(11, 'RdGy'))[4])) +
+				labs(x='', y='', fill='') +
+				theme_bw() + 
+				theme(legend.position='bottom') +
+				theme(axis.ticks.x=element_blank()) +
+				theme(panel.border=element_blank()) +
+				theme(axis.text.x=element_blank()) +
+				theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
+	}
+	if(0)
+	{
+		rplkl2				<- subset(rplkl, GROUP=='TYPE_BASIC')
+		rplkl2[, TYPE_TO:= 'disconnected/ not close']
+		set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('chain', TYPE))], 'TYPE_TO', 'close ancestral')
+		set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'close intermingled')
+		set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+		rplkl2				<- rplkl2[, list(N=N[1],NEFF=NEFF[1],K=sum(K),KEFF=sum(KEFF)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+		set(rplkl2, NULL, 'TYPE_TO', rplkl2[, factor(TYPE_TO, levels=c('close ancestral','close intermingled','close sibling','disconnected/ not close'))])
+		#	copy sorted PAIRID to rplkl2
+		rplkl2				<- merge(rplkl2, unique(subset(rpp, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+		#
+		p2	<- ggplot(rplkl2, aes(x=PAIRID, y=KEFF, fill=TYPE_TO)) +
+				geom_bar(stat='identity',position='stack') +
+				scale_y_continuous(expand=c(0,0)) +
+				scale_fill_manual(values=c("close ancestral"=brewer.pal(11, 'PuOr')[2], "close intermingled"=brewer.pal(11, 'PuOr')[4], 'close sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected/ not close"=rev(brewer.pal(11, 'RdGy'))[4])) +
+				labs(x='', y='', fill='') +
+				theme_bw() + 
+				theme(legend.position='bottom') +
+				theme(axis.ticks.x=element_blank()) +
+				theme(panel.border=element_blank()) +
+				theme(axis.text.x=element_blank()) +
+				theme(panel.grid.minor.x=element_blank(), panel.grid.major.x=element_blank())
+	}	
 	#	for each pair:
 	#	get phyloscanner distances confidence intervals and median values
 	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')[, list(	PD_CL=quantile(PATRISTIC_DISTANCE,p=0.025),
 														PD_IL=quantile(PATRISTIC_DISTANCE,p=0.25),
-														PD_M=mean(PATRISTIC_DISTANCE),
+														PD_M=median(PATRISTIC_DISTANCE),
 														PD_IU=quantile(PATRISTIC_DISTANCE,p=0.75),
 														PD_CU=quantile(PATRISTIC_DISTANCE,p=0.975)
 														),by=c('MALE_RID','FEMALE_RID','PTY_RUN')]
@@ -4870,7 +4899,10 @@ RakaiFull.analyze.couples.todi.170522.DI.vs.TODI.vs.DIR<- function()
 	require(Hmisc)
 	
 	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"	
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"	
+	
 	load(infile)
 	#	per pair:
 	#	make pair topology assignments: TYPE_PAIR_TO ancestral/intermingled; other; ambiguous as usual
@@ -4882,34 +4914,47 @@ RakaiFull.analyze.couples.todi.170522.DI.vs.TODI.vs.DIR<- function()
 	#	make window topology assignments: TYPE_PAIR_TO ancestral/intermingled; withintermediate; other (include adjacent other here)
 	#	make boxplot
 	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')
-	rpw2[, TYPE_TO:= 'disconnected']
-	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE))], 'TYPE_TO', 'ancestral/intermingled')
-	set(rpw2, rpw2[,which(grepl('with intermediate', TYPE))], 'TYPE_TO', 'with intermediate')
-	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'sibling')
+	#rpw2[, TYPE_TO:= 'disconnected']
+	#set(rpw2, rpw2[,which(grepl('no intermediate', TYPE))], 'TYPE_TO', 'ancestral/intermingled')
+	#set(rpw2, rpw2[,which(grepl('with intermediate', TYPE))], 'TYPE_TO', 'with intermediate')
+	#set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'sibling')
+	#set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected"))])
+	rpw2[, TYPE_TO:= 'disconnected or with intermediate']
+	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE) & grepl('chain', TYPE))], 'TYPE_TO', 'ancestral & no intermediate')
+	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled & no intermediate')
+	set(rpw2, rpw2[,which(grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'adjacent & no intermediate')	
+	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c('ancestral & no intermediate','intermingled & no intermediate','adjacent & no intermediate','disconnected or with intermediate'))])
 	rpw2[, PATRISTIC_DISTANCE_LOG:= log10(PATRISTIC_DISTANCE)]
-	rpw2[, PATRISTIC_DISTANCE_LOGC:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, 0.0075, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-0.75%', '0.75%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
+	rpw2[, PATRISTIC_DISTANCE_LOGC:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
 	rpw2[, PATRISTIC_DISTANCE_LOGC2:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.035, 0.08, 2e3)),labels=c('<3.5%', '3.5%-8%', '>8%'))]	
-														
+	#
+	rpw2[, table(TYPE_TO)]
+	rpw2[, table(TYPE_TO)/nrow(rpw2)]
+	#      ancestral & no intermediate    intermingled & no intermediate        adjacent & no intermediate disconnected or with intermediate 
+    #                    0.34229600                        0.14258437                        0.05163276                        0.46348687
+
 	#
 	#	plot topology assignment by distance
-	#
-	cols.typet			<- c(brewer.pal(11, 'PuOr')[2], rev(brewer.pal(11, 'PuOr'))[c(3,4)], rev(brewer.pal(11, 'RdGy'))[4])
-	names(cols.typet)	<- c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected")
-	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected"))])
+	#		
+	#cols.typet			<- c(brewer.pal(11, 'PuOr')[2], rev(brewer.pal(11, 'PuOr'))[c(3,4)], rev(brewer.pal(11, 'RdGy'))[4])
+	#names(cols.typet)	<- c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected")
+	cols.typet			<- c("ancestral & no intermediate"=brewer.pal(11, 'PuOr')[2], "intermingled & no intermediate"=brewer.pal(11, 'PuOr')[4], 'adjacent & no intermediate'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected or with intermediate"=rev(brewer.pal(11, 'RdGy'))[4])	
 	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
 			geom_bar(position='fill') +
 			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
 			theme_bw() + theme(legend.position='bottom') +
 			scale_fill_manual(values=cols.typet) +
-			labs(x='\npatristic distance between WH clades\n(subst/site)', y='genomic windows\nacross couples\n', fill='pairwise\ntopological relationship')
-	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_prop.pdf'), w=7, h=4.5)
+			labs(x='\nsubtree distance\n(subst/site)', y='subtree relationships\nacross genomic windows\n', fill='pairwise\ntopological relationship') +
+			guides(fill=FALSE)
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_prop.pdf'), w=5, h=2.25)
 	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
 			geom_bar(position='stack') +
-			scale_y_continuous(breaks=seq(0,20e3,1e3), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,20e3,2e3), expand=c(0,0)) +
 			theme_bw() + theme(legend.position='bottom') +
 			scale_fill_manual(values=cols.typet) +
-			labs(x='\npatristic distance between WH clades\n(subst/site)', y='genomic windows\nacross couples\n', fill='pairwise\ntopological relationship')
-	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count.pdf'), w=7, h=4.5)
+			labs(x='\nsubtree distance\n(subst/site)', y='subtree relationships\nacross genomic windows\n', fill='pairwise\ntopological relationship') +
+			guides(fill=FALSE)
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count.pdf'), w=5, h=2.25)
 	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC2, fill=TYPE_TO)) +
 			geom_bar(position='fill') +
 			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
@@ -5318,6 +5363,79 @@ RakaiFull.analyze.couples.todi.170522.DIRext<- function()
 			invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.blacklisted=FALSE, drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))						
 		}
 	}
+}
+
+RakaiFull.analyze.couples.todi.170522.distance.histogram<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+		
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'		
+	outfile.base	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"		
+	load(infile)
+	dfd				<- subset(rpw, GROUP=='TYPE_BASIC')
+	dfd				<- dfd[, list(	PHSC_PD_MEAN=mean(PATRISTIC_DISTANCE, na.rm=TRUE),
+									PHSC_PD_Q025=quantile(PATRISTIC_DISTANCE, p=0.025, na.rm=TRUE),
+									PHSC_PD_Q25=quantile(PATRISTIC_DISTANCE, p=0.25, na.rm=TRUE),
+									PHSC_PD_Q75=quantile(PATRISTIC_DISTANCE, p=0.75, na.rm=TRUE),
+									PHSC_PD_Q975=quantile(PATRISTIC_DISTANCE, p=0.975, na.rm=TRUE)	
+									), by=c('PTY_RUN','MALE_RID','FEMALE_RID')]
+	
+	#
+	require(mclust)
+	dfds	<- subset(dfd, PHSC_PD_MEAN>1e-5 & PHSC_PD_MEAN<1)
+	m1		<- densityMclust( log(dfds$PHSC_PD_MEAN), G=2)
+	m2		<- densityMclust( log(dfds$PHSC_PD_MEAN))	#best fit really is 2D
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_pdf.pdf'), w=5, h=5)
+	plot(m1, what='density', data= log(dfds$PHSC_PD_MEAN), breaks=50)
+	dev.off()
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_cdf.pdf'), w=5, h=5)
+	densityMclust.diagnostic(m1, type='cdf')	
+	dev.off()
+	#	mean and variance of first component	
+	tmp		<- log(seq(1e-4,1,0.0001))
+	th1		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(1,3,5)])
+	dens1	<- data.table(X=tmp, Y=dnorm(tmp, mean=th1[1], sd=sqrt(th1[2])))
+	th2		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(2,4,6)])
+	dens2	<- data.table(X=tmp, Y=dnorm(tmp, mean=th2[1], sd=sqrt(th2[2])))
+	densm	<- data.table(X=tmp, Y=predict.densityMclust(m1, tmp))
+	
+	#	3.5% threshold corresponds to 9.14% quantile of the LogNormal
+	pnorm(log(0.035), mean=th1[1], sd=sqrt(th1[2]), lower.tail=FALSE)
+	#	3.5% threshold corresponds to 0.6% quantile of the LogNormal
+	pnorm(log(0.035), mean=th2[1], sd=sqrt(th2[2]), lower.tail=TRUE)	
+	#	8% threshold corresponds to 6.936269e-07 quantile of the LogNormal
+	pnorm(log(0.08), mean=th2[1], sd=sqrt(th2[2]), lower.tail=TRUE)
+	
+	#	10% quantile is 3.3% threshold
+	exp(qnorm(0.9, mean=th1[1], sd=sqrt(th1[2])))
+	#tmp		<- seq(1e-4,0.1,0.0001)
+	#tmp		<- data.table(X=tmp, Y=dlnorm(tmp, meanlog=th1[1], sdlog=sqrt(th1[2]), log=FALSE))
+	
+	ggplot(dfds) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.035), ymin=-Inf, ymax=Inf, fill=brewer.pal(11, 'PuOr')[2], alpha=0.5) +
+			annotate("rect", xmin=log(0.08), xmax=log(1), ymin=-Inf, ymax=Inf, fill=rev(brewer.pal(11, 'RdGy'))[4], alpha=0.5) +
+			#geom_vline(xintercept=log(c(0.035,0.08)), colour='grey70') +
+			#geom_vline(xintercept=qnorm(c(1e-3, 0.005, 0.01), mean=th2[1], sd=sqrt(th2[2])), colour='blue') +
+			#geom_vline(xintercept=qnorm(c(0.8,0.9,0.95), mean=th1[1], sd=sqrt(th1[2])), colour='red') +
+			geom_histogram(aes(x=log(PHSC_PD_MEAN), y=..density..), binwidth=0.2, colour='white', fill='skyblue3') +
+			geom_line(data=densm, aes(x=X, y=Y), lwd=0.8, colour='black') +			
+			#geom_line(data=dens1, aes(x=X, y=Y*0.57), lwd=1.25, colour=brewer.pal(11, 'PuOr')[2]) +
+			#geom_line(data=dens2, aes(x=X, y=Y*0.432), lwd=1.25, colour=rev(brewer.pal(11, 'RdGy'))[4]) +			
+			#scale_colour_brewer(palette='Set1') +			
+			scale_y_continuous(expand=c(0,0), limits=c(0,0.52)) + 
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\naverage subtree distance between spouses\n( subst/site )', y='density', colour='')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted.pdf'), w=5, h=2.25)
+	
 }
 
 RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()

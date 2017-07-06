@@ -58,7 +58,7 @@ project.dual.alignments.missing<- function()
 project.dual.alignments.reference<- function()
 {
 	file			<- '~/Dropbox (Infectious Disease)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
-	outfile			<- '~/git/phyloscan/inst/HIV1_compendium_C_B_CPX.fasta'
+	outfile			<- '~/git/Phyloscanner.R.utilities/inst/HIV1_compendium_C_B_CPX.fasta'
 	ref				<- read.dna(file, format='fasta')
 	df				<- data.table(TAXA=rownames(ref))
 	df[,SUBTYPE:= toupper(gsub('^[0-9]+_','',regmatches(TAXA,regexpr('^[^\\.]+',TAXA))))]
@@ -70,7 +70,7 @@ project.dual.alignments.reference<- function()
 	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
 	
 	file			<- '~/Dropbox (Infectious Disease)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
-	outfile			<- '~/git/phyloscan/inst/HIV1_compendium_AD_B_CPX.fasta'
+	outfile			<- '~/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX.fasta'
 	ref				<- read.dna(file, format='fasta')
 	df				<- data.table(TAXA=rownames(ref))
 	df[,SUBTYPE:= toupper(gsub('^[0-9]+_','',regmatches(TAXA,regexpr('^[^\\.]+',TAXA))))]
@@ -1395,6 +1395,415 @@ project.Rakai.ExaMLTree.170601<- function()
 			})	
 }
 ######################################################################################
+project.Rakai.FastTree.170628<- function()
+{
+	require(ape)
+	
+	sq				<- read.dna("~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta", format='fasta')
+	#	handle repeats
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	cat('Repeats', paste(sqi[tmp,TAXA], collapse=', '))
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]
+	#	get coverage
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('-R[0-9]+','',TAXA)]
+	#	for each PIDF keep taxon with highest coverage
+	sqi		<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	select
+	sq				<- sq[ sqi$TAXA, ]
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	#	add new consensuses
+	infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/Rakai_Mar2017_GlobalAlignment_10040_BestSeqPerSample.fasta'
+	sn		<- read.dna(infile, format='fa')
+	sq		<- rbind(sq,sn)
+	#	handle repeats
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	cat('Repeats', paste(sqi[tmp,TAXA], collapse=', '))
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]
+	#	get coverage
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('-R[0-9]+','',TAXA)]
+	#	for each PIDF keep taxon with highest coverage
+	sqi				<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	select
+	sq				<- sq[ sqi$TAXA, ]
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	#
+	#	update stragglers
+	infile			<- '~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/stragglers_GlobalAlignment_10040.fasta'
+	sn				<- read.dna(infile, format='fa')
+	rownames(sn)	<- gsub('_consensus_MinCov_10_50','',rownames(sn))	
+	#	keep only longest straggler for each PANGEA ID
+	stg				<- data.table(SID=rownames(sn), DUMMY=seq_len(nrow(sn)))
+	tmp				<- sapply(seq_len(nrow(sn)), function(i) base.freq(sn[i,], all=TRUE, freq=TRUE))
+	stg[, COV:=ncol(sn)-apply( tmp[c('-','?'),], 2, sum	)]		
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_assemblystatus.rda')
+	tmp				<- merge(sqi, subset(dc, !is.na(SID), select=c(PIDF, SID)), by='PIDF',all.x=TRUE)
+	stg				<- merge(stg, subset(tmp, select=c(SID, PIDF)), by='SID',all.x=1)
+	stg				<- merge(stg, stg[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	add to re-processed stragglers those taxa that are now junk
+	tmp				<- data.table(PIDF=c('PG14-UG501871-S03875','PG14-UG500718-S02722','PG14-UG503751-S05755','PG14-UG501956-S03960','PG14-UG503966-S05970','PG14-UG503944-S05948','PG14-UG503322-S05326','PG14-UG501838-S03842','PG14-UG503896-S05900','PG14-UG500743-S02747','PG14-UG503259-S05263','PG14-UG502371-S04375','PG14-UG503509-S05513','PG14-UG503648-S05652','PG14-UG503750-S05754','PG14-UG503518-S05522','PG14-UG501117-S03121','PG14-UG501506-S03510','PG14-UG503995-S05999','PG14-UG502131-S04135','PG14-UG501758-S03762','PG14-UG503968-S05972','PG14-UG503565-S05569','PG14-UG502024-S04028','PG14-UG503929-S05933','PG14-UG503673-S05677','PG14-UG502418-S04422','PG14-UG503643-S05647','PG14-UG501140-S03144','PG14-UG503190-S05194','PG14-UG500711-S02715','PG14-UG503891-S05895','PG14-UG503697-S05701','PG14-UG501743-S03747','PG14-UG503596-S05600','PG14-UG502370-S04374','PG14-UG501271-S03275','PG14-UG503555-S05559','PG14-UG502472-S04476','PG14-UG503500-S05504'))
+	stg				<- merge(tmp, stg, by='PIDF', all.x=1)
+	#write.csv(stg, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no1.csv')
+	#	reduce central alignment to taxa not in stg	
+	sq				<- sq[setdiff(rownames(sq),stg[, PIDF]),]
+	tmp				<- subset(stg, !is.na(SID))
+	sn				<- sn[tmp[,SID],]
+	rownames(sn)	<- tmp[,PIDF]
+	sq				<- rbind(sq,sn)	
+	sqi				<- merge(sqi,data.table(PIDF=rownames(sq)), by='PIDF')	
+	sqi[, COV:=NULL]
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	#
+	#	add in new stragglers from 170628
+	#
+	infile			<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/BlastfiltTest_10_50_ForGlobalAln_10040.fasta'
+	sn				<- read.dna(infile, format='fa')
+	rownames(sn)	<- gsub('_consensus_MinCov_10_50','',rownames(sn))	
+	#	keep only longest straggler for each PANGEA ID
+	stg				<- data.table(SID=rownames(sn), DUMMY=seq_len(nrow(sn)))
+	tmp				<- sapply(seq_len(nrow(sn)), function(i) base.freq(sn[i,], all=TRUE, freq=TRUE))
+	stg[, COV:=ncol(sn)-apply( tmp[c('-','?'),], 2, sum	)]		
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_assemblystatus.rda')	
+	stg				<- merge(stg, subset(dc, !is.na(SID), select=c(PIDF, SID)), by='SID',all.x=TRUE)	
+	stg				<- merge(stg, stg[, list(SID=SID, PIDF2=paste0('TANYA0628-',PIDF,'-R',seq_along(SID))), by='PIDF'], by=c('SID','PIDF'))
+	sn				<- sn[stg[,SID],]
+	rownames(sn)	<- stg[,PIDF2]	
+	sq				<- rbind(sq,sn)		
+	#
+	# update sqi
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))	
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('TANYA0628-','',gsub('-R[0-9]+','',TAXA))]
+	sqi[, GENBANK:= NA_character_]
+	tmp				<- sqi[, which(PNG=='N')]
+	set(sqi,tmp, 'GENBANK', sqi[tmp,gsub('.*\\.([^\\.]+)$','\\1',PIDF)])
+	set(sqi,sqi[, which(PNG=='Y')],'GENBANK','PANGEA')	
+	#
+	#	save UG
+	tmp				<- read.dna('/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta', format='fa')
+	tmp				<- rownames(tmp)
+	tmp				<- gsub('.*_([^_]+)$','\\1',tmp[!grepl('CPX',tmp)])
+	sqi				<- merge(sqi,data.table(GENBANK=c(tmp,'PANGEA')),by='GENBANK')		
+	sq				<- sq[sqi$TAXA,]
+	sqi				<- subset(sqi, PNG=='N' | (PNG=='Y' & grepl('PG[0-9][0-9]-UG.*',TAXA)))
+	sq				<- sq[sqi$TAXA,]	
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5046_Imperial_v170628_UgandaAlignment.fasta')
+	write.dna(sq, file=tmp, format='fa')	
+	
+	#	tree as requested by Tanya
+	tmp2			<- sq[subset(sqi, COV>700)[,TAXA],]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4216_Imperial_v170628_UgandaAlignment_minCov700.fasta')	
+	write.dna(tmp2, file=tmp, format='fa')	
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4216_Imperial_v170628_UgandaAlignment_minCov700.fasta'
+	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+	cat(tmp)
+	
+	#	take out samples that are covered in updated stragglers
+	tmp				<- stg[, unique(PIDF)]
+	tmp3			<- tmp2[setdiff(rownames(tmp2), tmp),]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4201_Imperial_v170628_UgandaAlignment_minCov700.fasta')	
+	write.dna(tmp3, file=tmp, format='fa')	
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4201_Imperial_v170628_UgandaAlignment_minCov700.fasta'
+	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+	cat(tmp)
+	
+	tmp				<- merge( subset(sqi, COV>700), unique(subset(stg, select=PIDF)), by='PIDF' )
+	tmp				<- merge(tmp,tmp[, list(N=length(TAXA)),by='PIDF'],by='PIDF')	
+	write.csv(subset(tmp, N>1), file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4216_Imperial_v170628_UgandaAlignment_minCov700_compareTANYAtaxa.csv')
+	
+	
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4199_Imperial_v170601_UgandaAlignment_minCov700_ft.newick'
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4216_Imperial_v170628_UgandaAlignment_minCov700_ft.newick'
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4201_Imperial_v170628_UgandaAlignment_minCov700_ft.newick'
+	ph				<- read.tree(infile)
+	tmp				<- as.numeric(ph$node.label)
+	tmp[is.na(tmp)]	<- 0
+	ph$node.label	<- tmp
+	tmp				<- which(ph$tip.label=='B.FR.83.HXB2_LAI_IIIB_BRU.K03455')
+	ph				<- phytools::reroot(ph, tmp, position=ph$edge.length[which(ph$edge[, 2]==tmp)] / 2)
+	ph				<- ladderize(ph)
+	pdf(gsub('newick','pdf',infile), w=15, h=500)
+	plot(ph, cex=0.5, show.node.label=TRUE)
+	dev.off()
+	
+	
+	tmp				<- extract.clade(ph,getMRCA(ph,c("PG14-UG502292-S04296","PG14-UG502476-S04480")))
+	tmp				<- merge(sqi, data.table(TAXA=tmp$tip.label), by='TAXA')
+	tmp				<- merge(tmp, dc, by='PIDF')
+	write.table(tmp, row.names=FALSE, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no3.csv')
+	
+}
+
+######################################################################################
+project.Rakai.FastTree.170630<- function()
+{
+	require(ape)	
+	sq				<- read.dna("~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta", format='fasta')
+	#	handle repeats
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	cat('Repeats', paste(sqi[tmp,TAXA], collapse=', '))
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]
+	#	get coverage
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('-R[0-9]+','',TAXA)]
+	#	for each PIDF keep taxon with highest coverage
+	sqi		<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	select
+	sq				<- sq[ sqi$TAXA, ]
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	#	add new consensuses
+	infile	<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/Rakai_Mar2017_GlobalAlignment_10040_BestSeqPerSample.fasta'
+	sn		<- read.dna(infile, format='fa')
+	sq		<- rbind(sq,sn)
+	#	handle repeats
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	cat('Repeats', paste(sqi[tmp,TAXA], collapse=', '))
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]
+	#	get coverage
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('-R[0-9]+','',TAXA)]
+	#	for each PIDF keep taxon with highest coverage
+	sqi				<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	select
+	sq				<- sq[ sqi$TAXA, ]
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	
+	#	add to sqi list of taxa that were re-processed
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_assemblystatus.rda')	
+	stg	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/OddCladeCheckMiseq.txt', header=FALSE, col.names='SID',stringsAsFactors=FALSE))
+	stg	<- merge(dc, stg, by='SID')
+	#sn				<- read.dna(file='~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/OddCladeCheckMiseq_10_50_ForGlobalAln_10040.fasta',format='fasta')
+	sn				<- read.dna(file='~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017/OddCladeCheck_WS17_Miseq_10_50_ForGlobalAln_10040.fasta',format='fasta')
+	rownames(sn)	<- gsub('_consensus_MinCov_10_50','',rownames(sn))
+	tmp2	<- data.table(SID=rownames(sn), DUMMY=seq_len(nrow(sn)))
+	tmp		<- sapply(seq_len(nrow(sn)), function(i) base.freq(sn[i,], all=TRUE, freq=TRUE))
+	tmp2[, COV:=ncol(sn)-apply( tmp[c('-','?'),], 2, sum	)]		
+	stg		<- merge(stg, tmp2, by='SID',all.x=1)
+	set(stg, stg[, which(is.na(COV))],'COV',0)
+	#	remove from sqi old taxa that do not appear in the new list
+	tmp		<- stg[, unique(PIDF)]
+	sqi[, STG0630:='n']
+	set(sqi, sqi[, which(PIDF%in%tmp)],'STG0630','y')
+	tmp		<- subset(stg, COV>0)[, unique(PIDF)]
+	sqi[, STG0630_COV:='n']
+	set(sqi, sqi[, which(PIDF%in%tmp)],'STG0630_COV','y')
+	sqi		<- subset(sqi, !(STG0630=='y' & STG0630_COV=='n'))
+	#	change names
+	tmp		<- sqi[, which(PNG=='Y' & STG0630=='n')]
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste0('NOCHANGE-',TAXA)])
+	tmp		<- sqi[, which(PNG=='Y' & STG0630=='y')]
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste0('PREVIOUS-',TAXA)])
+	set(sqi, NULL, c('STG0630','STG0630_COV','DUMMY'), NULL)
+	sq				<- sq[ sqi$PIDF, ]
+	rownames(sq)	<- sqi$TAXA
+	stg		<- subset(stg, COV>0, c(SID,PIDF,COV))
+	stg[, TAXA:= paste0('TANYA0630-',PIDF,'-',SID)]
+	stg[, PNG:='Y']
+	sn				<- sn[ stg$SID, ]
+	rownames(sn)	<- stg$TAXA
+	#	put all sequences together
+	sqi				<- rbind(sqi, stg, fill=TRUE)
+	sq				<- rbind(sq, sn)
+	#	add GENBANK
+	sqi[, GENBANK:= NA_character_]
+	tmp				<- sqi[, which(PNG=='N')]
+	set(sqi,tmp, 'GENBANK', sqi[tmp,gsub('.*\\.([^\\.]+)$','\\1',PIDF)])
+	set(sqi,sqi[, which(PNG=='Y')],'GENBANK','PANGEA')	
+	
+	#	save UG
+	tmp				<- read.dna('/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta', format='fa')
+	tmp				<- rownames(tmp)
+	tmp				<- gsub('.*_([^_]+)$','\\1',tmp[!grepl('CPX',tmp)])
+	sqi				<- merge(sqi,data.table(GENBANK=c(tmp,'PANGEA')),by='GENBANK')		
+	sqi				<- subset(sqi, PNG=='N' | (PNG=='Y' & grepl('PG[0-9][0-9]-UG.*',TAXA)))
+	sq				<- sq[sqi$TAXA,]	
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n5194_Imperial_v170630b_UgandaAlignment.fasta')
+	write.dna(sq, file=tmp, format='fa')		
+	#	tree as requested by Tanya
+	tmp2			<- sq[subset(sqi, COV>700)[,TAXA],]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4288_Imperial_v170630b_UgandaAlignment_minCov700.fasta')	
+	write.dna(tmp2, file=tmp, format='fa')	
+	#	take out samples that are covered in updated stragglers
+	tmp3			<- sq[subset(sqi, COV>700 & !grepl('PREVIOUS',TAXA))[,TAXA],]
+	tmp				<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Mar2017','PANGEA_HIV_n4171_Imperial_v170630b_UgandaAlignment_minCov700.fasta')	
+	write.dna(tmp3, file=tmp, format='fa')	
+	
+	#
+	infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4171_Imperial_v170630b_UgandaAlignment_minCov700.fasta'
+	#infile.fasta	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4288_Imperial_v170630_UgandaAlignment_minCov700.fasta'
+	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+	cat(tmp)
+	
+	
+	
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4199_Imperial_v170601_UgandaAlignment_minCov700_ft.newick'
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4216_Imperial_v170628_UgandaAlignment_minCov700_ft.newick'
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4201_Imperial_v170628_UgandaAlignment_minCov700_ft.newick'
+	infile			<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_n4171_Imperial_v170630b_UgandaAlignment_minCov700_ft.newick'
+	ph				<- read.tree(infile)
+	tmp				<- as.numeric(ph$node.label)
+	tmp[is.na(tmp)]	<- 0
+	ph$node.label	<- tmp
+	tmp				<- which(ph$tip.label=='B.FR.83.HXB2_LAI_IIIB_BRU.K03455')
+	ph				<- phytools::reroot(ph, tmp, position=ph$edge.length[which(ph$edge[, 2]==tmp)] / 2)
+	ph				<- ladderize(ph)
+	pdf(gsub('newick','pdf',infile), w=15, h=500)
+	plot(ph, cex=0.5, show.node.label=TRUE)
+	dev.off()
+	
+	
+	tmp				<- extract.clade(ph,getMRCA(ph,c("PG14-UG502292-S04296","PG14-UG502476-S04480")))
+	tmp				<- merge(sqi, data.table(TAXA=tmp$tip.label), by='TAXA')
+	tmp				<- merge(tmp, dc, by='PIDF')
+	write.table(tmp, row.names=FALSE, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no3.csv')
+	
+}
+
+######################################################################################
+project.Rakai.FastTree.170704<- function()
+{
+	require(ape)	
+	require(data.table)
+	sq				<- read.dna("~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.fasta", format='fasta')
+	#	handle repeats
+	sqi				<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp				<- sqi[, which(duplicated(TAXA))]
+	cat('Repeats', paste(sqi[tmp,TAXA], collapse=', '))
+	set(sqi, tmp, 'TAXA', sqi[tmp, paste(TAXA,'-R2',sep='')])
+	setkey(sqi, DUMMY)
+	rownames(sq)	<- sqi[,TAXA]
+	#	get coverage
+	tmp				<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]	
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]
+	sqi[, PIDF:= gsub('-R[0-9]+','',TAXA)]
+	#	for each PIDF keep taxon with highest coverage
+	sqi		<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)]), by='PIDF'], by=c('PIDF','DUMMY'))
+	#	select
+	sq				<- sq[ sqi$TAXA, ]
+	rownames(sq)	<- gsub('-R[0-9]+','',rownames(sq))
+	#
+	#	add new consensuses
+	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Jul2017/RakaiMiseqRerun_GlobalAln_10040.fasta'
+	sn		<- read.dna(infile, format='fa')	
+	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Jul2017/RakaiRerunKate_GlobalAln_10040.fasta'
+	tmp		<- read.dna(infile, format='fa')
+	sn		<- rbind(tmp,sn)
+	infile	<- '~/Dropbox (Infectious Disease)/PANGEA_data/Rakai_Shiver_Jul2017/RakaiHiseqRerun_GlobalAln_10040.fasta'
+	tmp		<- read.dna(infile, format='fa')
+	sn		<- rbind(tmp,sn)
+	rownames(sn)	<- gsub('_consensus_MinCov_10_50','',rownames(sn))
+	rownames(sn)	<- gsub('_consensus','',rownames(sn))
+	#	add to sqi list of taxa that were re-processed
+	load('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_assemblystatus.rda')	
+	sqi		<- data.table(SID=rownames(sn))
+	sqi		<- merge(dc, sqi, by='SID')
+	sqi		<- subset(sqi, select=c(SID,PIDF))
+	sqi[, TAXA:= paste0(PIDF,'_WTSI_',SID)]
+	sn		<- sn[ sqi$SID, ]
+	rownames(sn)	<- sqi$TAXA
+	#
+	sq		<- rbind(sq,sn)
+	#
+	#	get coverage
+	sqi		<- data.table(TAXA=rownames(sq), DUMMY=seq_len(nrow(sq)))
+	tmp		<- sapply(seq_len(nrow(sq)), function(i) base.freq(sq[i,], all=TRUE, freq=TRUE))
+	sqi[, COV:=ncol(sq)-apply( tmp[c('-','?'),], 2, sum	)]
+	sqi[, PNG:= sqi[, factor(grepl('PG',TAXA),levels=c(TRUE,FALSE),labels=c('Y','N'))]]	
+	sqi[, PIDF:= gsub('_WTSI_.*','',TAXA)]
+	#	for each PIDF identify taxon with highest coverage
+	sqi		<- merge(sqi, sqi[, list(DUMMY=DUMMY[which.max(COV)], HIGHEST_COV='Y'), by='PIDF'], by=c('PIDF','DUMMY'), all.x=TRUE)
+	set(sqi, sqi[, which(is.na(HIGHEST_COV))], 'HIGHEST_COV', 'N')
+	#
+	#	add GENBANK
+	sqi[, GENBANK:= NA_character_]
+	tmp				<- sqi[, which(PNG=='N')]
+	set(sqi,tmp, 'GENBANK', sqi[tmp,gsub('.*\\.([^\\.]+)$','\\1',PIDF)])
+	set(sqi,sqi[, which(PNG=='Y')],'GENBANK','PANGEA')	
+	#	determine which references for UG alignment
+	tmp				<- read.dna('/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta', format='fa')
+	tmp				<- rownames(tmp)
+	tmp				<- gsub('.*_([^_]+)$','\\1',tmp[!grepl('CPX',tmp)])
+	sqi[, IN_UG_ALI:='N']
+	set(sqi, sqi[, which(GENBANK%in%tmp)], 'IN_UG_ALI', 'Y')
+	set(sqi, sqi[, which(grepl('PG[0-9][0-9]-UG.*', TAXA))], 'IN_UG_ALI', 'Y')
+	#
+	#	write to file: Uganda, all SIDs, COV>700
+	tmp			<- sq[ subset(sqi, COV>700 & IN_UG_ALI=='Y')[, TAXA], ]
+	outfile		<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov700.fasta')
+	write.dna(tmp, file=outfile, format='fa')		
+	#	write to file: Uganda, all SIDs, COV>300
+	tmp			<- sq[ subset(sqi, COV>300 & IN_UG_ALI=='Y')[, TAXA], ]
+	outfile		<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov300.fasta')
+	write.dna(tmp, file=outfile, format='fa')		
+	#	write to file: Uganda, highest cov SIDs, COV>700
+	tmp			<- sq[ subset(sqi, COV>700 & IN_UG_ALI=='Y' & HIGHEST_COV=='Y')[, TAXA], ]
+	outfile		<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta')
+	write.dna(tmp, file=outfile, format='fa')		
+	
+	#
+	#	run FastTree
+	require(big.phylo)
+	infile.fasta	<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov700.fasta')
+	infile.fasta	<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov300.fasta')
+	infile.fasta	<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta')	
+	outfile.ft		<- gsub('\\.fasta','_ft.newick',infile.fasta)
+	tmp				<- cmd.fasttree(infile.fasta, outfile=outfile.ft, pr.args='-nt -gtr -gamma')
+	cat(tmp)
+	
+	
+	#
+	#	check FastTree
+	infile			<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov700_ft.newick')
+	infile			<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_allSID_cov300_ft.newick')
+	infile			<- file.path('/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus','PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_ft.newick')	
+	ph				<- read.tree(infile)
+	tmp				<- as.numeric(ph$node.label)
+	tmp[is.na(tmp)]	<- 0
+	ph$node.label	<- tmp
+	tmp				<- which(ph$tip.label=='B.FR.83.HXB2_LAI_IIIB_BRU.K03455')
+	ph				<- phytools::reroot(ph, tmp, position=ph$edge.length[which(ph$edge[, 2]==tmp)] / 2)
+	ph				<- ladderize(ph)
+	pdf(gsub('newick','pdf',infile), w=15, h=500)
+	plot(ph, cex=0.5, show.node.label=TRUE)
+	dev.off()
+	
+	
+	tmp				<- extract.clade(ph,getMRCA(ph,c("PG14-UG502292-S04296","PG14-UG502476-S04480")))
+	tmp				<- merge(sqi, data.table(TAXA=tmp$tip.label), by='TAXA')
+	tmp				<- merge(tmp, dc, by='PIDF')
+	write.table(tmp, row.names=FALSE, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no3.csv')
+	
+}
+
+######################################################################################
 project.Rakai.FastTree.170601<- function()
 {
 	require(ape)
@@ -1477,7 +1886,7 @@ project.Rakai.FastTree.170601<- function()
 	tmp				<- sqi[, which(PNG=='N')]
 	set(sqi,tmp, 'GENBANK', sqi[tmp,gsub('.*\\.([^\\.]+)$','\\1',PIDF)])
 	set(sqi,sqi[, which(PNG=='Y')],'GENBANK','PANGEA')
-	tmp				<- read.dna('/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta', format='fa')
+	tmp				<- read.dna('/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta', format='fa')
 	tmp				<- rownames(tmp)
 	tmp				<- gsub('.*_([^_]+)$','\\1',tmp[!grepl('CPX',tmp)])
 	sqi				<- merge(sqi,data.table(GENBANK=c(tmp,'PANGEA')),by='GENBANK')		
@@ -2843,7 +3252,7 @@ pty.process.160901<- function()
 		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
 		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
 													trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
-													norm.file.name="/Users/Oliver/Library/R/3.3/library/phyloscan/data/hiv.hxb2.norm.constants.rda"))
+													norm.file.name="/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda"))
 				
 	}
 	#	170410
@@ -2860,7 +3269,7 @@ pty.process.160901<- function()
 		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
 		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
 						trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
-						norm.file.name="/Users/Oliver/Library/R/3.3/library/phyloscan/data/hiv.hxb2.norm.constants.rda"))
+						norm.file.name="/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda"))
 		norm.file.name	<- NA
 		save.file		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250'
 		for(opt in c('d50_st20_trC_rerun','d50_st20_trU_rerun','d50_st20_trB_rerun'))
@@ -3058,7 +3467,7 @@ pty.pipeline.phyloscanner.test<- function()
 	pty.data.dir		<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
 	work.dir			<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
 	out.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/test_ptoutput'	
-	prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+	prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
 	prog.raxml			<- '"raxmlHPC-AVX -m GTRCAT -T 1 -p 42"'
 	pty.select			<- c(22)
 	hpc.load			<- ""
@@ -3074,9 +3483,9 @@ pty.pipeline.phyloscanner.test<- function()
 				data.dir=pty.data.dir, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
-				alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
+				alignments.file="/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
 				alignments.root='REF_CPX_AF460972', 
-				bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
+				bl.normalising.reference.file='/Users/Oliver/git/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda',
 				bl.normalising.reference.var='MEDIAN_PWD',
 				alignments.pairwise.to='REF_B_K03455',
 				window.automatic= '', 
@@ -3087,13 +3496,14 @@ pty.pipeline.phyloscanner.test<- function()
 				merge.paired.reads=TRUE, 
 				no.trees=FALSE, 
 				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
 				num.bootstraps=1,
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
 				win=c(2500,3000,250,250), 
 				keep.overhangs=FALSE,	
-				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),				
 				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
@@ -3109,7 +3519,9 @@ pty.pipeline.phyloscanner.test<- function()
 				pw.trmw.distant.brl=0.08,
 				pw.prior.keff=2,
 				pw.prior.neff=3,
-				pw.prior.calibrated.prob=0.5,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
+				pw.prior.calibrated.prob=0.66,
 				mem.save=0,
 				verbose=TRUE,
 				select=pty.select)														
@@ -3126,9 +3538,9 @@ pty.pipeline.phyloscanner.test<- function()
 							data.dir=pty.data.dir, 
 							work.dir=work.dir, 
 							out.dir=out.dir, 
-							alignments.file="/Users/Oliver/git/phyloscan/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
+							alignments.file="/Users/Oliver/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX_v2.fasta",
 							alignments.root='REF_CPX_AF460972', 
-							bl.normalising.reference.file='/Users/Oliver/git/phyloscan/data/hiv.hxb2.norm.constants.rda',
+							bl.normalising.reference.file='/Users/Oliver/git/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda',
 							bl.normalising.reference.var='MEDIAN_PWD',
 							alignments.pairwise.to='REF_B_K03455',
 							window.automatic= '', 
@@ -3403,7 +3815,7 @@ pty.pipeline.phyloscanner.160915.example<- function()
 	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	setnames(pty.runs, 'FILE_ID', 'IND_ID')
 	runs_rakai_couples	<- subset(pty.runs, select=c(PTY_RUN, IND_ID, TAXA, PARTNER, COUPID))
-	save(runs_rakai_couples, file='~/git/phyloscan/data/runs_rakai_couples.rda')
+	save(runs_rakai_couples, file='~/git/Phyloscanner.R.utilities/data/runs_rakai_couples.rda')
 	
 	# 	load data.table of predefined phyloscanner runs
 	require(Phyloscanner.R.utilities)
