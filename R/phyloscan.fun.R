@@ -1,11 +1,11 @@
-PR.PACKAGE			<- "phyloscan" 
+PR.PACKAGE			<- "Phyloscanner.R.utilities" 
 PR.read.processed.phyloscanner.output.in.directory		<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.read.processed.phyloscanner.output.in.directory.Rscript"))
 PR.pairwise.relationships								<- paste('Rscript', system.file(package=PR.PACKAGE, "phsc.pairwise.relationships.Rscript"))
 #PR.pairwise.relationships								<- paste('Rscript', '/Users/Oliver/git/Phyloscanner.R.utilities/inst/phsc.pairwise.relationships.Rscript')
 
 .onAttach <- function(...) 
 {
-	packageStartupMessage("Loaded utility functions for phyloscanner (https://github.com/olli0601/phyloscan)")
+	packageStartupMessage("Loaded utility functions for phyloscanner (https://github.com/olli0601/Phyloscanner.R.utilities)")
 }
 .onLoad <- function(...) 
 {
@@ -593,7 +593,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 	#	cd to tmp dir
 	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
 	cmd		<- paste(cmd, prog.pty,' "',basename(file.input),'" ',sep='')	
-	cmd		<- paste(cmd, '--merging-threshold', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality,'--keep-output-together')
+	cmd		<- paste(cmd, '--merging-threshold-a', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality,'--keep-output-together')
 	if(!is.na(merge.paired.reads))
 		cmd	<- paste(cmd,' ',merge.paired.reads,sep='')	
 	if(!is.na(dont.check.duplicates))
@@ -775,7 +775,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'split_hosts_to_subgraphs.R'),sep='')
 	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'summary_statistics.R'),sep='')
 	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'classify_relationships.R'),sep='')	
-	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
+	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'TransmissionSummary.R'),sep='')	
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
 	blacklistFiles					<- NA_character_
@@ -1004,7 +1004,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#	add bash command to get likely transmissions summary
 	#						
 	tmp				<- phsc.cmd.LikelyTransmissionsSummary(	prog.pty.lkl.smry, 
-															pty.tools.dir,
+															pty.tools.dir.deprecated,
 															file.path(tmp.dir, basename(file.patients)),												
 															file.path(tmp.dir, paste(run.id_,'patStatsFull.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'classification_InWindow_',sep='')), 
@@ -2361,10 +2361,10 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#	other
 	#
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other')
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other')
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
@@ -2538,11 +2538,11 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	#	
 	if('TYPE_DIR_TODI2'%in%get.groups)
 	{
-		df[, TYPE_DIRSCORE_TODI3:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
-		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'fm')
-		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'mf')
-		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '12')
-		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '21')
+		df[, TYPE_DIR_TODI2:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI2', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI2', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI2', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI2', '21')
 	}
 	#
 	#	group to determine probabilities for transmission networks
