@@ -1,6 +1,6 @@
 project.dual<- function()
 {	
-	CODE.HOME	<<- "/work/or105/libs/phyloscan"
+	CODE.HOME	<<- "/work/or105/libs/Phyloscanner.R.utilities"
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"
 	#project.readlength.count.bam.150218()

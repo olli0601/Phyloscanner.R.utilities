@@ -22,8 +22,8 @@ require(ggplot2)
 require(Phyloscanner.R.utilities)
 
 
-CODE.HOME	<<- "/Users/Oliver/git/phyloscan"
-#CODE.HOME	<<- "/work/or105/libs/phyloscan"
+CODE.HOME	<<- "/Users/Oliver/git/Phyloscanner.R.utilities"
+#CODE.HOME	<<- "/work/or105/libs/Phyloscanner.R.utilities"
 HOME		<<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
 #HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 DATA		<<- paste(HOME,"data",sep='/')
@@ -75,7 +75,7 @@ my.mkdir<-function(root,data.name)
 
 my.make.documentation<- function()
 {
-	roxygen2::roxygenize("/Users/Oliver/git/phyloscan")
+	roxygen2::roxygenize("/Users/Oliver/git/Phyloscanner.R.utilities")
 }
 
 #index of row i (i=1..n) and col j (j=1..n) of nxn matrix in a distance object (as.vector of lower triangular matrix)
