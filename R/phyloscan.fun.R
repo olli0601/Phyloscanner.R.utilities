@@ -71,9 +71,9 @@ phsc.cmd.blacklist.dualinfections<- function(pr, inputFileNameDuals, outputFileN
 	cmd
 }
 
-phsc.cmd.blacklist.parsimonybased<- function(pr, scriptdir, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA, branchLengthNormalisation=NA, verbose=NA)
+phsc.cmd.blacklist.parsimonybased<- function(pr, inputFileName, outputFileName, dualCandidatesOutputFileName=NA, blackListFileName=NA, rawThreshold=1, ratioThreshold=1/200, sankhoffK=20, multifurcation.threshold=1e-5, outgroupName=NA, tipRegex=NA, branchLengthNormalisation=NA, verbose=NA)
 {
-	cmd	<- paste0(pr, ' --scriptdir ',scriptdir,' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'"')
+	cmd	<- paste0(pr, ' ',rawThreshold,' ',ratioThreshold,' ',sankhoffK, ' "', inputFileName, '" "',outputFileName,'"')
 	if(!is.na(dualCandidatesOutputFileName))
 		cmd	<- paste0(cmd, ' --dualsOutputFile "', dualCandidatesOutputFileName,'"')			
 	if(!is.na(outgroupName))
@@ -121,30 +121,40 @@ phsc.cmd.blacklist.rogue.extremeprob<- function(pr, scriptdir, inputTreeFileName
 	cmd
 }
 
-phsc.cmd.blacklist.downsample<- function(pr, scriptdir, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, outgroupName=NA, tipRegex=NA, seed=42L, verbose=NA)
+phsc.cmd.blacklist.downsample<- function(pr, inputTreeFileName, outputFileName, maxReadsPerPatient=200, blackListFileName=NA, tipRegex=NA, seed=42L, rename=NA, hosts=NA, excludeUnderrepresented=FALSE, verbose=NA)
 {
-	cmd	<- paste(pr, ' --scriptdir ',scriptdir, maxReadsPerPatient, inputTreeFileName, outputFileName)
-	if(!is.na(outgroupName))
-		cmd	<- paste(cmd, '--outgroupName', outgroupName)	
+	cmd	<- paste(pr, maxReadsPerPatient, inputTreeFileName, outputFileName)
 	if(!is.na(blackListFileName))
 		cmd	<- paste(cmd, '--blacklist', blackListFileName)
 	if(!is.na(tipRegex))
-		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')	
+		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
+	if(!is.na(hosts))
+		cmd	<- paste(cmd, '--hosts', hosts)
+	if(!is.na(rename))
+		cmd	<- paste(cmd, '--rename', rename)		
 	if(!is.na(seed))
 		cmd	<- paste(cmd, '--seed', seed)
+	if(excludeUnderrepresented)
+		cmd	<- paste(cmd, '--excludeUnderrepresented')
 	if(!is.na(verbose) & verbose)
 		cmd	<- paste0(cmd, ' --verbose')		
 	cmd
 }
 
 
-phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA, verbose=NA)
+phsc.cmd.SummaryStatistics<- function(pr, scriptdir, file.patients, treeFiles, splitsFiles, outputBaseName, tipRegex=NA, blacklistFiles=NA, windowCoords=NA, recombinationFiles=NA, noReadCounts=NA, verbose=FALSE)
 {
-	cmd	<- paste(pr,' --scriptdir ',scriptdir,' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
+	cmd	<- paste(pr,' --scriptDir ',scriptdir,' "', file.patients, '" "', treeFiles, '" "',splitsFiles, '" "',outputBaseName, '"', sep='')	
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "',tipRegex,'"', sep='')	
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklists "',blacklistFiles,'"', sep='')
+	if(!is.na(recombinationFiles))
+		cmd	<- paste(cmd, ' --recombinationFiles "',recombinationFiles,'"', sep='')	
+	if(!is.na(windowCoords))
+		cmd	<- paste(cmd, ' --windowCoords "',windowCoords,'"', sep='')
+	if(!is.na(noReadCounts) & noReadCounts==TRUE)
+		cmd	<- paste0(cmd, ' --noReadCounts')
 	if(!is.na(verbose) & verbose)
 		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
@@ -235,13 +245,15 @@ phsc.cmd.SplitPatientsToSubtrees<- function(pr, scriptdir, infile, outputdir=NA,
 	cmd	
 }
 
-phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, proximityThreshold=NA, readCountsMatterOnZeroBranches=NA, tiesRule=NA, tipRegex=NA, branchLengthNormalisation=NA, outputAsRDA=1, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
+phsc.cmd.SplitPatientsToSubGraphs<- function(pr, infile, outputFileIdentifier, outputdir=NA, blacklistFiles=NA, idFile=NA, outgroupName=NA, splitsRule=NA, sankhoff.k=NA, proximityThreshold=NA, readCountsMatterOnZeroBranches=NA, tipRegex=NA, branchLengthNormalisation=NA, pruneBlacklist=FALSE, useff=FALSE, outputAsRDA=1, multifurcation.threshold=1e-5, pdfwidth=30, pdfrelheight=0.15, verbose=NA)	
 {	
-	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'" --scriptdir "', scriptdir,'"', sep='')
+	cmd	<- paste(pr, ' "', infile, '" "',outputFileIdentifier,'"', sep='')
 	if(!is.na(blacklistFiles))
 		cmd	<- paste(cmd, ' --blacklist "', blacklistFiles,'"', sep='')
 	if(!is.na(outputdir))
-		cmd	<- paste(cmd, ' --outputdir "', outputdir,'"', sep='')	
+		cmd	<- paste(cmd, ' --outputdir "', outputdir,'"', sep='')
+	if(!is.na(idFile))
+		cmd	<- paste(cmd, ' --idFile "', idFile,'"', sep='')		
 	if(!is.na(outgroupName))
 		cmd	<- paste(cmd, ' --outgroupName ', outgroupName, sep='')
 	if(!is.na(splitsRule))
@@ -252,9 +264,6 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 		cmd	<- paste(cmd, ' --proximityThreshold ', proximityThreshold, sep='')
 	if(!is.na(readCountsMatterOnZeroBranches) & readCountsMatterOnZeroBranches)
 		cmd	<- paste(cmd, ' --readCountsMatterOnZeroBranches', sep='')
-	stopifnot(is.na(tiesRule))
-	#if(!is.na(tiesRule))
-	#	cmd	<- paste(cmd, ' --tiesRule ', tiesRule, sep='')		
 	if(!is.na(tipRegex))
 		cmd	<- paste(cmd, ' --tipRegex "', tipRegex, '"', sep='')	
 	if(!is.na(multifurcation.threshold))
@@ -264,7 +273,11 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
 		cmd	<- paste(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation, sep='')
 	if(!is.na(outputAsRDA) & outputAsRDA==TRUE)
-		cmd	<- paste(cmd, ' --outputAsRDA ', sep='')
+		cmd	<- paste(cmd, ' --outputAsRDA', sep='')
+	if(!is.na(useff) & useff==TRUE)
+		cmd	<- paste(cmd, ' --useff', sep='')	
+	if(!is.na(pruneBlacklist) & pruneBlacklist==TRUE)
+		cmd	<- paste(cmd, ' --pruneBlacklist', sep='')	
 	if(!is.na(pdfwidth))
 		cmd	<- paste(cmd, ' --pdfwidth ', pdfwidth, sep='')
 	if(!is.na(pdfrelheight))
@@ -274,15 +287,17 @@ phsc.cmd.SplitPatientsToSubGraphs<- function(pr, scriptdir, infile, outputFileId
 	cmd	
 }
 	
-phsc.cmd.LikelyTransmissions<- function(pr, scriptdir, file.tree, file.splits, file.out, tipRegex=NA, branchLengthNormalisation=NA, verbose=NA)
+phsc.cmd.LikelyTransmissions<- function(pr, file.tree, file.splits, file.out, tipRegex=NA, collapsedTree=NA, branchLengthNormalisation=NA, verbose=NA)
 {
-	cmd<- paste0(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'" ',' --scriptdir ', scriptdir)
+	cmd<- paste0(pr, ' "', file.tree, '" "', file.splits, '" "', file.out,'"')
 	if(!is.na(tipRegex))
 		cmd	<- paste0(cmd, ' --tipRegex "', tipRegex,'"')
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='character')
 		cmd	<- paste0(cmd, ' --branchLengthNormalisation "', branchLengthNormalisation, '"')
 	if(!is.na(branchLengthNormalisation) & class(branchLengthNormalisation)=='numeric')
 		cmd	<- paste0(cmd, ' --branchLengthNormalisation ', branchLengthNormalisation)
+	if(!is.na(collapsedTree) & collapsedTree==TRUE)
+		cmd	<- paste0(cmd, ' --collapsedTree')				
 	if(!is.na(verbose) & verbose)
 		cmd	<- paste0(cmd, ' --verbose')			
 	cmd
@@ -746,19 +761,20 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prior.keff.dir					<- pty.args[['pw.prior.keff.dir']] 
 	prior.neff.dir					<- pty.args[['pw.prior.neff.dir']] 	
 	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
-	verbose							<- pty.args[['verbose']]
-	pty.tools.dir					<- file.path(dirname(prog.pty),'deprecated')
-	#pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
-	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir,'NormalisationLookupWriter.R'),sep='')
-	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeReadBlacklist.R'),sep='')
-	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'ParsimonyBasedBlacklister.R'),sep='')
-	prog.pty.rogueblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklist.R'),sep='')
-	prog.pty.roguewblacklist		<- paste('Rscript ',file.path(pty.tools.dir,'MakeRogueBlacklistWeibull.R'),sep='')
-	prog.pty.dualblacklist			<- paste('Rscript ',file.path(pty.tools.dir,'DualPatientBlacklister.R'),sep='')
-	prog.pty.downsample				<- paste('Rscript ',file.path(pty.tools.dir,'DownsampleReads.R'),sep='')
-	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'SplitPatientsToSubgraphs.R'),sep='')
-	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'SummaryStatistics.R'),sep='')
-	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'ClassifyRelationships.R'),sep='')	
+	verbose							<- pty.args[['verbose']]	
+	#AAA
+	pty.tools.dir.deprecated		<- file.path(dirname(prog.pty),'deprecated')
+	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
+	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'NormalisationLookupWriter.R'),sep='')
+	prog.pty.readblacklist			<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'MakeReadBlacklist.R'),sep='')
+	prog.pty.readblacklistsankoff	<- paste('Rscript ',file.path(pty.tools.dir,'parsimony_based_blacklister.R'),sep='')
+	prog.pty.rogueblacklist			<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'MakeRogueBlacklist.R'),sep='')
+	prog.pty.roguewblacklist		<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'MakeRogueBlacklistWeibull.R'),sep='')
+	prog.pty.dualblacklist			<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'DualPatientBlacklister.R'),sep='')
+	prog.pty.downsample				<- paste('Rscript ',file.path(pty.tools.dir,'downsample_reads.R'),sep='')
+	prog.pty.split					<- paste('Rscript ',file.path(pty.tools.dir,'split_hosts_to_subgraphs.R'),sep='')
+	prog.pty.smry					<- paste('Rscript ',file.path(pty.tools.dir,'summary_statistics.R'),sep='')
+	prog.pty.lkltrm					<- paste('Rscript ',file.path(pty.tools.dir,'classify_relationships.R'),sep='')	
 	prog.pty.lkl.smry				<- paste('Rscript ',file.path(pty.tools.dir,'TransmissionSummary.R'),sep='')	
 	run.id							<- gsub('_rename.txt|_bam.txt|_patient.txt|_patients.txt','',basename(file.patients))
 	run.id_							<- ifelse(grepl('[a-z0-9]',substring(run.id, nchar(run.id))), paste(run.id,'_',sep=''), run.id)
@@ -769,7 +785,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
 		stopifnot(	!is.null(contaminant.prop.threshold) & !is.na(contaminant.prop.threshold), 
 					!is.null(contaminant.read.threshold) & !is.na(contaminant.read.threshold))
-	if(any(grepl('ParsimonyBasedBlacklister', use.blacklisters)))
+	if(any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)))
 		stopifnot(	!any(grepl('MakeRogueBlacklist', use.blacklisters)),	
 					!is.null(roguesubtree.prop.threshold) & !is.na(roguesubtree.prop.threshold),
 					!is.null(roguesubtree.read.threshold) & !is.na(roguesubtree.read.threshold),
@@ -785,11 +801,11 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 					!is.null(rogue.probThreshold) & !is.na(rogue.probThreshold))
 	if(any(grepl('DualPatientBlacklister', use.blacklisters))) 
 		stopifnot(!is.null(dual.prop.threshold) & !is.na(dual.prop.threshold))
-	if(any(grepl('DownsampleReads', use.blacklisters))) 
+	if(any(grepl('DownsampleReads|downsample_reads', use.blacklisters))) 
 		stopifnot(!is.null(dwns.maxReadsPerPatient) & !is.na(dwns.maxReadsPerPatient))
 	if(is.null(tip.regex))
 		tip.regex					<- NA_character_
-	use.sankhoff.blacklister		<- any(grepl('ParsimonyBasedBlacklister', use.blacklisters))
+	use.sankhoff.blacklister		<- any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters))
 	#
 	cmd					<- ''
 	#
@@ -804,7 +820,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	if(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var))
 	{
 		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser,
-																	pty.tools.dir,
+																	pty.tools.dir.deprecated,
 																	file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
 																	bl.normalising.reference.file, 
 																	file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
@@ -833,13 +849,12 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
-	if(any(grepl('ParsimonyBasedBlacklister', use.blacklisters)))	
+	if(any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)))	
 	{		
-		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff, 
-																pty.tools.dir,
+		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff,																
 																file.path(tmp.dir,paste0(run.id_,'InWindow_')),
-																file.path(tmp.dir,paste0(run.id_,'blacklistsank_')),																 
-																dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow_')),
+																file.path(tmp.dir,paste0(run.id_,'blacklistsank_InWindow')),																 
+																dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow')),
 																blackListFileName=blacklistFiles,
 																rawThreshold=roguesubtree.read.threshold, 
 																ratioThreshold=roguesubtree.prop.threshold, 
@@ -914,17 +929,18 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to downsample tips (add to blacklist)
 	#
-	if(any(grepl('DownsampleReads', use.blacklisters)))
+	if(any(grepl('DownsampleReads|downsample_reads', use.blacklisters)))
 	{
-		tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 
-																pty.tools.dir, 
+		tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 																 
 																file.path(tmp.dir,run.id_),																
-																file.path(tmp.dir,paste(run.id_,'blacklistdwns_',sep='')), 
+																file.path(tmp.dir,paste(run.id_,'blacklistdwns',sep='')), 
 																maxReadsPerPatient=dwns.maxReadsPerPatient, 
 																blackListFileName=blacklistFiles, 
-																outgroupName=root.name, 
 																tipRegex=tip.regex,
-																seed=42L)
+																seed=42L,
+																hosts=NA,
+																excludeUnderrepresented=FALSE,
+																verbose=verbose)
 		cmd				<- paste(cmd, tmp, sep='\n')
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_InWindow_',sep=''))
 		#cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
@@ -933,10 +949,9 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to plot trees and calculate splits
 	#			
-	tmp				<- phsc.cmd.SplitPatientsToSubGraphs(	prog.pty.split,
-															pty.tools.dir,
+	tmp				<- phsc.cmd.SplitPatientsToSubGraphs(	prog.pty.split,															
 															file.path(tmp.dir,run.id_),
-															run.id_, 
+															run.id, 
 															outputdir=tmp.dir, 
 															blacklistFiles=gsub('InWindow_','',blacklistFiles), 
 															outgroupName=root.name, 
@@ -945,10 +960,13 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															proximityThreshold=split.proximityThreshold,
 															readCountsMatterOnZeroBranches=split.readCountsMatterOnZeroBranches,
 															multifurcation.threshold=multifurcation.threshold,
-															branchLengthNormalisation=bl.normalising.file,
-															tiesRule=ifelse(!is.null(split.tiesRule) && !is.na(split.tiesRule),split.tiesRule,NA_character_), 
+															branchLengthNormalisation=bl.normalising.file,															 
 															tipRegex=tip.regex, 
-															pdfwidth=30, pdfrelheight=0.15,
+															pdfwidth=30, 
+															pdfrelheight=0.15,
+															useff=FALSE,
+															pruneBlacklist=FALSE,
+															idFile=file.path(tmp.dir, basename(file.patients)),
 															verbose=verbose)	
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -964,18 +982,21 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 													file.path(tmp.dir, run.id_),
 													tipRegex=tip.regex,
 													blacklistFiles=blacklistFiles,
+													windowCoords=NA,
+													recombinationFiles=NA,
+													noReadCounts=FALSE,
 													verbose=verbose
 													)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
 	#	bash command to get likely transmissions 
 	#
-	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 
-														pty.tools.dir, 
+	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 														 
 														file.path(tmp.dir,paste('ProcessedTree_',split.rule,'_',run.id_,sep='')), 
 														file.path(tmp.dir,paste('subgraphs_',split.rule,'_',run.id_,sep='')), 
 														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1)),
 														branchLengthNormalisation=bl.normalising.file,
+														collapsedTree=FALSE,
 														verbose=verbose
 														)
 	cmd				<- paste(cmd, tmp, sep='\n')
@@ -2308,53 +2329,42 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 {
 	df[, TYPE_BASIC:= TYPE_RAW]
 	
-	stopifnot(c('ADJACENT','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(df))
-	#	chains with no intermediate
-	tmp		<- df[, which(TYPE_BASIC=="anc_12" & ADJACENT)]
-	cat('\nFound adjacent anc_12, n=', length(tmp),'--> chain with no intermediate')
+	stopifnot(c('ADJACENT','CONTIGUOUS','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(df))
+	#
+	#	chains_12 
+	#
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & CONTIGUOUS)]
+	cat('\nFound PATHS_12>0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> chain_12 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
-	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & ADJACENT)]
-	cat('\nFound adjacent multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
-	#	chains with no intermediate
-	tmp		<- df[, which(TYPE_BASIC=="anc_21" & ADJACENT)]
-	cat('\nFound adjacent anc_21, n=', length(tmp),'--> chain with no intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')
-	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & ADJACENT)]
-	cat('\nFound adjacent multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS)]
+	cat('\nFound PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> chain_12 with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')	
+	#
+	#	chains_21
+	#
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & CONTIGUOUS)]
+	cat('\nFound PATHS_12==0 & PATHS_21>0 & CONTIGUOUS, n=', length(tmp),'--> chain_21 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
-	#
-	#	chains with intermediate
-	#
-	tmp		<- df[, which(TYPE_BASIC=="anc_12" & !ADJACENT)]
-	cat('\nFound non-adjacent anc_12, n=', length(tmp),'--> chain with intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
-	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & !ADJACENT)]
-	cat('\nFound non-adjacent multi_anc_12, n=', length(tmp),'--> chain with intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
-	#	chains with intermediate
-	tmp		<- df[, which(TYPE_BASIC=="anc_21" & !ADJACENT)]
-	cat('\nFound non-adjacent anc_21, n=', length(tmp),'--> chain with intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
-	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & !ADJACENT)]
-	cat('\nFound non-adjacent multi_anc_21, n=', length(tmp),'--> chain with intermediate')
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS)]
+	cat('\nFound PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS, n=', length(tmp),'--> chain_21 with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
 	#
-	#	intermingled with no intermediate
-	tmp		<- df[, which(TYPE_BASIC=="conflict" & ADJACENT)]
-	cat('\nFound adjacent conflict, n=', length(tmp),'--> intermingled with no intermediate')
+	#	intermingled 
+	#
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & CONTIGUOUS)]
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> intermingled with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
-	#	intermingled with intermediate
-	tmp		<- df[, which(TYPE_BASIC=="conflict" & !ADJACENT)]
-	cat('\nFound non-adjacent conflict, n=', length(tmp),'--> intermingled with intermediate')
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & !CONTIGUOUS)]
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> intermingled with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
 	#
-	#	other	
-	tmp		<- df[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
-	cat('\nFound adjacent with no paths, n=', length(tmp),'--> other')
+	#	other
+	#
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT)]
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other')
 	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
-	tmp		<- df[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
-	cat('\nFound non-adjacent with no assignment, n=', length(tmp),'--> other')
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT)]
+	cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other')
 	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
@@ -2441,29 +2451,28 @@ phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trm
 #' @param get.groups names of relationship groups  
 #' @param make.pretty.labels Logical   
 #' @return input data.table with new columns. Each new column defines relationship states for a specific relationship group. 
-phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE_PAIRSCORE_DI','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_PAIR_TODI','TYPE_PAIRSCORE_TODI','TYPE_PAIR_TODI2','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
+phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
 {
 	#	
 	#	group to define likely pair just based on distance
 	#
-	if('TYPE_PAIR_DI'%in%get.groups)
-	{
-		df[, TYPE_PAIR_DI:= 'intermediate\ndistance']
-		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'close')
-		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'distant')			
-	}
-	if('TYPE_PAIRSCORE_DI'%in%get.groups)
-	{
-		df[, TYPE_PAIRSCORE_DI:= NA_character_]
-		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'close')
-		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'distant')			
-	}	
+	#if('TYPE_PAIR_DI'%in%get.groups)
+	#{
+	#	df[, TYPE_PAIR_DI:= 'intermediate\ndistance']
+	#	set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'close')
+	#	set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI', 'distant')			
+	#}
+	#if('TYPE_PAIRSCORE_DI'%in%get.groups)
+	#{
+	#	df[, TYPE_PAIRSCORE_DI:= NA_character_]
+	#	set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'close')
+	#	set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'distant')			
+	#}	
 	if('TYPE_PAIR_DI2'%in%get.groups)
 	{
 		df[, TYPE_PAIR_DI2:= 'not close']
 		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI2', 'close')			
-	}
-	
+	}	
 	#	
 	#	group to define likely pair just based on topology
 	#	
@@ -2474,7 +2483,7 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('intermingled',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TO', 'ancestral/\nintermingled')
 	}
 	#
-	#	group for Christophe's 2x2 table without ambiguous
+	#	group for full 2x2 table of distance and topology
 	#
 	if('TYPE_PAIR_TODI2x2'%in%get.groups)
 	{		
@@ -2484,20 +2493,50 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(!grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2x2', 'close other')
 	}
 	#
+	#	group to determine linkage - only 2 states, linked / unlinked
+	#
+	if('TYPE_PAIR_TODI2'%in%get.groups)
+	{
+		df[, TYPE_PAIR_TODI2:= 'unlinked']	
+		#	this counts close siblings 'other_nointermediate_close' as evidence for linkage 		
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'linked')
+	}	
+	#
+	#	group to determine likely pairs
+	#
+	#if('TYPE_PAIR_TODI'%in%get.groups)
+	#{
+	#	df[, TYPE_PAIR_TODI:= 'distant/disconnected']	
+	#	set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')
+	#	set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'distant/disconnected')
+	#	set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')		
+	#}
+	#	same as TYPE_PAIR_TODI but do not count ambiguous distance
+	#if('TYPE_PAIRSCORE_TODI'%in%get.groups)
+	#{
+	#	df[, TYPE_PAIRSCORE_TODI:= 'distant/disconnected']
+	#	set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'distant/disconnected')
+	#	set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'likely pair')	
+	#	set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', NA_character_)
+	#}	
+	#
 	#	group to determine direction of transmission in likely pairs
 	#
-	if('TYPE_DIR_TODI3'%in%get.groups)
-	{				
-		df[, TYPE_DIR_TODI3:= NA_character_]	# non-NA: all relationships that are used for likely pair	
-		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
-		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
-		set(df, df[, which(grepl('chain_',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')		
-		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
-		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
-		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '12')
-		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '21')
-	}
-	if('TYPE_DIRSCORE_TODI3'%in%get.groups)
+	#if('TYPE_DIR_TODI3'%in%get.groups)
+	#{				
+	#	df[, TYPE_DIR_TODI3:= NA_character_]	# non-NA: all relationships that are used for likely pair	
+	#	set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+	#	set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')
+	#	set(df, df[, which(grepl('chain_',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'ambiguous')		
+	#	set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'fm')
+	#	set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', 'mf')
+	#	set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '12')
+	#	set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI3', '21')
+	#}
+	#
+	#	group to determine direction of transmission in likely pairs
+	#	
+	if('TYPE_DIR_TODI2'%in%get.groups)
 	{
 		df[, TYPE_DIRSCORE_TODI3:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
 		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', 'fm')
@@ -2505,46 +2544,21 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '12')
 		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIRSCORE_TODI3', '21')
 	}
-	if('TYPE_DIR_TODI4'%in%get.groups)
+	#
+	#	group to determine probabilities for transmission networks
+	#		
+	if('TYPE_NETWORK_SCORES'%in%get.groups)
 	{				
-		df[, TYPE_DIR_TODI4:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
-		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'ambiguous')
-		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'ambiguous')				
-		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'fm')
-		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', 'mf')
-		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', '12')
-		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI4', '21')
+		df[, TYPE_NETWORK_SCORES:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
+		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'ambiguous')
+		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'ambiguous')				
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', '21')
 	}	
 	#
-	#	group to determine likely pairs - only 2 states, likely pair / no
-	#
-	if('TYPE_PAIR_TODI2'%in%get.groups)
-	{
-		df[, TYPE_PAIR_TODI2:= 'other']	
-		#	this counts 'other_close' as 'other' 		
-		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'likely pair')
-	}	
-	#
-	#	group to determine likely pairs
-	#
-	if('TYPE_PAIR_TODI'%in%get.groups)
-	{
-		df[, TYPE_PAIR_TODI:= 'distant/disconnected']	
-		#	this counts 'other_close' as 'distant/disconnected'
-		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'intermediate distance')
-		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'distant/disconnected')
-		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI', 'likely pair')		
-	}
-	#	same as TYPE_PAIR_TODI but do not count ambiguous distance
-	if('TYPE_PAIRSCORE_TODI'%in%get.groups)
-	{
-		df[, TYPE_PAIRSCORE_TODI:= 'distant/disconnected']
-		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'distant/disconnected')
-		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', 'likely pair')	
-		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_TODI', NA_character_)
-	}
-	#
-	#	group to determine chains
+	#	group to transmission networks
 	#	
 	if('TYPE_CHAIN_TODI'%in%get.groups)
 	{
@@ -2552,7 +2566,7 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
 		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
-		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'intermediate distance')
+		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', NA_character_)
 	}
 	#
 	#	TYPE_DIR_TODI7x3 make pretty labels
@@ -2569,18 +2583,13 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI','TYPE
 
 phsc.get.pairwise.relationships.numbers<- function()
 {
-	tmp	<- matrix(c('TYPE_PAIR_DI','3',
-					'TYPE_PAIRSCORE_DI','2',
-					'TYPE_PAIR_DI2','2',
+	tmp	<- matrix(c('TYPE_PAIR_DI2','2',
 					'TYPE_PAIR_TO','2',
-					'TYPE_PAIR_TODI2x2','4',
-					'TYPE_DIR_TODI3','3',
-					'TYPE_DIRSCORE_TODI3','2',
-					'TYPE_DIR_TODI4','4',
+					'TYPE_PAIR_TODI2x2','4',					
 					'TYPE_PAIR_TODI2','2',
-					'TYPE_PAIR_TODI','3', 
-					'TYPE_PAIRSCORE_TODI','2',
-					'TYPE_CHAIN_TODI','3',
+					'TYPE_DIR_TODI2','2',															
+					'TYPE_CHAIN_TODI','2',
+					'TYPE_NETWORK_SCORES','3',					
 					'TYPE_BASIC','24'), ncol=2,byrow=TRUE)
 	colnames(tmp)	<- c('GROUP','N_TYPE')
 	tmp				<- as.data.table(tmp)

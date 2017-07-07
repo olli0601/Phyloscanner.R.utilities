@@ -44,9 +44,9 @@ if(args$rel.likely.pair.by.topology.only)
 if(args$rel.likely.pair.by.cross.table)
 	relationship.types	<- c(relationship.types,'TYPE_PAIR_TODI2x2')
 if(args$rel.direction)
-	relationship.types	<- c(relationship.types,'TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_DIR_TODI4')
+	relationship.types	<- c(relationship.types,'TYPE_DIR_TODI2')
 if(args$rel.chain)
-	relationship.types	<- c(relationship.types,'TYPE_CHAIN_TODI')
+	relationship.types	<- c(relationship.types,'TYPE_CHAIN_TODI','TYPE_NETWORK_SCORES')
 ###############################################################################
 #	for testing / debugging
 ###############################################################################
@@ -73,7 +73,7 @@ if(0)
 	prior.keff.dir					<- 2
 	prior.neff.dir					<- 3
 	prior.calibrated.prob			<- 0.66
-	relationship.types				<- c('TYPE_BASIC','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3','TYPE_DIR_TODI4','TYPE_PAIR_TODI2','TYPE_CHAIN_TODI','TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2')
+	relationship.types				<- c('TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI')
 }
 ###############################################################################
 #	run script

@@ -1698,6 +1698,80 @@ pty.get.taxa.combinations<- function(pty.taxan, pty.sel.n)
 	pty.idx
 }
 
+phsc.get.basic.pairwise.relationships.170703<- function(df, trmw.close.brl, trmw.distant.brl)
+{
+	df[, TYPE_BASIC:= TYPE_RAW]
+	
+	stopifnot(c('ADJACENT','TYPE_BASIC','PATRISTIC_DISTANCE','PATHS_12','PATHS_21')%in%colnames(df))
+	#	chains with no intermediate
+	tmp		<- df[, which(TYPE_BASIC=="anc_12" & ADJACENT)]
+	cat('\nFound adjacent anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & ADJACENT)]
+	cat('\nFound adjacent multi_anc_12, n=', length(tmp),'--> chain with no intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
+	#	chains with no intermediate
+	tmp		<- df[, which(TYPE_BASIC=="anc_21" & ADJACENT)]
+	cat('\nFound adjacent anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & ADJACENT)]
+	cat('\nFound adjacent multi_anc_21, n=', length(tmp),'--> chain with no intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
+	#
+	#	chains with intermediate
+	#
+	tmp		<- df[, which(TYPE_BASIC=="anc_12" & !ADJACENT)]
+	cat('\nFound non-adjacent anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_12" & !ADJACENT)]
+	cat('\nFound non-adjacent multi_anc_12, n=', length(tmp),'--> chain with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')
+	#	chains with intermediate
+	tmp		<- df[, which(TYPE_BASIC=="anc_21" & !ADJACENT)]
+	cat('\nFound non-adjacent anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	tmp		<- df[, which(TYPE_BASIC=="multi_anc_21" & !ADJACENT)]
+	cat('\nFound non-adjacent multi_anc_21, n=', length(tmp),'--> chain with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
+	#
+	#	intermingled with no intermediate
+	tmp		<- df[, which(TYPE_BASIC=="conflict" & ADJACENT)]
+	cat('\nFound adjacent conflict, n=', length(tmp),'--> intermingled with no intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
+	#	intermingled with intermediate
+	tmp		<- df[, which(TYPE_BASIC=="conflict" & !ADJACENT)]
+	cat('\nFound non-adjacent conflict, n=', length(tmp),'--> intermingled with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
+	#
+	#	other	
+	tmp		<- df[, which(ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound adjacent with no paths, n=', length(tmp),'--> other')
+	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
+	tmp		<- df[, which(!ADJACENT & PATHS_12==0 & PATHS_21==0)]
+	cat('\nFound non-adjacent with no assignment, n=', length(tmp),'--> other')
+	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
+	#	check
+	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
+	#
+	#	add distance as second dimension
+	#
+	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
+	{
+		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
+		tmp		<- df[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
+		cat('\nFound close, n=', length(tmp))
+		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_close')])		
+	}
+	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
+	{
+		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
+		tmp		<- df[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
+		cat('\nFound distant, n=', length(tmp))
+		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_distant')])	
+	}
+	df
+}
+
 pty.various<- function()
 {		
 	if(1)

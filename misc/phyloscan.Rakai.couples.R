@@ -4750,6 +4750,62 @@ RakaiFull.analyze.couples.todi.170522.windowssummaryplots<- function()
 	
 }
 
+RakaiFull.analyze.couples.todi.170522.check.intermingledwithintermediate<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(colorspace)
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"
+	load(infile)	
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]
+	
+	tmp		<- subset(rpw, GROUP=='TYPE_BASIC')
+	tmp		<- subset(tmp, grepl('intermingled',TYPE) & grepl('with intermediate',TYPE))
+	rtpdm	<- unique(subset(tmp, select=c(MALE_RID,FEMALE_RID,PTY_RUN)))
+	for(ii in 2:7)
+	{		
+		indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
+		# load dfr and phs
+		load( file.path(indir, paste0('ptyr',rtpdm[ii,PTY_RUN],'_trees.rda')) )
+		# setup plotting
+		ids			<- c(rtpdm[ii, MALE_RID],rtpdm[ii, FEMALE_RID])
+		dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+		dfs[, MALE_RID:=ids[1]]
+		dfs[, FEMALE_RID:=ids[2]]
+		dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'), all.x=1)	
+		dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\npmf',PATHS_MF,' pfm',PATHS_FM, ' ',ADJACENT,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+		plot.file	<- paste0(outfile.base, 'checkintermingled/todi_pairs_170610_run_', rtpdm[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+		invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))					
+	}
+	
+	tmp		<- subset(rpw, GROUP=='TYPE_BASIC')
+	subset(tmp, grepl('chain mf',TYPE) &  grepl('no intermediate',TYPE) & grepl('close',TYPE))[, table(PATHS_FM, ADJACENT)]
+	tmp		<- subset(tmp, PATHS_FM==0 & PATHS_MF==0 & grepl('close',TYPE) & !ADJACENT)
+	rtpdm	<- unique(subset(tmp, select=c(MALE_RID,FEMALE_RID,PTY_RUN)))
+	for(ii in 1:7)
+	{		
+		indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
+		# load dfr and phs
+		load( file.path(indir, paste0('ptyr',rtpdm[ii,PTY_RUN],'_trees.rda')) )
+		# setup plotting
+		ids			<- c(rtpdm[ii, MALE_RID],rtpdm[ii, FEMALE_RID])
+		dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+		dfs[, MALE_RID:=ids[1]]
+		dfs[, FEMALE_RID:=ids[2]]
+		dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'), all.x=1)	
+		dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\npmf',PATHS_MF,' pfm',PATHS_FM, ' ',ADJACENT,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+		plot.file	<- paste0(outfile.base, 'checkcloseother/todi_pairs_170610_run_', rtpdm[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+		invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))					
+	}
+}
+
 RakaiFull.analyze.couples.todi.170522.birdseyeview<- function()
 {	
 	require(data.table)
