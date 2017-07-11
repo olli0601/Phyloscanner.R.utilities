@@ -4297,6 +4297,7 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		#pty.select			<- 667:1100
 		pty.select			<- 1101:1891		
 		pty.select			<- c(1107, 1117, 1123, 1132, 1142, 667, 682, 692, 717)
+		pty.select			<- 910:1100	
 	}	
 	if(0)
 	{
