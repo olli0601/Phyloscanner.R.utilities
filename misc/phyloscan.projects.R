@@ -4295,8 +4295,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		#pty.select			<- 667:1100
-		pty.select			<- 1101:1891
-		#pty.select			<- c(1001, 1004, 1005, 1026, 1029, 1041, 1051, 1054, 1055, 1066, 1076, 1079, 1080, 1091, 1097, 1101, 1104, 1116, 1126, 1129, 1130, 1141, 1146, 1151, 1154, 1166, 1176, 1179, 1180, 1191, 1201, 1203, 1204, 1216, 1221, 1226, 1229, 1230, 1241, 1251, 1254, 1255, 1261, 1266, 1276, 1279, 1291, 1501, 1504, 1516, 1526, 1529, 1541, 1549, 1551, 1554, 1576, 1579, 1600, 1603, 1615, 1623, 1626, 1627, 1636, 1638, 1645, 1648, 1660, 1666, 1669, 1670, 1679, 1681, 1686, 1689, 1690, 1699)
+		pty.select			<- 1101:1891		
+		pty.select			<- c(1107, 1117, 1123, 1132, 1142, 667, 682, 692, 717)
 	}	
 	if(0)
 	{
