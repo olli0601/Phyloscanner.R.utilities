@@ -5176,11 +5176,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	if(1)
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
-		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
-		#pty.c	<- subset(pty.c, !PTY_RUN%in%c(1001, 1004, 1005, 1026, 1029, 1041, 1051, 1054, 1055, 1066, 1076, 1079, 1080, 1091, 1097, 1101, 1104, 1116, 1126, 1129, 1130, 1141, 1146, 1151, 1154, 1166, 1176, 1179, 1180, 1191, 1201, 1203, 1204, 1216, 1221, 1226, 1229, 1230, 1241, 1251, 1254, 1255, 1261, 1266, 1276, 1279, 1291, 1501, 1504, 1516, 1526, 1529, 1541, 1549, 1551, 1554, 1576, 1579, 1600, 1603, 1615, 1623, 1626, 1627, 1636, 1638, 1645, 1648, 1660, 1666, 1669, 1670, 1679, 1681, 1686, 1689, 1690, 1699))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]		
 		#pty.c	<- subset(pty.c, PTY_RUN%in%(1:399))
-		#pty.c	<- subset(pty.c, PTY_RUN%in%(400))
-		pty.c	<- subset(pty.c, PTY_RUN%in%(400:1891))		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -5203,8 +5200,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-							stop()
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)							
 						}, by='PTY_RUN'])
 		quit('no')		
 	}
