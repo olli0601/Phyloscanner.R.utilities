@@ -5111,7 +5111,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_firstbatch_sk20_tb_blnormed")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		pty.select			<- 1:666
-		pty.select			<- 666
+		#pty.select			<- 666
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'				
 	}	
 	#
@@ -5177,7 +5177,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]		
-		#pty.c	<- subset(pty.c, PTY_RUN%in%(1:399))
+		pty.c	<- subset(pty.c, !PTY_RUN%in%(1:6))
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
