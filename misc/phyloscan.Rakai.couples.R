@@ -439,20 +439,25 @@ RakaiFull.preprocess.closepairs.calculate.170421	<- function()
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170428.rda'
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
+	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35.rda'
+	
 	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp	<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed/ptyr667_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
-				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				group	<- 'TYPE_PAIR_DI2'
+				rtp		<- subset(rplkl, GROUP==group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
 				rtp		<- subset(rtp, TYPE_MLE=='close')
-				tmp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIRSCORE_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				rtp		<- rbind(rtp, tmp)				
-				rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp		<- merge(rtp, subset(rplkl, GROUP==group & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				#tmp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIRSCORE_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				#rtp		<- rbind(rtp, tmp)				
+				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
 				rtp				
 			}, by=c('PTY_RUN')]			
 	dmin	<- infiles[,{
