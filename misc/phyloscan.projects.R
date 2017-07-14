@@ -4534,9 +4534,9 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		#pty.select			<- 667:1100
-		pty.select			<- 1101:1891		
-		pty.select			<- c(1107, 1117, 1123, 1132, 1142, 667, 682, 692, 717)
-		pty.select			<- 910:1100	
+		pty.select			<- 1667:1891		
+		#pty.select			<- c(1107, 1117, 1123, 1132, 1142, 667, 682, 692, 717)
+		#pty.select			<- 910:1100	
 	}	
 	if(0)
 	{
@@ -5349,7 +5349,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		in.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed")
 		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_rerun")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
-		pty.select			<- 1000
+		pty.select			<- NA
 		#pty.select			<- 666
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'				
 	}	
@@ -5421,7 +5421,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
 		setkey(pty.c, PTY_RUN)	
-		pty.c	<- subset(pty.c, PTY_RUN%in%pty.select)
+		#pty.c	<- subset(pty.c, PTY_RUN%in%pty.select)
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
