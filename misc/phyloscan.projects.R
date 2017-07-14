@@ -5421,13 +5421,12 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
 		setkey(pty.c, PTY_RUN)	
-		print(pty.c)
-		stop()
+		pty.c	<- subset(pty.c, PTY_RUN%in%pty.select)
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
-					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
+					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
 					print(prefix.infiles)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 					list(CMD=cmd)
