@@ -5346,8 +5346,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"		
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
-		in.dir				<- file.path(HOME,"/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed")
-		out.dir				<- file.path(HOME,"/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_rerun")		
+		in.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_rerun")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		pty.select			<- 1000
 		#pty.select			<- 666
