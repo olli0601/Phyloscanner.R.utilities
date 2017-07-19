@@ -28,4 +28,4 @@ if(1)
 #	run script
 ###############################################################################
 suppressMessages(library(Phyloscanner.R.utilities))
-invisible(phyloscan:::phsc.read.processed.phyloscanner.output.in.directory(prefix.infiles, save.file.base, read.likelytransmissions=read.likelytransmissions, read.trees=read.trees, read.subtrees=read.subtrees, resume=resume, zip=zip))
+invisible(Phyloscanner.R.utilities:::phsc.read.processed.phyloscanner.output.in.directory(prefix.infiles, save.file.base, read.likelytransmissions=read.likelytransmissions, read.trees=read.trees, read.subtrees=read.subtrees, resume=resume, zip=zip))
