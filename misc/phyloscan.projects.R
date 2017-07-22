@@ -19,8 +19,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
-	#pty.pipeline.phyloscanner.170301.secondbatchofall()
-	project.Rakai.FastTree.170704()
+	pty.pipeline.phyloscanner.170301.secondbatchofall()	
+	#project.Rakai.FastTree.170704()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -4558,7 +4558,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		load( file.path(in.dir, 'Rakai_phyloscanner_170704_b75_part2.rda') )		
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-		hpc.nproc			<- 4							
+		#hpc.nproc			<- 4	
+		hpc.nproc			<- 1
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
@@ -4597,7 +4598,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 				merge.threshold=2, 
 				min.read.count=1, 				
 				merge.paired.reads=TRUE, 
-				no.trees=FALSE, 
+				no.trees=TRUE,
+				#no.trees=FALSE, 
 				dont.check.duplicates=FALSE,
 				dont.check.recombination=TRUE,
 				num.bootstraps=1,
@@ -4640,7 +4642,8 @@ pty.pipeline.phyloscanner.170301.secondbatchofall<- function()
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)		
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="23600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="23600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=24, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=199, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
