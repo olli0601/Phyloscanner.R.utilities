@@ -5472,8 +5472,8 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)							
-							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="10900mb",  hpc.nproc=1, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=1, hpc.q=NA, hpc.mem="1890mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
