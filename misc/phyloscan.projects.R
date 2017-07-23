@@ -11,11 +11,11 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()	
-	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()	
+	pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()	
 	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
-	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()
-	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 
+	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
+	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 
 	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
@@ -5389,7 +5389,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_rerun")		
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		pty.select			<- NA
-		#pty.select			<- 666
+		pty.select			<- c(1811, 1825)
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'				
 	}	
 	#
@@ -5460,7 +5460,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
 		setkey(pty.c, PTY_RUN)	
-		#pty.c	<- subset(pty.c, PTY_RUN%in%pty.select)
+		pty.c	<- subset(pty.c, PTY_RUN%in%pty.select)
 		pty.c	<- pty.c[, {
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
