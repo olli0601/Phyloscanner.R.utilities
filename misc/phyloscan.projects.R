@@ -1192,9 +1192,10 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
 	setnames(rtc, c('IDCLU','CLU_SIZE','ID','ID_TYPE','PATRISTIC_DISTANCE','PTY_SIZE'), c('TRCLU_ID','TRCLU_SIZE','RID','RID_TYPE','RID_PATRISTIC_DISTANCE','PTY_SIZE_RID'))
 	pty.runs<- merge(rtc, tmp, by='RID')
 	setkey(pty.runs, PTY_RUN, RID_TYPE, RID)
-	pty.runs<- unique(pty.runs, by=c('RID','SID','PTY_RUN'))
+	pty.runs<- unique(pty.runs, by=c('RID','SID','PTY_RUN'))	
+	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')	
+	pty.runs<- merge(pty.runs, pty.runs[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('PTY_RUN','RID')], by=c('PTY_RUN','RID','SID'))
 	
-	pty.runs<- merge(pty.runs, pty.runs[, list(PTY_SIZE_SID=length(SID)), by='PTY_RUN'], by='PTY_RUN')
 	save(pty.runs, file= '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
 }
 
@@ -4876,7 +4877,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#load( file.path(in.dir, 'Rakai_phyloscanner_170301.rda') )
 		#load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
 		load( file.path(in.dir, 'Rakai_phyloscanner_170704_stagetwo.rda') )
-		
+		print(pty.runs)
 		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1							
