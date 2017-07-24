@@ -427,12 +427,7 @@ RakaiFull.preprocess.closepairs.calculate.170421	<- function()
 {
 	#
 	#	from every phyloscanner run, select pairs that are closely related 
-	#
-	mle.group	<- 
-	mle.state	<- 'close'
-	conf.group	<- 'TYPE_PAIR_DI'
-	conf.state	<- 'close'
-	
+	#		
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
 	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed'
