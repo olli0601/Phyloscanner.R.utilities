@@ -4720,11 +4720,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-		if(0)	#first lightweight run to handle most read alignments
+		if(1)	#first lightweight run to handle most read alignments
 		{
 			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
 		}
-		if(1)	#second midweight run to handle the remaining read alignments
+		if(0)	#second midweight run to handle the remaining read alignments
 		{
 			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "3600mb"; hpc.q<- "pqeph"
 			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
@@ -4754,7 +4754,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		infiles	<- subset(infiles, is.na(FT))	
 		setkey(infiles, PTY_RUN, W_FROM)	
 		 
-		infiles	<- subset(infiles, PTY_RUN<60)
+		infiles	<- subset(infiles, PTY_RUN>=60 & PTY_RUN<100)
 		print(infiles)	 
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 		#df[1, cat(CMD)]	
