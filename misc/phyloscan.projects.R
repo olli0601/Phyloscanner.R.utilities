@@ -4801,7 +4801,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			if(!length(tmp) & !length(misstrs))
 				cat('\nIn',indir,'Found all fasta and tree files')
 			zipit	<- !length(tmp) & !length(misstrs)
-			zipit	<- 0
+			#zipit	<- 1
 			if(zipit)
 			{			
 				cat('\nProcess',indir)
