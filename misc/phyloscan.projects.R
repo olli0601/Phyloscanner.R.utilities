@@ -4733,10 +4733,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		if(0)	#third heavyweight run to handle the remaining read alignments
 		{
 			hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "7850mb"; hpc.q<- NA
+			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 34; hpc.mem<- "63850mb"; hpc.q<- NA
 		}
 		
-		#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-		raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		#raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 		raxml.args			<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo')
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')		
@@ -4789,19 +4790,27 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
-			tmp		<- subset(infiles, is.na(F))[, W_FROM]
-			if(length(tmp))
-				cat('\nIn',indir,'Found missing fasta files for',paste(tmp,collapse=', '))
+			missfs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(missfs))
+				cat('\nIn',indir,'Found missing fasta files for',paste(missfs,collapse=', '))
 			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
 			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
 			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
 			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
 			if(length(misstrs))
 				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
-			if(!length(tmp) & !length(misstrs))
+			zipit	<- 0
+			if(!length(missfs) & !length(misstrs))
+			{
 				cat('\nIn',indir,'Found all fasta and tree files')
-			zipit	<- !length(tmp) & !length(misstrs)
-			#zipit	<- 1
+				zipit	<- 1
+			}				
+			if(setdiff(misstrs,missfs))
+			{
+				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+				zipit	<- 1
+			}	
+			#
 			if(zipit)
 			{			
 				cat('\nProcess',indir)
@@ -4833,10 +4842,12 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
 				cat('\nDone',indir)
 			}
-			if(!length(misstrs))
+			#if(!length(misstrs))
+			if(zipit)
 				invisible(unlink(indir, recursive=TRUE))
 			#	expand again if asked to
-			if(length(misstrs))
+			#if(length(misstrs))
+			if(0)
 			{
 				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
 				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
@@ -5227,15 +5238,18 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	if(1)
 	{	
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'								
-		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1		
-		in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")
+		#in.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo")		
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun")
-		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23")
+		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34")		
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23")
-		work.dir			<- file.path(HOME,"RakaiAll_work_170301")
-		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		#work.dir			<- file.path(HOME,"RakaiAll_work_170301")
+		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
+		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23")
+		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
 	}	
 	if(0)
@@ -5262,7 +5276,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
 				bl.normalising.reference.var='MEDIAN_PWD',														
 				window.automatic= '', 
-				merge.threshold=2, 
+				merge.threshold=0, 
 				min.read.count=1, 
 				quality.trim.ends=23, 
 				min.internal.quality=23, 
@@ -5285,14 +5299,14 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				multifurcation.threshold=1e-5,
 				split.rule='s',
 				split.kParam=20,
-				split.proximityThreshold=0.035,
+				split.proximityThreshold=0,
 				split.readCountsMatterOnZeroBranches=TRUE,
 				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
-				pw.prior.keff=3,
-				pw.prior.neff=4,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
 				pw.prior.keff.dir=2,
 				pw.prior.neff.dir=3,				
 				pw.prior.calibrated.prob=0.66,
@@ -5306,13 +5320,13 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	#	
 	if(1)
 	{
-		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_bam.txt', full.names=TRUE))
-		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_bam.txt','',basename(FILE_BAM))))]
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]
 		#pty.c	<- subset(pty.c, PTY_RUN!=1)
 		#pty.c	<- subset(pty.c, PTY_RUN%in%c(35,60,69,117,131,149,163,164,165,166,167,169,170,171,173,174,175,177,178,180,181,182,183,184,185,196,235,243))
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(80))
-		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_trmStatsPerWindow.rda', full.names=TRUE))
-		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_trmStatsPerWindow.rda','',basename(FILE_TRMW))))]
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(80))
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
 		setkey(pty.c, PTY_RUN)		
@@ -5320,7 +5334,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#FILE_BAM<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
-					prefix.infiles	<- gsub('bam.txt','',FILE_BAM)
+					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
 					print(prefix.infiles)
 					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 					list(CMD=cmd) 
@@ -5328,9 +5342,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		pty.c[1,cat(CMD)]
 		#stop()
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q=NA, hpc.mem="64000mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q=NA, hpc.mem="64000mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -5400,7 +5414,7 @@ pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function()
 				multifurcation.threshold=1e-5,
 				split.rule='s',
 				split.kParam=20,
-				split.proximityThreshold=0.035,	#!!
+				split.proximityThreshold=0.035,	
 				split.readCountsMatterOnZeroBranches=TRUE,
 				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
