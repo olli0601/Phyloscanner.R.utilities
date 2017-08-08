@@ -12,11 +12,11 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()	
 	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()	
-	#pty.pipeline.phyloscanner.170301.secondstage() 
+	pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
@@ -4885,7 +4885,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
-		pty.select			<- NA		
+		pty.select			<- 1		
 	}	
 	if(0)
 	{
@@ -4986,8 +4986,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
 		#pty.c[1,cat(CMD)]		
 		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="7850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
@@ -5352,7 +5352,13 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 							#stop()
 						}, by='PTY_RUN'])
 		quit('no')		
-	}		
+	}
+	if(0)	#check runs
+	{
+		df	<- data.table(F=list.files('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23', pattern='_pairwise_relationships.rda$', full.names=TRUE))
+		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
+		paste(setdiff( 1:185, df[, PTY_RUN]), collapse=', ')		
+	}
 }
 
 pty.pipeline.phyloscanner.170301.firstbatchofall.rerun<- function() 
