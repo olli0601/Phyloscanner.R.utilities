@@ -4946,7 +4946,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 				select=pty.select	#of 240
 		)		 
 	}	
-	if(1)	#run read alignments
+	if(0)	#run read alignments
 	{				
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft='mafft', 
@@ -4980,7 +4980,7 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	RUN PHYLOSCANNER
 	#
-	if(1)
+	if(0)
 	{
 		pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 		#pty.c				<- subset(pty.c, PTY_RUN!=1)
@@ -5000,19 +5000,9 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 	#
 	#	run read alignments, one run per window
 	#
-	if(0)
+	if(1)
 	{
-		pty.select	<- 4
-		pty.select	<- c(11, 14, 17, 20, 215)
-		pty.select	<- c(27, 31, 32, 34, 35, 154, 156, 46, 48, 50, 53, 54, 58, 60, 157, 184)
-		pty.select	<- c(63, 69, 71, 73, 74, 76, 77, 78, 80)
-		pty.select	<- c(84, 86, 96, 100, 101, 117, 124, 200, 221)
-		pty.select	<- c(105, 106, 109, 112, 115, 116, 120, 122, 123)
-		pty.select	<- c(136, 148, 232, 126, 127, 129, 130, 131, 132, 133, 134, 135, 137, 138, 141, 143, 145)
-		pty.select	<- c(25, 33, 155, 42, 56, 79, 187, 83, 230)
-		pty.select	<- c(103, 107, 179)
-		pty.select	<- 143
-		pty.select	<- setdiff(as.numeric(gsub('ptyr([0-9]+)_.*','\\1',list.files(out.dir, pattern='ptyr.*_trees$'))),143)
+		pty.select	<- 1		
 		print(pty.select)		
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
@@ -5059,8 +5049,8 @@ pty.pipeline.phyloscanner.170301.secondstage<- function()
 		#stop()		 
 		invisible(pty.c[,	{
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("snorc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
