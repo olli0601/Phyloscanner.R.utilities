@@ -12,10 +12,10 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.160915.couples.rerun()
 	#pty.pipeline.phyloscanner.170301.firstbatchofall()	
 	#pty.pipeline.phyloscanner.170301.firstbatchofall.rerun()	
-	pty.pipeline.phyloscanner.170301.secondstage() 
+	#pty.pipeline.phyloscanner.170301.secondstage() 
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
-	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
+	pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
 	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
@@ -4716,11 +4716,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	produce trees
 	#
-	if(0)
+	if(1)
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-		if(1)	#first lightweight run to handle most read alignments
+		if(0)	#first lightweight run to handle most read alignments
 		{
 			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
 		}
@@ -4730,10 +4730,10 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 998; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
 			#hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "1800mb"; hpc.q<- NA
 		}
-		if(0)	#third heavyweight run to handle the remaining read alignments
+		if(1)	#third heavyweight run to handle the remaining read alignments
 		{
-			hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "7850mb"; hpc.q<- NA
-			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 34; hpc.mem<- "63850mb"; hpc.q<- NA
+			#hpc.select<- 1; hpc.nproc<- 8; 	hpc.walltime<- 71; hpc.mem<- "7850mb"; hpc.q<- NA
+			hpc.select<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<- "63850mb"; hpc.q<- NA
 		}
 		
 		raxml.pr			<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
@@ -4755,7 +4755,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		infiles	<- subset(infiles, is.na(FT))	
 		setkey(infiles, PTY_RUN, W_FROM)	
 		 
-		infiles	<- subset(infiles, PTY_RUN>=60 & PTY_RUN<100)
+		#infiles	<- subset(infiles, PTY_RUN>=60 & PTY_RUN<100)
 		print(infiles)	 
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 		#df[1, cat(CMD)]	
@@ -4771,7 +4771,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	combine all the data
 	#	
-	if(1)
+	if(0)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
