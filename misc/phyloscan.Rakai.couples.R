@@ -5494,6 +5494,25 @@ RakaiFull.analyze.couples.todi.170522.distance.histogram<- function()
 	
 }
 
+
+RakaiFull.analyze.couples.todi.170811.consensus<- function()
+{	
+	require(Phyloscanner.R.utilities)
+	indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees'
+	infiles	<- data.table(F=list.files(indir, full.names=TRUE, pattern='^PANGEA.*newick'))
+	F<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_ft.000.newick'
+	phf		<- read.tree(F)
+	phfi	<- data.table(SEQIDb= phf$tip.label)
+	#	get patristic distances
+	tmp								<- cophenetic.phylo(phf)
+	tmp								<- as.matrix(tmp)
+	tmp[upper.tri(tmp, diag=TRUE)]	<- NA_real_
+	tmp								<- as.data.table(melt(tmp))
+	setnames(tmp, c('Var1','Var2','value'), c('SEQIDb','SEQIDb2','PD'))
+	phfi							<- subset(tmp, !is.na(PD))
+	
+}
+
 RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
 {	
 	require(data.table)
