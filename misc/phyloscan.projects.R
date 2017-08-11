@@ -1955,12 +1955,11 @@ project.Rakai.FastTree.170704<- function()
 		tmp				<- extract.clade(ph,getMRCA(ph,c("PG14-UG502292-S04296","PG14-UG502476-S04480")))
 		tmp				<- merge(sqi, data.table(TAXA=tmp$tip.label), by='TAXA')
 		tmp				<- merge(tmp, dc, by='PIDF')
-		write.table(tmp, row.names=FALSE, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no3.csv')
-		
+		write.table(tmp, row.names=FALSE, file='/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/stragglers_no3.csv')		
 	}
 	#
 	#	get 100 trees on HPC
-	if(1)
+	if(0)
 	{			
 		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
 		indir			<- '/work/or105/Gates_2014/Rakai'
@@ -1981,6 +1980,34 @@ project.Rakai.FastTree.170704<- function()
 		cat(cmd)					
 		outfile.cmd		<- paste("rk",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(indir, outfile.cmd, cmd)	
+	}
+	#
+	#	get 100 ExaML trees on HPC
+	if(1)
+	{					
+		indir			<- '/work/or105/Gates_2014/Rakai'
+		infile			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700')
+		infile			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples')
+		#	ExaML bootstrap args
+		bs.from		<- 0
+		bs.to		<- 2
+		bs.n		<- 100
+		outdir		<- indir
+		args.parser	<- paste("-m DNA")
+		#args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours
+		args.examl	<- "-f d -D -m GTRCAT"			
+		cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="nucleotide", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
+		dummy		<- lapply(cmd, function(x)
+				{				
+					#x		<- cmd.hpcwrapper(x, hpc.walltime=21, hpc.q= NA, hpc.mem="450mb", hpc.nproc=1)
+					#x		<- cmd.hpcwrapper(x, hpc.walltime=79, hpc.q="pqeph", hpc.mem="1800mb", hpc.nproc=1)
+					cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load='module load R/3.3.3 intel-suite mpi libgmp/4.2.1') 
+					cmd		<- paste(cmd,x,sep='\n')
+					cat(cmd)					
+					outfile.cmd		<- paste("rke",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+					cmd.hpccaller(indir, outfile.cmd, cmd)
+					Sys.sleep(1)
+				})			
 	}
 	#
 	#	get couples-only alignment 
