@@ -1964,13 +1964,15 @@ project.Rakai.FastTree.170704<- function()
 	{			
 		#indir			<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2017/2017_Seattle'
 		indir			<- '/work/or105/Gates_2014/Rakai'
-		infile.fasta	<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta')
+		#infile.fasta	<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta')
+		infile.fasta	<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples.fasta')
 		
 		bs.n			<- 100	
-		bs.dir			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees')	
+		#bs.dir			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees')
+		bs.dir			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples_bootstrap_trees')
 		outfile.ft		<- gsub('\\.fasta',paste0('_ft_bs',bs.n,'.newick'),infile.fasta)
-		#tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
-		tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, bs.from=42, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
+		tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
+		#tmp				<- cmd.fasttree.many.bootstraps(infile.fasta, bs.dir, bs.n, bs.from=42, outfile.ft, pr.args='-nt -gtr -gamma', opt.bootstrap.by='nucleotide')
 		
 		
 		#	run on HPC
@@ -1980,6 +1982,27 @@ project.Rakai.FastTree.170704<- function()
 		outfile.cmd		<- paste("rk",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(indir, outfile.cmd, cmd)	
 	}
+	#
+	#	get couples-only alignment 
+	if(0)
+	{	
+		infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700.fasta'
+		sq		<- read.dna(infile, format='fasta')
+		dfi		<- data.table(F=rownames(sq))
+		dfi[, PIDF:= gsub('_WTSI.*','',F)]
+		dfi[, PNG:= grepl('^PG[0-9]+-', PIDF)]
+		
+		#	load couples to search for in phyloscanner output
+		load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+		rps		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, FEMALE_TAXA, MALE_TAXA, COUPID)))
+		rps		<- data.table(PIDF=rps[, unique(na.omit(c(FEMALE_TAXA, MALE_TAXA)))])
+		rps		<- merge(rps, dfi, by='PIDF')
+		dfi		<- rbind(rps, subset(dfi, !PNG), fill=TRUE)		
+		sq		<- sq[ dfi$F, ]
+		
+		write.dna(sq, file=gsub('\\.fasta','_couples.fasta',infile), format='fasta')		
+	}
+	
 }
 
 ######################################################################################
