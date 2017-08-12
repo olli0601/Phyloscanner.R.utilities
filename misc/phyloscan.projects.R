@@ -1994,8 +1994,8 @@ project.Rakai.FastTree.170704<- function()
 		bs.n		<- 100
 		outdir		<- indir
 		args.parser	<- paste("-m DNA")
-		#args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours
-		args.examl	<- "-f d -D -m GTRCAT"			
+		args.examl	<- "-f d -D -m GAMMA"	#	 -- this is the default that worked in 24 hours
+		#args.examl	<- "-f d -D -m GTRCAT"			
 		cmd			<- cmd.examl.bootstrap(indir, infile, bs.from=bs.from, bs.to=bs.to, bs.n=bs.n, opt.bootstrap.by="nucleotide", args.parser=args.parser, args.examl=args.examl, tmpdir.prefix="examl")					
 		dummy		<- lapply(cmd, function(x)
 				{				
