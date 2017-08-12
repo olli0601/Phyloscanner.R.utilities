@@ -3168,7 +3168,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	rtpa		<- unique(subset(rplkl, select=c(FEMALE_RID, MALE_RID)))
 	rtpa		<- subset(merge(rtpa, subset(rtp, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
 	rtpa		<- subset(merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rex, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
-	rtpa		<- merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rplkl, GROUP==group & TYPE=='likely pair'), by=c('MALE_RID','FEMALE_RID'))
+	rtpa		<- merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rplkl, GROUP==group & TYPE=='linked'), by=c('MALE_RID','FEMALE_RID'))
 	#rtpa[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 	rtpa[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]	
 	rtpa		<- merge(rtpa, rtpa[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')], by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
@@ -6062,7 +6062,8 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	#	correlation plot
 	#
 	ggplot(dfd2, aes(x=CONS_PD_MEAN, xmin=CONS_PD_Q25, xmax=CONS_PD_Q75, y=PHSC_PD_MEAN, ymin=PHSC_PD_Q25, ymax=PHSC_PD_Q75)) +
-			geom_rect(xmin=log10(0.05), xmax=log10(0.12), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
+			#geom_rect(xmin=log10(0.05), xmax=log10(0.12), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
+			geom_rect(xmin=log10(0.12), xmax=log10(0.23), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
 			geom_rect(ymin=log10(0.035), ymax=log10(0.08), xmin=log10(0.0001), xmax=log10(1), fill='grey85', colour='grey85') +
 			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +
 			geom_linerange(size=.5, alpha=0.5, colour='grey40') +
@@ -6079,41 +6080,47 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 		
 	dfd2[, cor(CONS_PD_MEAN, PHSC_PD_MEAN)]
 	#	0.5319824
-	
+	dfd2[, cor(log10(CONS_PD_MEAN), log10(PHSC_PD_MEAN))]
+	#	0.9126216
 
+
+	#
 	#	look at outliers
-	tmp	<- subset(dfd2, CONS_PD_MEAN>0.05 & PHSC_PD_MEAN<0.035)
-	subset(merge(rtp, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN.x))
-	#	MALE_RID FEMALE_RID PTY_RUN.x
-	#1:  A106044    C106054       146
-	#2:  A108832    A108688       109
-	#3:  B035048    J035045       214
-	#4:  D030388    J104165       131
-	#5:  H104368    G104325       206
-	#6:  J106848    K107014        13
-	#6:  F108382    F108764        43
-	#5:  D066337    B066335       116
-	tmp	<- subset(dfd, PHSC_W=='all' & PD<0.01 & PHSC_PD_MEAN>0.05)
-	subset(merge(rca, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN.x))
-	#	   MALE_RID FEMALE_RID PTY_RUN.x
-	#	1:  B114802    H115007       165
+	tmp	<- subset(dfd2, CONS_PD_MEAN>0.12 & PHSC_PD_MEAN<0.035)
+	dfco<- subset(merge(rca, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC))
+	write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_outliers.csv'))
+	#MALE_RID FEMALE_RID PTY_RUN                                            SELECT COUP_SC
+	#1:  A084005    A106060     139                     couple most likely not a pair seroinc
+	#2:  B023435    K010338     169              couple ambiguous if pair or not pair    M->F
+	#3:  B035048    J035045     214  couple most likely a pair direction not resolved    M->F
+	#4:  C109805    B109854     195 couple most likely a pair with resolved direction seropos
+	#5:  D030388    J104165     131  couple most likely a pair direction not resolved seroinc
+	#6:  D105026    H105062      88              couple ambiguous if pair or not pair seropos
+	#7:  D108885    E108632     221  couple most likely a pair direction not resolved seropos
+	#8:  J045006    C025397     208  couple most likely a pair direction not resolved    M->F
+	#9:  J100181    A100167     214 couple most likely a pair with resolved direction seropos
+	if(0)
+	{
+		require(colorspace)
+		zz	<- dfco[, which(MALE_RID%in%c('A084005'))]
+		#for(ii in seq_len(nrow(rtpdm))[-1])
+		for(ii in zz)
+		{		
+			indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
+			# load dfr and phs
+			load( file.path(indir, paste0('ptyr',dfco[ii,PTY_RUN],'_trees.rda')) )
+			# setup plotting
+			ids			<- c(dfco[ii, MALE_RID],dfco[ii, FEMALE_RID])
+			dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+			dfs[, MALE_RID:=ids[1]]
+			dfs[, FEMALE_RID:=ids[2]]				
+			dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', dfco[ii, PTY_RUN], '\nwindow ', W_FROM,'-', W_TO, sep='')]]
+			plot.file	<- paste0(outfile.base, 'run_', dfco[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+			invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.blacklisted=FALSE, drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))						
+		}
+	}
 	
-	tmp	<- merge(rca, unique(subset(dfd, PHSC_W=='all', c(MALE_RID, FEMALE_RID, PD, GD))), by=c('MALE_RID','FEMALE_RID'), all.x=1)
-	tmp[, table(SELECT,is.finite(PD))]
-	#SELECT                                                               FALSE TRUE
-	#couple ambiguous if pair or not pair                                   4   15
-	#couple most likely a pair direction not resolved                       3   52
-	#couple most likely a pair with resolved direction                     12   76
-	#couple most likely not a pair                                         35  111
-	#insufficient deep sequence data for at least one partner of couple   178    0
-	tmp[, table(SELECT,is.finite(GD))]
-	#SELECT                                                               FALSE TRUE
-	#couple ambiguous if pair or not pair                                   0   19
-	#couple most likely a pair direction not resolved                       0   55
-	#couple most likely a pair with resolved direction                      0   88
-	#couple most likely not a pair                                          0  146
-	#insufficient deep sequence data for at least one partner of couple   178    0
-
+	
 
 }
 

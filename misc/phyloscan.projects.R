@@ -1986,8 +1986,8 @@ project.Rakai.FastTree.170704<- function()
 	if(1)
 	{					
 		indir			<- '/work/or105/Gates_2014/Rakai'
-		infile			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700')
-		infile			<- file.path(indir,'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples')
+		infile			<- 'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700'
+		infile			<- 'PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples'
 		#	ExaML bootstrap args
 		bs.from		<- 0
 		bs.to		<- 2
