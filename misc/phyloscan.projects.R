@@ -16,11 +16,11 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
-	project.Rakai.FastTree.170704()
+	#project.Rakai.FastTree.170704()
 	#project.RakaiAll.setup.RAxMLmodel.170301()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
@@ -5289,7 +5289,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23")
+		#out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
@@ -5336,14 +5337,14 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
 				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
-				roguesubtree.read.threshold=20,
+				roguesubtree.read.threshold=10,
 				dwns.maxReadsPerPatient=50,	
 				multifurcation.threshold=1e-5,
 				split.rule='s',
 				split.kParam=20,
 				split.proximityThreshold=0,
 				split.readCountsMatterOnZeroBranches=TRUE,
-				pw.trmw.min.reads=20,									
+				pw.trmw.min.reads=10,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
@@ -5384,9 +5385,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		pty.c[1,cat(CMD)]
 		#stop()
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5600mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')

@@ -3298,6 +3298,27 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 		setnames(rplkl2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
 		phsc.plot.windowsummaries.for.pairs(rps, rpw2, rplkl2, plot.file, cols=NULL, group=group)				
 	}
+	#
+	#	plot windows of other couples
+	if(0)
+	{
+		rps			<- subset(rca, SELECT%in%c('couple ambiguous if pair or not pair','couple most likely not a pair','insufficient deep sequence data for at least one partner of couple'), select=c(MALE_RID, FEMALE_RID, PTY_RUN, TYPE, POSTERIOR_SCORE))
+		rps			<- subset(rps, !is.na(PTY_RUN))
+		setkey(rps, TYPE, POSTERIOR_SCORE)
+		write.csv(rps, file=paste0(outfile.base,'_summary_notlklpairs.csv'))
+		rps[, DUMMY:=seq_len(nrow(rps))]
+		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
+		
+		group		<- 'TYPE_BASIC'
+		#group		<- 'TYPE_PAIR_TODI'					
+		rpw2		<- subset(rpw, GROUP==group)
+		rplkl2		<- subset(rplkl, GROUP==group)	
+		plot.file	<- paste0(outfile.base,'windows_summary_notlklpairs_',group,'.pdf')
+		setnames(rps, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rpw2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rplkl2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		phsc.plot.windowsummaries.for.pairs(rps, rpw2, rplkl2, plot.file, cols=NULL, group=group)				
+	}
 	if(0)
 	{
 		require(colorspace)
@@ -3648,7 +3669,7 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 		setnames(rpw2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
 		setnames(rplkl2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
 		phsc.plot.windowsummaries.for.pairs(rps, rpw2, rplkl2, plot.file, cols=NULL, group=group)				
-	}
+	}	
 	
 	require(colorspace)
 	#for(ii in seq_len(nrow(rtpdm))[-1])
@@ -5981,9 +6002,20 @@ RakaiFull.analyze.couples.todi.170811.consensus.distances.read.from.FASTA<- func
 	rps		<- merge(rps, tmp, by='FEMALE_RID')
 	
 	#	get patristic distances
-	indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees'
-	infiles	<- data.table(F=list.files(indir, full.names=TRUE, pattern='^PANGEA.*newick'))
-	infiles[, REP:= as.numeric(gsub('.*_ft\\.([0-9]+)\\.newick','\\1',F))]
+	if(0)
+	{
+		indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees'
+		indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples_bootstrap_trees'
+		infiles	<- data.table(F=list.files(indir, full.names=TRUE, pattern='^PANGEA.*newick'))
+		infiles[, REP:= as.numeric(gsub('.*_ft\\.([0-9]+)\\.newick','\\1',F))]		
+	}
+	if(1)
+	{
+		indir	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_couples_ExaMLbootstrap_trees'
+		infiles	<- data.table(F=list.files(indir, full.names=TRUE, pattern='^ExaML_result.PANGEA.*'))
+		infiles[, REP:= as.numeric(gsub('.*finaltree\\.([0-9]+)','\\1',F))]		
+	}
+	
 	dfd		<- infiles[, {
 				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_bootstrap_trees/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_ft.000.newick'
 				phf			<- read.tree(F)	
@@ -5998,6 +6030,8 @@ RakaiFull.analyze.couples.todi.170811.consensus.distances.read.from.FASTA<- func
 			}, by='REP']
 	#	save
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_FastTree_patristicdistances.rda'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_FastTree_patristicdistances.rda'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_ExaML_patristicdistances.rda'
 	save(rps, dfd, file=outfile)	
 }
 
@@ -6011,15 +6045,20 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 		
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_"
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_"	
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplesExaMLcouples_170811_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_"
 	#	
 	#	load patristic distances 
 	#	we only have this for a subset of couples with at least 700 nt long consensus
-	infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_FastTree_patristicdistances.rda'
+	#infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_FastTree_patristicdistances.rda'
+	#infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_ExaML_patristicdistances.rda'
+	infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_FastTree_patristicdistances.rda'
+	
 	load(infile)	
 	#
 	#	load preprocessed couples and add TAXA + SIDs
-	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda"	
+	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_withmetadata.rda"	
 	load(infile)
 	rpw2	<- subset(rpw, GROUP=='TYPE_PAIR_DI2')
 	
@@ -6045,8 +6084,8 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	#
 	tmp		<- melt(dfd2, id.vars=c('COUPID','MALE_RID','FEMALE_RID'), measure.vars=c('CONS_PD_MEAN','PHSC_PD_MEAN'))
 	ggplot(tmp, aes(x=log10(value), colour=variable)) +
-		geom_vline(xintercept=log10(c(0.035,0.08)), colour='blue', linetype='dotted') +
-		geom_vline(xintercept=log10(c(0.12, 0.23)), colour='red', linetype='dotted') +
+		geom_vline(xintercept=log10(c(0.035)), colour='blue', linetype='dotted') +
+		geom_vline(xintercept=log10(c(0.08)), colour='red', linetype='dotted') +
 		stat_ecdf() +
 		scale_colour_brewer(palette='Set1') +			
 		scale_y_continuous(expand=c(0,0), limits=c(0,1)) + 
@@ -6063,8 +6102,10 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	#
 	ggplot(dfd2, aes(x=CONS_PD_MEAN, xmin=CONS_PD_Q25, xmax=CONS_PD_Q75, y=PHSC_PD_MEAN, ymin=PHSC_PD_Q25, ymax=PHSC_PD_Q75)) +
 			#geom_rect(xmin=log10(0.05), xmax=log10(0.12), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
-			geom_rect(xmin=log10(0.12), xmax=log10(0.23), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
-			geom_rect(ymin=log10(0.035), ymax=log10(0.08), xmin=log10(0.0001), xmax=log10(1), fill='grey85', colour='grey85') +
+			#geom_rect(xmin=log10(0.08), xmax=log10(0.5), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
+			#geom_rect(ymin=log10(0.035), ymax=log10(0.5), xmin=log10(0.0001), xmax=log10(1), fill='grey85', colour='grey85') +
+			geom_hline(yintercept=0.035, colour='black') +
+			geom_vline(xintercept=0.08, colour='black') +
 			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +
 			geom_linerange(size=.5, alpha=0.5, colour='grey40') +
 			geom_errorbarh(size=.5, alpha=0.5, colour='grey40', height = 0) +
@@ -6078,16 +6119,15 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	ggsave(file=paste0(outfile.base,'_distances_consPatristic_extraPartners.pdf'), w=7, h=7)	
 	
 		
-	dfd2[, cor(CONS_PD_MEAN, PHSC_PD_MEAN)]
-	#	0.5319824
 	dfd2[, cor(log10(CONS_PD_MEAN), log10(PHSC_PD_MEAN))]
-	#	0.9126216
+	#	0.9287092
 
 
 	#
 	#	look at outliers
-	tmp	<- subset(dfd2, CONS_PD_MEAN>0.12 & PHSC_PD_MEAN<0.035)
-	dfco<- subset(merge(rca, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC))
+	tmp	<- subset(dfd2, CONS_PD_MEAN>0.05 & PHSC_PD_MEAN<0.035)
+	dfco<- subset(merge(rca, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC, CONS_PD_MEAN, PHSC_PD_MEAN))
+	dfco<- dfco[order(CONS_PD_MEAN), ]
 	write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_outliers.csv'))
 	#MALE_RID FEMALE_RID PTY_RUN                                            SELECT COUP_SC
 	#1:  A084005    A106060     139                     couple most likely not a pair seroinc
