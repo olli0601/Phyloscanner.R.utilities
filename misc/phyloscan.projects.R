@@ -4975,7 +4975,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 							cmd.hpccaller(work.dir, outfile, cmd)
 							#stop()
-						}, by=c('PTY_RUN','W_FROM')])
+						}, by=c('ID')])
 	}
 	#
 	#	combine all the data
