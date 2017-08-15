@@ -4966,8 +4966,8 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		df[, ID:=ceiling(seq_len(nrow(df))/30)]
 		df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
 		
-		df[1, cat(CMD)]
-		stop()
+		#df[1, cat(CMD)]
+		#stop()
 		invisible(df[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd			<- paste(cmd,CMD,sep='\n')
