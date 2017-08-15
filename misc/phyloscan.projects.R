@@ -2616,25 +2616,26 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 	#
 	if(0)
 	{
-		batch.n	<- 75
-		dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')
-		tmp		<- unique(subset(dc.it1, select=RID))	
+		#	input: dc is a large data.table with column RID (ID of individuals) and other columns 
+		batch.n	<- 75			#number of individuals per phyloscanner run
+		dc.it1	<- subset(dc, HPC_ALL_SID_FOR_RID=='Y')		#select indivivuals for whom we have already bam files 
+		tmp		<- unique(subset(dc.it1, select=RID))	#tmp has one row with column RID
 		set.seed(42)
-		tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]
+		tmp[, RID_B:= sample(nrow(tmp),nrow(tmp))]	# randomly associate a batch ID to each RID 	
 		dc.it1	<- merge(dc.it1, tmp, by='RID')
 		setkey(dc.it1, RID_B)
-		dc.it1[, BATCH:= ceiling( RID_B/batch.n )]
+		dc.it1[, BATCH:= ceiling( RID_B/batch.n )]	# convert RID_B into a batch ID, grouping batch.n individuals into one BATCH	
 		#
 		#	set up first pty.runs
 		#		
-		pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))
+		pty.runs	<- as.data.table(t(combn(dc.it1[, unique(BATCH)],2)))	# take all combinations of BATCHes
 		setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
-		pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
-		pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')
+		pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]	# assign phyloscanner IDs to all combinations of BATCHes
+		pty.runs	<- melt(pty.runs, id.vars='PTY_RUN', variable.name='DUMMY', value.name='BATCH')	# melt into long format
 		set(pty.runs, NULL, 'DUMMY', NULL)
 		setkey(pty.runs, PTY_RUN)
 		tmp			<- subset(dc.it1, select=c(BATCH, RID, SID))
-		tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]
+		tmp			<- tmp[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('BATCH','RID')]	# at my end, individual IDs and bam IDs are different, and I want to rename the short reads in each bam ID too. Here I define the RENAME_SID field
 		pty.runs	<- merge(pty.runs, tmp, by='BATCH',allow.cartesian=TRUE)
 		
 		#tmp	<- pty.runs[, list(N_SID=length(SID)), by=c('PTY_RUN','RID')]	
@@ -4961,8 +4962,11 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 		infiles	<- subset(infiles, is.na(FT))	
 		setkey(infiles, PTY_RUN, W_FROM)	
 		 
-		infiles	<- subset(infiles, PTY_RUN>=240 & PTY_RUN<300)
+		#infiles	<- subset(infiles, PTY_RUN>=240 & PTY_RUN<300)
+		infiles	<- subset(infiles, PTY_RUN>=186 & PTY_RUN<239)
 		print(infiles)	 
+		stop()
+		
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
 		df[, ID:=ceiling(seq_len(nrow(df))/30)]
 		df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
