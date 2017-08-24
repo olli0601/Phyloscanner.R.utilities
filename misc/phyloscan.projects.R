@@ -4922,7 +4922,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	produce trees
 	#
-	if(1)
+	if(0)
 	{
 		#HOME				<<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -4984,7 +4984,7 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	#
 	#	combine all the data
 	#	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo'
@@ -5450,11 +5450,12 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#work.dir			<- file.path(HOME,"RakaiAll_work_170301")
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
+		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
 		#out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23")
 		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
-		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner.py'
+		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
 	}	
 	if(0)
 	{
@@ -5526,7 +5527,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]		
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(104, 116, 120, 144, 151, 164, 165, 170, 178, 185))		
+		pty.c	<- subset(pty.c, PTY_RUN%in%c(104))		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)

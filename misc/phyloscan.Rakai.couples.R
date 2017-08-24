@@ -82,7 +82,7 @@ RakaiCouples.setup.phyloscan.runs<- function()
 	set(rp, tmp, 'FEMALE_PTY_RUN', rp[tmp, MALE_PTY_RUN])
 	tmp		<- rp[, which(is.na(MALE_PTY_RUN) & !is.na(FEMALE_PTY_RUN))]
 	set(rp, tmp, 'MALE_PTY_RUN', rp[tmp, FEMALE_PTY_RUN])
-	#	fixup inconsistent phylotype run assignments
+	#	fixup inconsistent phylotype run COMPLEX_TOPOLOGYs
 	tmp		<- subset(rp, FEMALE_PTY_RUN!=MALE_PTY_RUN)
 	set(tmp, NULL, 'FEMALE_PTY_RUN', tmp[, MALE_PTY_RUN] )
 	tmp2	<- rp[, which(FEMALE_PTY_RUN!=MALE_PTY_RUN)]
@@ -1200,6 +1200,9 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior34d23.rda'		
 	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
 	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170610_cl3_prior23.rda'	
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'	
+	
 	
 	use.posterior.mode		<- 1
 	
@@ -1381,6 +1384,179 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				ans			
 			}, by='PTY_RUN']
 	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_DIR_TODI3","TYPE_DIRSCORE_TODI3","TYPE_DIR_TODI4","TYPE_PAIR_TODI2","TYPE_CHAIN_TODI","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2"))
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
+	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)	
+}
+
+RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
+{
+	require(data.table)
+	indir	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
+	#
+	#	load couples to search for in phyloscanner output
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+	#
+	#	load sequence data
+	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
+	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
+	#
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	
+	#
+	#	from every phyloscanner run, select pairs that are closely related 
+	#	
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	setkey(infiles, PTY_RUN)
+	rtp.todi2<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23/ptyr106_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				#	ML likely transmission pairs by distance
+				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_DI')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE_MLE=='close')
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]								
+				ans		<- copy(rtp)
+				#	ML likely transmission pairs by distance + topology
+				rtp		<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2')[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE_MLE=='linked')
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='linked'), by=c('ID1','ID2'), all.x=1)
+				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
+				ans		<- rbind(ans, rtp)
+				#	ML directed likely transmission pairs by distance + topology
+				#	among those pairs that are likely transmission pairs
+				rtp		<- merge(subset(rtp, select=c('ID1','ID2')), subset(rplkl, GROUP=='TYPE_NETWORK_SCORES'), by=c('ID1','ID2'))
+				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, !TYPE_MLE%in%c('ambiguous','not close/disconnected'))
+				setnames(rtp, 'TYPE_MLE', 'TYPE')
+				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_DIR_TODI2'), by=c('ID1','ID2','TYPE'), all.x=1)
+				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]				
+				rtp[, TYPE_MLE:=TYPE]
+				ans		<- rbind(ans, rtp, use.names=TRUE)
+				ans				
+			}, by=c('PTY_RUN')]		
+	set(rtp.todi2, NULL, 'TYPE_MLE', NULL)	
+	set(rtp.todi2, NULL, 'GROUP', rtp.todi2[, as.character(GROUP)])
+	#
+	#	re-arrange to male-female
+	#
+	#rtp.todi2.o	<- copy(rtp.todi2)
+	tmp			<- unique(subset(rd, select=c('RID','SEX')))
+	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	setnames(tmp, c('ID1_RID'), c('ID1'))
+	stopifnot( !length(setdiff(rtp.todi2[, ID1], tmp[, ID1])) )
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1'))	
+	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
+	stopifnot( !length(setdiff(rtp.todi2[, ID2], tmp[, ID2])) )	
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID2'))
+	tmp			<- rtp.todi2[, which(TYPE=='12')]
+	set(rtp.todi2, tmp, 'TYPE', rtp.todi2[tmp, tolower(paste0(ID1_SEX,ID2_SEX))])
+	tmp			<- rtp.todi2[, which(TYPE=='21')]
+	set(rtp.todi2, tmp, 'TYPE', rtp.todi2[tmp, tolower(paste0(ID2_SEX,ID1_SEX))])
+	set(rtp.todi2, NULL, 'ID1_SEX', rtp.todi2[, as.character(ID1_SEX)])
+	set(rtp.todi2, NULL, 'ID2_SEX', rtp.todi2[, as.character(ID2_SEX)])
+	#
+	#	prepare all dwin and rplkl and save separately
+	#
+	rplkl	<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				rplkl			
+			}, by='PTY_RUN']
+	rpw		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				dwin			
+			}, by='PTY_RUN']
+	#	add male female
+	tmp			<- unique(subset(rd, select=c('RID','SEX')))
+	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	setnames(tmp, c('ID1_RID'), c('ID1'))	
+	rplkl		<- merge(rplkl, tmp, by=c('ID1'))
+	rpw			<- merge(rpw, tmp, by=c('ID1'))
+	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))		
+	rplkl		<- merge(rplkl, tmp, by=c('ID2'))
+	rpw			<- merge(rpw, tmp, by=c('ID2'))
+	#	melt rpw
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2","TYPE_PAIR_TODI2","TYPE_DIR_TODI2","TYPE_NETWORK_SCORES","TYPE_CHAIN_TODI"))	
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])	
+	#	save
+	save(rplkl, rpw, file=gsub('\\.rda','_allwindows.rda',outfile))
+	#
+	#	prepare just the dwin and rplkl that we need for further analysis of the pairs
+	#
+	tmp			<- unique( subset(rtp.todi2, select=c(ID1, ID2, PTY_RUN)) )	
+	infiles		<- subset(infiles, PTY_RUN%in%tmp$PTY_RUN)
+	rplkl		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				cat(PTY_RUN,'\n')
+				load(F)
+				ans	<- merge(unique(subset(tmp, select=c('ID1','ID2'))), rplkl, by=c('ID1','ID2'))
+				ans			
+			}, by='PTY_RUN']
+	rpw		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				cat(PTY_RUN,'\n')
+				load(F)
+				ans	<- merge(unique(subset(tmp, select=c('ID1','ID2'))), dwin, by=c('ID1','ID2'))
+				ans			
+			}, by='PTY_RUN']
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2","TYPE_PAIR_TODI2","TYPE_DIR_TODI2","TYPE_NETWORK_SCORES","TYPE_CHAIN_TODI"))	
 	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
 	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
 	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)	
@@ -3061,6 +3237,8 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66	
 	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda"
 	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_"
+	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_"
 	
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	load(infile.trmpairs.todi)
@@ -3695,6 +3873,357 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170421<- function()
 	}
 	
 	save(rtpdm, rp, rs, rd, rh, ra, rtp.todi2, rplkl, rpw, rtpd.hsx, rtp.all, rtp, rtpd, rsm, rsma, rsmpl, rsmpl2, rsmpl3, file=outfile.save)
+}
+
+RakaiFull.preprocess.trmpairs.todi.addingmetadata.170811<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+		
+	confidence.cut			<- 0.66	
+	neff.cut				<- 3
+	group 					<- 'TYPE_PAIR_TODI2'
+	#load rsmpl data.tables
+	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/community_sampling_170522.rda')
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
+	#infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'		
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170516_"
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_"	
+	
+	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
+	#	now load second stage output
+	load(infile.trmpairs.todi)
+	#
+	#	above NEFF cut
+	tmp			<- subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2' & TYPE=='linked' & NEFF>neff.cut, select=c(ID1, ID2, PTY_RUN))
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
+	#
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with lowest evidence		
+	rtp		<- subset(rtp.todi2, GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]
+	rtp		<- subset(rtp, ID1!=ID2)
+	rtp		<- merge(rtp, subset(rtp.todi2, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)		# first stage 2723, second stage 628, p mode 530	
+	rtp[, length(unique(c(ID1,ID2)))]							# first stage 1511, second stage 1098, p mode 974 
+	
+	#	
+	#	directed likely transmission pairs, using topology and distance	
+	tmp		<- unique(subset(rtp, select=c('ID1','ID2','PTY_RUN')))		
+	rtpd	<- merge(tmp, subset(rtp.todi2, GROUP=='TYPE_DIR_TODI2'), by=c('ID1','ID2','PTY_RUN'))
+	rtpd	<- subset(rtpd, POSTERIOR_SCORE>confidence.cut)		# first stage 1536, second stage 364, p mode 260
+	rtpd[, length(unique(c(ID1,ID2)))]							# first stage 936, second stage 668, p mode 492
+	
+	#
+	#	select only m->f, f->m
+	#	
+	rtpd[, table(ID1_SEX, ID2_SEX)]	
+	# on stage 1:
+	#            ID2_SEX
+	#	ID1_SEX  F  M
+	#			F 507 496
+	#			M 317 216		723/1511= 47%
+	
+	# on stage 2:
+	#            ID2_SEX
+	#	ID1_SEX  F  M
+	#		  F  51 140
+	#		  M 117  56			107/364= 29%
+	
+	# on stage 2 using 23 and neff>=3
+	#	ID1_SEX   F   M    
+	#  F  55 121
+	#  M  95  44 				99/315= 31%
+	
+	rtpd.all<- copy(rtpd)	
+	rtpd	<- subset(rtpd, ID1_SEX!=ID2_SEX)					
+	#	first stage 824 pairs, second stage 257, pmode 192
+	tmp		<- subset(rtpd, ID1_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
+	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
+	set(tmp, tmp[, which(TYPE=='12')], 'TYPE', 'mf')
+	set(tmp, tmp[, which(TYPE=='21')], 'TYPE', 'fm')
+	rtpd	<- subset(rtpd, ID1_SEX=='F')
+	setnames(rtpd, colnames(rtpd), gsub('ID1','FEMALE',colnames(rtpd)))
+	setnames(rtpd, colnames(rtpd), gsub('ID2','MALE',colnames(rtpd)))
+	set(rtpd, rtpd[, which(TYPE=='12')], 'TYPE', 'fm')
+	set(rtpd, rtpd[, which(TYPE=='21')], 'TYPE', 'mf')
+	rtpd	<- rbind(rtpd, tmp, use.names=TRUE)	 
+	setnames(rtpd, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
+	set(rtpd, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
+	#	same for rtp
+	rtp.all	<- copy(rtp)	
+	rtp	<- subset(rtp, ID1_SEX!=ID2_SEX)					
+	tmp		<- subset(rtp, ID1_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('ID1','MALE',colnames(tmp)))
+	setnames(tmp, colnames(tmp), gsub('ID2','FEMALE',colnames(tmp)))
+	set(tmp, tmp[, which(TYPE=='12')], 'TYPE', 'mf')
+	set(tmp, tmp[, which(TYPE=='21')], 'TYPE', 'fm')
+	rtp	<- subset(rtp, ID1_SEX=='F')
+	setnames(rtp, colnames(rtp), gsub('ID1','FEMALE',colnames(rtp)))
+	setnames(rtp, colnames(rtp), gsub('ID2','MALE',colnames(rtp)))
+	set(rtp, rtp[, which(TYPE=='12')], 'TYPE', 'fm')
+	set(rtp, rtp[, which(TYPE=='21')], 'TYPE', 'mf')
+	rtp	<- rbind(rtp, tmp, use.names=TRUE)	 
+	setnames(rtp, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
+	set(rtp, NULL, c('FEMALE_SEX','MALE_SEX'), NULL)
+	
+	#
+	#	select only pairs with consistent sero-history
+	#
+	rtpd.hsx<- copy(rtpd)	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	rtpd	<- merge(rtpd, tmp, by='MALE_RID')	
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	rtpd	<- merge(rtpd, tmp, by='FEMALE_RID')			
+	rtpd[, SDC_TYPE:=NA_character_]
+	set(rtpd, rtpd[, which(TYPE=='fm' & FEMALE_LASTNEGDATE>MALE_FIRSTPOSDATE)], 'SDC_TYPE', 'incorrect')
+	set(rtpd, rtpd[, which(TYPE=='fm' & FEMALE_FIRSTPOSDATE<=MALE_LASTNEGDATE)], 'SDC_TYPE', 'correct')	
+	set(rtpd, rtpd[, which(TYPE=='mf' & MALE_LASTNEGDATE>FEMALE_FIRSTPOSDATE)], 'SDC_TYPE', 'incorrect')
+	set(rtpd, rtpd[, which(TYPE=='mf' & MALE_FIRSTPOSDATE<=FEMALE_LASTNEGDATE)], 'SDC_TYPE', 'correct')
+	subset(rtpd, !is.na(SDC_TYPE))[, table(TYPE, SDC_TYPE)]
+	#	stage 1
+	#		 correct 	incorrect
+	#fm      29         2
+	#mf      20         1				3/52= 0.0576
+	#--> pretty good	
+	
+	#	stage 2
+	#		 correct 	incorrect
+	#fm      16         2
+	#mf      12         1				3/31= 0.096
+	#--> OK-ish	
+	
+	#	on stage 2 using 23 and neff>=3
+	#TYPE correct incorrect
+	#fm      14         0
+	#mf       8         1				1/23= 0.0434
+	
+	#	plot
+	if(0)
+	{
+		t.posneg	<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+		setnames(t.posneg, c('BIRTHDATE','EST_DATEDIED'), c('DOB','DOD'))
+		t.seq		<- unique(subset(rs, !is.na(PID), select=c(RID, PID, SEQ_DATE)))
+		t.cd4		<- unique(subset(rd, !is.na(RECENTCD4DATE) & !is.na(RECENTCD4), select=c(RID, RECENTCD4DATE, RECENTCD4)))
+		set(t.cd4, NULL, 'RECENTCD4', t.cd4[, cut(RECENTCD4, breaks=c(-1,250,350,500,800,Inf), labels=c('<200','200-349','350-499','500-799','800+'))])
+		t.vl		<- unique(subset(rd, !is.na(RECENTVLDATE) & !is.na(RECENTVL), select=c(RID, RECENTVLDATE, RECENTVL)))
+		set(t.vl, NULL, 'RECENTVL', t.vl[, cut(RECENTVL, breaks=c(-1,200,1e3,1e5,Inf), labels=c('<200','200-1,000','1,000-100,000','100,000+'))])
+		df			<- subset(rtpd, SDC_TYPE=='incorrect')
+		p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
+		pdf(file=paste0(outfile.base,'epilines_pairs_with_inconsistent_serohistory.pdf'), w=8, h=5)
+		print(p)
+		dev.off()
+		df			<- subset(rtpd, SDC_TYPE=='correct')
+		p			<- RakaiFull.plot.epitimeline(df, copy(t.posneg), copy(t.cd4), copy(t.vl), copy(t.seq), age.adult=14)
+		pdf(file=paste0(outfile.base,'epilines_pairs_with_consistent_serohistory.pdf'), w=8, h=20)
+		print(p)
+		dev.off()
+	}
+	rtpd	<- subset(rtpd, is.na(SDC_TYPE) | SDC_TYPE=='correct')
+	rtpd	<- subset(rtpd, select=c(FEMALE_RID, MALE_RID, PTY_RUN, GROUP, TYPE, K, KEFF, N, NEFF, N_TYPE, PAR_PRIOR, POSTERIOR_ALPHA, POSTERIOR_BETA, POSTERIOR_SCORE))
+	#
+	#	check for multiple donors to same recipient
+	#
+	tmp	<- subset(rtpd, TYPE=='mf')[, list(FEMALE_N_TR=length(MALE_RID)), by='FEMALE_RID']
+	tmp[, table(FEMALE_N_TR>1)]
+	#stage 1
+	#FALSE  TRUE 
+	#  171   97 
+	#stage 2
+	#FALSE  TRUE 
+	#147     1
+	#on stage 2 using 23 and neff>=3
+	#FALSE 
+	#126
+	tmp2<- subset(rtpd, TYPE=='fm')[, list(MALE_N_TR=length(FEMALE_RID)), by='MALE_RID']
+	tmp2[, table(MALE_N_TR>1)]
+	#stage 1
+	#FALSE  TRUE 
+	# 117    39
+	#stage 2
+	#FALSE 
+	#105 
+	#on stage 2 using 23 and neff>=3
+	#FALSE TRUE
+	#   87 1 
+	#--> stage 2 is awesome
+	rtpd	<- merge(rtpd, tmp, by='FEMALE_RID', all.x=1)
+	rtpd	<- merge(rtpd, tmp2, by='MALE_RID', all.x=1)
+	rtpd	<- subset(rtpd, MALE_N_TR==1 | FEMALE_N_TR==1)
+	set(rtpd, NULL, c('FEMALE_N_TR','MALE_N_TR'), NULL)
+	
+	#
+	#	add if in reported couple yes/no 
+	#
+	rtpd[, MALE_IN_COUPLE:= rtpd[, as.integer(MALE_RID%in%rp$MALE_RID)]]
+	rtpd[, FEMALE_IN_COUPLE:= rtpd[, as.integer(FEMALE_RID%in%rp$FEMALE_RID)]]
+	tmp		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, COUP_SC)))
+	rtpd	<- merge(rtpd, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	setnames(rtpd, 'COUP_SC', 'COUPLE')
+	tmp		<- rtpd[, which(!is.na(COUPLE))]
+	set(rtpd, tmp, 'COUPLE', rtpd[tmp, paste('couple',COUPLE,'at enrollment')])
+	set(rtpd, rtpd[, which(is.na(COUPLE))], 'COUPLE', 'no couple')
+	rtpd[, table(COUPLE)]
+	#	stage 1: 731 not within stable couples, 79 directed pairs among couples 
+	#	stage 2: 167 not within stable couples, 87 directed pairs among couples			
+	#	pmode:	 125 not within stable couples, 67 directed pairs among couples 
+	#
+	#	determine first concordant pos visit
+	#	add metadata at first concordant pos visit
+	tmp		<- unique(subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	rtpdm	<- merge(rtpd, tmp, by='MALE_RID')	
+	setnames(tmp, colnames(tmp), gsub('MALE','FEMALE',colnames(tmp)))
+	rtpdm	<- merge(rtpdm, tmp, by='FEMALE_RID')			
+	rtpdm[, VISIT_FIRSTCONCPOS:= rtpdm[, pmax(MALE_FIRSTPOSVIS,FEMALE_FIRSTPOSVIS)]]
+	set(rtpdm, NULL, c('MALE_FIRSTPOSVIS','MALE_FIRSTPOSDATE','FEMALE_FIRSTPOSVIS','FEMALE_FIRSTPOSDATE'), NULL)
+	# male rd
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'MALE_RID')
+	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('MALE_RID','VISIT_FIRSTCONCPOS')])
+	setnames(tmp, 'MALE_RID', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "DATE", "REGION", "COMM_NUM", "COMM_NUM_A", "HH_NUM", "RECENTCD4","RECENTCD4DATE", "RECENTVL", "RECENTVLDATE", "SELFREPORTART", "EVERSELFREPORTART", "FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	setnames(tmp, 'MALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'MALE_VISIT', NULL)	
+	rtpdm	<- merge(rtpdm, tmp, by=c('MALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# male rh
+	tmp		<- unique(subset(rh, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'MALE_RID')
+	tmp		<- unique(merge(rtpdm, tmp, by='MALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('MALE_RID','VISIT_FIRSTCONCPOS')])
+	setnames(tmp, 'MALE_RID', 'RID')
+	tmp2	<- unique(subset(rh, select=c("RID","VISIT","CIRCUM","MARSTAT","EDUCAT","RELCAT","OCAT","OCCUP_OLLI","SEXP1YR","SEXP1OUT","COMM_TYPE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
+	setnames(tmp, 'MALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'MALE_VISIT', NULL)	
+	rtpdm	<- merge(rtpdm, tmp, by=c('MALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# female rd
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'FEMALE_RID')
+	tmp		<- unique(merge(rtpdm, tmp, by='FEMALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('FEMALE_RID','VISIT_FIRSTCONCPOS')])
+	setnames(tmp, 'FEMALE_RID', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "DATE", "REGION", "COMM_NUM", "COMM_NUM_A", "HH_NUM", "RECENTCD4","RECENTCD4DATE", "RECENTVL", "RECENTVLDATE", "SELFREPORTART", "EVERSELFREPORTART", "FIRSTSELFREPORTART","RELIGION","COHORT","BIRTHDATE","LASTNEGDATE","FIRSTPOSVIS","FIRSTPOSDATE","ARVSTARTDATE","EST_DATEDIED")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('FEMALE_',colnames(tmp)))
+	setnames(tmp, 'FEMALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'FEMALE_VISIT', NULL)	
+	rtpdm	<- merge(rtpdm, tmp, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# female rh
+	tmp		<- unique(subset(rh, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'FEMALE_RID')
+	tmp		<- unique(merge(rtpdm, tmp, by='FEMALE_RID')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('FEMALE_RID','VISIT_FIRSTCONCPOS')])	
+	setnames(tmp, 'FEMALE_RID', 'RID')
+	tmp2	<- unique(subset(rh, select=c("RID","VISIT","CIRCUM","MARSTAT","EDUCAT","RELCAT","OCAT","OCCUP_OLLI","SEXP1YR","SEXP1OUT","COMM_TYPE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), paste0('FEMALE_',colnames(tmp)))
+	setnames(tmp, 'FEMALE_VISIT_FIRSTCONCPOS', 'VISIT_FIRSTCONCPOS')
+	set(tmp, NULL, 'FEMALE_VISIT', NULL)	
+	rtpdm	<- merge(rtpdm, tmp, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	# some clean up
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM==23)], 'FEMALE_COMM_TYPE', 'agrarian')
+	set(rtpdm, rtpdm[, which(MALE_COMM_NUM==23)], 'MALE_COMM_TYPE', 'agrarian')
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM==38)], 'FEMALE_COMM_TYPE', 'fisherfolk')
+	set(rtpdm, rtpdm[, which(MALE_COMM_NUM==38)], 'MALE_COMM_TYPE', 'fisherfolk')	
+	
+	#
+	#	make sample data.table for geography
+	rsm		<- rsmpl[, list(	PARTICIPATED=length(RID),
+					COMM_NUM_A= COMM_NUM_A[1],
+					COMM_TYPE= COMM_TYPE[1],
+					HIV=sum(HIV),
+					HAS_PID=sum(HAS_PID), 
+					BAM_OUTPUT=sum(BAM_OUTPUT), 
+					MIN_PNG_OUTPUT=sum(MIN_PNG_OUTPUT)), by='COMM_NUM']	
+	#ggplot(suppressWarnings(melt(rsm, id.vars=c('COMM_NUM','HIV'), measure.vars=c('HAS_PID','BAM_OUTPUT','MIN_PNG_OUTPUT'))), aes(x=COMM_NUM, y=value/HIV, colour=variable)) + geom_point()
+	tmp		<- rsmpl3[, list(ELIGIBLE_AVG=mean(ELIGIBLE), PARTICIPATED_AVG=mean(PARTICIPATED)), by='COMM_NUM']	
+	rsm		<- merge(rsm, tmp, all=1, by='COMM_NUM')
+	#
+	#	make sample data.table by age and gender and comm type
+	rsmpl[, AGE_C:= rsmpl[, cut(AGEYRS, right=FALSE, breaks=c(seq(15,45,5),65), labels=paste0(seq(15,50,5)[-8], '-', seq(15,50,5)[-1]-1))]]	
+	stopifnot( !nrow(subset(rsmpl, is.na(AGE_C))) )
+	rsma	<- rsmpl[, list(	PARTICIPATED=length(RID),
+					HIV=sum(HIV),
+					HAS_PID=sum(HAS_PID), 
+					BAM_OUTPUT=sum(BAM_OUTPUT), 
+					MIN_PNG_OUTPUT=sum(MIN_PNG_OUTPUT)), by=c('SEX','AGE_C','COMM_TYPE')]		
+	#
+	#	convert rpw into MALE FEMALE format needed for plotting
+	tmp			<- copy(rpw)
+	setnames(tmp, c('ID1','ID2','PATHS_12','PATHS_21','ID1_L','ID1_R','ID2_L','ID2_R'), c('ID2','ID1','PATHS_21','PATHS_12','ID2_L','ID2_R','ID1_L','ID1_R'))						
+	set(tmp, NULL, 'TYPE', tmp[, gsub('12','XX33XX',TYPE)])						
+	set(tmp, NULL, 'TYPE', tmp[, gsub('21','12',TYPE)])
+	set(tmp, NULL, 'TYPE', tmp[, gsub('XX33XX','21',TYPE)])						
+	rpw			<- rbind(tmp, rpw)
+	setnames(rpw, c('ID1','ID2','PATHS_12','PATHS_21','ID1_L','ID1_R','ID2_L','ID2_R'), c('MALE_RID','FEMALE_RID','PATHS_MF','PATHS_FM','MALE_L','MALE_R','FEMALE_L','FEMALE_R'))
+	set(rpw, NULL, 'TYPE', rpw[, gsub('21','fm',gsub('12','mf',TYPE))])
+	rpw			<- merge(rpw, unique(subset(rtpdm, select=MALE_RID)), by='MALE_RID')
+	rpw			<- merge(rpw, unique(subset(rtpdm, select=FEMALE_RID)), by='FEMALE_RID')
+	#
+	#	convert rplkl into MALE FEMALE format needed for plotting
+	tmp			<- copy(rplkl)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))						
+	set(tmp, NULL, 'TYPE', tmp[, gsub('12','XX33XX',TYPE)])						
+	set(tmp, NULL, 'TYPE', tmp[, gsub('21','12',TYPE)])
+	set(tmp, NULL, 'TYPE', tmp[, gsub('XX33XX','21',TYPE)])						
+	rplkl		<- rbind(tmp, rplkl)
+	setnames(rplkl, c('ID1','ID2'), c('MALE_RID','FEMALE_RID'))
+	set(rplkl, NULL, 'TYPE', rplkl[, gsub('21','fm',gsub('12','mf',TYPE))])
+	rplkl		<- merge(rplkl, unique(subset(rtpdm, select=MALE_RID)), by='MALE_RID')
+	rplkl		<- merge(rplkl, unique(subset(rtpdm, select=FEMALE_RID)), by='FEMALE_RID')
+	
+	#
+	#	plot windows of identified transmission pairs
+	if(0)
+	{
+		rps			<- subset(rtpdm, select=c(MALE_RID, FEMALE_RID, PTY_RUN, TYPE, POSTERIOR_SCORE))
+		setkey(rps, TYPE, POSTERIOR_SCORE)
+		write.csv(rps, file=paste0(outfile.base,'_summary_lklpairswdirection.csv'))
+		rps[, DUMMY:=seq_len(nrow(rps))]
+		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
+		
+		group		<- 'TYPE_BASIC'
+		#group		<- 'TYPE_PAIR_TODI2'					
+		rpw2		<- subset(rpw, GROUP==group)
+		rplkl2		<- subset(rplkl, GROUP==group)	
+		plot.file	<- paste0(outfile.base,'windows_summary_',group,'.pdf')
+		setnames(rps, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rpw2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rplkl2, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		phsc.plot.windowsummaries.for.pairs(rps, rpw2, rplkl2, plot.file, cols=NULL, group=group)				
+	}	
+	
+	require(colorspace)
+	#for(ii in seq_len(nrow(rtpdm))[-1])
+	for(ii in 111:252)
+	{		
+		if(rtpdm[ii, PTY_RUN]!=1)
+		{
+			indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun'
+			# load dfr and phs
+			load( file.path(indir, paste0('ptyr',rtpdm[ii,PTY_RUN],'_trees.rda')) )
+			# setup plotting
+			ids			<- c(rtpdm[ii, MALE_RID],rtpdm[ii, FEMALE_RID])
+			dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+			dfs[, MALE_RID:=ids[1]]
+			dfs[, FEMALE_RID:=ids[2]]
+			dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'), all.x=1)	
+			dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\npmf',PATHS_MF,' pfm',PATHS_FM, ' ',ADJACENT,' ',CONTIGUOUS,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+			plot.file	<- paste0(outfile.base, 'trees/todi_pairs_170516_run_', rtpdm[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+			invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))			
+		}				
+	}
+	
+	save(rtpdm, rp, rs, rd, rh, ra, rtp.todi2, rplkl, rpw, rtpd.hsx, rtpd.all, rtp, rtpd, rsm, rsma, rsmpl, rsmpl2, rsmpl3, file=outfile.save)
 }
 
 RakaiFull.analyze.trmpairs.community.anonymize.170522<- function()
@@ -5203,6 +5732,87 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 	
 }
 
+RakaiFull.analyze.ffpairs.intermingled.170811<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	confidence.cut			<- 0.66	
+	neff.cut				<- 3
+	infile.trmpairs.todi	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_ff_170811_cl3_prior23_min10_"	
+	#	load second stage output
+	load(infile.trmpairs.todi)
+	#
+	#	above NEFF cut
+	tmp			<- subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2' & TYPE=='linked' & NEFF>neff.cut, select=c(ID1, ID2, PTY_RUN))
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
+	#
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with lowest evidence		
+	rtp		<- subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2')[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('ID1','ID2')]	
+	rtp		<- subset(rtp, ID1!=ID2)
+	rtp		<- merge(rtp, subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2','PTY_RUN'))	
+	rtp		<- subset(rtp, POSTERIOR_SCORE>confidence.cut)			
+	#
+	#	find likely FF pairs
+	#	see if predominantly close intermingled
+	rff		<- subset(rtp, ID1_SEX=='F' & ID2_SEX=='F')
+	rpw2	<- merge(subset(rff, select=c(ID1,ID2,PTY_RUN)), subset(rpw, GROUP=='TYPE_BASIC'), by=c('ID1','ID2','PTY_RUN'))
+	rpw2[, TYPE_TO:= 'disconnected/not close']
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('chain', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close intermingled')
+	#set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate')
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	tmp		<- rpw2[, list(K=length(W_FROM)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_MLE=TYPE_TO[which.max(K)], K_MLE=max(K), N=sum(K)), by=c('ID1','ID2','PTY_RUN')]
+	rffci	<- subset(tmp, TYPE_MLE=='close intermingled')
+	#
+	#	plot windows and phylogenies
+	#	plot windows of identified transmission pairs
+	if(0)
+	{
+		rps			<- subset(rffci, select=c(ID1, ID2, PTY_RUN))
+		write.csv(rps, file=paste0(outfile.base,'summary.csv'))
+		rps[, DUMMY:=seq_len(nrow(rps))]
+		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('f ',ID1,' f ', ID2,'\n',PTY_RUN))]]
+		
+		group		<- 'TYPE_BASIC'
+		#group		<- 'TYPE_PAIR_TODI2'					
+		rpw2		<- subset(rpw, GROUP==group)
+		rplkl2		<- subset(rplkl, GROUP==group)	
+		plot.file	<- paste0(outfile.base,'windows_summary_',group,'.pdf')
+		setnames(rps, c('ID1','ID2'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rpw2, c('ID1','ID2'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rplkl2, c('ID1','ID2'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		phsc.plot.windowsummaries.for.pairs(rps, rpw2, rplkl2, plot.file, cols=NULL, group=group)				
+	}	
+	
+	require(colorspace)
+	for(ii in seq_len(nrow(rffci)))
+	#for(ii in 111:252)
+	{		
+		indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+		# load dfr and phs
+		load( file.path(indir, paste0('ptyr',rffci[ii,PTY_RUN],'_trees.rda')) )
+		# setup plotting
+		ids			<- c(rffci[ii, ID1],rffci[ii, ID2])
+		dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+		dfs[, ID1:=ids[1]]
+		dfs[, ID2:=ids[2]]
+		dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('ID1','ID2','W_FROM','W_TO'), all.x=1)	
+		dfs[, TITLE:= dfs[, paste('female1 ', ids[1],'\nfemale2 ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\np21',PATHS_12,' p12',PATHS_21, ' ',ADJACENT,' ',CONTIGUOUS,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+		plot.file	<- paste0(outfile.base, '_', rffci[ii, PTY_RUN],'_F_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+		invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red4','hotpink1'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))										
+	}
+	
+}
+
 RakaiFull.analyze.couples.todi.170522.windowssummaryplots<- function()
 {		
 	require(data.table)
@@ -5243,7 +5853,7 @@ RakaiFull.analyze.couples.todi.170522.windowssummaryplots<- function()
 	
 }
 
-RakaiFull.analyze.couples.todi.170522.check.intermingledwithintermediate<- function()
+RakaiFull.analyze.trmpairs.todi.170811.intermingledwithintermediate<- function()
 {	
 	require(data.table)
 	require(scales)
@@ -5253,11 +5863,76 @@ RakaiFull.analyze.couples.todi.170522.check.intermingledwithintermediate<- funct
 	require(RColorBrewer)
 	require(Hmisc)
 	require(colorspace)
-	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"
+	infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_allwindows.rda'
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/intermingledintermediate_170811_cl3_prior23_min10_"
+	#infile					<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda'
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_"
+	
 	load(infile)	
-	setkey(rca, MALE_RID, FEMALE_RID)
-	rca[, PAIRID:=seq_len(nrow(rca))]
+	#setkey(rca, MALE_RID, FEMALE_RID)
+	#rca[, PAIRID:=seq_len(nrow(rca))]
+	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')
+	#	for every couple keep PTY_RUN with longest N
+	tmp		<- unique(subset(rplkl, GROUP=='TYPE_BASIC', select=c(ID1, ID2, PTY_RUN, NEFF)))
+	tmp		<- tmp[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]
+	rpw2	<- merge(rpw2, tmp, by=c('ID1','ID2', 'PTY_RUN') )
+	#	define new type to find pairs that have most frequently intermingled windows
+	rpw2[, TYPE_TO:= 'disconnected/not close']
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('chain', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close intermingled')		
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	tmp		<- rpw2[, list(K=length(W_FROM)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_MLE=TYPE_TO[which.max(K)], K_MLE=max(K), N=sum(K)), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- subset(tmp, TYPE_MLE=='close intermingled')
+	#	of those, see how many intermediates/other windows there are, that could indicate an intermediate
+	rpw3	<- merge(rpw2, subset(tmp, select=c(ID1, ID2, PTY_RUN)), by=c('ID1','ID2','PTY_RUN'))
+	rpw3[, TYPE_TO:= 'not other/intermediate']
+	set(rpw3, rpw3[,which(grepl('other', TYPE) | grepl('with intermediate', TYPE))], 'TYPE_TO', 'other/intermediate')
+	tmp		<- rpw3[, list(K=length(W_FROM)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_TO=TYPE_TO, K=K, N=sum(K), P=K/sum(K)), by=c('ID1','ID2','PTY_RUN')]
+	subset(tmp, TYPE_TO=='other/intermediate')
+	
+	
+	
+	
+	#	define new type to find pairs that have most frequently windows with intermediates
+	rpw2[, TYPE_TO:= 'disconnected/not close']
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('chain', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close intermingled')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate')	
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	tmp		<- rpw2[, list(K=length(W_FROM)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_MLE=TYPE_TO[which.max(K)], K_MLE=max(K), N=sum(K)), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- subset(tmp, TYPE_MLE=='close with intermediate')
+	
+	#	among those pairs, see how many are most frequently intermediate
+	rpw3	<- merge(rpw2, subset(tmp, select=c(ID1, ID2, PTY_RUN)), by=c('ID1','ID2','PTY_RUN'))
+	rpw3[, TYPE_TO:= 'disconnected/not close']
+	set(rpw3, rpw3[,which(grepl('close', TYPE) & grepl('chain', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rpw3, rpw3[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close intermingled')
+	set(rpw3, rpw3[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate intermingled')
+	set(rpw3, rpw3[,which(grepl('close', TYPE) & grepl('chain 12', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate chain12')
+	set(rpw3, rpw3[,which(grepl('close', TYPE) & grepl('chain 21', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate chain21')
+	set(rpw3, rpw3[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	tmp		<- rpw3[, list(K=length(W_FROM)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_MLE=TYPE_TO[which.max(K)], K_MLE=max(K), N=sum(K)), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- subset(tmp, TYPE_MLE=='close with intermediate intermingled')
+	
+	tmp[, table(TYPE_MLE)]
+	
+	
+	#	try couples
+	rpw2	<- merge(subset(rtp, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), subset(rpw, GROUP=='TYPE_BASIC'), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
+	rpw2[, TYPE_TO:= 'disconnected/not close']
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('chain', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close ancestral')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('intermingled', TYPE) & grepl('no intermediate', TYPE))], 'TYPE_TO', 'close intermingled')
+	set(rpw2, rpw2[,which(grepl('close', TYPE) & grepl('with intermediate', TYPE))], 'TYPE_TO', 'close with intermediate')	
+	set(rpw2, rpw2[,which(ADJACENT & grepl('other', TYPE))], 'TYPE_TO', 'close sibling')
+	tmp		<- rpw2[, list(K=length(W_FROM)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+	tmp		<- tmp[, list(TYPE_MLE=TYPE_TO[which.max(K)], K_MLE=max(K), N=sum(K)), by=c('MALE_RID','FEMALE_RID','PTY_RUN')]
+	rffci	<- subset(tmp, TYPE_MLE=='close with intermediate')
+	
+	
 	
 	tmp		<- subset(rpw, GROUP=='TYPE_BASIC')
 	tmp		<- subset(tmp, grepl('intermingled',TYPE) & grepl('with intermediate',TYPE))
@@ -6037,6 +6712,133 @@ RakaiFull.analyze.couples.todi.170811.consensus.distances.read.from.FASTA<- func
 	save(rps, dfd, file=outfile)	
 }
 
+RakaiFull.analyze.couples.todi.170811.plot.consensus.tree.for.paper<- function()
+{	
+	require(data.table)
+	require(ape)
+	require(ggtree)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(splines)
+	
+	infile		<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda"
+	infile.tree	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_ft_bs100.newick'
+	outfile.base<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/examples_'
+	load(infile)
+	
+	#	load tree and rename tips
+	ph	<- read.tree(infile.tree)
+	dph	<- data.table(TAXA=ph$tip.label, TIP_ID=seq_len(Ntip(ph)))
+	dph[, PIDF:= gsub('_WTSI.*','',TAXA)]
+	dph	<- merge(dph, unique(subset(rs, select=c(PIDF,RID))), all.x=TRUE, by='PIDF')
+	tmp	<- dph[, which(is.na(RID))]
+	set(dph, tmp, 'RID', dph[tmp,PIDF])
+	setkey(dph, TIP_ID)
+	ph$tip.label	<- dph[, RID]
+	ph$node.label[ph$node.label=='']	<- "0"
+	ph$node.label	<- as.numeric(ph$node.label)/100
+	
+	dph[, TIP_COL:='black']
+	set(dph, dph[, which(RID%in%c('K107705','G107639','J116744','K107569'))], 'TIP_COL', 'DarkRed')
+	set(dph, dph[, which(RID%in%c('D105505','B104540'))], 'TIP_COL', 'DarkRed')
+	set(dph, dph[, which(RID%in%c('B114802','H115007'))], 'TIP_COL', 'DarkRed')
+	
+	#
+	#plot tree direct transmission
+	tmp	<- drop.tip(ph, setdiff(dph[, RID], c('PG14-UG000568-S01881','K107705','G107639','J116744','K107569')), subtree=TRUE) 
+	tmp	<- phytools:::reroot(tmp, which(tmp$tip.label=='PG14-UG000568-S01881'), position=0)
+	dt	<- data.table(TAXA=tmp$tip.label, IDX=seq_along(tmp$tip.label), COUNT=sub('\\[([0-9]+)_tip.*','\\1',tmp$tip.label))
+	dt[, COLOUR:= as.character(factor(grepl('^[0-9]+$',COUNT), levels=c(TRUE,FALSE),labels=c('grey50','DarkRed')))]
+	set(dt, dt[, which(!grepl('^[0-9]+$',COUNT))], 'COUNT', "1")
+	set(dt, NULL, 'COUNT', dt[, as.integer(COUNT)])	
+	ggtree(tmp) %<+% dt +
+			geom_text2(aes(subset=!isTip, label=label), hjust=-.3, size=2, colour='grey50') +
+			geom_tippoint(aes(size=COUNT), shape=18) +
+			scale_size(range=c(1,20)) +
+			#scale_fill_hue(na.value="black") +								
+			theme(legend.position="none") +
+			#scale_x_continuous() +
+			geom_tiplab(align=T, aes(col=I(COLOUR)), size=3, linetype='dotted', linesize=NA) +
+			guides(size='none') +
+			theme_tree2() +
+			theme(	axis.line.x=element_line(),
+					panel.grid.major.x=element_line(color="grey20", linetype="dotted", size=.3),
+					legend.position="bottom") + 
+			ggplot2::xlim(0, max(node.depth.edgelength(tmp)[1:Ntip(tmp)])*1.15) +
+			labs(x='subst/site')
+	ggsave(file=paste0(outfile.base,'tree_direct_transmission.pdf'), w=4, h=7)
+	
+	#
+	#plot tree no resolution
+	tmp	<- drop.tip(ph, setdiff(dph[, RID], c('PG14-UG000568-S01881','D105505','B104540','H096194','C107300')), subtree=TRUE) 
+	tmp	<- phytools:::reroot(tmp, which(tmp$tip.label=='PG14-UG000568-S01881'), position=0)
+	dt	<- data.table(TAXA=tmp$tip.label, IDX=seq_along(tmp$tip.label), COUNT=sub('\\[([0-9]+)_tip.*','\\1',tmp$tip.label))
+	dt[, COLOUR:= as.character(factor(grepl('^[0-9]+$',COUNT), levels=c(TRUE,FALSE),labels=c('grey50','DarkRed')))]
+	set(dt, dt[, which(!grepl('^[0-9]+$',COUNT))], 'COUNT', "1")
+	set(dt, NULL, 'COUNT', dt[, as.integer(COUNT)])	
+	ggtree(tmp) %<+% dt +
+			geom_text2(aes(subset=!isTip, label=label), hjust=-.3, size=2, colour='grey50') +
+			geom_tippoint(aes(size=COUNT), shape=18) +
+			scale_size(range=c(1,20)) +
+			#scale_fill_hue(na.value="black") +								
+			theme(legend.position="none") +
+			#scale_x_continuous() +
+			geom_tiplab(align=T, aes(col=I(COLOUR)), size=3, linetype='dotted', linesize=NA) +
+			guides(size='none') +
+			theme_tree2() +
+			theme(	axis.line.x=element_line(),
+					panel.grid.major.x=element_line(color="grey20", linetype="dotted", size=.3),
+					legend.position="bottom") + 
+			ggplot2::xlim(0, max(node.depth.edgelength(tmp)[1:Ntip(tmp)])*1.15) +
+			labs(x='subst/site')
+	ggsave(file=paste0(outfile.base,'tree_no_resolution.pdf'), w=4, h=7)
+	
+	pdf(file=paste0(infile.tree,'.pdf'), w=15, h=200)
+	plot(ph, cex=0.2, edge.width=0.5, align.tip.label=FALSE, show.node.label=TRUE, no.margin=FALSE, label.offset=0.001, tip.color=dph[, TIP_COL])
+	axisPhylo()
+	dev.off()
+	
+	
+	#
+	#plot tree dual infection
+	tmp	<- drop.tip(ph, setdiff(dph[, RID], c('PG14-UG000568-S01881','B114802','H115007','C114764')), subtree=TRUE) 
+	tmp	<- phytools:::reroot(tmp, which(tmp$tip.label=='PG14-UG000568-S01881'), position=0)
+	dt	<- data.table(TAXA=tmp$tip.label, IDX=seq_along(tmp$tip.label), COUNT=sub('\\[([0-9]+)_tip.*','\\1',tmp$tip.label))
+	dt[, COLOUR:= as.character(factor(grepl('^[0-9]+$',COUNT), levels=c(TRUE,FALSE),labels=c('grey50','DarkRed')))]
+	set(dt, dt[, which(!grepl('^[0-9]+$',COUNT))], 'COUNT', "1")
+	set(dt, NULL, 'COUNT', dt[, as.integer(COUNT)])	
+	ggtree(tmp) %<+% dt +
+			#geom_text(aes(x=branch, label=edge.length)) +
+			geom_text2(aes(subset=!isTip, label=label), hjust=-.3, size=2, colour='grey50') +
+			geom_tippoint(aes(size=COUNT), shape=18) +
+			scale_size(range=c(1,20)) +
+			#scale_fill_hue(na.value="black") +								
+			theme(legend.position="none") +
+			#scale_x_continuous() +
+			geom_tiplab(align=T, aes(col=I(COLOUR)), size=3, linetype='dotted', linesize=NA) +
+			guides(size='none') +
+			theme_tree2() +
+			theme(	axis.line.x=element_line(),
+					panel.grid.major.x=element_line(color="grey20", linetype="dotted", size=.3),
+					legend.position="bottom") + 
+			ggplot2::xlim(0, max(node.depth.edgelength(tmp)[1:Ntip(tmp)])*1.15) +
+			labs(x='subst/site')
+	ggsave(file=paste0(outfile.base,'tree_dual_infection.pdf'), w=4, h=7)
+	
+	#
+	#	plot entire tree
+	pdf(file=paste0(infile.tree,'.pdf'), w=15, h=200)
+	plot(ph, cex=0.2, edge.width=0.5, align.tip.label=FALSE, show.node.label=TRUE, no.margin=FALSE, label.offset=0.001, tip.color=dph[, TIP_COL])
+	axisPhylo()
+	dev.off()
+	
+	
+}
+
 RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 {	
 	require(data.table)
@@ -6046,23 +6848,41 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	require(Hmisc)
-		
+	require(splines)
 	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_"	
 	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplesExaMLcouples_170811_"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_"
+	#outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_"
+	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10_"
 	#	
 	#	load patristic distances 
 	#	we only have this for a subset of couples with at least 700 nt long consensus
 	#infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_FastTree_patristicdistances.rda'
 	#infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_ExaML_patristicdistances.rda'
 	infile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_couples_FastTree_patristicdistances.rda'
+	load(infile)
 	
-	load(infile)	
 	#
 	#	load preprocessed couples and add TAXA + SIDs
-	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_withmetadata.rda"	
+	infile					<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda"	
 	load(infile)
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]
+	
 	rpw2	<- subset(rpw, GROUP=='TYPE_PAIR_DI2')
+		
+	#	load raw genetic distances 
+	infile	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_rawgendist.rda"
+	load(infile)		
+	gd		<- subset(gd, grepl('^PG',TAXA) & grepl('^PG',TAXA2))
+	set(gd, NULL, 'TAXA', gd[, gsub('_WTSI.*','',TAXA)])
+	set(gd, NULL, 'TAXA2', gd[, gsub('_WTSI.*','',TAXA2)])	
+	setnames(gd, c('TAXA','TAXA2'), c('MALE_TAXA','FEMALE_TAXA'))
+	tmp		<- copy(gd)
+	setnames(tmp, c('MALE_TAXA','FEMALE_TAXA'), c('FEMALE_TAXA','MALE_TAXA'))
+	gd		<- rbind(gd, tmp, use.names=TRUE)
+	tmp		<- subset(rp, !is.na(MALE_TAXA) & !is.na(FEMALE_TAXA), select=c(MALE_RID,FEMALE_RID,MALE_TAXA,FEMALE_TAXA))
+	gd		<- merge(gd, tmp, by=c('FEMALE_TAXA','MALE_TAXA'))
+	gd		<- gd[, list(CONS_GDRW=mean(CONS_GDRW)), by=c('MALE_RID','FEMALE_RID')]
 	
 	#
 	#	get 95% confidence intervals for consensus distances and phyloscanner distances
@@ -6070,21 +6890,62 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	tmp		<- rpw2[,	list(	PHSC_PD_MEAN=mean(PATRISTIC_DISTANCE, na.rm=TRUE),
 					PHSC_PD_Q025=quantile(PATRISTIC_DISTANCE, p=0.025, na.rm=TRUE),
 					PHSC_PD_Q25=quantile(PATRISTIC_DISTANCE, p=0.25, na.rm=TRUE),
+					PHSC_PD_Q50=quantile(PATRISTIC_DISTANCE, p=0.5, na.rm=TRUE),
 					PHSC_PD_Q75=quantile(PATRISTIC_DISTANCE, p=0.75, na.rm=TRUE),
 					PHSC_PD_Q975=quantile(PATRISTIC_DISTANCE, p=0.975, na.rm=TRUE)	
 			), by=c('MALE_RID','FEMALE_RID')]
 	dfd2	<- dfd[, list(	CONS_PD_MEAN=mean(PD, na.rm=TRUE),
 					CONS_PD_Q025=quantile(PD, p=0.025, na.rm=TRUE),
 					CONS_PD_Q25=quantile(PD, p=0.25, na.rm=TRUE),
+					CONS_PD_Q50=quantile(PD, p=0.5, na.rm=TRUE),
 					CONS_PD_Q75=quantile(PD, p=0.75, na.rm=TRUE),
 					CONS_PD_Q975=quantile(PD, p=0.975, na.rm=TRUE)	
 			),	by=c('COUPID','MALE_RID','FEMALE_RID')]
 	dfd2	<- merge(dfd2, tmp, by=c('MALE_RID','FEMALE_RID'))
+	dfd2	<- merge(dfd2, gd, by=c('MALE_RID','FEMALE_RID'), all.x=TRUE)
+	set(dfd2, NULL, 'PHSC_PD_ASYM', dfd2[, as.numeric(PHSC_PD_MEAN<PHSC_PD_Q25 | PHSC_PD_MEAN>PHSC_PD_Q75)])
+	set(dfd2, NULL, 'CONS_PD_ASYM', dfd2[, as.numeric(CONS_PD_MEAN<CONS_PD_Q25 | CONS_PD_MEAN>CONS_PD_Q75)])
 	
+	#
+	#	correlation between consensus raw genetic dist and phylogenetic dist	
+	tmp		<- subset(dfd2, !is.na(CONS_GDRW))
+	#	determine outliers in regression curve based on Cooks Distance	
+	tmp[, LOG_CONS_GDRW:= log10(CONS_GDRW)]
+	tmp[, LOG_CONS_PD_MEAN:= log10(CONS_PD_MEAN)]
+	tmp[, LOG_CONS_PD_Q50:= log10(CONS_PD_Q50)]
+	m1		<- lm(LOG_CONS_GDRW~ns(LOG_CONS_PD_Q50, df=2), data=tmp)
+	#	df=2 spline looks good
+	tmp[, PR:= 10^predict(m1,type='response')]	
+	#	ggplot(tmp, aes(x=CONS_PD_MEAN)) + geom_point(size=1, aes(y=CONS_GDRW)) + geom_line(aes(y=PR)) + scale_x_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) + scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) + coord_cartesian(xlim=c(0.002, 0.75), ylim=c(0.002, 0.5))  
+	tmp[, COOKSD:=cooks.distance(m1)]
+	tmp[, COOKSD_OUTLIER:= as.integer(COOKSD>6*mean(COOKSD))]	
+	tmp[, CI_WIDTH:= (log10(CONS_PD_Q75)-log10(CONS_PD_Q25))]
+	tmp[, CONS_PD_HV:= as.integer(CI_WIDTH>quantile(CI_WIDTH, p=0.95))]
+	ggplot(tmp, aes(x=CONS_PD_Q50, xmin=CONS_PD_Q25, xmax=CONS_PD_Q75)) +
+			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +
+			geom_line(aes(y=PR)) +
+			geom_errorbarh(aes(y=CONS_GDRW), size=.5, alpha=0.5, colour='grey40', height = 0) +
+			geom_point(aes(y=CONS_GDRW, colour=as.character(CONS_PD_HV)), size=1) +			
+			scale_x_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+			coord_cartesian(xlim=c(0.002, 0.75), ylim=c(0.002, 0.5)) + 
+			theme_bw() + theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
+			guides(colour=FALSE) +
+			labs(	x='\npatristic distance between consensus sequences\n(subst/site)',
+					y='patristic distance between WH clades\n(avg subst/site across windows)\n')
+	ggsave(file=paste0(outfile.base,'_distances_correlation_patristic_rawgenetic.pdf'), w=7, h=7)
+	#	flag patristic distance outliers
+	dfd2	<- merge(dfd2, subset(tmp, select=c(MALE_RID, FEMALE_RID, COOKSD_OUTLIER, CONS_PD_HV)), by=c('MALE_RID','FEMALE_RID'), all.x=TRUE)
+	set(dfd2, dfd2[, which(is.na(COOKSD_OUTLIER))], 'COOKSD_OUTLIER', 2L)
+	set(dfd2, dfd2[, which(is.na(CONS_PD_HV))], 'CONS_PD_HV', 2L)
+	#dfd2	<- subset(dfd2, COOKSD_OUTLIER==0)
+	
+
+
 	#
 	#	plot histograms to determine cut off points
 	#
-	tmp		<- melt(dfd2, id.vars=c('COUPID','MALE_RID','FEMALE_RID'), measure.vars=c('CONS_PD_MEAN','PHSC_PD_MEAN'))
+	tmp		<- melt(dfd2, id.vars=c('COUPID','MALE_RID','FEMALE_RID'), measure.vars=c('CONS_PD_Q50','PHSC_PD_Q50'))
 	ggplot(tmp, aes(x=log10(value), colour=variable)) +
 		geom_vline(xintercept=log10(c(0.035)), colour='blue', linetype='dotted') +
 		geom_vline(xintercept=log10(c(0.08)), colour='red', linetype='dotted') +
@@ -6102,57 +6963,184 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	#
 	#	correlation plot
 	#
-	ggplot(dfd2, aes(x=CONS_PD_MEAN, xmin=CONS_PD_Q25, xmax=CONS_PD_Q75, y=PHSC_PD_MEAN, ymin=PHSC_PD_Q25, ymax=PHSC_PD_Q75)) +
-			#geom_rect(xmin=log10(0.05), xmax=log10(0.12), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
-			#geom_rect(xmin=log10(0.08), xmax=log10(0.5), ymin=log10(0.0001), ymax=log10(1), fill='grey85', colour='grey85') +
-			#geom_rect(ymin=log10(0.035), ymax=log10(0.5), xmin=log10(0.0001), xmax=log10(1), fill='grey85', colour='grey85') +
-			geom_hline(yintercept=0.035, colour='black') +
-			geom_vline(xintercept=0.08, colour='black') +
-			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +
-			geom_linerange(size=.5, alpha=0.5, colour='grey40') +
-			geom_errorbarh(size=.5, alpha=0.5, colour='grey40', height = 0) +
-			geom_point(size=1) +			
-			scale_x_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
-			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
-			coord_cartesian(xlim=c(0.002, 0.5), ylim=c(0.002, 0.5)) + 
-			theme_bw() + theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
+	tmp3	<- copy(dfd2)		
+	set(tmp3, tmp3[,which(PHSC_PD_Q50< 10^(-3.1))], 'PHSC_PD_Q50', 10^(-3.1))
+	ggplot(tmp3, aes(x=log10(CONS_PD_Q50))) +			
+			geom_linerange(aes(ymin=log10(PHSC_PD_Q25), ymax=log10(PHSC_PD_Q75)), size=.5, alpha=0.2, colour='black') +
+			geom_errorbarh(aes(y=log10(PHSC_PD_Q50), xmin=log10(CONS_PD_Q25), xmax=log10(CONS_PD_Q75)), size=.5, alpha=0.2, colour='black', height = 0) +
+			geom_point(size=1, aes(y=log10(PHSC_PD_Q50))) +			
+			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +				
+			scale_x_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			scale_y_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			coord_cartesian(xlim=log10(c(min(tmp3$CONS_PD_Q50), 0.5)), ylim=log10(c(0.0007, 0.5))) +
+			theme_bw() +
+			guides(colour=FALSE) +
+			theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
 			labs(	x='\npatristic distance between consensus sequences\n(subst/site)',
-					y='patristic distance between WH clades\n(avg subst/site across windows)\n')
-	ggsave(file=paste0(outfile.base,'_distances_consPatristic_extraPartners.pdf'), w=7, h=7)	
-	
+					y='subtree distance across genomic windows\n(subst/site)\n')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic.pdf'), w=7, h=7)
 		
 	dfd2[, cor(log10(CONS_PD_MEAN), log10(PHSC_PD_MEAN))]
-	#	0.9287092
-
+	#	0.9366971
+	dfd2[, cor(log10(CONS_PD_Q50), log10(PHSC_PD_Q50))]
+	#	0.7682366
+	
 
 	#
+	#	define outliers
+	#	determine outliers as before through regression curve based on Cooks Distance	
+	#	exclude from regression fit: highly uncertain points & major outliers
+	#
+	tmp	<- copy(dfd2)
+	tmp[, LOG_PHSC_PD_Q50:= log10(PHSC_PD_Q50)]	
+	tmp[, LOG_CONS_PD_Q50:= log10(CONS_PD_Q50)]
+	tmp[, NEW_Y:=LOG_PHSC_PD_Q50-LOG_CONS_PD_Q50]
+	if(1)
+	{
+		tmp2	<- subset(tmp, CONS_PD_HV==0 & PHSC_PD_Q50>=1e-4 & !(CONS_PD_Q50>0.07 & PHSC_PD_Q50<0.01))
+		m1		<- lm(LOG_PHSC_PD_Q50~ns(LOG_CONS_PD_Q50, df=3), data=tmp2)
+		tmp[, PR:= predict(m1,type='response',newdata=tmp)]
+		tmp[, PRSD:= predict(m1,type='response',newdata=tmp, se.fit=TRUE)$se.fit]
+		tmp[, PR_U:=PR+2*PRSD]
+		tmp[, PR_L:=PR-2*PRSD]
+		tmp2[, COOKSD:=cooks.distance(m1)]
+		tmp		<- merge(tmp, subset(tmp2, select=c(MALE_RID, FEMALE_RID, COOKSD)), by=c('MALE_RID','FEMALE_RID'), all.x=TRUE)
+		set(tmp, tmp[,which(is.na(COOKSD) & CONS_PD_HV==0)], 'COOKSD', 1)
+	}	
+	if(0)
+	{		
+		tmp2	<- subset(tmp, PHSC_PD_Q50>=1e-4 & !(CONS_PD_Q50>0.07 & PHSC_PD_Q50<0.01))
+		m1		<- lm(LOG_PHSC_PD_Q50~LOG_CONS_PD_Q50, data=tmp2)
+		tmp[, PR:= predict(m1,type='response',newdata=tmp)]		
+		tmp[, PRSD:= predict(m1,type='response',newdata=tmp, se.fit=TRUE)$se.fit]
+		tmp[, PR_U:=PR+2*PRSD]
+		tmp[, PR_L:=PR-2*PRSD]
+		tmp2[, COOKSD:=cooks.distance(m1)]
+		tmp		<- merge(tmp, subset(tmp2, select=c(MALE_RID, FEMALE_RID, COOKSD)), by=c('MALE_RID','FEMALE_RID'), all.x=TRUE)
+		set(tmp, tmp[,which(is.na(COOKSD))], 'COOKSD', 1)
+	}
+	if(0)
+	{
+		m1		<- lm(NEW_Y~1, data=tmp)	
+		tmp[, PR:= 10^(LOG_CONS_PD_Q50+predict(m1,type='response'))]			
+	}	
+	if(0)
+	{
+		tmp2	<- subset(tmp, PHSC_PD_Q50>0.035)
+		m1		<- lm(LOG_PHSC_PD_Q50~LOG_CONS_PD_Q50, data=tmp2)
+		tmp[, PR:= 10^(predict(m1,type='response',newdata=tmp))]
+	}
+	if(0)
+	{ 
+		m1		<- lm(NEW_Y~1, data=subset(tmp, PHSC_PD_Q50>0.035))
+		tmp[, PR:= 10^(LOG_CONS_PD_Q50+predict(m1,type='response',newdata=tmp))]
+	}
+	if(1)
+	{
+		#tmp[, OUT:= CONS_PD_Q50>0.07 & PHSC_PD_Q50<0.01]
+		tmp3	<- copy(tmp)		
+		set(tmp3, tmp3[,which(LOG_PHSC_PD_Q50< -3.1)], 'LOG_PHSC_PD_Q50', -3.1)		
+		set(tmp3, NULL, 'CLASS', tmp3[,as.character(as.numeric(COOKSD>0.027/2))])
+		set(tmp3, tmp3[,which(CONS_PD_HV>=1)], 'CLASS', '2')
+		ggplot(tmp3, aes(x=LOG_CONS_PD_Q50)) +
+				geom_ribbon(aes(ymin=PR_L, ymax=PR_U), fill='black',alpha=0.15) +
+				geom_line(aes(y=PR)) +
+				geom_point(size=1, aes(y=LOG_PHSC_PD_Q50, colour=CLASS)) +
+				scale_colour_manual(values=c('1'='red','0'='black','2'='blue')) +
+				geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +				
+				scale_x_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+				scale_y_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+				coord_cartesian(xlim=c(min(tmp3$LOG_CONS_PD_Q50), log10(0.5)), ylim=log10(c(0.0007, 0.5))) +
+				theme_bw() +
+				guides(colour=FALSE) +
+				theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
+				labs(	x='\npatristic distance between consensus sequences\n(subst/site)',
+						y='subtree distance across genomic windows\n(subst/site)\n')
+		ggsave(file=paste0(outfile.base,'_distances_consPatristic_outliers.pdf'), w=7, h=7)
+		dfd2	<- merge(dfd2, subset(tmp3, select=c(MALE_RID,FEMALE_RID,CLASS, PR, PR_U, PR_L)), by=c('MALE_RID','FEMALE_RID'))
+		set(dfd2, NULL, 'PR', dfd2[, 10^PR])
+		set(dfd2, NULL, 'PR_L', dfd2[, 10^PR_L])
+		set(dfd2, NULL, 'PR_U', dfd2[, 10^PR_U])
+	}
+	if(0)
+	{
+		require(BLR)
+		data(wheat)     #Loads the wheat dataset
+		y=Y[,1]
+		### Creates a testing set with 100 observations
+		whichNa<-sample(1:length(y),size=100,replace=FALSE)
+		yNa<-y
+		yNa[whichNa]<-NA
+		### Runs the Gibbs sampler
+		fm<-BLR(	y=yNa,
+					XL=X,
+					GF=list(ID=1:nrow(A),A=A),
+					prior=list(varE=list(df=3,S=0.25),
+					varU=list(df=3,S=0.63),
+					lambda=list(shape=0.52,rate=1e-4,type='random',value=30)),
+					nIter=1000,
+					burnIn=500,
+					thin=1,
+					saveAt="example_")
+		MSE.tst<-mean((fm$yHat[whichNa]-y[whichNa])^2)
+		MSE.tst
+		MSE.trn<-mean((fm$yHat[-whichNa]-y[-whichNa])^2)
+		MSE.trn
+		COR.tst<-cor(fm$yHat[whichNa],y[whichNa])
+		COR.tstCOR.trn<-cor(fm$yHat[-whichNa],y[-whichNa])
+		COR.trn
+		plot(fm$yHat~y,xlab="Phenotype",ylab="Pred. Gen. Value" ,cex=.8)
+		points(x=y[whichNa],y=fm$yHat[whichNa],col=2,cex=.8,pch=19)
+		x11()
+		plot(scan('example_varE.dat'),type="o",ylab=expression(paste(sigma[epsilon]^2)))
+	}
+	
+	
+	#
 	#	look at outliers
-	tmp	<- subset(dfd2, CONS_PD_MEAN>0.05 & PHSC_PD_MEAN<0.035)
-	dfco<- subset(merge(rca, tmp, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC, CONS_PD_MEAN, PHSC_PD_MEAN))
-	dfco<- dfco[order(CONS_PD_MEAN), ]
-	write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_outliers.csv'))
-	#MALE_RID FEMALE_RID PTY_RUN                                            SELECT COUP_SC
-	#1:  A084005    A106060     139                     couple most likely not a pair seroinc
-	#2:  B023435    K010338     169              couple ambiguous if pair or not pair    M->F
-	#3:  B035048    J035045     214  couple most likely a pair direction not resolved    M->F
-	#4:  C109805    B109854     195 couple most likely a pair with resolved direction seropos
-	#5:  D030388    J104165     131  couple most likely a pair direction not resolved seroinc
-	#6:  D105026    H105062      88              couple ambiguous if pair or not pair seropos
-	#7:  D108885    E108632     221  couple most likely a pair direction not resolved seropos
-	#8:  J045006    C025397     208  couple most likely a pair direction not resolved    M->F
-	#9:  J100181    A100167     214 couple most likely a pair with resolved direction seropos
+	#
+	#	read existing manual comments on previous classification scheme
+	dfd3	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_outliers_EDITED_OR.csv'))
+	dfd3	<- subset(dfd3, select=c(MALE_RID,FEMALE_RID,ASSIGNMENT,PAIR.CHAIN,OTHER))
+	dfd3	<- merge(dfd2, dfd3, by=c('MALE_RID','FEMALE_RID'),all.x=TRUE)
+	dfd3	<- subset(dfd3, CLASS>=1 & is.na(ASSIGNMENT))
+	
+	#	check distribution of patristic distance estimates
+	tmp		<- subset(dfd3, select=c(MALE_RID,FEMALE_RID,CONS_PD_Q50,PHSC_PD_Q50,CLASS, PR, PR_U, PR_L))
+	dfd4	<- merge(tmp,subset(rpw2, select=c(MALE_RID,FEMALE_RID,PTY_RUN,W_FROM,PATRISTIC_DISTANCE)),by=c('MALE_RID','FEMALE_RID'))
+	tmp		<- merge(tmp, subset(dfd, select=c(MALE_RID,FEMALE_RID,PD)),by=c('MALE_RID','FEMALE_RID'))
+	setnames(tmp, 'PD','PATRISTIC_DISTANCE')
+	dfd4	<- rbind(dfd4,tmp,fill=TRUE)
+	dfd4[, TYPE:= dfd4[,factor(is.na(PTY_RUN),levels=c(TRUE,FALSE),labels=c('CONS','PHSC'))]]
+	dfd4	<- merge(dfd4,unique(subset(rca, select=c(MALE_RID,FEMALE_RID,PAIRID))),by=c('MALE_RID','FEMALE_RID'))
+	ggplot(dfd4) + 
+			geom_point(aes(x=PATRISTIC_DISTANCE, y=PAIRID+as.numeric(TYPE=='CONS')-0.5, colour=TYPE)) +
+			geom_errorbarh(aes(y=PAIRID, x=PR, xmin=PR_L, xmax=PR_U), colour='black') +
+			theme_bw() +
+			scale_x_log10(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+			facet_wrap(~paste(PAIRID, MALE_RID, FEMALE_RID,sep=' '), ncol=1, scales='free_y')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_outliers_v2_distances.pdf'), w=20, h=20)
+	
+	#	inspect manually
+	#dfco<- subset(merge(rca, dfd3, by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC, CONS_GDRW, CONS_PD_MEAN, CONS_PD_Q50, PHSC_PD_Q50, CLASS, PR))
+	#dfco<- subset(merge(rca, subset(dfd5, is.na(CLASS_MANUAL) & PHSC_PD_Q50<0.035), by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC, CONS_GDRW, CONS_PD_MEAN, CONS_PD_Q50, PHSC_PD_Q50, CLASS, PR))
+	dfco<- subset(merge(rca, subset(dfd5, is.na(CLASS_MANUAL) & PHSC_PD_Q50>=0.035), by=c('MALE_RID','FEMALE_RID')), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, COUP_SC, CONS_GDRW, CONS_PD_MEAN, CONS_PD_Q50, PHSC_PD_Q50, CLASS, PR))
+	dfco<- dfco[order(CONS_PD_Q50), ]	
+	#write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_outliers_v2.csv'))
+	#write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_nooutliersclose.csv'))
+	write.csv(dfco, file=paste0(outfile.base,'_distances_consPatristic_nooutliersnotclose.csv'))
 	if(0)
 	{
 		require(colorspace)
-		zz	<- dfco[, which(MALE_RID%in%c('A084005'))]
-		#for(ii in seq_len(nrow(rtpdm))[-1])
-		for(ii in zz)
+		#zz	<- dfco[, which(MALE_RID%in%c('H115099'))]
+		for(ii in seq_len(nrow(dfco)))
+		#for(ii in zz)
 		{		
 			indir		<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
 			# load dfr and phs
 			load( file.path(indir, paste0('ptyr',dfco[ii,PTY_RUN],'_trees.rda')) )
 			# setup plotting
-			ids			<- c(dfco[ii, MALE_RID],dfco[ii, FEMALE_RID])
+			ids			<- c(dfco[ii, as.character(MALE_RID)],dfco[ii, as.character(FEMALE_RID)])
 			dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
 			dfs[, MALE_RID:=ids[1]]
 			dfs[, FEMALE_RID:=ids[2]]				
@@ -6162,8 +7150,57 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 		}
 	}
 	
+	#	read existing manual comments on previous classification scheme
+	dfd5	<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_outliers_EDITED_OR.csv'))
+	dfd5	<- subset(dfd5, select=c(MALE_RID,FEMALE_RID,COMPLEX_TOPOLOGY,PAIR_CHAIN,OTHER))
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_outliers_v2_EDITED_OR.csv'))
+	tmp		<- subset(tmp, select=c(MALE_RID,FEMALE_RID,COMPLEX_TOPOLOGY,PAIR_CHAIN,OTHER))
+	dfd5	<- rbind(dfd5,tmp)
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_nooutliersclose_EDITED_OR.csv'))
+	tmp		<- subset(tmp, select=c(MALE_RID,FEMALE_RID,COMPLEX_TOPOLOGY,PAIR_CHAIN,OTHER))
+	dfd5	<- rbind(dfd5,tmp)
+	tmp		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_nooutliersnotclose_EDITED_OR.csv'))
+	tmp		<- subset(tmp, select=c(MALE_RID,FEMALE_RID,COMPLEX_TOPOLOGY,PAIR_CHAIN,OTHER))
+	dfd5	<- rbind(dfd5,tmp)
+	dfd5	<- subset(dfd5, !is.na(COMPLEX_TOPOLOGY) & COMPLEX_TOPOLOGY!='')	
+	dfd5[, CLASS_MANUAL:=NA_character_]
+	set(dfd5, dfd5[, which(grepl('no clear signal',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','unclear')
+	set(dfd5, dfd5[, which(grepl('nothing',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','typical topological configurations')
+	set(dfd5, dfd5[, which(grepl('insufficient',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','unclear')
+	set(dfd5, dfd5[, which(grepl('yes',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','multiple infection/dual infection/recombinants')
+	set(dfd5, dfd5[, which(grepl('yes! ish',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','multiple infection/dual infection/recombinants, weak signal')
+	set(dfd5, dfd5[, which(grepl('long single tip branches|siblings|long tip branch|tree artifact',tolower(COMPLEX_TOPOLOGY)))],'CLASS_MANUAL','unusual subtree distances')
+	stopifnot( !nrow(subset(dfd5, is.na(CLASS_MANUAL))) )
+	dfd5	<- subset(dfd5, select=c(MALE_RID,FEMALE_RID,CLASS_MANUAL))
+	dfd5	<- merge(dfd2,dfd5,by=c('MALE_RID','FEMALE_RID'),all.x=TRUE)
 	
-
+	tmp3	<- copy(dfd5)		
+	set(tmp3, tmp3[,which(log10(PHSC_PD_Q50)< -3.1)], 'PHSC_PD_Q50', 10^(-3.1))
+	set(tmp3, NULL, 'CLASS', tmp3[, factor(CLASS, levels=c('0','1','2'), labels=c('broadly comparable','discordant','highly variable'))])
+	set(tmp3, tmp3[, which(is.na(CLASS_MANUAL))], 'CLASS_MANUAL', 'not manually checked')
+	ggplot(tmp3, aes(x=log10(CONS_PD_Q50))) +
+			#geom_ribbon(aes(ymin=PR_L, ymax=PR_U), fill='black',alpha=0.15) +
+			#geom_line(aes(y=PR)) +
+			geom_point(size=1.5, aes(y=log10(PHSC_PD_Q50), shape=CLASS, colour=CLASS_MANUAL)) +
+			scale_shape_manual(values=c('discordant'=15,'broadly comparable'=16,'highly variable'=17)) +
+			scale_colour_manual(values=c(	"multiple infection/dual infection/recombinants"='orangered',              
+											"multiple infection/dual infection/recombinants, weak signal"='plum', 
+											"insufficient data"='grey50',                              
+											"not manually checked"='black',
+											"typical topological configurations"='black',
+											"unclear"='bisque4',                                        
+											"unusual subtree distances"='purple')) +
+			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +				
+			scale_x_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			scale_y_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			coord_cartesian(xlim=log10(c(min(tmp3$CONS_PD_Q50), 0.5)), ylim=log10(c(0.0007, 0.5))) +
+			theme_bw() +
+			theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
+			labs(	x='\npatristic distance between consensus sequences\n(subst/site)',
+					y='subtree distance across genomic windows\n(subst/site)\n',
+					pch='subtree distances versus\nconsensus distances',
+					colour='topological configurations')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_manualassessed_v2.pdf'), w=10, h=7)
 }
 
 RakaiFull.analyze.couples.todi.170522.compare.to.consensus<- function()
