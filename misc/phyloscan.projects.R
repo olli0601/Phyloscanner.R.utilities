@@ -5527,7 +5527,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]		
-		pty.c	<- subset(pty.c, PTY_RUN%in%c(60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))		
+		#pty.c	<- subset(pty.c, PTY_RUN%in%c(60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -5543,11 +5543,13 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 					list(CMD=cmd) 
 				}, by='PTY_RUN']		
 		pty.c[1,cat(CMD)]
+		pty.c	<- pty.c[1,]
 		#stop()
 		invisible(pty.c[,	{					
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
 							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
@@ -5558,7 +5560,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	}
 	if(0)	#check runs
 	{
-		df	<- data.table(F=list.files('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23', pattern='_pairwise_relationships.rda$', full.names=TRUE))
+		df	<- data.table(F=list.files('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10', pattern='_pairwise_relationships.rda$', full.names=TRUE))
 		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
 		paste(setdiff( 1:346, df[, PTY_RUN]), collapse=', ')		
 	}
