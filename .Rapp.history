@@ -318,7 +318,7 @@ tmp
 infiles			<- merge(infiles, tmp, by='FILE',all.x=1)
 infiles
 pty.div
-pty.stat.file	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'#
+pty.stat.file	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/ptyr_examl_stat.rda'#
 		load(pty.stat.file)
 tmp	<- pty.stat[, list(FILE_ID_N=length(unique(W_FROM))), by='FILE_ID']#
 		ggplot(tmp, aes(x=FILE_ID_N)) + geom_histogram()#
@@ -721,9 +721,9 @@ pty.runs[, table(PTY_RUN)]
 tmp2
 tmp2[, length(unique(W_FROM))]
 pty.stat[, length(unique(W_FROM))]
-as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3.csv"))
-as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
-df<-as.data.table(read.csv("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
+as.data.table(read.csv("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3.csv"))
+as.data.table(read.csv("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
+df<-as.data.table(read.csv("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121/superinfections_clcountn_100_taxan_40_diffind_1_winn_3_curated.csv"))
 colnames(df)
 df[, table(grepl('^Super',THOUGHTS_OR))]
 (8.5+3.5 )/ 2

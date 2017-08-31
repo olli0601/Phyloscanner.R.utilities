@@ -24,7 +24,7 @@ require(Phyloscanner.R.utilities)
 
 CODE.HOME	<<- "/Users/Oliver/git/Phyloscanner.R.utilities"
 #CODE.HOME	<<- "/work/or105/libs/Phyloscanner.R.utilities"
-HOME		<<- "/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
+HOME		<<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"	#! quotes switch off tilde expansion
 #HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 DATA		<<- paste(HOME,"data",sep='/')
 HIVC.DEBUG	<<- 0

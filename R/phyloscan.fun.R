@@ -2163,7 +2163,7 @@ phsc.read.subtrees<- function(prefix.infiles, prefix.run='ptyr', regexpr.subtree
 	setkey(dfr, PTY_RUN, W_FROM, W_TO)	
 	cat('\nFound tree summary files, n=', nrow(dfr),'...\n')	
 	rs.subtrees	<- lapply(seq_len(nrow(dfr)), function(i){				 
-				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
+				#z	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
 				load(dfr[i,FILE_TR])	
 				rs.subgraphs	<- as.data.table(rs.subgraphs)
 				rs.subgraphs[, PTY_RUN:= dfr[i, PTY_RUN]]
@@ -2237,7 +2237,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 	dfr[, IDX:= seq_len(nrow(dfr))]
 	cat('\nFound tree summary files, n=', nrow(dfr),'...\n')	
 	phs	<- lapply(seq_len(nrow(dfr)), function(i){				 
-				#z	<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
+				#z	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/ptyr1_InWindow_1050_to_1299_subtrees_r.rda'				
 				load(dfr[i,FILE_TR])
 				tree				
 			})
@@ -2717,7 +2717,7 @@ phsc.get.assignments.by.window.for.couple<- function(id1, id2, infiles)
 	tmp	<- data.table(F= infiles)
 	tmp[, RUN:=tmp[, basename(dirname(F))]]
 	df		<- tmp[, {
-				#load( '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda' )
+				#load( '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda' )
 				load(F)
 				df		<- subset(window.table, (pat.1==id1 & pat.2==id2) | (pat.1==id2 & pat.2==id1))
 				setnames(df, c('pat.1','pat.2','type'), c('ID1','ID2','TYPE'))

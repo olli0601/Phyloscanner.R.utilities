@@ -977,12 +977,12 @@ pty.evaluate.tree<- function(indir, pty.runs=NULL, outdir=indir, select='', outg
 {	
 	if(0)
 	{
-		#indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
-		#indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201"
-		indir				<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_UG60"
+		#indir				<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150121"
+		#indir				<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_150201"
+		indir				<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/coinf_ptoutput_UG60"
 		outdir				<- indir
 		pty.runs			<- NULL
-		#pty.infile			<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
+		#pty.infile			<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda"
 		select				<- '^ptyr1_In'
 		outgroup			<- "CPX_AF460972"
 		references.pattern	<- 'REF'

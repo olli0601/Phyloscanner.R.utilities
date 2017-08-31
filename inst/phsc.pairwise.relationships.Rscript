@@ -63,7 +63,7 @@ if(0)
 }
 if(0)
 {
-	infile							<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34/ptyr106_trmStatsPerWindow.rda'
+	infile							<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34/ptyr106_trmStatsPerWindow.rda'
 	trmw.min.reads					<- 20
 	trmw.min.tips					<- 1
 	trmw.close.brl 					<- 0.035

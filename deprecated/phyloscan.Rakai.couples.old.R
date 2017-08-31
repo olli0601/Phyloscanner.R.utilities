@@ -8,9 +8,9 @@ RakaiAll.addposteriors.pairs.170120<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
@@ -152,7 +152,7 @@ RakaiAll.addposteriors.pairs.170120<- function()
 			}, by=c('PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','RUN','GROUP')]
 	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','TYPE'))
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	
 	#
 	#	prepare colours
@@ -294,9 +294,9 @@ RakaiAll.addposteriors.pairs.170201<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
@@ -440,7 +440,7 @@ RakaiAll.addposteriors.pairs.170201<- function()
 	tmp		<- rplkl[, list(	TYPE=TYPE, POSTERIOR_ALPHA=KEFF+par.prior, POSTERIOR_BETA=sum(KEFF+par.prior)-(KEFF+par.prior))	, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP')]
 	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','TYPE'))
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	#
 	#	prepare colours
 	#	
@@ -584,11 +584,11 @@ RakaiAll.addposteriors.pairs.170227<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	tmp		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
 	set(tmp, NULL, setdiff(colnames(tmp),colnames(rpw)), NULL)
 	rpw		<- rbind(rpw, tmp, fill=TRUE)	
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
@@ -737,7 +737,7 @@ RakaiAll.addposteriors.pairs.170227<- function()
 	tmp		<- rplkl[, list(	TYPE=TYPE, POSTERIOR_ALPHA=KEFF+par.prior, POSTERIOR_BETA=sum(KEFF+par.prior)-(KEFF+par.prior))	, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP')]
 	rplkl	<- merge(rplkl, tmp, by=c('RUN','PTY_RUN','FEMALE_SANGER_ID','MALE_SANGER_ID','GROUP','TYPE'))
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmp_allpairs_posteriors.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmp_allpairs_posteriors.rda')
 	#
 	#	check runs missing?
 	#
@@ -806,7 +806,7 @@ RakaiAll.addposteriors.pairs.170227<- function()
 	#		estimated posterior probabilities on unknown phylogenetic relationship
 	#
 	run		<- 'RCCS_170227_w250_dxxx'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227'	
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227'	
 	
 	groups		<- c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI3','TYPE_PAIR_DI')
 	group		<- c('TYPE_DIR_TODI7x3')
@@ -890,7 +890,7 @@ RakaiAll.confounded.RIDs.170309<- function()
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
 	rs		<- subset(rs, !is.na(VISIT))
 	tmp		<- unique(subset(rs, !is.na(SID), select=c(SID,RID)))
 	setnames(tmp, 'SID', 'FILE_ID')
@@ -899,7 +899,7 @@ RakaiAll.confounded.RIDs.170309<- function()
 	ddup	<- merge(ddup, unique(subset(rs, !is.na(SID), select=c(SID,RID))), by='RID')
 	setkey(ddup, PTY_RUN)
 	ddup[, N:=NULL]
-	save(ddup, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns_confounded.rda")
+	save(ddup, file="~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns_confounded.rda")
 }
 
 RakaiAll.addposteriors.pairs.170309<- function()
@@ -911,11 +911,11 @@ RakaiAll.addposteriors.pairs.170309<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	
 	tmp		<- copy(rpw)
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
 	rpw[, UNINTERRUPTED:=NA]	
 	rpw		<- rbind(rpw, tmp, fill=TRUE)	
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
@@ -1069,7 +1069,7 @@ RakaiAll.addposteriors.pairs.170309<- function()
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmp_allpairs_posteriors.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmp_allpairs_posteriors.rda')
 	#
 	#	check runs missing?
 	#
@@ -1085,7 +1085,7 @@ RakaiAll.addposteriors.pairs.170309<- function()
 	#		'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5' (using uninterrupted)
 	#		'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5' (not using uninterrupted)
 	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_dxxx' 
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_dxxx' 
 	
 	rps		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_TODI3') & TYPE==c("no intermediate\n and close"))
 	rps[, PROB:=pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)]
@@ -1141,8 +1141,8 @@ RakaiAll.addposteriors.pairs.170309<- function()
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/unint_RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5_'	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/unint_RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5_'	
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 14
@@ -1185,14 +1185,14 @@ RakaiAll.addposteriors.pairs.170320<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	
 	tmp		<- copy(rpw)
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
 	rpw[, UNINTERRUPTED:=NA]	
 	tmp		<- rbind(rpw, tmp, fill=TRUE)	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
 	rpw		<- rbind(rpw, tmp)
 	
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
@@ -1348,7 +1348,7 @@ RakaiAll.addposteriors.pairs.170320<- function()
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors.rda')
 	#
 	#	check runs missing?
 	#
@@ -1364,7 +1364,7 @@ RakaiAll.addposteriors.pairs.170320<- function()
 	#		'RCCS_170309_w250_d50_st20_mr20_mt1_cl2_d5' (using uninterrupted)
 	#		'RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5' (not using uninterrupted)
 	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 
 	
 	rps		<- subset(rplkl, 	GROUP%in%c('TYPE_PAIR_TODI3') & 
 					TYPE==c("no intermediate\n and close") &
@@ -1414,8 +1414,8 @@ RakaiAll.addposteriors.pairs.170320<- function()
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
 	invisible(sapply(seq_len(nrow(tmp))[-c(1:7)], function(ii)
 					{	
 						#ii<- 1
@@ -1439,9 +1439,9 @@ RakaiAll.addposteriors.pairs.170322<- function()
 	require(RColorBrewer)
 	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -1454,12 +1454,12 @@ RakaiAll.addposteriors.pairs.170322<- function()
 	rd		<- subset(rd, !is.na(PID))
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	
 	tmp		<- copy(rpw)
 	tmp[, TYPE_PAIR:=NULL]
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmw_assignments_allpairs.rda')
 	rpw		<- rbind(rpw, tmp)
 	setnames(rpw, c('TYPE'), c('TYPE_DIR_TODI7x3'))
 	#
@@ -1590,7 +1590,7 @@ RakaiAll.addposteriors.pairs.170322<- function()
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
 	#	save
-	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 }
 
 RakaiAll.addposteriors.pairs.170405<- function()
@@ -1603,9 +1603,9 @@ RakaiAll.addposteriors.pairs.170405<- function()
 	require(RColorBrewer)
 	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -1618,12 +1618,12 @@ RakaiAll.addposteriors.pairs.170405<- function()
 	rd		<- subset(rd, !is.na(PID))
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	
 	tmp		<- copy(rpw)
 	tmp[, TYPE_PAIR:=NULL]
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmw_assignments_allpairs.rda')
 	rpw		<- rbind(rpw, tmp)
 	setnames(rpw, c('TYPE'), c('TYPE_DIR_TODI7x3'))
 	#
@@ -1756,7 +1756,7 @@ RakaiAll.addposteriors.pairs.170405<- function()
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
 	#	save
-	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 }
 
 RakaiAll.addposteriors.pairs.170410<- function()
@@ -1769,9 +1769,9 @@ RakaiAll.addposteriors.pairs.170410<- function()
 	require(RColorBrewer)
 	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -1784,9 +1784,9 @@ RakaiAll.addposteriors.pairs.170410<- function()
 	rd		<- subset(rd, !is.na(PID))
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	
 	setnames(rpw, c('TYPE'), c('TYPE_DIR_TODI7x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
@@ -1884,7 +1884,7 @@ RakaiAll.addposteriors.pairs.170410<- function()
 	rplkl[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
 	rplkl[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]	
 	#	save
-	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 }
 
 RakaiAll.addposteriors.pairs.170426<- function()
@@ -1897,9 +1897,9 @@ RakaiAll.addposteriors.pairs.170426<- function()
 	require(RColorBrewer)
 	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -1912,11 +1912,11 @@ RakaiAll.addposteriors.pairs.170426<- function()
 	rd		<- subset(rd, !is.na(PID))
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	
 	tmp		<- subset(rpw, RUN=='RCCS_170410_w250_d50_st20_trB_blInScriptNormed_mr20_mt1_cl3.5_d8')
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmw_assignments_allpairs.rda')
 	rpw		<- rbind(rpw, tmp)
 	setnames(rpw, c('TYPE'), c('TYPE_DIR_TODI7x3'))
 	#
@@ -2013,7 +2013,7 @@ RakaiAll.addposteriors.pairs.170426<- function()
 	rplkl[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]
 	rplkl[, POSTERIOR_BETA:= PAR_PRIOR*(1-1/N_TYPE)+NEFF-KEFF]	
 	#	save
-	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	save(rd, rh, ri, rs, rp, rpw, rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 }
 
 RakaiAll.analyze.pairs.170322.triangles<- function()
@@ -2027,17 +2027,17 @@ RakaiAll.analyze.pairs.170322.triangles<- function()
 	require(Hmisc)
 	
 	run		<- 'RCCS_170322_w250_trB_triangle_'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322'	
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322'	
 	#	load denominator
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	ra		<- tmp$ra		
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load rd, rh, rs, rp, rpw, rplkl, ptc
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 	#
 	# select final run
 	#
@@ -2189,16 +2189,16 @@ RakaiAll.analyze.pairs.170120.comparedirection<- function()
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	
 	#	make pair data table
 	rp		<- copy(rpw)
@@ -2261,24 +2261,24 @@ RakaiAll.analyze.pairs.170227.comparetoprevious<- function()
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')		
 	rs		<- subset(rs, !is.na(VISIT))	
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load transmission summaries	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	tmp		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')
 	set(tmp, NULL, setdiff(colnames(tmp),colnames(rpw)), NULL)
 	rpw		<- rbind(rpw, tmp, fill=TRUE)		
 	run		<- 'RCCS_170227_w270_dxxx'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227'		
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227'		
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmp_allpairs_posteriors.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmp_allpairs_posteriors.rda')
 	set(rplkl, NULL, 'MALE_SANGER_ID', rplkl[, as.character(MALE_SANGER_ID)])
 	set(rplkl, NULL, 'FEMALE_SANGER_ID', rplkl[, as.character(FEMALE_SANGER_ID)])
 	
@@ -2308,8 +2308,8 @@ RakaiAll.analyze.pairs.170227.comparetoprevious<- function()
 	tmp		<- subset(tmp, is.na(RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5) | is.na(RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5))
 	dch		<- merge(tmp, unique(subset(rpd, select=c('LABEL_SH','PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID','MALE_RID','FEMALE_RID','COUPID'))), by='LABEL_SH')	
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/noTP_RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5_'
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/noTP_RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5_'
 	tmp		<- subset(dch, is.na(RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5))
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
@@ -2345,18 +2345,18 @@ RakaiAll.analyze.pairs.170120.direction<- function()
 	require(Hmisc)
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]		
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	
 	#	make pair data table
 	rp		<- copy(rpw)
@@ -2720,14 +2720,14 @@ RakaiAll.analyze.pairs.170320.direction<- function()
 	require(Hmisc)
 	
 	run		<- 'RCCS_170320_w250_dxxx'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320'
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320'
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load rd, rh, rs, rp, rpw, rplkl, ptc
-	load( '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda' )
+	load( '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda' )
 	rpw		<- subset(rpw, RUN%in%c("RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5") )
 	rplkl	<- subset(rplkl, RUN%in%c("RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5") & PAR_PRIOR==3 )	
 	#	make pair data table
@@ -3042,17 +3042,17 @@ RakaiAll.analyze.pairs.170322.direction<- function()
 	require(Hmisc)
 	
 	run		<- 'RCCS_170322_w250_trB_clothyes_dxxx'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322'	
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322'	
 	#	load denominator
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	ra		<- tmp$ra		
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load rd, rh, rs, rp, rpw, rplkl, ptc
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 	#
 	# select final run
 	#
@@ -3283,11 +3283,11 @@ RakaiAll.analyze.trmpairs.170426<- function()
 	
 	#	
 	#	prepare rtp.todi
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')	
 	rs		<- unique(subset(rs, !is.na(VISIT) & !is.na(SID), select=c(SID,RID,VISIT,DATE)))
 	confidence.cut			<- 0.5	# do not change, because the prior is calibrated for 0.5
-	infile.trmpairs.todi	<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda"
-	outfile.base			<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda"
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
 	load(infile.trmpairs.todi)
 	rtp.tpairs<- rtp.todi2
 	group <- 'TYPE_PAIR_TODI2'
@@ -3324,7 +3324,7 @@ RakaiAll.analyze.trmpairs.170426<- function()
 	rd		<- tmp$rd	
 	rd[, SID:=NULL]
 	#	add sequence dates to rd
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')	
 	rs		<- unique(subset(rs, !is.na(VISIT)))
 	tmp		<- unique(subset(rs, !is.na(PID), select=c(PID, SID, DATE)),by='PID')
 	setnames(tmp, 'DATE','SEQDATE')
@@ -3414,7 +3414,7 @@ RakaiAll.analyze.trmpairs.170426<- function()
 	#
 	# plot the MM FF pairs
 	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/170426_samesextodi_' 
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/170426_samesextodi_' 
 	rps		<- subset(rtpd, ID1_SEX==ID2_SEX, select=c(SID1, ID1, ID1_SEX, SID2, ID2, ID2_SEX, PTY_RUN, TYPE))
 	setnames(rps, c('TYPE'), c('TYPE_DIR'))
 	write.csv(rps, file=paste0(outfile.base,'select_',group,'_summary.csv'))	
@@ -3422,7 +3422,7 @@ RakaiAll.analyze.trmpairs.170426<- function()
 	pgroup		<- 'TYPE_DIR_TODI7x3'
 	#pgroup		<- 'TYPE_PAIR_TODI'
 	#pgroup		<- 'TYPE_PAIR_TODI2'
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda")
 	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
 	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])	
 	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','SID1','SID2')), GROUP==group), by=c('PTY_RUN','SID1','SID2'))
@@ -3455,7 +3455,7 @@ RakaiAll.analyze.trmpairs.170426<- function()
 	#	use now  group<- 'TYPE_PAIR_TODI2' and which.max(POSTERIOR_SCORE)
 	#	select sero-discordant pairs
 	#
-	outfile.base	<- "/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/170426_serohistory_"
+	outfile.base	<- "/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/170426_serohistory_"
 	sdc		<- copy(rtpd)
 	sdc[, SDC_TYPE:=NA_character_]
 	set(sdc, sdc[, which(TYPE=='fm' & FEMALE_LASTNEGDATE>MALE_FIRSTPOSDATE)], 'SDC_TYPE', 'incorrect')
@@ -3520,12 +3520,12 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	ra		<- tmp$ra		
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load rd, rh, rs, rp, rpw, rplkl, ptc
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 	#	add info on pair types to rplkl
 	rp		<- copy(rpw)
 	set(rp, NULL, c('DIR','FILE','RUN','W_FROM','W_TO','TYPE_RAW','TYPE','GROUP','PATRISTIC_DISTANCE','ADJACENT','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R','CHUNK','CHUNK_L','CHUNK_N','ID_R_MIN','ID_R_MAX'), NULL)
@@ -3624,7 +3624,7 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	#3:              RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8 44
 	#	OK this is looking good
 	
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/170426_diff_trB_p35' 
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/170426_diff_trB_p35' 
 	#	
 	#	plot difference between trB and p35
 	#		
@@ -3656,7 +3656,7 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	set(rpw2, NULL, 'ADJACENT', rpw2[, as.integer(ADJACENT)])
 	set(rpw2, NULL, 'CONTIGUOUS', rpw2[, as.integer(CONTIGUOUS)])
 	set(rpw2, NULL, 'PATRISTIC_DISTANCE', rpw2[, round(PATRISTIC_DISTANCE, d=4)])
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscout.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscout.rda')	
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
@@ -3673,7 +3673,7 @@ RakaiAll.analyze.pairs.170426.comparetoprevious<- function()
 	#
 	#	plot difference between PAIRSCORE and PAIR
 	#	 
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/170426_diff_PAIRSCORE_'
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/170426_diff_PAIRSCORE_'
 	rps		<- data.table(LABEL_SH= setdiff(subset(rtps, RUN=='RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8')[, LABEL_SH],subset(rtp, RUN=='RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8')[, LABEL_SH]), NOTE='identified with PAIRSCORE not PAIR')
 	set(rtps, NULL, 'LABEL_SH', rtps[, as.character(LABEL_SH)])
 	rps		<- unique(subset(merge(rps, unique(rtps, by='LABEL_SH'), by='LABEL_SH'), select=c('MALE_SANGER_ID','FEMALE_SANGER_ID','PTY_RUN','NOTE')))
@@ -3700,7 +3700,7 @@ RakaiAll.analyze.pairs.170410.compareTODItoDI<- function()
 	require(Hmisc)
 	
 	#	load rd, rh, rs, rp, rpw, rplkl
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
 	#
 	#	select likely pairs and compare between two runs
 	#
@@ -3722,7 +3722,7 @@ RakaiAll.analyze.pairs.170410.compareTODItoDI<- function()
 	#TYPE_PAIR_DI    0    1
 	#       0     1511    0
 	#       1       47  183
-	outfile.base	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_DI_butnot_TODI_'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_DI_butnot_TODI_'
 	rps		<- subset(tmp, TYPE_PAIR_DI==1 & TYPE_PAIR_TODI_NEW==0, select=c(MALE_SANGER_ID, FEMALE_SANGER_ID, PTY_RUN))	
 	write.csv(rps, file=paste0(outfile.base,'_summary.csv'))
 	#	make detailed plots for selection	
@@ -3743,7 +3743,7 @@ RakaiAll.analyze.pairs.170410.compareTODItoDI<- function()
 	set(rpw2, NULL, 'MALE_SANGER_ID', rpw2[, as.character(MALE_SANGER_ID)])
 	set(rpw2, NULL, 'CONTIGUOUS', rpw2[, as.integer(CONTIGUOUS)])
 	set(rpw2, NULL, 'PATRISTIC_DISTANCE', rpw2[, round(PATRISTIC_DISTANCE, d=4)])	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8_phscout.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8_phscout.rda')
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
@@ -3768,9 +3768,9 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
@@ -3932,11 +3932,11 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[,KEFF+POSTERIOR_ALPHA])
 	set(rplkl,NULL,'POSTERIOR_BETA', rplkl[,NEFF-KEFF+POSTERIOR_BETA])
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_checkprior.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_checkprior.rda')
 	#
 	#	check prior
 	#
-	outfile.base	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
+	outfile.base	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
 	rps				<- unique(subset(rplkl, NEFF<5 & KEFF>.25 & PAR_PRIOR==0.1 & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.5 & GROUP=='TYPE_PAIRCHAIN_TODI' & TYPE=='likely pair', select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')))
 	write.csv(rps, file=paste0(outfile.base,'-phsc-relationships__compare_prior_0.1_3_5.csv'))
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
@@ -3944,8 +3944,8 @@ RakaiAll.addposteriors.pairs.170320.checkprior<- function()
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/prior_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
@@ -3986,10 +3986,10 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
@@ -4114,8 +4114,8 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	#
 	#	load consensus distances
 	#
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda")
-	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda")
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
 	load(infile)
 	#	prepare patristic distance data.table
 	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
@@ -4124,7 +4124,7 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
 	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
 	#	load genetic distance matrix with overlap
-	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
 	load(infile)	#loads sq.gd
 	setnames(sq.gd, 'PD', 'GD')
 	#	for each run construct all pairings that were evaluated
@@ -4145,7 +4145,7 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	ptc[, FEMALE_PID:= gsub('-S[0-9]+','',TAXA2)]
 	#ptcc		<- copy(ptc)
 	#	merge with Rakai IDs and make sure male is first
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -4166,7 +4166,7 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
 	set(ptc, NULL, c('MALE_SEX','FEMALE_SEX'), NULL)
 	#	save
-	save(rd, rh, rs, rp, rpw, rplkl, ptc, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda')
+	save(rd, rh, rs, rp, rpw, rplkl, ptc, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda')
 	#
 	#	compare 
 	#
@@ -4189,15 +4189,15 @@ RakaiAll.addposteriors.pairs.170320.vs.consensusdistance<- function()
 	rps			<- unique(subset(rpw, (PSC_MPD+2*PSC_SPD) < GD/1.083,select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID', 'PSC_MPD', 'PSC_SPD', 'PD', 'GD')))
 	rps[, F:=GD/PSC_MPD]
 	rps			<- rps[order(-F),]	
-	outfile.base<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
+	outfile.base<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
 	write.csv(rps, file=paste0(outfile.base,'-phsc-relationships_compare_largeconsensus.csv'))
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
 	tmp			<- copy(rps)
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/consensus_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/consensus_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
 	invisible(sapply(seq_len(nrow(tmp))[1:40], function(ii)
 					{	
 						#ii<- 1
@@ -4255,10 +4255,10 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')		
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
 	rpw[, table(RUN, useNA='if')]
@@ -4383,8 +4383,8 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	#
 	#	load consensus distances
 	#
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda")
-	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda")
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
 	load(infile)
 	#	prepare patristic distance data.table
 	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
@@ -4393,7 +4393,7 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
 	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
 	#	load genetic distance matrix with overlap
-	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
 	load(infile)	#loads sq.gd
 	setnames(sq.gd, 'PD', 'GD')
 	#	for each run construct all pairings that were evaluated
@@ -4414,7 +4414,7 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	ptc[, FEMALE_PID:= gsub('-S[0-9]+','',TAXA2)]
 	#ptcc		<- copy(ptc)
 	#	merge with Rakai IDs and make sure male is first
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -4435,7 +4435,7 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
 	set(ptc, NULL, c('MALE_SEX','FEMALE_SEX'), NULL)
 	#	save
-	save(rd, rh, rs, rp, rpw, rplkl, ptc, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda')
+	save(rd, rh, rs, rp, rpw, rplkl, ptc, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmp_allpairs_posteriors_vsconsdist.rda')
 	#
 	#	compare 
 	#
@@ -4458,15 +4458,15 @@ RakaiAll.addposteriors.pairs.170322.vs.consensusdistance<- function()
 	rps			<- unique(subset(rpw, (PSC_MPD+2*PSC_SPD) < GD/1.083,select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID', 'PSC_MPD', 'PSC_SPD', 'PD', 'GD')))
 	rps[, F:=GD/PSC_MPD]
 	rps			<- rps[order(-F),]	
-	outfile.base<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
+	outfile.base<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_dxxx' 	
 	write.csv(rps, file=paste0(outfile.base,'-phsc-relationships_compare_largeconsensus.csv'))
 	#	plot phylogenies for pairs with little evidence in either of the two runs	
 	tmp			<- copy(rps)
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/consensus_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_phscout.rda')
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/consensus_RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5_'		
 	invisible(sapply(seq_len(nrow(tmp))[1:40], function(ii)
 					{	
 						#ii<- 1
@@ -4528,17 +4528,17 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.age<- function()
 	require(Hmisc)
 	require(gamlss)
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
 	# add agrarian etc
 	# 	from Kate:
 	#	Trading communities: 1   4   16  22  24  33  51  107 776
@@ -4693,17 +4693,17 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.communities.auxsampl
 	require(Hmisc)
 	require(gamlss)
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
 	# add agrarian etc
 	# 	from Kate:
 	#	Trading communities: 1   4   16  22  24  33  51  107 776
@@ -4846,16 +4846,16 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.communities<- functi
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')	
 	#	make pair data table
 	rp		<- copy(rpw)
 	set(rp, NULL, c('DIR','FILE','PTY_RUN','RUN','W_FROM','W_TO','TYPE_RAW','TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3','PATRISTIC_DISTANCE','CONTIGUOUS','PATHS_12','PATHS_21','MALE_SANGER_ID_L','MALE_SANGER_ID_R','FEMALE_SANGER_ID_L','FEMALE_SANGER_ID_R'), NULL)
@@ -5099,9 +5099,9 @@ RakaiAll.preprocess.pairs.170120<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
 	rh		<- tmp$rh
@@ -5138,12 +5138,12 @@ RakaiAll.preprocess.pairs.170120<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	infiles	<- subset(infiles, grepl('d50_p001_mr20_mt1_cl2_d5',RUN))
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -5233,25 +5233,25 @@ RakaiAll.preprocess.pairs.170120<- function()
 	#		
 	#	save transmission summary assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmsout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmsout.rda','',basename(FILE))]					
 	rps		<- infiles[, {
 				load(FILE)
 				dtrms
 			}, by=c('DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments_allpairs.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments_allpairs.rda')
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 }
 
 RakaiAll.preprocess.pairs.170227<- function()
@@ -5259,9 +5259,9 @@ RakaiAll.preprocess.pairs.170227<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -5301,11 +5301,11 @@ RakaiAll.preprocess.pairs.170227<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -5395,14 +5395,14 @@ RakaiAll.preprocess.pairs.170227<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')	 	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170227/RCCS_170227_w270_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.pairs.170309<- function()
@@ -5410,9 +5410,9 @@ RakaiAll.preprocess.pairs.170309<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -5452,11 +5452,11 @@ RakaiAll.preprocess.pairs.170309<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -5546,14 +5546,14 @@ RakaiAll.preprocess.pairs.170309<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	 	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170309/RCCS_170309_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.pairs.170320<- function()
@@ -5561,10 +5561,10 @@ RakaiAll.preprocess.pairs.170320<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -5605,11 +5605,11 @@ RakaiAll.preprocess.pairs.170320<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -5699,14 +5699,14 @@ RakaiAll.preprocess.pairs.170320<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	 	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170320/RCCS_170320_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.pairs.170322<- function()
@@ -5714,10 +5714,10 @@ RakaiAll.preprocess.pairs.170322<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -5749,11 +5749,11 @@ RakaiAll.preprocess.pairs.170322<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						setcolorder(dtrms, sort(colnames(dtrms)))
@@ -5845,7 +5845,7 @@ RakaiAll.preprocess.pairs.170322<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]
 	rpw		<- lapply(seq_len(nrow(infiles)), function(i)
@@ -5857,7 +5857,7 @@ RakaiAll.preprocess.pairs.170322<- function()
 				dwin
 			})
 	rpw		<- do.call('rbind',rpw)
-	save(ri, rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmw_assignments_allpairs.rda')	 	
+	save(ri, rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.pairs.170405<- function()
@@ -5865,10 +5865,10 @@ RakaiAll.preprocess.pairs.170405<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -5900,11 +5900,11 @@ RakaiAll.preprocess.pairs.170405<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170405', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						setcolorder(dtrms, sort(colnames(dtrms)))
@@ -5996,7 +5996,7 @@ RakaiAll.preprocess.pairs.170405<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170405', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]
 	rpw		<- lapply(seq_len(nrow(infiles)), function(i)
@@ -6009,7 +6009,7 @@ RakaiAll.preprocess.pairs.170405<- function()
 				dwin
 			})
 	rpw		<- do.call('rbind',rpw)
-	save(ri, rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmw_assignments_allpairs.rda')	 	
+	save(ri, rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170405/RCCS_170405_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.pairs.170410<- function()
@@ -6017,10 +6017,10 @@ RakaiAll.preprocess.pairs.170410<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -6052,11 +6052,11 @@ RakaiAll.preprocess.pairs.170410<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						setcolorder(dtrms, sort(colnames(dtrms)))
@@ -6148,7 +6148,7 @@ RakaiAll.preprocess.pairs.170410<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]
 	rpw		<- lapply(seq_len(nrow(infiles)), function(i)
@@ -6168,7 +6168,7 @@ RakaiAll.preprocess.pairs.170410<- function()
 				dwin
 			})
 	rpw		<- do.call('rbind',rpw)
-	save(ri, rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	 	
+	save(ri, rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 RakaiAll.preprocess.trmpairs.todi.170421<- function()
@@ -6176,14 +6176,14 @@ RakaiAll.preprocess.trmpairs.todi.170421<- function()
 	#
 	#	from every phyloscanner run, select pairs that are closely related 
 	#
-	indir	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170426_couples_w250_d50_p35_blNormed_rerun'
-	outfile	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_170426_couples_w250_d50_p35_blNormed_rerun'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_d50_p35_blNormed_mr20_mt1_cl3.5_d8_phscpairsout.rda'
 	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp.todi<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
 				#	ML likely transmission pairs by distance
@@ -6211,7 +6211,7 @@ RakaiAll.preprocess.trmpairs.todi.170421<- function()
 				ans				
 			}, by=c('PTY_RUN')]		
 	rtp.todi2<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
 				#	ML likely transmission pairs by distance
@@ -6265,10 +6265,10 @@ RakaiAll.preprocess.pairs.170426<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	rs		<- subset(rs, !is.na(VISIT))		
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
@@ -6300,11 +6300,11 @@ RakaiAll.preprocess.pairs.170426<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						setcolorder(dtrms, sort(colnames(dtrms)))
@@ -6396,7 +6396,7 @@ RakaiAll.preprocess.pairs.170426<- function()
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426', pattern='_allpairs_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_allpairs_trmwout.rda','',basename(FILE))]
 	rpw		<- lapply(seq_len(nrow(infiles)), function(i)
@@ -6416,7 +6416,7 @@ RakaiAll.preprocess.pairs.170426<- function()
 				dwin
 			})
 	rpw		<- do.call('rbind',rpw)
-	save(ri, rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmw_assignments_allpairs.rda')	 	
+	save(ri, rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170426/RCCS_170426_w250_trmw_assignments_allpairs.rda')	 	
 }
 
 
@@ -6426,11 +6426,11 @@ RakaiCouples.analyze.couples.161107.trmw<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161107_w270_d200_r004_mr1", "RCCS_161107_w270_d50_r004_mr1", "RCCS_161107_w270_d20_r004_mr1", "RCCS_161107_w270_d50_r004_mr20", "RCCS_161107_w270_d50_r004_mr30", "RCCS_161107_w270_d50_r004_mr40", "RCCS_161107_w270_d50_r004_mr50", "RCCS_161107_w270_d50_r004_mr100") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161107_w270_d20_r004_mr1","RCCS_161107_w270_d50_r004_mr1","RCCS_161107_w270_d200_r004_mr1",
@@ -6530,11 +6530,11 @@ RakaiCouples.consensus.to.couples.161205.model<- function()
 	require(scales)
 	require(ggplot2)	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	#	load PANGEA alignment to create raw genetic distances
-	load('~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/explaingaps/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda')	
+	load('~/Dropbox (SPH Imperial College)/PANGEAHIVsim/201507_TreeReconstruction/explaingaps/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda')	
 	
 	#
 	#	raw genetic distance
@@ -6570,7 +6570,7 @@ RakaiCouples.consensus.to.couples.161205.model<- function()
 	#		
 	
 	#	load 'dgd', 'sqi', 'sq'
-	load('~/Dropbox (Infectious Disease)/PANGEAHIVsim/201507_TreeReconstruction/explaingaps/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda')
+	load('~/Dropbox (SPH Imperial College)/PANGEAHIVsim/201507_TreeReconstruction/explaingaps/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment.rda')
 	tmp			<- dcast.data.table(subset(dgd, GENE%in%c('GAG','POL')), TAXA~GENE, value.var='ACTG')	
 	phsc.input	<- unique(subset(pty.runs, select=c('TAXA','FILE_ID')))
 	phsc.input	<- merge(phsc.input, tmp, by='TAXA')
@@ -6583,8 +6583,8 @@ RakaiCouples.consensus.to.couples.161205.model<- function()
 	tmp			<- as.character(tmp)
 	tmp[tmp=='?']	<- '-'
 	tmp			<- as.DNAbin(tmp)
-	file.ftin	<- "/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol.fasta"
-	file.ftout	<- "/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol_fasttree.newick"
+	file.ftin	<- "/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol.fasta"
+	file.ftout	<- "/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol_fasttree.newick"
 	write.dna(tmp, file.ftin, format='fa', colsep='', nbcol=-1)
 	#	get FastTree and ExaML tree
 	require(big.phylo)
@@ -6595,7 +6595,7 @@ RakaiCouples.consensus.to.couples.161205.model<- function()
 	cat(tmp2)
 	#	read trees
 	phf			<- read.tree(file.ftout)
-	file.ftout	<- "/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol_examl.newick"
+	file.ftout	<- "/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_gagpol_examl.newick"
 	phe			<- read.tree(file.ftout)
 	#	get patristic distances
 	phd			<- as.data.table(melt(as.matrix(cophenetic.phylo(phf)), varnames=c('TAXA1','TAXA2'), value.name='PD_FT'))
@@ -6608,7 +6608,7 @@ RakaiCouples.consensus.to.couples.161205.model<- function()
 	setnames(phd, c('TAXA1','TAXA2'), c('MALE_TAXA','FEMALE_TAXA'))	
 	rp			<- merge(rp, phd, by=c('MALE_TAXA','FEMALE_TAXA'), all.x=1)
 	setnames(rp, c('PD_FT','PD_EX'), c('CONS_PD_FT','CONS_PD_EX'))
-	save(rp, file="~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	save(rp, file="~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 }
 
 
@@ -6619,11 +6619,11 @@ RakaiCouples.analyze.couples.161110.bb.model<- function()
 	require(scales)
 	require(ggplot2)	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161110_w270_d200_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr1_mt1", "RCCS_161110_w270_d20_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr20_mt2", "RCCS_161110_w270_d50_r004_mr30_mt2", "RCCS_161110_w270_d50_r004_mr40_mt2", "RCCS_161110_w270_d50_r004_mr50_mt2", "RCCS_161110_w270_d50_r004_mr100_mt2") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161110_w270_d20_r004_mr1_mt1","RCCS_161110_w270_d50_r004_mr1_mt1","RCCS_161110_w270_d200_r004_mr1_mt1",
@@ -6796,11 +6796,11 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161110_w270_d200_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr1_mt1", "RCCS_161110_w270_d20_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr20_mt2", "RCCS_161110_w270_d50_r004_mr30_mt2", "RCCS_161110_w270_d50_r004_mr40_mt2", "RCCS_161110_w270_d50_r004_mr50_mt2", "RCCS_161110_w270_d50_r004_mr100_mt2") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161110_w270_d20_r004_mr1_mt1","RCCS_161110_w270_d50_r004_mr1_mt1","RCCS_161110_w270_d200_r004_mr1_mt1",
@@ -6933,7 +6933,7 @@ RakaiCouples.analyze.couples.161110.trmw<- function()
 	#	
 	tmp		<- subset(rpd, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, W_FROM, W_TO))
 	tmp		<- melt(tmp, measure.vars=c('MALE_SANGER_ID','FEMALE_SANGER_ID'), value.name='ID')
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_d50_r004_mr20_mt2_phscout.rda')	
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_d50_r004_mr20_mt2_phscout.rda')	
 	require(gamlss)
 	dr		<- tmp[, {
 				pty_run	<- PTY_RUN
@@ -7032,11 +7032,11 @@ RakaiCouples.analyze.couples.161213.trmw<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trmw_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trmw_assignments.rda')
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161213_w270_d50_p001_mr20_mt2_cl1_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl2_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl4_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_dInf") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161213_w270_d50_p001_mr20_mt2_cl1_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl2_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl4_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_dInf"))])
@@ -7356,11 +7356,11 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
@@ -7494,7 +7494,7 @@ RakaiCouples.analyze.couples.161219.pair.bb.model<- function()
 	set(rplkl, rplkl[, which(GROUP=='TYPE_PD_MEAN')], c('KEFF','DIR_PO','DIR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA','POSTERIOR_QL','POSTERIOR_QU','POSTERIOR_IL','POSTERIOR_IU'), NA_real_)
 	
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
 	
 	#
 	#	make table by TYPE of effective counts,  posterior probs,	alpha/beta
@@ -7815,7 +7815,7 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	dir		<- rpw$DIR[1]	
 	
 	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
 	rh		<- tmp$rh
@@ -7833,7 +7833,7 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	rd		<- merge(rd, tmp, by='COMM_NUM')
 	
 	#	load patristic distance matrix
-	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
 	load(infile)
 	#	prepare patristic distance data.table
 	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
@@ -7842,11 +7842,11 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
 	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
 	#	load genetic distance matrix with overlap
-	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
 	load(infile)	#loads sq.gd
 	setnames(sq.gd, 'PD', 'GD')
 	#	load selected phyloscanner runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	#	for each run construct all pairings that were evaluated
 	ptc			<- lapply(pty.runs[, unique(PTY_RUN)], function(pty_run)
 			{
@@ -7871,7 +7871,7 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	ptc			<- subset(ptc, MALE_SEX=='M' & FEMALE_SEX=='F')
 	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
 	#	merge with couples	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	tmp			<- unique(subset(rp, select=c(MALE_RID,FEMALE_RID,COUPID,COUP_SC)))
 	ptc			<- merge(ptc, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
 	ptc[, GD_DI:= cut(GD, breaks=c(-Inf,0.035,0.07,Inf), labels=c('close','unclear','distant'))]
@@ -7888,16 +7888,16 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	#
 	
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments_allpairs.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_allpairs_posteriors.rda')
 	
 	#	select: distant, close, unclear from phyloscanner distances
 	rpd		<- subset(rplkl, GROUP%in%c('TYPE_PAIR_DI') & TYPE=='distant' & pbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)>0.5)		
@@ -7963,7 +7963,7 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	#
 	#	double check NA's
 	#
-	tmp		<- phsc.combine.phyloscanner.output('~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270_d50_p001_rerun')
+	tmp		<- phsc.combine.phyloscanner.output('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270_d50_p001_rerun')
 	dwin	<- tmp$dwin
 	tmp		<- subset(pty.runs, select=c('TAXA','FILE_ID','PTY_RUN'))
 	setnames(tmp, c('TAXA','FILE_ID'), c('TAXA1','ID1'))
@@ -8002,7 +8002,7 @@ RakaiAll.analyze.pairs.170322.comparetoprevious<- function()
 	require(Hmisc)
 	
 	#	load rd, rh, rs, rp, rpw, rplkl
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
 	#
 	#	select likely pairs and compare between two runs
 	#
@@ -8033,7 +8033,7 @@ RakaiAll.analyze.pairs.170322.comparetoprevious<- function()
 			subset(rpd, RUN=='RCCS_170320_w250_d50_st20_mr20_mt1_cl2_d5' & LIKELY_PAIR==1 & PAR_PRIOR==3.0)[, LABEL_SH]	)
 	rps		<- unique(subset(merge(data.table(LABEL_SH=tmp), rpd, by='LABEL_SH'), select=c('MALE_SANGER_ID','FEMALE_SANGER_ID','PTY_RUN')))
 	#	make detailed plots for selection
-	outfile.base	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/inAnotC_'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/inAnotC_'
 	group		<- 'TYPE_DIR_TODI7x3'
 	run			<- 'RCCS_170322_w250_d50_st20_trA_mr20_mt1_cl2_d5'	
 	plot.select	<- unique(subset(merge(rplkl, rps, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID')), GROUP==group), by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
@@ -8080,8 +8080,8 @@ RakaiAll.analyze.pairs.170322.comparetoprevious<- function()
 	set(tmp, NULL, 'FEMALE_SANGER_ID', tmp[, as.character(FEMALE_SANGER_ID)])
 	set(tmp, NULL, 'MALE_SANGER_ID', tmp[, as.character(MALE_SANGER_ID)])
 	#	check RCCS_170227_w270_d50_st20_mr20_mt1_cl2_d5
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_d50_st20_trB_mr20_mt1_cl2_d5_phscout.rda')
-	outfile.base	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/closeother_RCCS_170322_w250_d50_st20_trB_'		
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_d50_st20_trB_mr20_mt1_cl2_d5_phscout.rda')
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/closeother_RCCS_170322_w250_d50_st20_trB_'		
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
@@ -8131,9 +8131,9 @@ RakaiAll.analyze.pairs.170410.distances<- function()
 	
 	#
 	run		<- 'RCCS_170410_w250_trB_blNormedOnFly_'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410'	
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410'	
 	#
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_160816.rda')
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rh		<- tmp$rh
@@ -8146,7 +8146,7 @@ RakaiAll.analyze.pairs.170410.distances<- function()
 	rd		<- merge(rd, unique(subset(rh, select=c(COMM_NUM,COMM_TYPE))), by='COMM_NUM')
 	
 	#	load patristic distance matrix
-	infile	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda'
 	load(infile)
 	#	prepare patristic distance data.table
 	ph.gdtr	<- as.data.table(melt(ph.gdtr, varnames=c('TAXA1','TAXA2')))
@@ -8155,11 +8155,11 @@ RakaiAll.analyze.pairs.170410.distances<- function()
 	set(ph.gdtr, NULL, 'TAXA1', ph.gdtr[, gsub('_','-',as.character(TAXA1))])
 	set(ph.gdtr, NULL, 'TAXA2', ph.gdtr[, gsub('_','-',as.character(TAXA2))])
 	#	load genetic distance matrix with overlap
-	infile		<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/PANGEA_HIV_n4562_Imperial_v151113_GlobalAlignment_gd.rda'
 	load(infile)	#loads sq.gd
 	setnames(sq.gd, 'PD', 'GD')
 	#	load selected phyloscanner runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	#	for each run construct all pairings that were evaluated
 	ptc			<- lapply(pty.runs[, unique(PTY_RUN)], function(pty_run)
 			{
@@ -8184,14 +8184,14 @@ RakaiAll.analyze.pairs.170410.distances<- function()
 	ptc			<- subset(ptc, MALE_SEX=='M' & FEMALE_SEX=='F')
 	ptc			<- unique(ptc, by=c('TAXA1','TAXA2'))
 	#	merge with couples	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	tmp			<- unique(subset(rp, select=c(MALE_RID,FEMALE_RID,COUPID,COUP_SC)))
 	ptc			<- merge(ptc, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)	
 	ptc			<- subset(ptc, !is.na(GD))
 	setnames(ptc, c('TAXA1','TAXA2'), c('MALE_TAXA','FEMALE_TAXA'))
 	#	load rd, rh, rs, rp, rpw, rplkl
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	#
 	#	focus on mean distances + quantiles among couples
 	#
@@ -8264,17 +8264,17 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	require(Hmisc)
 	
 	run		<- 'RCCS_170410_w250_trB_blNormedOnFly_dirlklprs_'
-	dir		<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410'	
+	dir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410'	
 	#	load denominator
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	ra		<- tmp$ra		
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	rc		<- copy(rp)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load rd, rh, rs, rp, rpw, rplkl, ptc
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')
 	#
 	# select final run
 	#
@@ -8373,7 +8373,7 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	#	plot detailed windows
 	#
 	rps			<- subset(rtr, select=c(PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID))
-	outfile.base<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI_'
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_TODI_'
 	#write.csv(rps, file=paste0(outfile.base,'_summary.csv'))
 	#write.csv(rps, file=paste0(outfile.base,'_summary_versionstrict2.csv'))
 	write.csv(rps, file=paste0(outfile.base,'_summary_versiondirambmf.csv'))
@@ -8389,9 +8389,9 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	#
 	# get difference from manual check (versionstrict2) to more relaxed version
 	#
-	tmp2		<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	tmp2		<- subset(as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp2[, VERSION:='checked manually']
-	tmp			<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	tmp			<- subset(as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp			<- merge(tmp, tmp2, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all.x=1)
 	rps			<- subset(tmp, is.na(VERSION))
 	rps[, VERSION:=NULL]
@@ -8408,9 +8408,9 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	#
 	# get difference from manual check (versionstrict2) to more relaxed version
 	#
-	tmp2		<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	tmp2		<- subset(as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versionstrict2.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp2[, VERSION:='checked manually']
-	tmp			<- subset(as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versiondirambmf.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
+	tmp			<- subset(as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/lklpr_TODI__summary_versiondirambmf.csv')), select=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'))
 	tmp[, VERSION_NEW:='first dir then mf']
 	tmp			<- merge(tmp, tmp2, by=c('PTY_RUN','MALE_SANGER_ID','FEMALE_SANGER_ID'), all=1)
 	rps			<- subset(tmp, is.na(VERSION))
@@ -8438,7 +8438,7 @@ RakaiAll.analyze.pairs.170410.direction<- function()
 	set(rpw2, NULL, 'MALE_SANGER_ID', rpw2[, as.character(MALE_SANGER_ID)])
 	set(rpw2, NULL, 'CONTIGUOUS', rpw2[, as.integer(CONTIGUOUS)])
 	set(rpw2, NULL, 'PATRISTIC_DISTANCE', rpw2[, round(PATRISTIC_DISTANCE, d=4)])	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8_phscout.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_d50_st20_trB_blNormedOnFly_mr20_mt1_cl3.5_d8_phscout.rda')
 	invisible(sapply(seq_len(nrow(tmp)), function(ii)
 					{	
 						#ii<- 1
@@ -8706,15 +8706,15 @@ RakaiCouples.analyze.couples.161110.trms<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trms_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trms_assignments.rda')
 	rps		<- subset(rps, RUN%in%c("RCCS_161110_w270_d200_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr1_mt1", "RCCS_161110_w270_d20_r004_mr1_mt1", "RCCS_161110_w270_d50_r004_mr20_mt2", "RCCS_161110_w270_d50_r004_mr30_mt2", "RCCS_161110_w270_d50_r004_mr40_mt2", "RCCS_161110_w270_d50_r004_mr50_mt2", "RCCS_161110_w270_d50_r004_mr100_mt2") )
 	#
 	rpsn	<- copy(rps)
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')	
 	rps		<- rbind(rpsn, rps, fill=TRUE, use.names=TRUE)	
 	
 	set(rps, NULL, 'RUN', rps[, factor(RUN, levels=c( 	"RCCS_161007_w270", "RCCS_161110_w270_d20_r004_mr1_mt1","RCCS_161110_w270_d50_r004_mr1_mt1","RCCS_161110_w270_d200_r004_mr1_mt1",
@@ -8926,11 +8926,11 @@ RakaiCouples.analyze.couples.161213.trms<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trms_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trms_assignments.rda')
 	rps		<- subset(rps, RUN%in%c("RCCS_161213_w270_d50_p001_mr20_mt2_cl1_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl2_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl4_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_dInf") )	
 	set(rps, NULL, 'RUN', rps[, factor(RUN, levels=c( 	"RCCS_161213_w270_d50_p001_mr20_mt2_cl1_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl2_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_cl4_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_d7", "RCCS_161213_w270_d50_p001_mr20_mt2_clInf_dInf"))])
 	rps[, table(RUN)]	
@@ -9135,11 +9135,11 @@ RakaiCouples.analyze.couples.161219.trms<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments.rda')
 	rps		<- subset(rps, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf") )	
 	set(rps, NULL, 'RUN', rps[, factor(RUN, levels=c( 	"RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf"))])
 	rps[, table(RUN)]	
@@ -9255,9 +9255,9 @@ RakaiCouples.process.couples.160930<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -9270,14 +9270,14 @@ RakaiCouples.process.couples.160930<- function()
 	#
 	#	collect runs
 	#
-	infiles	<- data.table(	FILE= c(	'~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/160930/RCCS_160930_w270_phscout.rda' ))	
+	infiles	<- data.table(	FILE= c(	'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/160930/RCCS_160930_w270_phscout.rda' ))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]				
 	#
 	#	for each run: get list of pairs
 	#	
 	rpso		<- infiles[, {
-				#F_TRM	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160919_w270_trmStats.rda'; F_PH	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/RCCS_160919_w270_trees.rda'
+				#F_TRM	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/RCCS_160919_w270_trmStats.rda'; F_PH	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/RCCS_160919_w270_trees.rda'
 				load(FILE)	#loads phs dtrms dtrees
 				#	select likely pairs -- these are ordered
 				dtrms[, WIN_OF_TYPE_P:=WIN_OF_TYPE/WIN_TOTAL]				
@@ -9527,15 +9527,15 @@ RakaiCouples.analyze.couples.161219.direction.serodisc<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
 	
 	#
 	#	select close ancestral/intermingled > 50%
@@ -9860,15 +9860,15 @@ RakaiCouples.analyze.couples.170120.direction.serodisc<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
 	
 	#	add MALE_RID, FEMALE_RID, COUPID
 	tmp		<- subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID))
@@ -9910,9 +9910,9 @@ RakaiCouples.analyze.couples.170322.direction.serodisc<- function()
 	
 	
 	#	load rd, rh, rs, rp, rpw, rplkl
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170322/RCCS_170322_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
 	#	add MALE_RID, FEMALE_RID, COUPID
 	tmp		<- unique(subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID, COUP_SC)))
@@ -9972,9 +9972,9 @@ RakaiCouples.analyze.couples.170410.direction.serodisc<- function()
 	
 	
 	#	load rd, rh, rs, rp, rpw, rplkl
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170410/RCCS_170410_w250_trmp_allpairs_posteriors_cmptoprv.rda')	
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	
 	#	add MALE_RID, FEMALE_RID, COUPID, PAIR_TYPE
 	tmp		<- unique(subset(rp, select=c(FEMALE_SANGER_ID, MALE_SANGER_ID, MALE_RID, FEMALE_RID, COUPID, COUP_SC, PAIR_TYPE)))
@@ -10035,15 +10035,15 @@ RakaiCouples.analyze.couples.170120.direction.all.analyze<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load pairwise probabilities
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmp_bbmodels.rda')
 	
 	# 	add agrarian etc
 	# 	from Kate:
@@ -10170,11 +10170,11 @@ RakaiCouples.analyze.couples.161219.distances<- function()
 	require(ape)
 	require(Phyloscanner.R.utilities)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5") )
 	#	
 	rpw[, table(RUN, useNA='if')]
@@ -10319,11 +10319,11 @@ RakaiCouples.analyze.couples.161219.distances.window.topology<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf"))])
@@ -10424,11 +10424,11 @@ RakaiCouples.analyze.couples.161219.trmw<- function()
 	require(scales)
 	require(ggplot2)
 	# load pty.run
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf") )
 	#
 	set(rpw, NULL, 'RUN', rpw[, factor(RUN, levels=c( 	"RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5", "RCCS_161219_w270_d50_p001_mr20_mt1_cl1_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_cl2_dInf", "RCCS_161219_w270_d50_p001_mr20_mt1_clInf_dInf"))])
@@ -10791,17 +10791,17 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.indexpartner<- funct
 	require(Hmisc)
 	require(gamlss)
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
 	# add agrarian etc
 	# 	from Kate:
 	#	Trading communities: 1   4   16  22  24  33  51  107 776
@@ -10853,17 +10853,17 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.samplingbias<- funct
 	require(Hmisc)
 	require(gamlss)
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
 	# add agrarian etc
 	# 	from Kate:
 	#	Trading communities: 1   4   16  22  24  33  51  107 776
@@ -10909,13 +10909,13 @@ RakaiCouples.extracoupletrm.170106.addposteriors<- function()
 	require(gridExtra)
 	require(RColorBrewer)	
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	#
@@ -11226,7 +11226,7 @@ RakaiCouples.extracoupletrm.170106.addposteriors<- function()
 	dev.off()	
 	#
 	#	save
-	save(rplkl, file='~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')	
+	save(rplkl, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')	
 }
 
 
@@ -11242,17 +11242,17 @@ RakaiCouples.extracoupletrm.170106.analyze.extratrm.couples.noncohabiting<- func
 	require(Hmisc)
 	require(gamlss)
 	# load pty.runs
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	# load couples "rp"
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	# load transmission summaries
 	run		<- 'RCCS_161219_w270_dxxx'
 	dir		<- rpw$DIR[1]	
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 	rpw		<- subset(rpw, RUN%in%c("RCCS_161219_w270_d50_p001_mr20_mt1_cl2_d5") )
 	setnames(rpw, c('TYPE','TYPE_PAIR'), c('TYPE_DIR_TODI7x3','TYPE_PAIR_TODI3x3'))
 	# load posterior relationships
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_extracoupletrm_bbmodels.rda')
 	# add agrarian etc
 	# 	from Kate:
 	#	Trading communities: 1   4   16  22  24  33  51  107 776
@@ -11315,9 +11315,9 @@ RakaiCouples.process.couples.161007<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )
 	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -11330,14 +11330,14 @@ RakaiCouples.process.couples.161007<- function()
 	#
 	#	collect runs
 	#
-	infiles	<- data.table(	FILE= c(	'~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_phscout.rda' ))	
+	infiles	<- data.table(	FILE= c(	'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_phscout.rda' ))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]				
 	#
 	#	for each run: get list of pairs
 	#	
 	rps		<- infiles[, {
-				#FILE	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_phscout.rda'
+				#FILE	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_phscout.rda'
 				load(FILE)	#loads phs dtrms dtrees
 				#	select likely pairs -- these are ordered
 				dtrms[, WIN_OF_TYPE_P:=WIN_OF_TYPE/WIN_TOTAL]				
@@ -11366,7 +11366,7 @@ RakaiCouples.process.couples.161007<- function()
 				dtrms	<- merge(dtrms, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))				
 				dtrms
 			}, by=c('RUN','DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')
 	#
 	cat('\nNumber of couples',rps[, length(unique(COUPID))])
 	setkey(rps, RUN, COUPID, MALE_SANGER_ID, FEMALE_SANGER_ID)
@@ -11583,8 +11583,8 @@ RakaiCouples.process.couples.161027<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -11598,16 +11598,16 @@ RakaiCouples.process.couples.161027<- function()
 	#
 	#	collect runs
 	#
-	infiles	<- data.table(	FILE= c(	'~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d20_phscout.rda',
-					'~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d50_phscout.rda',
-					'~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda'))	
+	infiles	<- data.table(	FILE= c(	'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d20_phscout.rda',
+					'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d50_phscout.rda',
+					'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda'))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]				
 	#
 	#	for each run: get list of pairs
 	#	
 	rps		<- infiles[, {
-				#FILE	<- '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d20_phscout.rda'
+				#FILE	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d20_phscout.rda'
 				cat('\n',FILE)
 				load(FILE)	#loads phs dtrms dtrees
 				#	select likely pairs -- these are ordered
@@ -11639,9 +11639,9 @@ RakaiCouples.process.couples.161027<- function()
 				dtrms	<- merge(dtrms, rp, by=c('MALE_SANGER_ID','FEMALE_SANGER_ID'))				
 				dtrms
 			}, by=c('RUN','DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_assignments.rda')
 	rpsn	<- copy(rps)
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161007/RCCS_161007_w270_assignments.rda')
 	rps		<- rbind(rpsn, rps)
 	#
 	cat('\nNumber of couples',paste(rps[, length(unique(COUPID)), by='RUN'], collapse=''))
@@ -11788,17 +11788,17 @@ RakaiCouples.process.couples.161027<- function()
 	#
 	#	inspect rogue case by window
 	#
-	dr		<- as.data.table(read.csv('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/couple_374_rogues_OR.csv'))
+	dr		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/couple_374_rogues_OR.csv'))
 	setnames(dr, c('window.start','J110207','G105508'), c('W_FROM','15778_1_82','15758_1_76'))
 	tmp		<- melt(subset(dr, select=c('W_FROM','15778_1_82','15758_1_76')), id.vars='W_FROM',value.name='BRL',variable.name='ID')  
 	dr		<- melt(subset(dr, select=c('W_FROM','rogue_15778_1_82','rogue_15758_1_76')), id.vars='W_FROM',value.name='ROGUE',variable.name='ID')
 	set(dr, NULL, 'ID', dr[, gsub('rogue_','',ID)])
 	dr		<- merge(tmp, dr, by=c('W_FROM','ID'))
 	
-	#infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
-	#				'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
-	#				'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'	)
-	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr66_trmStatsPerWindow.rda')
+	#infiles<- c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr66_trmStatsPerWindow.rda',
+	#				'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr66_trmStatsPerWindow.rda',
+	#				'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr66_trmStatsPerWindow.rda'	)
+	infiles<- c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr66_trmStatsPerWindow.rda')
 	id.m	<- '15778_1_82'
 	id.f	<- '15758_1_76'	
 	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
@@ -11824,7 +11824,7 @@ RakaiCouples.process.couples.161027<- function()
 	subset(df, (BRL1>0.05 & !ROGUE1) | (BRL2>0.05 & !ROGUE2))
 	subset(df, (BRL1<0.07 & ROGUE1) | (BRL2<0.07 & ROGUE2))
 	#	calculate patristic distance..
-	load('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda')
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161027/RCCS_161027_w270_d200_phscout.rda')
 	#ph		<- phs[[ subset(dtrees, PTY_RUN==66 & W_FROM==1225)[, IDX] ]]
 	#tmp		<- as.matrix(cophenetic.phylo(ph))
 	#max( tmp['15758_1_76.bam_read_7_count_1', grepl('15758_1_76', colnames(tmp))] )
@@ -11910,9 +11910,9 @@ RakaiCouples.process.couples.161027<- function()
 	#
 	#	inspect couple K061956:J061939 ( M:15103_1_74 F:15861_1_22 run:91 )
 	#
-	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr91_trmStatsPerWindow.rda',
-			'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr91_trmStatsPerWindow.rda',
-			'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr91_trmStatsPerWindow.rda'	)
+	infiles<- c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr91_trmStatsPerWindow.rda',
+			'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr91_trmStatsPerWindow.rda',
+			'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr91_trmStatsPerWindow.rda'	)
 	id.m	<- '15103_1_74'
 	id.f	<- '15861_1_22'	
 	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
@@ -11920,9 +11920,9 @@ RakaiCouples.process.couples.161027<- function()
 	set(df, NULL, 'ID2', df[, gsub('\\.bam','',ID2)])
 	setnames(df, colnames(df), gsub('_rerun','',gsub('couples_','',gsub('Rakai_ptoutput_','',colnames(df)))))
 	
-	infiles<- c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr62_trmStatsPerWindow.rda',
-			'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr62_trmStatsPerWindow.rda',
-			'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr62_trmStatsPerWindow.rda'	)
+	infiles<- c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d20_rerun/ptyr62_trmStatsPerWindow.rda',
+			'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_rerun/ptyr62_trmStatsPerWindow.rda',
+			'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d200_rerun/ptyr62_trmStatsPerWindow.rda'	)
 	id.m	<- '15861_1_26'
 	id.f	<- '15861_1_22'	
 	df		<- phsc.get.assignments.by.window.for.couple(id1=paste(id.m,'.bam',sep=''), id2=paste(id.f,'.bam',sep=''), infiles)
@@ -11936,8 +11936,8 @@ RakaiCouples.process.couples.161107<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -11949,18 +11949,18 @@ RakaiCouples.process.couples.161107<- function()
 	#	F->M    M->F seroinc seropos 
 	#	7       19   50      251 			total: 327
 	
-	load('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d200_r004_mr1_phscout.rda')
+	load('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d200_r004_mr1_phscout.rda')
 	dwin[, RUN:= 'mr1']
 	dwin[, min(ID1_R)]
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	infiles	<- subset(infiles, grepl('d50',RUN))
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d20_r004_mr1_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d20_r004_mr1_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -12018,25 +12018,25 @@ RakaiCouples.process.couples.161107<- function()
 	#		
 	#	load transmission summary assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmsout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmsout.rda','',basename(FILE))]					
 	rps		<- infiles[, {
 				load(FILE)
 				dtrms
 			}, by=c('DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trms_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trms_assignments.rda')
 	#		
 	#	load transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107', pattern='_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161107_w270_trmw_assignments.rda')	
 }
 
 RakaiCouples.process.couples.161110<- function()
@@ -12044,8 +12044,8 @@ RakaiCouples.process.couples.161110<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -12060,12 +12060,12 @@ RakaiCouples.process.couples.161110<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	#infiles	<- subset(infiles, grepl('d50',RUN))
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d20_r004_mr1_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161107/RCCS_161027_w270d20_r004_mr1_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -12123,25 +12123,25 @@ RakaiCouples.process.couples.161110<- function()
 	#		
 	#	load transmission summary assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_trmsout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmsout.rda','',basename(FILE))]					
 	rps		<- infiles[, {
 				load(FILE)
 				dtrms
 			}, by=c('DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trms_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trms_assignments.rda')
 	#		
 	#	load transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110', pattern='_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/OR_Work/2016/2016_Rakai_Couples/161110/RCCS_161110_w270_trmw_assignments.rda')	
 }
 
 RakaiCouples.process.couples.161213<- function()
@@ -12149,8 +12149,8 @@ RakaiCouples.process.couples.161213<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -12165,12 +12165,12 @@ RakaiCouples.process.couples.161213<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	#infiles	<- subset(infiles, grepl('d50',RUN))
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_d50_p001_mr20_mt2_cl1_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_d50_p001_mr20_mt2_cl1_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -12234,25 +12234,25 @@ RakaiCouples.process.couples.161213<- function()
 	#		
 	#	load transmission summary assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213', pattern='_trmsout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213', pattern='_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmsout.rda','',basename(FILE))]					
 	rps		<- infiles[, {
 				load(FILE)
 				dtrms
 			}, by=c('DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trms_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trms_assignments.rda')
 	#		
 	#	load transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213', pattern='_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213', pattern='_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trmw_assignments.rda')	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161213/RCCS_161213_w270_trmw_assignments.rda')	
 }
 
 RakaiCouples.process.couples.161219<- function()
@@ -12260,8 +12260,8 @@ RakaiCouples.process.couples.161219<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	load( "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
-	load("~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
+	load( "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_phscruns.rda" )	
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v151113_info.rda")
 	setkey(rp, COUPID)
 	unique(rp)[, table(COUP_SC)]
 	#	total of couples with assigned SANGER_ID in RCCS
@@ -12276,12 +12276,12 @@ RakaiCouples.process.couples.161219<- function()
 	#
 	#	for each run: save trm assignments for couples
 	#
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_phscout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_phscout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_phscout.rda','',basename(FILE))]
 	#infiles	<- subset(infiles, grepl('d50',RUN))
 	invisible(infiles[, {
-						#FILE	<- '/Users/Oliver/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d7_phscout.rda'
+						#FILE	<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_d50_p001_mr20_mt1_cl1_d7_phscout.rda'
 						cat('\n',FILE)
 						load(FILE)	#loads phs dtrms dtrees dwin
 						#
@@ -12340,25 +12340,25 @@ RakaiCouples.process.couples.161219<- function()
 	#		
 	#	save transmission summary assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_trmsout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_trmsout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmsout.rda','',basename(FILE))]					
 	rps		<- infiles[, {
 				load(FILE)
 				dtrms
 			}, by=c('DIR','FILE')]
-	save(rps, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments.rda')
+	save(rps, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trms_assignments.rda')
 	#		
 	#	save transmission window assignments		
 	#		
-	infiles	<- data.table(FILE=list.files('~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219', pattern='_trmwout.rda', full.names=TRUE))	
+	infiles	<- data.table(FILE=list.files('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219', pattern='_trmwout.rda', full.names=TRUE))	
 	infiles[, DIR:= dirname(FILE)]
 	infiles[, RUN:= gsub('_trmwout.rda','',basename(FILE))]					
 	rpw		<- infiles[, {
 				load(FILE)
 				dwin
 			}, by=c('DIR','FILE')]
-	save(rpw, file= '~/Dropbox (Infectious Disease)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
+	save(rpw, file= '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/161219/RCCS_161219_w270_trmw_assignments.rda')	
 }
 
 
@@ -12367,7 +12367,7 @@ RakaiCirc.circ.dev160815<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
 	tmp		<- RakaiCirc.epi.get.info()
 	rh		<- tmp$rh
 	rd		<- tmp$rd
@@ -12403,7 +12403,7 @@ RakaiCirc.circ.dev160815<- function()
 	#
 	#	load info on phylotype runs
 	#
-	load("~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")	
+	load("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/data/PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda")	
 	ptyi	<- subset(pty.runs, select=c(TAXA, FILE_ID, PTY_RUN))
 	set(ptyi,NULL,'TAXA', ptyi[,gsub('_','-',gsub('_S[0-9]+','',TAXA))])
 	setnames(ptyi, c('TAXA','FILE_ID'), c('PID','SID'))
@@ -12528,7 +12528,7 @@ RakaiCirc.circ.dev160815<- function()
 	tmp		<- unique(subset(rt, SEQ_TYPE=='Sanger not started by Jul2016', select=c(RID, ROUND, SEX)))
 	tmp		<- merge(tmp, subset(rd, select=c(RID, PID)), by='RID')
 	write.table(tmp, file.path(wdir, 'RCCSparticipants_sequencingunclear.csv'))
-	infile.sangerstats	<- "~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
+	infile.sangerstats	<- "~/Dropbox (SPH Imperial College)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
 	tmp2	<- as.data.table(read.csv(infile.sangerstats, stringsAsFactors=FALSE))	
 	setnames(tmp2, colnames(tmp2), gsub('\\.','_',toupper(colnames(tmp2))))
 	setnames(tmp2, c('PROJECTID','STATUS'), c('PID','SANGER_STATUS'))
@@ -12541,7 +12541,7 @@ RakaiCirc.circ.dev160907<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
@@ -12563,11 +12563,11 @@ RakaiCirc.circ.dev160907<- function()
 	#
 	#	collect runs
 	#
-	infiles	<- data.table(	F_TRM= c(	'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200/RCCS_160902_w200_trmStats.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220/RCCS_160902_w220_trmStats.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda',
-					'~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_trmStats.rda'
+	infiles	<- data.table(	F_TRM= c(	'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w200/RCCS_160902_w200_trmStats.rda',
+					'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w220/RCCS_160902_w220_trmStats.rda',
+					'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w250/RCCS_160902_w250_trmStats.rda',
+					'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda',
+					'~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w280/RCCS_160902_w280_trmStats.rda'
 			))
 	infiles[, F_PH:= gsub('trmStats.rda','trees.rda', F_TRM)]
 	infiles[, DIR:= dirname(F_TRM)]
@@ -12576,8 +12576,8 @@ RakaiCirc.circ.dev160907<- function()
 	#	for each run: get list of pairs
 	#	
 	rp		<- infiles[, {
-				#F_TRM	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda'
-				#F_PH	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trees.rda'
+				#F_TRM	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trmStats.rda'
+				#F_PH	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160902_w270/RCCS_160902_w270_trees.rda'
 				load(F_TRM)	#loads df
 				dlkl	<- copy(df)
 				load(F_PH)	#loads phs and dfr
@@ -12736,7 +12736,7 @@ RakaiCirc.circ.dev160901<- function()
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	
 	#	get epi info
 	tmp		<- RakaiCirc.epi.get.info()
@@ -12748,11 +12748,11 @@ RakaiCirc.circ.dev160901<- function()
 	
 	
 	#	load likely transmissions summary from phyloscanner
-	infile.phsc.trms	<- "~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda"
+	infile.phsc.trms	<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_lkltrms_summary.rda"
 	load(infile.phsc.trms)
 	dlkl				<- copy(df)
 	#	load trees from phyloscanner
-	infile.phsc.trees	<- '~/Dropbox (Infectious Disease)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'	
+	infile.phsc.trees	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/pty_Rakai_160825/RCCS_run160825_all_trees.rda'	
 	load(infile.phsc.trees)
 	phs					<- tmp$phs
 	stat.phs			<- tmp$dfr
@@ -13014,9 +13014,9 @@ RakaiCirc.circ.timelines.init.160816<- function(rh, rd)
 
 RakaiCirc.recipient.female.get.info<- function(wdir=NA)
 {
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
-	indir.historicseq	<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree"
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	indir.historicseq	<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#
 	#	prepare RCCS data
 	#	
@@ -13079,8 +13079,8 @@ RakaiCirc.recipient.female.get.info<- function(wdir=NA)
 
 RakaiCirc.epi.get.info<- function()
 {
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"	
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
 	load(infile)
 	#	a bit of clean up 
 	rd		<- as.data.table(rccsData)
@@ -13111,18 +13111,18 @@ RakaiCirc.epi.get.info<- function()
 
 RakaiCirc.seq.get.info<- function()
 {
-	infile				<- "~/Dropbox (Infectious Disease)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"	
-	infile.sangerstats	<- "~/Dropbox (Infectious Disease)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
-	infile.relabel		<- "~/Dropbox (Infectious Disease)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"
-	infile.assembly		<- "~/Dropbox (Infectious Disease)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
-	wdir				<- "~/Dropbox (Infectious Disease)/Rakai Fish Analysis/circumcision"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"	
+	infile.sangerstats	<- "~/Dropbox (SPH Imperial College)/PANGEA_data/2016-07-07_PANGEA_stats_by_sample.csv"
+	infile.relabel		<- "~/Dropbox (SPH Imperial College)/PANGEA_alignments/Regional phylogenetic analyses/Region 1 gag analysis/SummaryofGagSequenceData.rda"
+	infile.assembly		<- "~/Dropbox (SPH Imperial College)/PANGEA_data/PANGEAconsensuses_2015-09_Imperial/PANGEA_HIV_n4562_Imperial_v150908_Summary.csv"
+	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"
 	#
 	#	read all processed RCCS sequences 
 	#	
-	infile.region1		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region1.rda'
-	infile.region2		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region2.rda'
-	infile.region3		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region3.rda'
-	infile.region4		<- '/Users/Oliver/Dropbox (Infectious Disease)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region4.rda'
+	infile.region1		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region1.rda'
+	infile.region2		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region2.rda'
+	infile.region3		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region3.rda'
+	infile.region4		<- '/Users/Oliver/Dropbox (SPH Imperial College)/PANGEA_alignments/Rakai Data for IqTree/Prelim_RakaiPangeaSqnAndMetaData_IqTree_Region4.rda'
 	
 	load(infile.region1)
 	tmp		<- as.character(gag.sqn)
