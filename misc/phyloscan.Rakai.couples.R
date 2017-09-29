@@ -738,9 +738,33 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda'
-	#indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
-	#outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10_zbl'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min50'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p45_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d100'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d1000'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s10_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda'
 	
+	
+	tmp		<- data.table(F=list.files(indir, pattern='_pairwise_relationships.rda$', full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
+	paste(setdiff( 2:346, tmp[, PTY_RUN]), collapse=', ')
 	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
@@ -831,9 +855,6 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	set(rtp.todi2, tmp, 'TYPE', rtp.todi2[tmp, tolower(paste0(ID1_SEX,ID2_SEX))])
 	tmp			<- rtp.todi2[, which(TYPE=='21')]
 	set(rtp.todi2, tmp, 'TYPE', rtp.todi2[tmp, tolower(paste0(ID2_SEX,ID1_SEX))])
-	
-	tmp	<- unique(rtp.todi2, by=c('ID1','ID2'))
-	save(tmp, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/check.rda')
 	
 	#
 	#	prepare just the dwin and rplkl for couples
@@ -1400,6 +1421,24 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min50'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min50.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl25_prior23_min30.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p45_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl45_prior23_min30.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s10_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_s10.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_s40.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d30.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d100'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d100.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d1000'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000.rda'		
 	
 	#
 	#	load couples to search for in phyloscanner output
@@ -1678,7 +1717,8 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 	zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
 	zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
 	load(infile)	
-	
+	#set(rtpdm, NULL, c('MALE_FIRSTPOSVIS.y','MALE_FIRSTPOSDATE.y','FEMALE_FIRSTPOSVIS.y','FEMALE_FIRSTPOSDATE.y'), NULL)
+	#setnames(rtpdm, c('MALE_FIRSTPOSVIS.x','MALE_FIRSTPOSDATE.x','FEMALE_FIRSTPOSVIS.x','FEMALE_FIRSTPOSDATE.x'), c('MALE_FIRSTPOSVIS','MALE_FIRSTPOSDATE','FEMALE_FIRSTPOSVIS','FEMALE_FIRSTPOSDATE'))
 	nrow(rtpdm)
 	#	stage 1: 307 transmissions with direction resolved to 307 recipients with unique transmitter
 	#	stage 2: 252 transmissions with unique transmitters	
@@ -1687,6 +1727,8 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 	set(rtpdm, NULL, 'PAIR_ID', rtpdm[, paste0(MALE_RID,'-',FEMALE_RID)])
 	set(rtpdm, NULL, 'MALE_SEX', 'M')
 	set(rtpdm, NULL, 'FEMALE_SEX', 'F')	
+	
+	subset(rsm, MIN_PNG_OUTPUT>0)[, quantile(MIN_PNG_OUTPUT/HIV, p=c(0,0.5,1))]
 	
 	#
 	#	some helper data.tables
@@ -1740,6 +1782,7 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 		set(tmp, NULL, 'TR_OBS', 0)
 		dc	<- rbind(dc, tmp)
 	}
+	#rsm[, list(ELIGIBLE_AVG=sum(ELIGIBLE_AVG)), by='COMM_TYPE']
 	dc[, TR_PRIOR:= 0.5]
 	#
 	#	Bayesian model first hierarchy: define Beta posterior for sampling probabilities (all alpha and betas)
@@ -1903,10 +1946,33 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 	tmp[, LABEL:= paste0(N, '\n(',round(P_TR,d=2)*100,'%)')]
 	ggplot(tmp, aes(x=REC_COMM_TYPE, y=P_TR, fill=TR_COMM_TYPE)) + 
 			geom_bar(stat='identity', position='dodge') +
+			scale_fill_brewer(palette='Dark2') +
 			theme_bw() + 
 			scale_y_continuous(labels=scales::percent, limits=c(0,1), expand=c(0,0), breaks=seq(0,1,0.2)) +			
 			labs(x='\nlocation likely recipient',y='location likely transmitter\n',fill='transmitter from') 
-	ggsave(file=paste0(outfile.base,'_commtype_barplottransmitters_crude.pdf'), w=6, h=5)	
+	ggsave(file=paste0(outfile.base,'_phylogeography_aft_sources_crude_prop.pdf'), w=6, h=5)
+	ggplot(tmp, aes(x=REC_COMM_TYPE, y=N, fill=TR_COMM_TYPE)) + 
+			geom_bar(stat='identity', position='dodge') +
+			scale_fill_brewer(palette='Dark2') +
+			theme_bw() + 
+			scale_y_continuous() +			
+			labs(x='\nlocation likely recipient',y='location likely transmitter\n',fill='transmitter from') 
+	ggsave(file=paste0(outfile.base,'_phylogeography_aft_sources_crude_count.pdf'), w=6, h=5)	
+	ggplot(tmp, aes(x=TR_COMM_TYPE, y=P_REC, fill=REC_COMM_TYPE)) + 
+			geom_bar(stat='identity', position='dodge') +
+			scale_fill_brewer(palette='Dark2') +
+			theme_bw() + 
+			scale_y_continuous(labels=scales::percent, limits=c(0,1), expand=c(0,0), breaks=seq(0,1,0.2)) +			
+			labs(x='\nlocation likely transmitters',y='location likely recipients\n',fill='recipient in') 
+	ggsave(file=paste0(outfile.base,'_phylogeography_aft_destinations_crude_prop.pdf'), w=6, h=5)
+	ggplot(tmp, aes(x=TR_COMM_TYPE, y=N, fill=REC_COMM_TYPE)) + 
+			geom_bar(stat='identity', position='dodge') +
+			scale_fill_brewer(palette='Dark2') +
+			theme_bw() + 
+			scale_y_continuous() +			
+			labs(x='\nlocation likely transmitter',y='location likely recipient\n',fill='recipient in') 
+	ggsave(file=paste0(outfile.base,'_phylogeography_aft_destinations_crude_count.pdf'), w=6, h=5)	
+	
 	#
 	#	geography transmitter flows into agrarian/trading/fisherolk recipient communities
 	#	adjusted		
@@ -2028,7 +2094,7 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 	
 	#
 	#	geography who infects whom matrix  
-	#
+	#	crude
 	tmp		<- rtr2[,list(N=length(unique(PAIR_ID))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
 	tmp[, P_CELL:= N/sum(N)]
 	tmp		<- merge(tmp, tmp[, list(P_REC= N/sum(N), REC_COMM_TYPE=REC_COMM_TYPE), by='TR_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
@@ -2044,6 +2110,52 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 			labs(x='\nlocation likely recipient',y='location likely transmitter\n') +
 			guides(size='none')
 	ggsave(file=paste0(outfile.base,'_commtype_3x3.pdf'), w=5, h=5)
+	
+	set(tmp, NULL, 'REC_COMM_TYPE', tmp[,paste0('to_',REC_COMM_TYPE)])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[,paste0('from_',TR_COMM_TYPE)])
+	tmp		<- suppressWarnings(melt(tmp, id.vars=c('REC_COMM_TYPE','TR_COMM_TYPE'), measure.vars=c('N','P_CELL')))
+	tmp		<- dcast.data.table(tmp, variable+TR_COMM_TYPE~REC_COMM_TYPE, value.var='value')
+	write.csv(tmp, row.names=FALSE, paste0(outfile.base,'_commtype_3x3_raw.csv'))
+	#
+	#	geography who infects whom matrix  
+	#	adjusted P
+	tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	z		<- z[, list(TR_OBS=sum(TR_OBS), TR_MISS=sum(TR_MISS), PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0('from_',TR_COMM_TYPE,' to_',REC_COMM_TYPE)]
+	mc.it	<- 1e2
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z[, TR_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\1',variable)]
+	z[, REC_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\2',variable)]	
+	z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(value, p=seq(0,1,0.01)))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]	
+	z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('PADJ_CL','PADJ_IL','PADJ_M','PADJ_IU','PADJ_CU'))		
+	ans		<- melt(z, id.vars=c('TR_COMM_TYPE','REC_COMM_TYPE'), measure.vars=c('PADJ_M','PADJ_CL','PADJ_CU'))
+	ans		<- dcast.data.table(ans, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='value')
+	#	adjusted N
+	tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	z		<- z[, list(TR_ADJ=sum(TR_OBS)+sum(TR_MISS)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])
+	z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(TR_ADJ, p=seq(0,1,0.01), type=1))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]	
+	z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('NADJ_CL','NADJ_IL','NADJ_M','NADJ_IU','NADJ_CU'))
+	z		<- melt(z, id.vars=c('TR_COMM_TYPE','REC_COMM_TYPE'), measure.vars=c('NADJ_M','NADJ_CL','NADJ_CU'))
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='value')
+	ans		<- rbind(z, ans)
+	write.csv(ans, row.names=FALSE, paste0(outfile.base,'_commtype_3x3_adjusted.csv'))
 	
 	
 	#
@@ -2149,6 +2261,379 @@ RakaiFull.analyze.trmpairs.todi.170421.phylogeography<- function()
 	ggsave(file=paste0(outfile.base,'_hubs_comm_locations.pdf'), w=10, h=10)
 	
 		
+}
+
+RakaiFull.analyze.trmpairs.todi.170421.waifwm.community.types<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170428_withmetadata.rda"		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170428_"	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170516_withmetadata.rda"		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170516_"	
+	zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	#set(rtpdm, NULL, c('MALE_FIRSTPOSVIS.y','MALE_FIRSTPOSDATE.y','FEMALE_FIRSTPOSVIS.y','FEMALE_FIRSTPOSDATE.y'), NULL)
+	#setnames(rtpdm, c('MALE_FIRSTPOSVIS.x','MALE_FIRSTPOSDATE.x','FEMALE_FIRSTPOSVIS.x','FEMALE_FIRSTPOSDATE.x'), c('MALE_FIRSTPOSVIS','MALE_FIRSTPOSDATE','FEMALE_FIRSTPOSVIS','FEMALE_FIRSTPOSDATE'))
+	nrow(rtpdm)
+	#	stage 1: 307 transmissions with direction resolved to 307 recipients with unique transmitter
+	#	stage 2: 252 transmissions with unique transmitters	
+	
+	rtpdm[, AGEDIFF:= rtpdm[, FEMALE_BIRTHDATE-MALE_BIRTHDATE]]
+	set(rtpdm, NULL, 'PAIR_ID', rtpdm[, paste0(MALE_RID,'-',FEMALE_RID)])
+	set(rtpdm, NULL, 'MALE_SEX', 'M')
+	set(rtpdm, NULL, 'FEMALE_SEX', 'F')	
+	
+	#subset(rsm, MIN_PNG_OUTPUT>0)[, quantile(MIN_PNG_OUTPUT/HIV, p=c(0,0.5,1))]
+	
+	#
+	#	some helper data.tables
+	rmf		<- subset(rtpdm, TYPE=='mf')
+	rfm		<- subset(rtpdm, TYPE=='fm')
+	rtr2	<- copy(rmf)
+	setnames(rtr2,colnames(rtr2),gsub('FEMALE','REC',colnames(rtr2)))
+	setnames(rtr2,colnames(rtr2),gsub('MALE','TR',colnames(rtr2)))
+	tmp		<- copy(rfm)
+	setnames(tmp,colnames(tmp),gsub('FEMALE','TR',colnames(tmp)))
+	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
+	rtr2	<- rbind(rtr2,tmp)
+	
+	#
+	#	Bayesian source attriution model
+	#	adjust for incomplete sampling
+	#
+	dc	<- rtr2[, list(TR_OBS=length(PAIR_ID)), by=c('TR_COMM_NUM_A','REC_COMM_NUM_A')]	
+	#	Bayesian model: add uniform prior
+	if(0)
+	{
+		#	(which is Dirichlet 1 among all communities pairs that have a connection either way
+		tmp	<- subset(dc, select=c(REC_COMM_NUM_A, TR_COMM_NUM_A))	
+		setnames(tmp, c('REC_COMM_NUM_A','TR_COMM_NUM_A'), c('TR_COMM_NUM_A','REC_COMM_NUM_A'))
+		tmp	<- merge(tmp, dc, all.x=1)
+		tmp	<- subset(tmp, is.na(TR_OBS))
+		set(tmp, NULL, 'TR_OBS', 0)
+		dc	<- rbind(dc, tmp)		
+	}
+	if(1)
+	{
+		#	This is a bit non-standard, I just don t want the prior to have a large impact, so I chose a sparse one. 
+		#	(which is Dirichlet 1 among all communities pairs that are closest)
+		#	always add self if not present
+		tmp	<- subset(dc[, list(UNOBSERVED_SELF=!any(REC_COMM_NUM_A==TR_COMM_NUM_A)), by='TR_COMM_NUM_A'],UNOBSERVED_SELF, TR_COMM_NUM_A)
+		tmp[, REC_COMM_NUM_A:=TR_COMM_NUM_A]
+		tmp[, TR_OBS:=0]
+		dc	<- rbind(dc, tmp)
+		#	ensure each community has at least 1 non-self community, if not add closest other community
+		#	I really want to keep this sparse, so do not consider non-self to all communities
+		tmp	<- unique(zc, by='COMM_NUM_A')
+		tmp	<- as.data.table(t(sapply(seq_len(nrow(tmp)), function(i)
+								{
+									z<- sort( sqrt( (tmp[,longitude]-tmp[i,longitude])^2+(tmp[,latitude]-tmp[i,latitude])^2 ), index.return=TRUE)$ix
+									c('TR_COMM_NUM_A'=tmp[i, COMM_NUM_A], 'REC_COMM_NUM_A'=tmp[z[2],COMM_NUM_A])
+								})))	
+		z	<- subset(dc[, list(REC_N_OBS=length(REC_COMM_NUM_A)), by='TR_COMM_NUM_A'], REC_N_OBS==1)
+		tmp	<- merge(tmp, z, by='TR_COMM_NUM_A')
+		tmp	<- merge(subset(tmp, select=c(TR_COMM_NUM_A, REC_COMM_NUM_A)), dc, all.x=1, by=c('REC_COMM_NUM_A','TR_COMM_NUM_A'))
+		tmp	<- subset(tmp, is.na(TR_OBS))
+		set(tmp, NULL, 'TR_OBS', 0)
+		dc	<- rbind(dc, tmp)
+	}
+	#rsm[, list(ELIGIBLE_AVG=sum(ELIGIBLE_AVG)), by='COMM_TYPE']
+	dc[, TR_PRIOR:= 0.5]
+	#
+	#	Bayesian model first hierarchy: define Beta posterior for sampling probabilities (all alpha and betas)
+	#
+	tmp	<- subset(rsm, select=c(COMM_NUM_A, ELIGIBLE_AVG, PARTICIPATED_AVG, HIV, MIN_PNG_OUTPUT))
+	tmp[, P_PART_EMP:= PARTICIPATED_AVG/ELIGIBLE_AVG]
+	tmp[, P_PART_ALPHA:= round(PARTICIPATED_AVG)+1]
+	tmp[, P_PART_BETA:= round(ELIGIBLE_AVG-PARTICIPATED_AVG)+1]
+	tmp[, P_SEQ_EMP:= MIN_PNG_OUTPUT/HIV]
+	tmp[, P_SEQ_ALPHA:= round(MIN_PNG_OUTPUT)+1]
+	tmp[, P_SEQ_BETA:= round(HIV-MIN_PNG_OUTPUT)+1]	
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc	<- merge(dc, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc	<- merge(dc, tmp, by='REC_COMM_NUM_A')
+	#
+	#	Bayesian model second hierarchy: draw unobserved data to augment likelihood
+	#
+	mc.it	<- 1e4
+	dcb		<- dc[, {
+				tmp	<- 	rbeta(mc.it, TR_P_PART_ALPHA, TR_P_PART_BETA)*
+						rbeta(mc.it, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA)*
+						rbeta(mc.it, REC_P_PART_ALPHA, REC_P_PART_BETA)*
+						rbeta(mc.it, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA)
+				#print(tmp)
+				tmp	<- rnbinom(mc.it, TR_OBS+TR_PRIOR, tmp)
+				#print(tmp)
+				list(MONTE_CARLO_IT=seq_len(mc.it), TR_PRIOR=TR_PRIOR, TR_OBS=TR_OBS, TR_MISS= tmp)
+			}, by=c('REC_COMM_NUM_A','TR_COMM_NUM_A')]	
+	#
+	#	Bayesian model second hierarchy: Dirichlet posterior for transmission from community i to j, pi_ij with pi_ij summing to 1
+	#
+	tmp		<- dcb[, list(	REC_COMM_NUM_A= REC_COMM_NUM_A, 
+					TR_COMM_NUM_A= TR_COMM_NUM_A, 
+					PI_IJ_ALPHA= TR_OBS+TR_MISS+TR_PRIOR				
+			), by='MONTE_CARLO_IT']
+	dcb		<- merge(dcb, tmp, by=c('REC_COMM_NUM_A','TR_COMM_NUM_A','MONTE_CARLO_IT'))
+	#
+	#	this is the end of the source attribution inference on the WAIFM matrix
+	#
+	
+	
+	
+	#
+	#	geography transmission flows by agrarian/trading/fisherolk 
+	#	crude	
+	tmp		<- rtr2[,list(N=length(unique(PAIR_ID))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
+	tmp[, P_CELL:= N/sum(N)]
+	tmp		<- merge(tmp, tmp[, list(P_REC= N/sum(N), REC_COMM_TYPE=REC_COMM_TYPE), by='TR_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
+	tmp		<- merge(tmp, tmp[, list(P_TR= N/sum(N), TR_COMM_TYPE=TR_COMM_TYPE), by='REC_COMM_TYPE'], by=c('TR_COMM_TYPE','REC_COMM_TYPE'))
+	#	P_REC	is cond prob Prob( recipient in A, T, F | source from x ) ie the entries in WAIFW matrix
+	#	P_TR	is cond prob Prob( source from A, T, F | recipient in x )
+	#	P_CELL 	is joint prob Prob( source from x, recipient in y )		
+	set(tmp, NULL, 'P_TR', tmp[,paste0(round(P_TR,d=3)*100,'%')])
+	set(tmp, NULL, 'P_REC', tmp[,paste0(round(P_REC,d=3)*100,'%')])
+	set(tmp, NULL, 'P_CELL', tmp[,paste0(round(P_CELL,d=3)*100,'%')])
+	set(tmp, NULL, 'REC_COMM_TYPE', tmp[,paste0('to_',REC_COMM_TYPE)])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[,paste0('from_',TR_COMM_TYPE)])
+	setnames(tmp, c('N','P_CELL','P_REC','P_TR'), c('raw_number_phyloscanner_transmissions','raw_proportion_phyloscanner_transmissions','raw_conditionalprob_of_recipients_fixed_source','raw_conditionalprob_of_sources_fixed_recipient'))
+	tmp		<- suppressWarnings(melt(tmp, id.vars=c('REC_COMM_TYPE','TR_COMM_TYPE')))
+	tmp		<- dcast.data.table(tmp, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='value')
+	ans		<- copy(tmp)
+	
+	#
+	#	geography joint prob of sources agrarian/trading/fisherolk and recipients agrarian/trading/fisherolk  
+	#	adjusted for sequence sampling and participation
+	tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	z		<- z[, list(TR_OBS=sum(TR_OBS), TR_MISS=sum(TR_MISS), PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0('from_',TR_COMM_TYPE,' to_',REC_COMM_TYPE)]
+	mc.it	<- 1e2
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z[, TR_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\1',variable)]
+	z[, REC_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\2',variable)]	
+	z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(value, p=seq(0,1,0.01)))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]	
+	z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('PADJ_CL','PADJ_IL','PADJ_M','PADJ_IU','PADJ_CU'))
+	z[, P_CELL:= z[,paste0(round(PADJ_M,d=3)*100,'% [', round(PADJ_CL,d=3)*100,'%-', round(PADJ_CU,d=3)*100,'%]')]]
+	z[, variable:='adjusted-for-par-seq_proportion_phyloscanner_transmissions']
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_CELL')	
+	ans		<- rbind(ans, z)
+	
+	#	geography % sources agrarian/trading/fisherolk for given recipient communities
+	#	adjusted for sequence sampling and participation
+	groups	<- c('agrarian','trading','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- subset(zc, COMM_TYPE==group)$COMM_NUM_A		
+				z		<- subset(dcb, REC_COMM_NUM_A%in%tmp)[, list(PI_ITYPE_ALPHA= sum(PI_IJ_ALPHA)), by=c('TR_COMM_NUM_A','MONTE_CARLO_IT')]
+				tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				z		<- z[, list(PI_TYPETYPE_ALPHA=sum(PI_ITYPE_ALPHA)), by=c('TR_COMM_TYPE','MONTE_CARLO_IT')]	
+				#	aggregate and get quantiles
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_TYPETYPE_ALPHA)
+							colnames(tmp)	<- TR_COMM_TYPE
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				z		<- melt(z, id.vars='MONTE_CARLO_IT', variable.name='TR_COMM_TYPE', value.name='PI_TYPETYPE')
+				z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(PI_TYPETYPE, p=seq(0,1,0.01)))), by='TR_COMM_TYPE']
+				#	subset to main quantities of interest
+				z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE~P, value.var='Q')
+				z[, REC_COMM_TYPE:=group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('TR_CL','TR_IL','TR_M','TR_IU','TR_CU'))
+	z[, P_TR:= z[,paste0(round(TR_M,d=3)*100,'% [', round(TR_CL,d=3)*100,'%-', round(TR_CU,d=3)*100,'%]')]]
+	z[, variable:='adjusted-for-par-seq_conditionalprob_of_sources_fixed_recipient']
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_TR')
+	ans		<- rbind(ans, z)
+	
+	#
+	#	geography % recipients agrarian/trading/fisherolk for given source communities
+	#	adjusted for sequence sampling and participation		
+	groups	<- c('agrarian','trading','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- subset(zc, COMM_TYPE==group)$COMM_NUM_A		
+				z		<- subset(dcb, TR_COMM_NUM_A%in%tmp)[, list(PI_ITYPE_ALPHA= sum(PI_IJ_ALPHA)), by=c('REC_COMM_NUM_A','MONTE_CARLO_IT')]
+				tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(z, tmp, by='REC_COMM_NUM_A')
+				z		<- z[, list(PI_TYPETYPE_ALPHA=sum(PI_ITYPE_ALPHA)), by=c('REC_COMM_TYPE','MONTE_CARLO_IT')]	
+				#	aggregate and get quantiles
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_TYPETYPE_ALPHA)
+							colnames(tmp)	<- REC_COMM_TYPE
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				z		<- melt(z, id.vars='MONTE_CARLO_IT', variable.name='REC_COMM_TYPE', value.name='PI_TYPETYPE')
+				z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(PI_TYPETYPE, p=seq(0,1,0.01)))), by='REC_COMM_TYPE']
+				#	subset to main quantities of interest
+				z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), REC_COMM_TYPE~P, value.var='Q')
+				z[, TR_COMM_TYPE:=group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('REC_CL','REC_IL','REC_M','REC_IU','REC_CU'))
+	z[, P_REC:= z[,paste0(round(REC_M,d=3)*100,'% [', round(REC_CL,d=3)*100,'%-', round(REC_CU,d=3)*100,'%]')]]
+	z[, variable:='adjusted-for-par-seq_conditionalprob_of_recipients_fixed_sources']
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_REC')
+	ans		<- rbind(ans, z)
+	
+	
+	suradj	<- rsm[, list(RCCS_ELIGIBLE_AVG=round(sum(ELIGIBLE_AVG))), by='COMM_TYPE']
+	suradj	<- merge(suradj, data.table(COMM_TYPE=c('agrarian','trading','fisherfolk'), RAKAI_BEST_GUESS=round(c(271814.29,29425.87,19989.65))), by='COMM_TYPE')
+	suradj[, RAKAI_BEST_GUESS_P:= RAKAI_BEST_GUESS/sum(RAKAI_BEST_GUESS)]  
+	suradj[, RCCS_ELIGIBLE_AVG_P:= RCCS_ELIGIBLE_AVG/sum(RCCS_ELIGIBLE_AVG)]
+	suradj[, BEST_GUESS_ADJ:= RAKAI_BEST_GUESS_P/RCCS_ELIGIBLE_AVG_P]
+	
+	#
+	#	geography joint prob of sources agrarian/trading/fisherolk and recipients agrarian/trading/fisherolk  
+	#	adjusted for sequence sampling and participation
+	tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	z		<- z[, list(TR_OBS=sum(TR_OBS), TR_MISS=sum(TR_MISS), PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0('from_',TR_COMM_TYPE,' to_',REC_COMM_TYPE)]
+	mc.it	<- 1e2
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)	
+				tmp[, MONTE_CARLO_IT2:= seq_len(mc.it)]
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars=c('MONTE_CARLO_IT','MONTE_CARLO_IT2'))	
+	z[, TR_COMM_TYPE:= gsub('from_([a-z]+) to_([a-z]+)','\\1',variable)]
+	z[, REC_COMM_TYPE:= gsub('from_([a-z]+) to_([a-z]+)','\\2',variable)]
+	#	adjust for community selection
+	tmp		<- subset(suradj, select=c(COMM_TYPE, BEST_GUESS_ADJ))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))	
+	z		<- merge(z, tmp, by='TR_COMM_TYPE')
+	tmp		<- subset(suradj, select=c(COMM_TYPE, BEST_GUESS_ADJ))
+	setnames(tmp, colnames(tmp), paste0('REC_',colnames(tmp)))	
+	z		<- merge(z, tmp, by='REC_COMM_TYPE')	
+	z		<- z[, list(TR_COMM_TYPE=TR_COMM_TYPE, REC_COMM_TYPE=REC_COMM_TYPE, value=value, value_ADJ=value*TR_BEST_GUESS_ADJ*REC_BEST_GUESS_ADJ/sum(value*TR_BEST_GUESS_ADJ*REC_BEST_GUESS_ADJ)), by=c('MONTE_CARLO_IT','MONTE_CARLO_IT2')]
+	
+	z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(value_ADJ, p=seq(0,1,0.01)))), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]	
+	z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('PADJ_CL','PADJ_IL','PADJ_M','PADJ_IU','PADJ_CU'))
+	z[, P_CELL:= z[,paste0(round(PADJ_M,d=3)*100,'%')]]
+	z[, variable:='adjusted-for-bestguesssur-par-seq_proportion_phyloscanner_transmissions']
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])	
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_CELL')	
+	ans		<- rbind(ans, z)
+	
+	
+	#	geography % sources agrarian/trading/fisherolk for given recipient communities
+	#	adjusted for survey community selection and sequence sampling and participation
+	groups	<- c('agrarian','trading','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- subset(zc, COMM_TYPE==group)$COMM_NUM_A		
+				z		<- subset(dcb, REC_COMM_NUM_A%in%tmp)[, list(PI_ITYPE_ALPHA= sum(PI_IJ_ALPHA)), by=c('TR_COMM_NUM_A','MONTE_CARLO_IT')]
+				tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				z		<- z[, list(PI_TYPETYPE_ALPHA=sum(PI_ITYPE_ALPHA)), by=c('TR_COMM_TYPE','MONTE_CARLO_IT')]	
+				#	aggregate and get quantiles
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_TYPETYPE_ALPHA)
+							colnames(tmp)	<- TR_COMM_TYPE
+							tmp		<- as.data.table(tmp)
+							tmp[, MONTE_CARLO_IT2:= seq_len(mc.it)]
+						}, by=c('MONTE_CARLO_IT')]
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT','MONTE_CARLO_IT2'), variable.name='COMM_TYPE', value.name='PI_TYPETYPE')
+				#	adjust for community selection -- we choose not to account for uncertainty, only adjust for means
+				z		<- merge(z, subset(suradj, select=c(COMM_TYPE, BEST_GUESS_ADJ)), by='COMM_TYPE')
+				z		<- z[, list(COMM_TYPE=COMM_TYPE, PI_TYPETYPE=PI_TYPETYPE, PI_TYPETYPE_ADJ=PI_TYPETYPE*BEST_GUESS_ADJ/sum(PI_TYPETYPE*BEST_GUESS_ADJ)), by=c('MONTE_CARLO_IT','MONTE_CARLO_IT2')]				
+				z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(PI_TYPETYPE_ADJ, p=seq(0,1,0.01)))), by='COMM_TYPE']
+				setnames(z, 'COMM_TYPE', 'TR_COMM_TYPE')
+				#	subset to main quantities of interest
+				z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), TR_COMM_TYPE~P, value.var='Q')
+				z[, REC_COMM_TYPE:=group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('TR_CL','TR_IL','TR_M','TR_IU','TR_CU'))
+	z[, P_TR:= z[,paste0(round(TR_M,d=3)*100,'%')]]
+	z[, variable:='adjusted-for-bestguesssur-par-seq_conditionalprob_of_sources_fixed_recipient']
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_TR')
+	ans		<- rbind(ans, z)
+	
+	#
+	#	geography % recipients agrarian/trading/fisherolk for given source communities
+	#	adjusted for survey community selection and sequence sampling and participation		
+	groups	<- c('agrarian','trading','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- subset(zc, COMM_TYPE==group)$COMM_NUM_A		
+				z		<- subset(dcb, TR_COMM_NUM_A%in%tmp)[, list(PI_ITYPE_ALPHA= sum(PI_IJ_ALPHA)), by=c('REC_COMM_NUM_A','MONTE_CARLO_IT')]
+				tmp		<- unique(subset(zc, select=c(COMM_NUM_A, COMM_TYPE)))
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(z, tmp, by='REC_COMM_NUM_A')
+				z		<- z[, list(PI_TYPETYPE_ALPHA=sum(PI_ITYPE_ALPHA)), by=c('REC_COMM_TYPE','MONTE_CARLO_IT')]	
+				#	aggregate and get quantiles
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_TYPETYPE_ALPHA)
+							colnames(tmp)	<- REC_COMM_TYPE
+							tmp		<- as.data.table(tmp)
+							tmp[, MONTE_CARLO_IT2:= seq_len(mc.it)]
+						}, by=c('MONTE_CARLO_IT')]
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT','MONTE_CARLO_IT2'), variable.name='COMM_TYPE', value.name='PI_TYPETYPE')
+				#	adjust for community selection -- we choose not to account for uncertainty, only adjust for means
+				z		<- merge(z, subset(suradj, select=c(COMM_TYPE, BEST_GUESS_ADJ)), by='COMM_TYPE')
+				z		<- z[, list(COMM_TYPE=COMM_TYPE, PI_TYPETYPE=PI_TYPETYPE, PI_TYPETYPE_ADJ=PI_TYPETYPE*BEST_GUESS_ADJ/sum(PI_TYPETYPE*BEST_GUESS_ADJ)), by=c('MONTE_CARLO_IT','MONTE_CARLO_IT2')]				
+				z		<- z[, list(P=seq(0,1,0.01), Q=unname(quantile(PI_TYPETYPE_ADJ, p=seq(0,1,0.01)))), by='COMM_TYPE']
+				setnames(z, 'COMM_TYPE', 'REC_COMM_TYPE')
+				#	subset to main quantities of interest
+				z		<- dcast.data.table(subset(z, P%in%c(0.03, 0.25, 0.5, 0.75, 0.97)), REC_COMM_TYPE~P, value.var='Q')
+				z[, TR_COMM_TYPE:=group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	setnames(z, c('0.03','0.25','0.5','0.75','0.97'), c('REC_CL','REC_IL','REC_M','REC_IU','REC_CU'))
+	z[, P_REC:= z[,paste0(round(REC_M,d=3)*100,'%')]]
+	z[, variable:='adjusted-for-bestguesssur-par-seq_conditionalprob_of_recipients_fixed_sources']
+	set(z, NULL, 'REC_COMM_TYPE', z[,paste0('to_',REC_COMM_TYPE)])
+	set(z, NULL, 'TR_COMM_TYPE', z[,paste0('from_',TR_COMM_TYPE)])
+	z		<- dcast.data.table(z, variable+REC_COMM_TYPE~TR_COMM_TYPE, value.var='P_REC')
+	ans		<- rbind(ans, z)
+	
+	write.csv(ans, file=paste0(outfile.base, 'WAIFW_communitytypes.csv'))
 }
 
 RakaiFull.analyze.trmpairs.todi.170421.age<- function()
@@ -3244,10 +3729,20 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
 	neff.cut				<- 3
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda"
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda"
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda"	
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda"	
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d30.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda"
 	
+	outfile.base			<- gsub('\\.rda','_',infile.trmpairs.todi) 
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	load(infile.trmpairs.todi)	
 	rtp.tpairs	<- rtp.todi2
@@ -3338,6 +3833,14 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	setnames(rpw, c('MALE','FEMALE'), c('MALE_RID','FEMALE_RID'))
 	rpw			<- merge(rpw, unique(subset(rp, select=c(MALE_RID, FEMALE_RID))), by=c('MALE_RID','FEMALE_RID'))
 	
+	#
+	#	select run with max NEFF for each pair
+	#
+	tmp			<- unique(subset(rtp.tpairs, GROUP=='TYPE_PAIR_TODI2', c(MALE_RID, FEMALE_RID, PTY_RUN, NEFF)))
+	tmp			<- tmp[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('MALE_RID','FEMALE_RID')]
+	rtp.tpairs	<- merge(rtp.tpairs, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	rpw			<- merge(rpw, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	rplkl		<- merge(rplkl, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	#
 	#	make selections
 	group 		<- 'TYPE_PAIR_TODI2'
@@ -3477,7 +3980,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
 		
 		group		<- 'TYPE_BASIC'
-		#group		<- 'TYPE_PAIR_TODI'					
+		group		<- 'TYPE_PAIR_TODI2'					
 		rpw2		<- subset(rpw, GROUP==group)
 		rplkl2		<- subset(rplkl, GROUP==group)	
 		plot.file	<- paste0(outfile.base,'windows_summary_',group,'.pdf')
@@ -3498,7 +4001,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
 		
 		group		<- 'TYPE_BASIC'
-		#group		<- 'TYPE_PAIR_TODI'					
+		#group		<- 'TYPE_PAIR_TODI2'					
 		rpw2		<- subset(rpw, GROUP==group)
 		rplkl2		<- subset(rplkl, GROUP==group)	
 		plot.file	<- paste0(outfile.base,'windows_summary_notlklpairs_',group,'.pdf')
@@ -3901,10 +4404,10 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170811<- function()
 	#outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170428_"
 	#infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170516_cl3.rda'		
 	#outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170516_"
-	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_"	
 	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23.rda'		
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_"	
 	
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	#	now load second stage output
@@ -5065,6 +5568,58 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	Rakai.plot.directed.pairs.discrete1(tmp, cols, file.path(dir, paste(run,'-phsc-directionpairs_education.pdf',sep='')), 'Educational status', w=10, h=7)	
 }
 
+RakaiFull.analyze.couples.todi.170811.computing.effort.couples<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'	
+	load(infile)
+		
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_stagetwo.rda')
+	tmp			<- subset(pty.runs, PTY_RUN!=1)
+	set(tmp, NULL, 'PID', NULL)
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_stagethree.rda')
+	pty.runs	<- rbind(tmp, pty.runs)
+	
+	tmp			<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID)))
+	ptyc		<- tmp[, {
+				#FEMALE_RID<- 'A090383'; MALE_RID<- 'D110040'	
+				z	<- subset(pty.runs, RID%in%c(FEMALE_RID,MALE_RID), select=c(PTY_RUN, RID))
+				z	<- z[, list(HAS_COUPLE= length(unique(RID))>1), by='PTY_RUN']
+				z	<- subset(z, HAS_COUPLE)[, PTY_RUN]
+				list(PTY_RUN=z, N=length(z))				
+			}, by=c('FEMALE_RID','MALE_RID')]
+	unique(ptyc, by=c('FEMALE_RID','MALE_RID'))[, table(N)]
+	#N
+  	#	0   1   2   3   4 
+  	#	2 117 346  15   6 
+	
+	#	couples are in how many runs?
+	ptycr	<- unique(subset(ptyc, select=PTY_RUN))
+	#	324
+	
+	#	how many trees in these runs
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+	tmp		<- data.table(F=list.files(indir, pattern='trees.rda$', full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	ptycr	<- merge(ptycr, tmp, by='PTY_RUN')
+	ptycr	<- ptycr[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30/ptyr10_trees.rda'
+				load(F)
+				list(N_PHY=length(phs), MIN_TAXA=min(sapply(phs, Ntip)), MAX_TAXA=max(sapply(phs, Ntip)))
+			}, by='PTY_RUN']
+	
+	ptycr[, c( sum(N_PHY), min(MIN_TAXA), max(MAX_TAXA))]
+	#	87731    39 23438
+	
+}
+	
 RakaiFull.analyze.couples.todi.170811.demographic.table<- function()
 {	
 	require(data.table)
@@ -5075,12 +5630,14 @@ RakaiFull.analyze.couples.todi.170811.demographic.table<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	
-	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170522/todi_couples_170522_withmetadata.rda'
-	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda'
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170522/todi_couples_170522_"
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170522/todi_couples_170611_"
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_"
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"
 	load(infile)
+	
+	setkey(rca, MALE_RID, FEMALE_RID)
+	subset(rca[, list(N=length(PTY_RUN)), by=c('MALE_RID','FEMALE_RID')], N>1)
+	unique(rca, by=c('MALE_RID','FEMALE_RID'))
+	
 	#	table
 	#	location female (community type)
 	group	<- 'FEMALE_COMM_TYPE'
@@ -5224,6 +5781,8 @@ RakaiFull.analyze.couples.todi.170811.demographic.table<- function()
 	setkey(tmp, GROUP, FACTOR)
 	tmp		<- subset(tmp, select=c('GROUP','FACTOR','all','data','not a pair','ambiguous if pair','pair','pair direction'))
 	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base,'couples_demographics.csv'))
+	
+	
 }
 
 RakaiFull.analyze.trmpairs.todi.170522.demographic.table<- function()
@@ -5764,6 +6323,7 @@ RakaiFull.analyze.ffpairs.todi.170811<- function()
 							FT=   c(0.037, 0.053, 0.066, 0.077, 0.088, 0.098, 0.107))
 	cuts	<- melt(cuts, measure.vars=c('PHSC','RWGD','FT'))
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_ff_170811_cl3_prior23_min10_"
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_ff_170811_cl3_prior23_min30_"
 	
 	#	load dc
 	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda')	
@@ -5825,6 +6385,7 @@ RakaiFull.analyze.ffpairs.todi.170811<- function()
 	
 	#	load phyloscanner results for all windows
 	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_allwindows.rda"
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_allwindows.rda"
 	load(infile)	
 	#	we only have raw genetic distances, 
 	#	remember the FastTree patristic distances were pretty bad and ExaML never converged 
@@ -5914,8 +6475,9 @@ RakaiFull.analyze.ffpairs.todi.170811<- function()
 		prior.neff		<- 3
 		prior.keff		<- 2
 		confidence.cut	<- 0.66
-		trmw.min.reads	<- 10
-		indir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'	
+		trmw.min.reads	<- 30
+		indir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+		indir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
 		infiles			<- data.table(F=list.files(indir, pattern='trmStatsPerWindow.rda$', full.names=TRUE))
 		for(close in seq(0.01,0.04,0.005))
 		{		
@@ -6003,7 +6565,7 @@ RakaiFull.analyze.ffpairs.todi.170811<- function()
 		confidence.cut	<- 0.66
 		neff.cut		<- 3
 		indir		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'	
-		infiles		<- data.table(F=list.files(indir, pattern='todi_ff_170811_.*close[0-9]+.rda$', full.names=TRUE))
+		infiles		<- data.table(F=list.files(indir, pattern='todi_ff_170811_cl3_prior23_min30_close[0-9]+.rda$', full.names=TRUE))
 		rtp			<- infiles[, {
 					#F			<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_ff_170811_cl3_prior23_min10_close10.rda'
 					load(F)
@@ -6366,6 +6928,121 @@ RakaiFull.analyze.trmpairs.todi.170811.intermingledwithintermediate<- function()
 	}
 }
 
+RakaiFull.analyze.couples.todi.170811.shorter.than.fulllength<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+		
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"
+	load(infile)	
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]
+	
+	#	average number of windows per couple with enough data
+	subset(rca, !grepl('insufficient', SELECT))[, mean(NEFF)]
+	#	9.76
+	
+	#	select pairs with more than 15 windows 	
+	neff.select	<- 15 
+	replicate.n	<- 100
+	de			<- subset(rca, NEFF>neff.select, c(FEMALE_RID, MALE_RID, PTY_RUN, SELECT, NEFF))
+	setnames(de, c('FEMALE_RID','MALE_RID','PTY_RUN'), c('FEMALE_RID_Q','MALE_RID_Q','PTY_RUN_Q'))
+	#	add how many non-overlapping windows to be chosen at random
+	de			<- merge(de, de[, list(N_CHOOSE=c(1,3,5,10)), by=c('FEMALE_RID_Q','MALE_RID_Q','PTY_RUN_Q')],by=c('FEMALE_RID_Q','MALE_RID_Q','PTY_RUN_Q'))	
+	de			<- merge(de, as.data.table(expand.grid(N_CHOOSE=c(1,3,5,10), REP=seq_len(replicate.n))), by=c('N_CHOOSE'), allow.cartesian=TRUE)
+	#	
+	
+	#
+	#	select windows at random, 
+	#	then calculate most likely assignment across subsampled windows
+	#	for TYPE_PAIR_TODI2 and TYPE_NETWORK_SCORES
+	set.seed(42)
+	trmw.close.brl			<- 0.035 
+	trmw.distant.brl		<- 0.08
+	prior.keff				<- prior.keff.dir <- 2
+	prior.neff				<- prior.neff.dir <- 3 
+	prior.calibrated.prob	<- 0.66	
+	get.groups				<- c('TYPE_PAIR_TODI2','TYPE_NETWORK_SCORES')	
+	de						<- de[, {
+				#FEMALE_RID_Q 	<- 'K110876'; MALE_RID_Q <- 'F110995'; PTY_RUN_Q<- 318; N_CHOOSE<- 10
+				#	subset to query individual
+				female_rid	<- FEMALE_RID_Q; male_rid<- MALE_RID_Q; pty.run<- PTY_RUN_Q	
+				tmp			<- unique(subset(rpw, GROUP=='TYPE_RAW' & FEMALE_RID==female_rid & MALE_RID==male_rid & PTY_RUN==pty.run, c(FEMALE_RID,MALE_RID,PTY_RUN,W_FROM,W_TO)))
+				#	determine distinct windows
+				tmp[, NEXT_NON_OVERLAPPING:= NA_integer_]
+				set(tmp, 1L, 'NEXT_NON_OVERLAPPING', 1L)
+				i			<- tail(which(!is.na(tmp$NEXT_NON_OVERLAPPING)))
+				while( length(i) && i<nrow(tmp) )
+				{
+					set(tmp, tmp[, which(W_FROM<tmp$W_TO[i] & W_TO>tmp$W_TO[i])], 'NEXT_NON_OVERLAPPING', 0L)
+					i	<- tmp[, which(W_FROM>=tmp$W_TO[i])]
+					if(length(i))
+					{
+						i	<- i[1] 
+						set(tmp, i, 'NEXT_NON_OVERLAPPING', 1L)		
+					}		
+				}
+				tmp		<- tmp[sample(which(NEXT_NON_OVERLAPPING==1), N_CHOOSE),]
+				tmp		<- merge(subset(rpw, GROUP=='TYPE_RAW'), tmp, by=c('FEMALE_RID','MALE_RID','PTY_RUN','W_FROM','W_TO'))
+				setnames(tmp, c('MALE_RID','FEMALE_RID','TYPE','PATHS_MF','PATHS_FM'), c('ID1','ID2','TYPE_RAW','PATHS_12','PATHS_21'))
+				set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('fm','21',gsub('mf','12',TYPE_RAW))])
+				set(tmp, NULL, 'GROUP', NULL)
+				dwin	<- phsc.get.basic.pairwise.relationships(tmp, trmw.close.brl, trmw.distant.brl, verbose=FALSE)
+				setnames(dwin, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	
+				dwin	<- phsc.get.pairwise.relationships(dwin, get.groups=get.groups, make.pretty.labels=FALSE)
+				setnames(dwin, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
+				dl		<- phsc.get.pairwise.relationships.keff.and.neff(dwin, get.groups)
+				#	get most likely assignment on subsampled windows
+				dl		<- subset(dl, GROUP%in%get.groups)[, 	{
+																	z<- which(KEFF==max(KEFF))
+																	list(TYPE_MLE=TYPE[ifelse(length(z)>1, sample(z,1), z)])
+																}, by=c('ID1','ID2','GROUP')]
+				set(dl, NULL, 'TYPE_MLE', dl[, gsub('21','fm',gsub('12','mf',TYPE_MLE))])
+				set(dl, NULL, c('ID1','ID2'), NULL)
+			}, by=c('FEMALE_RID_Q','MALE_RID_Q','PTY_RUN_Q','N_CHOOSE','REP')]	
+	setnames(de, c('FEMALE_RID_Q','MALE_RID_Q','PTY_RUN_Q'), c('FEMALE_RID','MALE_RID','PTY_RUN'))
+	#	add most likely assignment on real data
+	tmp	<- unique(subset(de, select=c('FEMALE_RID','MALE_RID','PTY_RUN','GROUP')))
+	tmp	<- merge(tmp, rplkl, by=c('FEMALE_RID','MALE_RID','PTY_RUN','GROUP'))
+	tmp	<- tmp[, 	{
+						z<- which(KEFF==max(KEFF))
+						list(TYPE_MLE_FULLLEN=TYPE[ifelse(length(z)>1, sample(z,1), z)])
+					}, by=c('FEMALE_RID','MALE_RID','PTY_RUN','GROUP')]
+	de	<- merge(de, tmp, by=c('FEMALE_RID','MALE_RID','PTY_RUN','GROUP'))	
+	save(de, file=paste0(outfile.base,'fulllen_vs_shorterlen.rda'))
+	#	summarise misclassification error for linked couples
+	tmp	<- subset(rca, grepl('likely a pair',SELECT), select=c(FEMALE_RID,MALE_RID,PTY_RUN))
+	tmp	<- merge(tmp, de, by=c('FEMALE_RID','MALE_RID','PTY_RUN'))
+	tmp	<- tmp[, list(E= length(which(TYPE_MLE!=TYPE_MLE_FULLLEN))/length(TYPE_MLE) ), by=c('GROUP','N_CHOOSE','REP')]
+	tmp	<- tmp[, list(P=paste0('p',c(0.025,0.25,0.5,0.75,0.975)), Q=quantile(E, prob=c(0.025,0.25,0.5,0.75,0.975))), by=c('GROUP','N_CHOOSE')]
+	tmp	<- dcast.data.table(tmp, GROUP+N_CHOOSE~P, value.var='Q')
+	tmp[, ANS:= paste0(round(p0.5*100, d=1), ' [',round(p0.025*100, d=1),', ',round(p0.975*100, d=1),']')]
+	tmp	<- dcast.data.table(tmp, GROUP~N_CHOOSE, value.var='ANS')
+	write.csv(tmp, file=paste0(outfile.base,'fulllen_vs_shorterlen_summary_among_linked_couples.csv'))
+	#                 GROUP                 1                 3                 5                10
+	#1: TYPE_NETWORK_SCORES 56.5 [39.1, 73.9] 47.8 [30.4, 71.8] 43.5 [30.4, 60.9] 34.8 [17.4, 47.8]
+	#2:     TYPE_PAIR_TODI2     8.7 [0, 21.7]       4.3 [0, 13]        0 [0, 8.7]        0 [0, 4.3]
+	
+	#	summarise misclassification error for all couples
+	tmp	<- de[, list(E= length(which(TYPE_MLE!=TYPE_MLE_FULLLEN))/length(TYPE_MLE) ), by=c('GROUP','N_CHOOSE','REP')]
+	tmp	<- tmp[, list(P=paste0('p',c(0.025,0.25,0.5,0.75,0.975)), Q=quantile(E, prob=c(0.025,0.25,0.5,0.75,0.975))), by=c('GROUP','N_CHOOSE')]
+	#	make table
+	tmp	<- dcast.data.table(tmp, GROUP+N_CHOOSE~P, value.var='Q')
+	tmp[, ANS:= paste0(round(p0.5*100, d=1), ' [',round(p0.025*100, d=1),', ',round(p0.975*100, d=1),']')]
+	tmp	<- dcast.data.table(tmp, GROUP~N_CHOOSE, value.var='ANS')
+	write.csv(tmp, file=paste0(outfile.base,'fulllen_vs_shorterlen_summary.csv'))
+	#	              GROUP              1             3            5          10
+	#1: TYPE_NETWORK_SCORES 	34 [22, 44] 30 [18.9, 39] 26 [18, 37] 22 [12, 29]
+	#2:     TYPE_PAIR_TODI2  	 10 [4, 17]     6 [2, 12]   4 [2, 10]    2 [0, 6]
+	
+}
+
 RakaiFull.analyze.couples.todi.170811.birdseyeview<- function()
 {	
 	require(data.table)
@@ -6524,6 +7201,8 @@ RakaiFull.analyze.couples.todi.170811.DI.vs.TODI.vs.DIR<- function()
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"	
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda'		
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_"	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"	
 	
 	load(infile)
 	#	per pair:
@@ -6757,7 +7436,255 @@ RakaiFull.analyze.couples.todi.170811.DI.vs.TODI.vs.DIR<- function()
 	}
 }
 
-RakaiFull.analyze.couples.todi.170522.DIRext<- function()
+
+RakaiFull.analyze.couples.todi.170811.compare.FF<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	cuts	<- data.table(	ID=   seq(1,7),
+			PHSC= c(0.01,0.015,0.02,0.025,0.03,0.035,0.04),
+			RWGD= c(0.0185, 0.026, 0.032, 0.0375, 0.041, 0.045, 0.048),
+			FT=   c(0.037, 0.053, 0.066, 0.077, 0.088, 0.098, 0.107))
+	cuts	<- melt(cuts, measure.vars=c('PHSC','RWGD','FT'))
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_ff_170811_cl3_prior23_min10_"
+	
+	#	load dc
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda')	
+	# 	load rd rp
+	#	load couples to search for in phyloscanner output
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+	#
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	
+	neff.cut		<- 3
+	confidence.cut	<- 0.66
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_ff_170811_'
+	infiles			<- data.table(F= c(	'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min50_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl25_prior23_min30_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl45_prior23_min30_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_s10_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_s40_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d30_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d100_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000_allwindows.rda'))
+	rff				<- infiles[, {
+				#F<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_allwindows.rda'
+				load(F)	
+				rff	<- subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='linked' & NEFF>=neff.cut & ID1_SEX=='F' & ID2_SEX=='F')
+				rff[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
+				rff	<- subset(rff, POSTERIOR_SCORE>=confidence.cut)
+				#	eliminate duplicates: make RID < RID_2 for FF pairs
+				tmp	<- subset(rff, ID1_SEX=='F' & ID2_SEX=='F' & ID1>ID2)
+				setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))	
+				rff<- rbind(subset(rff, ID1_SEX=='F' & ID2_SEX=='F' & ID1<ID2), tmp)
+				#	define if individual part of couple
+				rff[, ID1_COUPLE:= 0L]
+				set(rff, rff[, which(ID1%in%rp$FEMALE_RID)], 'ID1_COUPLE', 1L)	
+				rff[, ID2_COUPLE:= 0L]
+				set(rff, rff[, which(ID2%in%rp$FEMALE_RID)], 'ID2_COUPLE', 1L)		
+				rff	<- subset(rff, ID1_COUPLE==1 | ID2_COUPLE==1)
+				#	eliminate duplicates: only pty.run with max NEFF
+				tmp	<- rff[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]
+				rff	<- merge(rff, tmp, by=c('ID1','ID2','PTY_RUN'))
+				rff
+			}, by='F']
+	save(rff, file=paste0(outfile.base,'compare_runs.rda'))
+}
+
+
+RakaiFull.analyze.couples.todi.170811.compare.DIRext<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_'
+	infiles		<- data.table(F=c(	'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d30_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40_withmetadata.rda'
+									))		
+	rca			<- infiles[, {
+				cat('\nprocess',F)	
+				load(F)
+				setkey(rca, MALE_RID, FEMALE_RID)
+				rca[, PAIRID:=seq_len(nrow(rca))]
+				#	prepare extending serodiscordant couples	
+				rca[, EXT_TYPE:=NA_character_]
+				set(rca, rca[, which(FEMALE_LASTNEGDATE>=MALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-mf')		
+				set(rca, rca[, which(MALE_LASTNEGDATE>=FEMALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-fm')	
+				#	add extra couples in who one has CD4<400 and the other has CD4>800
+				#	for male potential recipient - evaluate CD4 around time male first positive
+				tmp	<- rca[, which(is.na(EXT_TYPE) &
+										MALE_RECENTCD4>800 & abs(MALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2 &
+										FEMALE_RECENTCD4<400 & abs(FEMALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2)]
+				set(rca, tmp, 'EXT_TYPE', 'CD4disc-fm')
+				#	for female potential recipient - evaluate CD4 around time female first positive
+				tmp	<- rca[, which(is.na(EXT_TYPE) &
+										FEMALE_RECENTCD4>800 & abs(FEMALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2 &
+										MALE_RECENTCD4<400 & abs(MALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2)]
+				set(rca, tmp, 'EXT_TYPE', 'CD4disc-mf')
+				#	separate into EXT_TYPE and EXT_DIR
+				set(rca, NULL, 'EXT_DIR', rca[, gsub('^([a-zA-Z0-9]+)-([a-zA-Z]+)$','\\2',EXT_TYPE)])
+				set(rca, NULL, 'EXT_TYPE', rca[, gsub('^([a-zA-Z0-9]+)-([a-zA-Z]+)$','\\1',EXT_TYPE)])
+				#	subset to couples for who we have extended type
+				df	<- subset(rca, !is.na(EXT_TYPE))
+				df[, EXT_EVAL:= NA_character_]
+				tmp	<- df[, which(TYPE%in%c('mf','fm'))]
+				set(df, tmp, 'EXT_EVAL', df[tmp, as.character(factor(TYPE==EXT_DIR, levels=c(TRUE,FALSE),labels=c('correct','incorrect')))])
+				tmp	<- df[, which(is.na(EXT_EVAL))]
+				set(df, tmp, 'EXT_EVAL', df[tmp, SELECT])
+				set(df, NULL, 'EXT_EVAL', df[, factor(EXT_EVAL, levels=c("insufficient deep sequence data for at least one partner of couple","couple most likely not a pair", "couple ambiguous if pair or not pair", "couple most likely a pair direction not resolved", "correct", "incorrect"))])
+				rca	<- merge(rca, subset(df, select=c(PAIRID, EXT_EVAL)), by='PAIRID', all.x=TRUE)				
+				rca
+			}, by='F']		
+	
+	set(rca, NULL, 'F', rca[, basename(F)])
+	df	<- rca[, list(N=length(PAIRID)), by=c('F','SELECT')]
+	write.csv(dcast.data.table(df, F~SELECT, value.var='N'), file=paste0(outfile.base,'compare_trms.csv'))
+	
+	df	<- subset(rca, !is.na(EXT_TYPE))[, list(N=length(PAIRID)), by=c('F','EXT_EVAL','EXT_TYPE')]
+	write.csv(dcast.data.table(df, F+EXT_EVAL~EXT_TYPE, value.var='N'), file=paste0(outfile.base,'compare_dir.csv'))
+ 	#
+	rca[, table(EXT_EVAL, EXT_TYPE, useNA='if')]
+}
+
+
+RakaiFull.analyze.couples.todi.170811.why.no.direction<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"	
+	
+	load(infile)
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]
+	rca		<- subset(rca, SELECT=='couple most likely a pair direction not resolved')
+	rplkl2	<- subset(rplkl, GROUP=='TYPE_NETWORK_SCORES')
+	rplkl2	<- merge(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), rplkl2, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	
+	da		<- rplkl2[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN')]
+	da[, table(TYPE_MLE)]
+	#	ambiguous                     fm                     mf not close/disconnected 
+	#		   19                     17                     20                      3 
+	subset(da, TYPE_MLE=='not close/disconnected')
+	#	these have intermediates
+		
+	rplkl2	<- subset(rplkl, GROUP=='TYPE_BASIC')
+	rplkl2	<- merge(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), rplkl2, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	rplkl2[, TYPE_TO:= NA_character_]
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE))], 'TYPE_TO', 'close other')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('chain mf', TYPE))], 'TYPE_TO', 'mf')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('chain fm', TYPE))], 'TYPE_TO', 'fm')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(rplkl2, rplkl2[,which(grepl('close', TYPE) & grepl('no intermediate', TYPE) & grepl('other', TYPE))], 'TYPE_TO', 'adjacent')
+	rplkl2	<- subset(rplkl2, !is.na(TYPE_TO))
+	rplkl2	<- rplkl2[, list(KEFF=sum(KEFF)), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+	da		<- rplkl2[, list(TYPE_MLE=TYPE_TO[which.max(KEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN')]
+	da[, table(TYPE_MLE)]
+	# TYPE_MLE
+    #	adjacent  close other           fm intermingled           mf 
+    #   	   6            1           19            6           27 
+	set(da, NULL, 'TYPE_MLE', da[, gsub('fm|mf', 'fm or mf',TYPE_MLE)])
+	set(da, NULL, 'TYPE_MLE', da[, gsub('close other', 'intermingled',TYPE_MLE)])
+	
+	#	for all, compute median subtree distances
+	#	compute confidence intervals
+	rpw2	<- subset(rpw, GROUP=='TYPE_PAIR_TODI2')
+	rpw2	<- merge(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), rpw2, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	da		<- merge(da, rpw2[, list(PHSC_Q50=median(PATRISTIC_DISTANCE)), by=c('MALE_RID','FEMALE_RID','PTY_RUN')], by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	tmp		<- da[, list(N=length(MALE_RID), P=paste0('p',c(0.025,0.25,0.5,0.75,0.975)), Q=quantile(PHSC_Q50, p=c(0.025,0.25,0.5,0.75,0.975))), by='TYPE_MLE']
+	tmp		<- dcast.data.table(tmp, TYPE_MLE+N~P, value.var='Q')
+	tmp[, PHSC_Q5050:= paste0(round(p0.5*1e2, d=2), '% [',round(p0.25*1e2, d=2),'%-',round(p0.75*1e2, d=2),'%]')]
+	write.csv( subset(tmp, select=c(TYPE_MLE, N, PHSC_Q5050)), file=paste0(outfile.base, 'unresolveddir.csv'))
+	
+}
+
+
+RakaiFull.analyze.couples.todi.170811.DIRext<- function()
 {	
 	require(data.table)
 	require(scales)
@@ -6773,6 +7700,10 @@ RakaiFull.analyze.couples.todi.170522.DIRext<- function()
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_"		
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_withmetadata.rda'		
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_"	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl_"	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"	
 	
 	load(infile)
 	setkey(rca, MALE_RID, FEMALE_RID)
@@ -6939,7 +7870,7 @@ RakaiFull.analyze.couples.todi.170522.DIRext<- function()
 				theme(axis.ticks.y=element_blank(), panel.border=element_blank()) +
 				labs(x='',y='',fill='') +	
 				coord_flip()
-		pdf(file=plot.file, w=8.27*1.5, h=11.69*1.5)
+		pdf(file=plot.file, w=8.27*1.5, h=11.69*0.8)
 		grid.newpage()	
 		pushViewport(viewport(layout=grid.layout(1, 4, widths=unit(c(1.3,6,3.5,2.5), "null"))))   	
 		print(p1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -7391,10 +8322,15 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	ggsave(file=paste0(outfile.base,'_distances_consPatristic.pdf'), w=7, h=7)
 		
 	dfd2[, cor(log10(CONS_PD_MEAN), log10(PHSC_PD_MEAN))]
-	#	0.9366971
+	#	0.932
 	dfd2[, cor(log10(CONS_PD_Q50), log10(PHSC_PD_Q50))]
-	#	0.7682366
-	
+	#	0.757
+	dfd2[, cor(log10(CONS_PD_MEAN), log10(PHSC_PD_MEAN), method='spearman')]
+	#	0.91
+	dfd2[, cor(log10(CONS_PD_Q50), log10(PHSC_PD_Q50), method='spearman')]	
+	#	0.8951977
+
+
 	#
 	#	define outliers
 	#	determine outliers as before through regression curve based on Cooks Distance	

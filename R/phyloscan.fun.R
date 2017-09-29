@@ -607,7 +607,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 	if(!nchar(window.automatic))
 		cmd	<- paste(cmd,' --windows ', paste(as.character(window.coord), collapse=','),sep='')
 	if(!is.na(alignments.file))
-		cmd	<- paste(cmd,' --alignment-of-other-refs ',alignments.file,sep='')	
+		cmd	<- paste(cmd,' --alignment-of-other-refs "',alignments.file,'"',sep='')	
 	if(!is.na(no.trees))		
 		cmd	<- paste(cmd, no.trees)
 	if(!is.na(num.bootstraps))
@@ -675,18 +675,49 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	#
 	#	associate BAM and REF files with each scheduled phylotype run
 	#	
+	set(pty.runs, NULL, 'SAMPLE_ID',  pty.runs[, gsub('\\.bam$','',SAMPLE_ID)])
 	#	get available Bam files
 	ptyd		<- data.table(FILE=list.files(pty.args[['data.dir']], full.names=TRUE))
 	ptyd[, TYPE:=NA_character_]
-	set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')
 	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
-	ptyd		<- subset(ptyd, !is.na(TYPE))
-	ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
-	ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
+	#	get Reference files
+	#	if reference files that were used in assembly are not specified in pty.runs, search for SAMPLE_ID+'_ref.fasta'
+	if(!any(colnames(pty.runs)=='REFERENCE_ID'))
+	{		
+		set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')		
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')		
+	}
+	#	if reference files that were used in assembly are specified in pty.runs, use these
+	if(any(colnames(pty.runs)=='REFERENCE_ID'))
+	{
+		tmp			<- subset(ptyd, is.na(TYPE))
+		tmp[, REFERENCE_ID:= gsub('\\.bam','',basename(FILE))]
+		tmp			<- merge(subset(pty.runs, select=c(SAMPLE_ID, REFERENCE_ID)), subset(tmp, select=c(REFERENCE_ID, FILE)), by='REFERENCE_ID')
+		tmp[, TYPE:='REF']
+		tmp[, REFERENCE_ID:=NULL]
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam$','',basename(FILE))]
+		ptyd		<- rbind(ptyd, tmp)
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
+	}
 	#	merge
-	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)
+	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)	
 	if(!any(is.na(pty.args[['select']])))
-		ptyd<- subset(ptyd, PTY_RUN%in%pty.args[['select']])		
+		ptyd<- subset(ptyd, PTY_RUN%in%pty.args[['select']])			
+	#	if background alignment is specified in pty.runs, use it
+	if(any(colnames(ptyd)=='BACKGROUND_ID'))
+	{
+		tmp	<- unique(data.table(BACKGROUND_ID=ptyd[, BACKGROUND_ID], FILE=file.path(pty.args[['data.dir']], ptyd[, BACKGROUND_ID])))
+		#	check if files exist
+		tmp	<- tmp[, list(EXISTS=file.exists(FILE)), by=c('BACKGROUND_ID','FILE')]
+		if(any(tmp[, !EXISTS]))
+			warning('\nCould not find location of BACKGROUND files for all runs in pty.runs, n=', tmp[, length(which(!EXISTS))],'\nRuns with missing background alignments are ignored. Please check.')
+		ptyd <- merge(ptyd, subset(tmp, EXISTS, c(BACKGROUND_ID, FILE)), by='BACKGROUND_ID')
+		set(ptyd, NULL, 'BACKGROUND_ID', NULL)
+		setnames(ptyd, 'FILE', 'BACKGROUND_ID')
+	}
 	if(ptyd[,any(is.na(BAM))])
 		warning('\nCould not find location of BAM files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(BAM)))],'\nMissing individuals are ignored. Please check.')	
 	if(ptyd[,any(is.na(REF))])
@@ -696,7 +727,8 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	#	write pty.run files and get pty command lines
 	#
 	pty.c		<- ptyd[, {
-				#	PTY_RUN<- z <- 22; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]									
+				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]
+				#	SAMPLE_ID<- subset(ptyd, PTY_RUN==z)[, SAMPLE_ID]; RENAME_ID<- subset(ptyd, PTY_RUN==z)[, RENAME_ID]; BACKGROUND_ID<- subset(ptyd, PTY_RUN==z)[, BACKGROUND_ID]
 				file.input		<- file.path(pty.args[['work.dir']], paste('ptyr',PTY_RUN,'_input.csv',sep=''))
 				tmp				<- cbind(BAM[!is.na(BAM)&!is.na(REF)], REF[!is.na(BAM)&!is.na(REF)])
 				if(exists('RENAME_ID'))
@@ -706,7 +738,15 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 				tmp				<- paste0(SAMPLE_ID[!is.na(BAM)&!is.na(REF)],'.bam')
 				if(exists('UNIT_ID'))
 					tmp			<- unique(UNIT_ID[!is.na(BAM)&!is.na(REF)])
+				if(exists('RENAME_ID'))
+					tmp			<- unique(RENAME_ID[!is.na(BAM)&!is.na(REF)])				
 				cat( paste(tmp,collapse='\n'), file= file.patient	)
+				if(exists('BACKGROUND_ID'))
+				{
+					if(length(unique(BACKGROUND_ID))!=1)
+						stop('\nrun',PTY_RUN,' Expected one background alignment file, found: ',paste(unique(BACKGROUND_ID), collapse=''),'. Please check.')
+					pty.args$alignments.file<- unique(BACKGROUND_ID)
+				}				
 				cmd			<- phsc.cmd.phyloscanner.one(	pty.args, 
 															file.input, 
 															file.patient)
@@ -1229,6 +1269,7 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI']]	<- tmp2
+	cols.type[['TYPE_PAIR_TODI2']]	<- tmp2
 	tmp2		<- data.table(	TYPE= c("chain", "intermediate distance", "distant"),
 								COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
@@ -1387,7 +1428,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 			heights	<- unit(c(2, 3.5, 4, 15), "null")
 			height	<- 17
 		}		
-		if(group%in%c('TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI'))
+		if(group%in%c('TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI','TYPE_PAIR_TODI2'))
 		{
 			heights	<- unit(c(2, 3.5, 4, 3.75), "null")
 			height	<- 8
@@ -2325,7 +2366,7 @@ phsc.read.trees<- function(prefix.infiles, prefix.run='ptyr', regexpr.trees='Sub
 #' @param trmw.close.brl  Maximum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically close.
 #' @param trmw.distant.brl   Minimum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically distant.
 #' @return input data.table with new relationship column TYPE_BASIC. 
-phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distant.brl)
+phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distant.brl, verbose=TRUE)
 {
 	df[, TYPE_BASIC:= TYPE_RAW]
 	
@@ -2334,37 +2375,37 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#	chains_12 
 	#
 	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & CONTIGUOUS)]
-	cat('\nFound PATHS_12>0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> chain_12 with no intermediate')
+	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> chain_12 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
 	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS)]
-	cat('\nFound PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> chain_12 with intermediate')
+	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> chain_12 with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')	
 	#
 	#	chains_21
 	#
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & CONTIGUOUS)]
-	cat('\nFound PATHS_12==0 & PATHS_21>0 & CONTIGUOUS, n=', length(tmp),'--> chain_21 with no intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21>0 & CONTIGUOUS, n=', length(tmp),'--> chain_21 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS)]
-	cat('\nFound PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS, n=', length(tmp),'--> chain_21 with intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS, n=', length(tmp),'--> chain_21 with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
 	#
 	#	intermingled 
 	#
 	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & CONTIGUOUS)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> intermingled with no intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> intermingled with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
 	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & !CONTIGUOUS)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> intermingled with intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> intermingled with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
 	#
 	#	other
 	#
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other with no intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT)]
-	cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
@@ -2373,16 +2414,16 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#
 	if(!is.na(trmw.close.brl) & is.finite(trmw.close.brl))
 	{
-		cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
+		if(verbose) cat('\nidentifying close pairwise assignments using distance=',trmw.close.brl)
 		tmp		<- df[, which(PATRISTIC_DISTANCE<trmw.close.brl)]
-		cat('\nFound close, n=', length(tmp))
+		if(verbose) cat('\nFound close, n=', length(tmp))
 		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_close')])		
 	}
 	if(!is.na(trmw.distant.brl) & is.finite(trmw.distant.brl))
 	{
-		cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
+		if(verbose) cat('\nidentifying distant pairwise assignments using distance=',trmw.distant.brl)
 		tmp		<- df[, which(PATRISTIC_DISTANCE>=trmw.distant.brl)]
-		cat('\nFound distant, n=', length(tmp))
+		if(verbose) cat('\nFound distant, n=', length(tmp))
 		set(df, tmp, 'TYPE_BASIC', df[tmp, paste0(TYPE_BASIC,'_distant')])	
 	}
 	df
@@ -2616,7 +2657,9 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 				if(length(tmp))
 					ans	<- min(tmp)
 				list(W_SLIDE=ans)
-			}, by=c('ID1','ID2')][, min(na.omit(W_SLIDE))]
+			}, by=c('ID1','ID2')]
+	w.slide	<- subset(w.slide, !is.na(W_SLIDE))
+	w.slide	<- ifelse(nrow(w.slide), w.slide[, min(W_SLIDE)], 1L)
 	#	define chunks
 	setkey(df, ID1, ID2, W_FROM)
 	tmp		<- df[, {
