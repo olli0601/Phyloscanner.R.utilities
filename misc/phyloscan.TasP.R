@@ -116,25 +116,23 @@ Tasp.pipeline.testbatch.170925.stage1<- function()
 	}
 	if(1)
 	{	
+		#olli's paths
 		#HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch'
 		in.dir				<- file.path(HOME,"input")
 		work.dir			<- file.path(HOME,"tmp")		
 		out.dir				<- file.path(HOME,"output")				
-		pty.runs			<- as.data.table(read.table( file.path(in.dir, 'ptyRuns_2batchesTest_OR.csv'), header=TRUE ))
+		pty.runs			<- as.data.table(read.csv( file.path(in.dir, 'ptyRuns_2batchesTest_OR.csv'), header=TRUE, stringsAsFactors=FALSE ))
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		#hpc.nproc			<- 4	
 		hpc.nproc			<- 1
-		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
-		pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
+		#pty.data.dir		<- '/work/or105/PANGEA_mapout/data'
+		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
+		pty.data.dir		<- file.path(HOME,"data")
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))		
 		pty.select			<- 1			
-	}	
-	if(0)
-	{
-		prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
-		pty.data.dir		<- file.path(HOME,"data")		
-	}			
+	}					
 	#
 	#	INPUT ARGS PHYLOSCANNER RUN
 	#	
