@@ -33,6 +33,42 @@ TasP.calculate.bam.readlength.coverage<- function()
 	save(bam.len, bam.cov, file= outfile)
 }
 
+TasP.evaluate.window.len<- function()
+{	
+	tip.regex	<- '(.*)_read_([0-9]+)_count_([0-9]+)'
+	min.count	<- 30
+	indir		<- '~/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch'
+	plot.file	<- '~/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch/171001_evaluate_winlen.pdf'
+	infiles		<- data.table(F=list.files(indir, recursive=TRUE, full.names=TRUE, pattern='subgraphs_s_ptyr1_InWindow_.*.rda$'))
+	infiles[, WLEN:= as.integer(gsub('.*_winlen([0-9]+).*','\\1',F))]
+	infiles[, WFROM:= as.integer(gsub('.*_InWindow_([0-9]+).*','\\1',F))]
+	infiles[, PTY_RUN:= as.integer(gsub('.*ptyr([0-9]+)_.*','\\1',F))]
+	
+	
+	dw			<- infiles[, {
+				#F			<- '~/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch/ptyr1_winlen180/subgraphs_s_ptyr1_InWindow_2300_to_2479.rda'
+				load(F)
+				tmp			<- data.table(TAXA=tree$tip.label)
+				tmp			<- subset(tmp, grepl(tip.regex, TAXA))
+				tmp[, ID:= gsub(tip.regex,'\\1',TAXA)]
+				tmp[, READ:= as.integer(gsub(tip.regex,'\\2',TAXA))]
+				tmp[, COUNT:= as.integer(gsub(tip.regex,'\\3',TAXA))]				
+				tmp			<- tmp[, list(READ=length(unique(READ)), COUNT=sum(COUNT)),by='ID']
+				tmp
+			}, by=c('PTY_RUN','WLEN','WFROM')]
+	
+	tmp			<- subset(dw, COUNT>=min.count)[, list(IDN=length(unique(ID))), by=c('PTY_RUN','WLEN','WFROM')]
+	tmp			<- tmp[, list(IDN_L=min(IDN), IDN_M=mean(IDN), IDN_U=max(IDN)), by=c('PTY_RUN','WLEN')]
+	
+	ggplot(tmp, aes(x=WLEN, y=IDN_M, ymin=IDN_L, ymax=IDN_U)) + 
+			geom_point() + 
+			geom_errorbar() + 
+			scale_y_continuous(lim=c(0,75), breaks=seq(0,75,5), expand=c(0,0)) +
+			labs(x='window length', y='number of individuals with min 30 reads')
+	ggsave(file=plot.file, w=5, h=6)
+	ggplot(tmp, aes(x=WFROM, y=IDN)) + geom_bar(stat='identity') + facet_wrap(~WLEN, scales='free_x', ncol=4)
+}
+
 TasP.evaluate.bam.len<- function()
 {	
 	infile.bam		<- '~/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch/output/bam_stats_170928.rda'
@@ -165,8 +201,11 @@ Tasp.pipeline.testbatch.170925.stage1<- function()
 				quality.trim.ends=23, 
 				min.internal.quality=23, 
 				#win=c(2300,2800,125,250),
-				win=c(2300,2800,75,150),
-				#win=c(800,9400,125,250), 				
+				#win=c(2300,2800,75,150),
+				#win=c(2300,2800,100,200),
+				#win=c(2300,2800,100,180),
+				#win=c(2300,2800,95,190),
+				win=c(2300,2800,85,170),			
 				keep.overhangs=FALSE,	
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),				
 				roguesubtree.kParam=20,
