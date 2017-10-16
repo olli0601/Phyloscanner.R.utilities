@@ -183,7 +183,7 @@ Tasp.pipeline.testbatch.170925.stage1<- function()
 				alignments.pairwise.to='B.FR.83.HXB2.K03455',
 				bl.normalising.reference.file=system.file(package="Phyloscanner.R.utilities", "data", "hiv.hxb2.norm.constants.rda"),
 				bl.normalising.reference.var='MEDIAN_PWD',
-				tip.regex='^(.*)_read_([0-9]+)_count_([0-9]+)$',				
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',		
 				window.automatic= '', 
 				merge.threshold=2, 
 				min.read.count=1, 				
