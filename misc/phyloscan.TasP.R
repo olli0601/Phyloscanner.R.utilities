@@ -65,8 +65,7 @@ TasP.evaluate.window.len<- function()
 			geom_errorbar() + 
 			scale_y_continuous(lim=c(0,75), breaks=seq(0,75,5), expand=c(0,0)) +
 			labs(x='window length', y='number of individuals with min 30 reads')
-	ggsave(file=plot.file, w=5, h=6)
-	ggplot(tmp, aes(x=WFROM, y=IDN)) + geom_bar(stat='identity') + facet_wrap(~WLEN, scales='free_x', ncol=4)
+	ggsave(file=plot.file, w=5, h=6)	
 }
 
 TasP.evaluate.bam.len<- function()
@@ -142,12 +141,11 @@ Tasp.pipeline.testbatch.170925.stage1<- function()
 		#fix Tiago's file
 		HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2018_TasP_phyloscanner/170908_test_batch'
 		in.dir				<- file.path(HOME,"input")
-		pty.runs			<- as.data.table(read.table( file.path(in.dir, 'ptyRuns_2batchesTest.txt'), header=TRUE ))
-		set(pty.runs, NULL, c('PTY_RUN','RID'), NULL)		
-		setnames(pty.runs, c('BATCH','SID','RENAME_SID','RefUsedToMap'), c('PTY_RUN','SAMPLE_ID','RENAME_ID','REFERENCE_ID'))
-		set(pty.runs, NULL, 'REFERENCE_ID', pty.runs[, paste0(REFERENCE_ID,'.fasta')])
-		set(pty.runs, NULL, 'SAMPLE_ID', pty.runs[, gsub('\\.bam','.sorted.bam',SAMPLE_ID)])
-		set(pty.runs, NULL, 'RENAME_ID', pty.runs[, paste0('TasP',gsub('^([0-9]+).*','\\1',SAMPLE_ID))])
+		pty.runs			<- as.data.table(read.csv( file.path(in.dir, 'ptyRuns_2batchesTest.csv') ))
+		set(pty.runs, NULL, c('PTY_RUN'), NULL)		
+		setnames(pty.runs, c('BATCH'), c('PTY_RUN'))
+		set(pty.runs, NULL, 'REFERENCE_ID', pty.runs[, paste0(REFERENCE_ID,'.fasta')])		
+		set(pty.runs, NULL, 'UNIT_ID', pty.runs[, paste0('TasP',UNIT_ID)])
 		write.csv(pty.runs, row.names=FALSE, file=file.path(in.dir, 'ptyRuns_2batchesTest_OR.csv'))		
 	}
 	if(1)
