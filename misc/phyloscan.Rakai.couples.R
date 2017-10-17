@@ -8055,6 +8055,85 @@ RakaiFull.analyze.couples.todi.170811.sources.bias.from.read.coverage<- function
 	
 }
 
+RakaiFull.analyze.couples.todi.170811.siblings.not.contiguous<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_min30_"	
+	
+	#
+	#	check adjacent for sibling --> OK
+	#	
+	load(infile)
+	setkey(rca, MALE_RID, FEMALE_RID)
+	rca[, PAIRID:=seq_len(nrow(rca))]	
+	tmp		<- subset(rpw, PATHS_FM==0 & PATHS_MF==0 & ADJACENT & !CONTIGUOUS & GROUP=='TYPE_BASIC')
+	rtpdm	<- unique(subset(tmp, select=c(MALE_RID, FEMALE_RID, PTY_RUN)))
+	
+	if(0)
+	{
+		require(colorspace)
+		#for(ii in seq_len(nrow(rtpdm))[-1])
+		for(ii in 1:4)
+		{		
+			if(rtpdm[ii, PTY_RUN]!=1)
+			{
+				indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+				# load dfr and phs
+				load( file.path(indir, paste0('ptyr',rtpdm[ii,PTY_RUN],'_trees.rda')) )
+				# setup plotting
+				ids			<- c(rtpdm[ii, MALE_RID],rtpdm[ii, FEMALE_RID])
+				dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+				dfs[, MALE_RID:=ids[1]]
+				dfs[, FEMALE_RID:=ids[2]]
+				dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'), all.x=1)	
+				dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\npmf',PATHS_MF,' pfm',PATHS_FM, ' ',ADJACENT,' ',CONTIGUOUS,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+				plot.file	<- paste0(outfile.base, 'trees/adjnotcont_170811_run_', rtpdm[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+				invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))			
+			}				
+		}
+	}
+	if(0)
+	{
+		require(colorspace)
+		#for(ii in seq_len(nrow(rtpdm))[-1])
+		for(ii in 2)
+		{		
+			if(rtpdm[ii, PTY_RUN]!=1)
+			{
+				indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+				# load dfr and phs
+				load( file.path(indir, paste0('ptyr',rtpdm[ii,PTY_RUN],'_trees.rda')) )
+				# setup plotting
+				ids			<- c(rtpdm[ii, MALE_RID],rtpdm[ii, FEMALE_RID])
+				dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+				dfs[, MALE_RID:=ids[1]]
+				dfs[, FEMALE_RID:=ids[2]]
+				dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'), all.x=1)	
+				dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', PTY_RUN, '\nwindow ', W_FROM,'-', W_TO,'\npmf',PATHS_MF,' pfm',PATHS_FM, ' ',ADJACENT,' ',CONTIGUOUS,' ',TYPE, '\n', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+				plot.file	<- paste0(outfile.base, 'trees/adjnotcont_nodrop_170811_run_', rtpdm[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+				invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.blacklisted=FALSE, drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))			
+			}				
+		}
+		subset(rpw, MALE_RID=='A106044' & PATHS_FM==0 & PATHS_MF>0 & ADJACENT & !CONTIGUOUS & GROUP=='TYPE_BASIC')
+	}
+	 
+	#
+	#	check contiguous for ancestral 
+	#	
+	tmp		<- subset(rpw, PATHS_FM==0 & PATHS_MF>0 & ADJACENT & !CONTIGUOUS & GROUP=='TYPE_BASIC')
+	subset(tmp, MALE_RID=='A106044')
+	rtpdm	<- unique(subset(tmp, select=c(MALE_RID, FEMALE_RID, PTY_RUN)))
+
+}
+
 RakaiFull.analyze.couples.todi.170811.DIRext<- function()
 {	
 	require(data.table)

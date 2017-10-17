@@ -5451,11 +5451,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		#out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_zbl")
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10_zbl")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5509,7 +5505,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				split.kParam=20,
 				split.proximityThreshold=0,
 				split.readCountsMatterOnZeroBranches=FALSE,
-				pw.trmw.min.reads=10,									
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,
+				pw.trmw.min.reads=30,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,

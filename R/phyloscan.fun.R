@@ -792,6 +792,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	tip.regex						<- pty.args[['tip.regex']]
 	mem.save						<- pty.args[['mem.save']]
 	multifurcation.threshold		<- pty.args[['multifurcation.threshold']]	
+	split.pruneBlacklist			<- pty.args[['split.pruneBlacklist']]
+	trms.allowMultiTrans			<- pty.args[['trms.allowMultiTrans']]	
 	trmw.min.reads					<- pty.args[['pw.trmw.min.reads']] 
 	trmw.min.tips					<- pty.args[['pw.trmw.min.tips']] 
 	trmw.close.brl					<- pty.args[['pw.trmw.close.brl']] 
@@ -802,7 +804,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prior.neff.dir					<- pty.args[['pw.prior.neff.dir']] 	
 	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
 	verbose							<- pty.args[['verbose']]	
-	#AAA
+	#
 	pty.tools.dir.deprecated		<- file.path(dirname(prog.pty),'deprecated')
 	pty.tools.dir					<- file.path(dirname(prog.pty),'tools')
 	prog.pty.bl.normaliser			<- paste('Rscript ',file.path(pty.tools.dir.deprecated,'NormalisationLookupWriter.R'),sep='')
@@ -1005,7 +1007,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															pdfwidth=30, 
 															pdfrelheight=0.15,
 															useff=FALSE,
-															pruneBlacklist=FALSE,
+															pruneBlacklist=split.pruneBlacklist,
 															idFile=file.path(tmp.dir, basename(file.patients)),
 															verbose=verbose)	
 	cmd				<- paste(cmd, tmp, sep='\n')
@@ -1051,7 +1053,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 															file.path(tmp.dir, paste(run.id_,'trmStats.csv',sep='')),
 															file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 															min.threshold=1, 
-															allow.MultiTrans=TRUE,
+															allow.MultiTrans=trms.allowMultiTrans,
 															verbose=verbose)
 	cmd				<- paste(cmd, tmp, sep='\n')
 	#
@@ -2401,12 +2403,15 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#
 	#	other
 	#
-	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT)]
-	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT, n=', length(tmp),'--> other with no intermediate')
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS)]
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS, n=', length(tmp),'--> other with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
-	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT)]
-	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS)]
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS, n=', length(tmp),'--> other with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT )]
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
+	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')	
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
 	#
