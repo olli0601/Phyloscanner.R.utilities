@@ -211,6 +211,8 @@ Tasp.pipeline.testbatch.170925.stage1<- function()
 				roguesubtree.read.threshold=20,
 				dwns.maxReadsPerPatient=50,	
 				multifurcation.threshold=1e-5,
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,				
 				split.rule='s',
 				split.kParam=20,
 				split.proximityThreshold=0.035,	

@@ -8123,8 +8123,7 @@ RakaiFull.analyze.couples.todi.170811.siblings.not.contiguous<- function()
 			}				
 		}
 		subset(rpw, MALE_RID=='A106044' & PATHS_FM==0 & PATHS_MF>0 & ADJACENT & !CONTIGUOUS & GROUP=='TYPE_BASIC')
-	}
-	 
+	}	 
 	#
 	#	check contiguous for ancestral 
 	#	
@@ -8385,8 +8384,8 @@ RakaiFull.analyze.couples.todi.170522.distance.histogram<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 		
-	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_withmetadata.rda'		
-	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23_"		
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
+	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"		
 	load(infile)
 	dfd				<- subset(rpw, GROUP=='TYPE_BASIC')
 	dfd				<- dfd[, list(	PHSC_PD_MEAN=mean(PATRISTIC_DISTANCE, na.rm=TRUE),
