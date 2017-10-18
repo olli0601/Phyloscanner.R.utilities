@@ -760,6 +760,8 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda'
 	
 	
 	tmp		<- data.table(F=list.files(indir, pattern='_pairwise_relationships.rda$', full.names=TRUE))
@@ -1439,6 +1441,8 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d100.rda'		
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d1000'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj.rda'		
 	
 	#
 	#	load couples to search for in phyloscanner output
@@ -3727,12 +3731,13 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	require(Hmisc)
 	
 	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
-	confidence.cut			<- 0.5
+	#confidence.cut			<- 0.5
 	neff.cut				<- 3
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda"	
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda"	
@@ -5570,6 +5575,30 @@ RakaiFull.analyze.couples.todi.170421<- function()
 	names(cols)	<- tmp[, sort(unique(c(FEMALE_FACTOR, MALE_FACTOR)))]
 	Rakai.plot.directed.pairs.discrete1(tmp, cols, file.path(dir, paste(run,'-phsc-directionpairs_education.pdf',sep='')), 'Educational status', w=10, h=7)	
 }
+
+RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
+	load(infile)
+	dc		<- subset(dc, !is.na(SID))
+	
+	dc[, length(unique(RID))]
+	#	individuals with WTSI output 4074			
+	subset(dc, !is.na(IMPERIAL_LEN))[, length(unique(RID))]
+	# number individuals with Imperial consensus 2565
+	subset(dc, !is.na(IMPERIAL_LEN) & IMPERIAL_LEN>3*250)[, length(unique(RID))]
+	# number individuals with Imperial consensus >750nt 2134
+	
+	
+}
+
 
 RakaiFull.analyze.couples.todi.170811.computing.effort.couples<- function()
 {	

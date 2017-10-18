@@ -16,7 +16,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
@@ -27,10 +27,10 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various  
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.2 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
 		cmd		<- paste(cmd,tmp,sep='\n')
 		cat(cmd)	 								
@@ -46,7 +46,8 @@ pty.various	<- function()
 	#project.scan.contaminants()
 	#project.readlength.count.all()
 	#project.readlength.count.bam.150218()
-	project.check.bam.integrity()
+	project.readlength.count.bam.171018()
+	#project.check.bam.integrity()
 }
 
 project.dual.alignments.missing<- function()
@@ -6155,14 +6156,14 @@ project.check.bam.integrity<- function()
 	#c('682','707','732','757','782','807','832','857','882','907','932','957','982','1007','1032','1057','1082','1107','1132','1157','1182','1207','1232','1257','1282','1307','1332','1357','1382','1407','1432','1457','1482','1507','1532','1557','1582','1606','1629','1651','1672','1692','1711','1729','1746','1762','1777','1791','1804','1816','1827','1837','1847','1848','1849','1850','1851','1852','1853','1854','1855')
 }
 
-project.readlength.count.bam.150218<- function()
+project.readlength.count.bam.171018<- function()
 {
 	require(ggplot2)
 	require(data.table)
 	require(Rsamtools)		
 	#pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'	
 	pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
-	outfile			<- file.path(pty.data.dir,'bam_stats_150218.rda')			
+	outfile			<- file.path(pty.data.dir,'bam_stats_171018.rda')			
 	
 	
 	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
