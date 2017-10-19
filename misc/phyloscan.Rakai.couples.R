@@ -5585,18 +5585,75 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	require(Hmisc)
-	infile	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
+	infile.bam	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171018.rda'
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_'
 	load(infile)
+	load(infile.bam)
+	setnames(bam.cov, 'FILE_ID', 'SID')
+	subset(dc, PROC_STATUS=='ThoseWithoutFastqs')[, table(WTSI_STATUS)]
+	#Assume sequencing failed 
+	#					   16 
 	dc		<- subset(dc, !is.na(SID))
 	
+	#	individuals with WTSI output
 	dc[, length(unique(RID))]
-	#	individuals with WTSI output 4074			
-	subset(dc, !is.na(IMPERIAL_LEN))[, length(unique(RID))]
-	# number individuals with Imperial consensus 2565
-	subset(dc, !is.na(IMPERIAL_LEN) & IMPERIAL_LEN>3*250)[, length(unique(RID))]
-	# number individuals with Imperial consensus >750nt 2134
+	#	4074
+	
+	bam.covm	<- do.call('rbind',lapply(c(1,10,30), function(x)
+					{
+						bam.covm	<- subset(bam.cov, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP), VCOV= sum(COV*REP)/sum(REP), VCOV_MAX=max(COV)), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- subset(bam.covm, HCOV>=750)
+	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(VCOV), COV_MAX=max(VCOV_MAX)), by='COV_MIN']	
+	#COV_MIN    N 	 COV_MEAN   COV_MAX
+	#1:       1 4074 5250.450  1431906
+	#2:      10 3466 7482.524  1431906
+	#3:      30 3124 8744.851  1431906
 	
 	
+	# number individuals with bam files with coverage at least 1, 10, 30 on at least 3 chunks of at least 250 nt
+	bam.ch		<- do.call('rbind',lapply(c(1,10,30), function(x)
+					{
+						bam.ch		<- subset(bam.cov, COV>=x)
+						bam.ch[, POS_NEXT:= POS+REP]	
+						bam.ch		<- bam.ch[, list(POS=POS, COV=COV, REP=REP, CHUNK=cumsum(as.numeric(c(TRUE, POS[-1]!=POS_NEXT[-length(POS_NEXT)])))), by='SID']
+						bam.ch		<- bam.ch[, list(POS_CH=min(POS), REP_CH=sum(REP), COV_MEAN= sum(COV*REP)/sum(REP), COV_MAX=max(COV) ), by=c('SID','CHUNK')]
+						bam.ch[, COV_MIN:=x]
+						bam.ch
+					}))
+	bam.ch		<- merge(subset(dc, select=c(SID, RID)), bam.ch, by='SID')
+	tmp			<- subset(bam.ch, REP_CH>=250)
+	tmp			<- tmp[, list(SUM_REP_CH=sum(REP_CH), COV_MEAN= sum(COV_MEAN*REP_CH)/sum(REP_CH), COV_MAX=max(COV_MAX)), by=c('SID','RID','COV_MIN')]
+	tmp			<- subset(tmp, SUM_REP_CH>=750)
+	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(COV_MEAN), COV_MAX=max(COV_MAX)), by='COV_MIN']
+	#COV_MIN    N 	 COV_MEAN COV_MAX
+	#1:       1 4071 5406.564 1431906
+	#2:      10 3342 7902.141 1431906
+	#3:      30 3091 9010.613 1431906
+	
+	#	roughly where are these chunks?		
+	bam.ch30	<- subset(bam.ch, REP_CH>=250 & COV_MIN==30)
+	tmp			<- bam.ch30[, list(SUM_REP_CH=sum(REP_CH)), by=c('SID','RID','COV_MIN')]
+	tmp			<- subset(tmp, SUM_REP_CH>=750)
+	tmp			<- tmp[, list(SID=SID[which.max(SUM_REP_CH)]), by='RID']
+	bam.ch30	<- merge(tmp, bam.ch30, by=c('RID','SID'))
+	tmp			<- bam.ch30[, 	{
+									z	<- rep(COV_CH,REP_CH)
+									list(COV=z, POS=POS_CH+seq_along(z)-1L)
+								}, by=c('SID','RID','CHUNK')]
+	tmp			<- tmp[, list(N=length(RID)), by='POS']
+	ggplot(tmp, aes(x=POS, y=N)) + geom_area() +
+			theme_bw() +
+			scale_x_continuous(breaks=seq(0,10e3,500), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,10e3,500), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,3100)) +
+			labs(x='\ngenomic position of mapped short reads', y='individuals\nwith minimum NGS output\n')
+	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput.pdf'), w=10, h=4)
 }
 
 

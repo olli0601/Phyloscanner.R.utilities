@@ -6169,16 +6169,45 @@ project.readlength.count.bam.171018<- function()
 	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
 	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
 	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
+	if(0)
+	{
 	#FILE<- "14939_1_80.bam"
 	#cat('\nreading',FILE)
 	#bam<- scanBam(file.path(pty.data.dir,FILE))[[1]]	#scan entire file
-	bam.cov	<- bfiles[,{
+	bam.cov		<- bfiles[,{
 				cat('\nCOV reading',FILE)
 				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
 				tmp	<- IRanges(start=z$pos, width=z$qwidth)
 				tmp <- coverage(tmp)
 				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+			}, by='FILE_ID']	
+	bam.cov175	<- bfiles[,{
+				cat('\nCOV reading',FILE)
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+				tmp	<- z[['qwidth']]>=175
+				z	<- lapply(z, function(x) x[tmp])					
+				tmp	<- IRanges(start=z$pos, width=z$qwidth)
+				tmp <- coverage(tmp)
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
 			}, by='FILE_ID']
+	bam.cov200	<- bfiles[,{
+				cat('\nCOV reading',FILE)
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+				tmp	<- z[['qwidth']]>=200
+				z	<- lapply(z, function(x) x[tmp])					
+				tmp	<- IRanges(start=z$pos, width=z$qwidth)
+				tmp <- coverage(tmp)
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+			}, by='FILE_ID']	
+	bam.cov250	<- bfiles[,{
+				cat('\nCOV reading',FILE)
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+				tmp	<- z[['qwidth']]>=250
+				z	<- lapply(z, function(x) x[tmp])					
+				tmp	<- IRanges(start=z$pos, width=z$qwidth)
+				tmp <- coverage(tmp)
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+			}, by='FILE_ID']	
 	#	get lengths of all reads in quality trimmed bam file
 	#z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','qual')))
 	bam.len			<- bfiles[,{
@@ -6187,9 +6216,41 @@ project.readlength.count.bam.171018<- function()
 				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth')))
 				list(QU=seq(0,320,20), CDF=ecdf(z[[1]][['qwidth']])(seq(0,320,20)))
 				#list(PR=seq(0.01,0.99,0.01), QU=quantile(z[[1]][['qwidth']], p=seq(0.01,0.99,0.01)))				
-			}, by='FILE']
+			}, by='FILE']	
+	}
+	if(1)
+	{
+		load(outfile)
+		bam.cov175	<- bfiles[,{
+					cat('\nCOV reading',FILE)
+					z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+					tmp	<- z[['qwidth']]>=175
+					z	<- lapply(z, function(x) x[tmp])					
+					tmp	<- IRanges(start=z$pos, width=z$qwidth)
+					tmp <- coverage(tmp)
+					list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+				}, by='FILE_ID']
+		bam.cov200	<- bfiles[,{
+					cat('\nCOV reading',FILE)
+					z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+					tmp	<- z[['qwidth']]>=200
+					z	<- lapply(z, function(x) x[tmp])					
+					tmp	<- IRanges(start=z$pos, width=z$qwidth)
+					tmp <- coverage(tmp)
+					list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+				}, by='FILE_ID']
+		bam.cov250	<- bfiles[,{
+					cat('\nCOV reading',FILE)
+					z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
+					tmp	<- z[['qwidth']]>=250
+					z	<- lapply(z, function(x) x[tmp])					
+					tmp	<- IRanges(start=z$pos, width=z$qwidth)
+					tmp <- coverage(tmp)
+					list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+				}, by='FILE_ID']			
+	}
 	#
-	save(bam.len, bam.cov, file= outfile)
+	save(bam.len, bam.cov, bam.cov175, bam.cov200, bam.cov250, file= outfile)
 }
 
 pty.pipeline.runs.coverage	<- function()
