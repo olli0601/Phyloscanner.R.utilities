@@ -5592,9 +5592,11 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	load(infile.bam)
 	setnames(bam.cov, 'FILE_ID', 'SID')
 	setnames(bam.cov200, 'FILE_ID', 'SID')
-	setnames(bam.cov250, 'FILE_ID', 'SID')
 	bam.cov200	<- subset(bam.cov200, !is.na(COV))
+	setnames(bam.cov250, 'FILE_ID', 'SID')
 	bam.cov250	<- subset(bam.cov250, !is.na(COV))
+	setnames(bam.cov280, 'FILE_ID', 'SID')
+	bam.cov280	<- subset(bam.cov280, !is.na(COV))
 	
 	subset(dc, PROC_STATUS=='ThoseWithoutFastqs')[, table(WTSI_STATUS)]
 	#Assume sequencing failed 
@@ -5665,6 +5667,28 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	tmp[, TYPE:='reads_250_cov_750']
 	ans			<- rbind(ans, tmp)
 	
+	
+	#	same query but only on short reads that are 
+	#	at least 280 bp long
+	#	NOTE: paired ends are not merged!!
+	bam.cov280m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
+					{
+						bam.covm	<- subset(bam.cov280, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.cov280m	<- merge(subset(dc, select=c(SID, RID)), bam.cov280m, by='SID')
+	tmp			<- bam.cov280m[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.cov280m	<- merge(tmp, bam.cov280m, by=c('RID','SID'))
+	tmp			<- bam.cov280m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_280']
+	ans			<- rbind(ans, tmp)	
+	tmp			<- subset(bam.cov280m, HCOV>=750)
+	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_280_cov_750']
+	ans			<- rbind(ans, tmp)
+	
 	#	make table
 	ans[, XCOV_LABEL:= paste0(round(XCOV_MEAN,d=0),'x ( ', round(XCOV_QL, d=1),'x - ',round(XCOV_QU, d=0),'x )')]
 	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & TYPE=='all', N], d=1), '%')]
@@ -5674,7 +5698,10 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 								(COV_MIN==50 & TYPE=='reads_200_cov_750') |
 								(COV_MIN==1 & TYPE=='reads_250') | 
 								(COV_MIN==30 & TYPE=='reads_250_cov_750') | 
-								(COV_MIN==50 & TYPE=='reads_250_cov_750'), c(TYPE, COV_MIN, N, P, XCOV_LABEL))
+								(COV_MIN==50 & TYPE=='reads_250_cov_750') |
+								(COV_MIN==1 & TYPE=='reads_280') | 
+								(COV_MIN==30 & TYPE=='reads_280_cov_750') | 
+								(COV_MIN==50 & TYPE=='reads_280_cov_750'), c(TYPE, COV_MIN, N, P, XCOV_LABEL))
 	write.csv(dt, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
 	
 	
