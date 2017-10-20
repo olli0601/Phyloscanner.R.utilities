@@ -40,14 +40,93 @@ project.dual<- function()
 	}			 
 } 
 
+RakaiFull.analyze.divergend.clades.170811<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)	
+	require(phytools)
+	
+	#	helper function
+	my.fastHeight<- function (tree, sp1, sp2) 
+	{
+		if (!inherits(tree, "phylo")) 
+			stop("tree should be an object of class \"phylo\".")
+		if (is.null(tree$edge.length)) 
+			stop("tree should have edge lengths.")
+		a1 <- c(sp1, phytools:::getAncestors(tree, sp1))
+		a2 <- c(sp2, phytools:::getAncestors(tree, sp2))
+		a12 <- intersect(a1, a2)
+		if (length(a12) > 1) {
+			a12 <- a12[2:length(a12) - 1]
+			h <- sapply(a12, function(i, tree) tree$edge.length[which(tree$edge[, 
+												2] == i)], tree = tree)
+			return(sum(h))
+		}
+		else return(0)
+	}
+	
+	
+	#	keep all potential contaminants
+	#	no downsampling so that no reads in clades are lost
+	tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
+	#indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_cont'
+	#outdir		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	indir		<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_cont'
+	outdir		<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/'
+	infiles		<- data.table(F=list.files(indir, pattern='trees.rda$', full.names=TRUE))	
+	outfile.base<- paste0(outdir, "divsubgraphs_170704_w250_s20_p35_stagetwo_rerun23_min30_cnt_")
+	#					
+	dd			<- infiles[, {
+				#F			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf3/ptyr10_trees.rda'
+				# load phs dfr
+				cat(basename(F),'\n')
+				load(F)	
+				#	for each tree in phs 
+				#	find divergent subgraphs
+				ans	<- lapply(seq_along(phs), function(i)
+						{
+							ph	<- phs[[i]]
+							df	<- data.table( 	NODE=seq_len(Nnode(ph, internal.only=FALSE)),
+									SUBGRAPH_MRCA=attr(ph,'SUBGRAPH_MRCA'),
+									INDIVIDUAL=attr(ph,'INDIVIDUAL'),
+									SPLIT=attr(ph,'SPLIT')
+							)
+							#	add counts for tip taxa
+							df[, COUNT:='']	
+							set(df, df[, which(NODE<=Ntip(ph))], 'COUNT', gsub(tip.regex, '\\3', ph$tip.label))
+							set(df, df[, which(!grepl('^[0-9]+$',COUNT))],'COUNT','0')
+							set(df, NULL, 'COUNT', df[, as.integer(COUNT)])
+							tmp	<- subset(df, !is.na(SPLIT))[, list(READS=sum(COUNT)), by=c('SPLIT','INDIVIDUAL')]
+							df	<- merge(subset(df, SUBGRAPH_MRCA, select=c(SPLIT, NODE)), tmp, by='SPLIT')
+							setnames(df, 'NODE', 'SUBGRAPH_MRCA')	
+							tmp	<- df[, list(	MAXCLADE_MRCA=SUBGRAPH_MRCA[which.max(READS)], MAXCLADE_READS=max(READS)), by='INDIVIDUAL']
+							df	<- merge(df, tmp, by='INDIVIDUAL')
+							tmp	<- df[, list(MAXCLADE_DIST=my.fastHeight(ph,SUBGRAPH_MRCA,SUBGRAPH_MRCA)+my.fastHeight(ph,MAXCLADE_MRCA,MAXCLADE_MRCA)-2*my.fastHeight(ph,SUBGRAPH_MRCA,MAXCLADE_MRCA)), by=c('INDIVIDUAL','SUBGRAPH_MRCA','MAXCLADE_MRCA')]
+							df	<- merge(df, tmp, by=c('INDIVIDUAL','SUBGRAPH_MRCA','MAXCLADE_MRCA'))
+							df	<- subset(df, MAXCLADE_DIST>0)
+							df[, NAME:= names(phs)[i]]
+							df
+						})
+				ans	<- do.call('rbind', ans)
+				ans
+			}, by='F']
+	save(dd, file=paste0(outfile.base,'info.rda'))	
+}
+
 pty.various	<- function()
 {
 	#project.scan.superinfections()
 	#project.scan.contaminants()
 	#project.readlength.count.all()
 	#project.readlength.count.bam.150218()
-	project.readlength.count.bam.171018()
+	#project.readlength.count.bam.171018()
 	#project.check.bam.integrity()
+	RakaiFull.analyze.divergend.clades.170811()
 }
 
 project.dual.alignments.missing<- function()
