@@ -26,7 +26,7 @@ project.dual<- function()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
-	#	various  
+	#	various   
 	if(1) 
 	{
 		require(big.phylo)
