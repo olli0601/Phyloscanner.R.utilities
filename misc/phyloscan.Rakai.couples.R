@@ -5591,6 +5591,11 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	load(infile)
 	load(infile.bam)
 	setnames(bam.cov, 'FILE_ID', 'SID')
+	setnames(bam.cov200, 'FILE_ID', 'SID')
+	setnames(bam.cov250, 'FILE_ID', 'SID')
+	bam.cov200	<- subset(bam.cov200, !is.na(COV))
+	bam.cov250	<- subset(bam.cov250, !is.na(COV))
+	
 	subset(dc, PROC_STATUS=='ThoseWithoutFastqs')[, table(WTSI_STATUS)]
 	#Assume sequencing failed 
 	#					   16 
@@ -5600,41 +5605,122 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	dc[, length(unique(RID))]
 	#	4074
 	
-	bam.covm	<- do.call('rbind',lapply(c(1,10,30), function(x)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,30,50), function(x)
 					{
 						bam.covm	<- subset(bam.cov, COV>=x)
-						bam.covm	<- bam.covm[, list(HCOV=sum(REP), VCOV= sum(COV*REP)/sum(REP), VCOV_MAX=max(COV)), by='SID']						
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']						
 						bam.covm[, COV_MIN:=x]
 						bam.covm
 					}))
 	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	ans			<- bam.covm[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	ans[, TYPE:='all']
+	
 	tmp			<- subset(bam.covm, HCOV>=750)
-	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(VCOV), COV_MAX=max(VCOV_MAX)), by='COV_MIN']	
-	#COV_MIN    N 	 COV_MEAN   COV_MAX
-	#1:       1 4074 5250.450  1431906
-	#2:      10 3466 7482.524  1431906
-	#3:      30 3124 8744.851  1431906
+	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='cov_750']
+	ans			<- rbind(ans, tmp)
+	
+	#	same query but only on short reads that are 
+	#	at least 200 bp long
+	#	NOTE: paired ends are not merged!!
+	bam.cov200m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
+					{
+						bam.covm	<- subset(bam.cov200, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.cov200m	<- merge(subset(dc, select=c(SID, RID)), bam.cov200m, by='SID')
+	tmp			<- bam.cov200m[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.cov200m	<- merge(tmp, bam.cov200m, by=c('RID','SID'))
+	tmp			<- bam.cov200m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_200']
+	ans			<- rbind(ans, tmp)	
+	tmp			<- subset(bam.cov200m, HCOV>=750)
+	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_200_cov_750']
+	ans			<- rbind(ans, tmp)
+	
+	#	same query but only on short reads that are 
+	#	at least 250 bp long
+	#	NOTE: paired ends are not merged!!
+	bam.cov250m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
+					{
+						bam.covm	<- subset(bam.cov250, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.cov250m	<- merge(subset(dc, select=c(SID, RID)), bam.cov250m, by='SID')
+	tmp			<- bam.cov250m[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.cov250m	<- merge(tmp, bam.cov250m, by=c('RID','SID'))
+	tmp			<- bam.cov250m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_250']
+	ans			<- rbind(ans, tmp)	
+	tmp			<- subset(bam.cov250m, HCOV>=750)
+	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
+	tmp[, TYPE:='reads_250_cov_750']
+	ans			<- rbind(ans, tmp)
+	
+	#	make table
+	ans[, XCOV_LABEL:= paste0(round(XCOV_MEAN,d=0),'x ( ', round(XCOV_QL, d=1),'x - ',round(XCOV_QU, d=0),'x )')]
+	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & TYPE=='all', N], d=1), '%')]
+	dt			<- subset(ans, 	(COV_MIN==1 & TYPE=='all') |
+								(COV_MIN==1 & TYPE=='reads_200') | 
+								(COV_MIN==30 & TYPE=='reads_200_cov_750') | 
+								(COV_MIN==50 & TYPE=='reads_200_cov_750') |
+								(COV_MIN==1 & TYPE=='reads_250') | 
+								(COV_MIN==30 & TYPE=='reads_250_cov_750') | 
+								(COV_MIN==50 & TYPE=='reads_250_cov_750'), c(TYPE, COV_MIN, N, P, XCOV_LABEL))
+	write.csv(dt, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
+	
+	
+	
+	#	roughly where are these 250 bp reads?
+	bam.cov250.30	<- subset(bam.cov250, COV>=30)
+	bam.cov250.30	<- merge(subset(dc, select=c(SID, RID)), bam.cov250.30, by='SID')
+	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]
+	tmp				<- subset(tmp, SUM_REP>=750)
+	tmp				<- tmp[, list(SID=SID[which.max(SUM_REP)]), by='RID']
+	bam.cov250.30	<- merge(tmp, bam.cov250.30, by=c('RID','SID'))
+	setkey(bam.cov250.30, RID, POS)
+	tmp				<- bam.cov250.30[, 	{
+										z	<- rep(COV,REP)
+										list(COV=z, POS2=POS+seq_along(z)-1L)
+									}, by=c('SID','RID','POS')]
+	tmp			<- tmp[, list(N=length(RID)), by='POS2']
+	ggplot(tmp, aes(x=POS2, y=N)) + geom_area() +
+			theme_bw() +
+			scale_x_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,3100)) +
+			labs(x='\ngenomic position of mapped short reads', y='individuals\nwith minimum NGS output\n') +
+			theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
+	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=10, h=4)
 	
 	
 	# number individuals with bam files with coverage at least 1, 10, 30 on at least 3 chunks of at least 250 nt
-	bam.ch		<- do.call('rbind',lapply(c(1,10,30), function(x)
+	bam.ch250	<- do.call('rbind',lapply(c(1,10,30), function(x)
 					{
-						bam.ch		<- subset(bam.cov, COV>=x)
+						bam.ch		<- subset(bam.cov250, COV>=x)
 						bam.ch[, POS_NEXT:= POS+REP]	
 						bam.ch		<- bam.ch[, list(POS=POS, COV=COV, REP=REP, CHUNK=cumsum(as.numeric(c(TRUE, POS[-1]!=POS_NEXT[-length(POS_NEXT)])))), by='SID']
 						bam.ch		<- bam.ch[, list(POS_CH=min(POS), REP_CH=sum(REP), COV_MEAN= sum(COV*REP)/sum(REP), COV_MAX=max(COV) ), by=c('SID','CHUNK')]
 						bam.ch[, COV_MIN:=x]
 						bam.ch
 					}))
-	bam.ch		<- merge(subset(dc, select=c(SID, RID)), bam.ch, by='SID')
-	tmp			<- subset(bam.ch, REP_CH>=250)
+	bam.ch250	<- merge(subset(dc, select=c(SID, RID)), bam.ch250, by='SID')
+	tmp			<- subset(bam.ch250, REP_CH>=250)
 	tmp			<- tmp[, list(SUM_REP_CH=sum(REP_CH), COV_MEAN= sum(COV_MEAN*REP_CH)/sum(REP_CH), COV_MAX=max(COV_MAX)), by=c('SID','RID','COV_MIN')]
 	tmp			<- subset(tmp, SUM_REP_CH>=750)
-	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(COV_MEAN), COV_MAX=max(COV_MAX)), by='COV_MIN']
-	#COV_MIN    N 	 COV_MEAN COV_MAX
-	#1:       1 4071 5406.564 1431906
-	#2:      10 3342 7902.141 1431906
-	#3:      30 3091 9010.613 1431906
+	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(COV_MEAN), COV_MAX=max(COV_MAX)), by='COV_MIN']	
+	#   COV_MIN    N COV_MEAN COV_MAX
+	#1:       1 4032 1416.039  175417
+	#2:      10 3090 2151.617  175417
+	#3:      30 3004 2380.465  175417
 	
 	#	roughly where are these chunks?		
 	bam.ch30	<- subset(bam.ch, REP_CH>=250 & COV_MIN==30)
@@ -6393,6 +6479,81 @@ RakaiFull.analyze.ffpairs.todi.170522<- function()
 				  fill='information used')
   	ggsave(file=paste0(outfile.base, 'topodist_FF_fpr_fdr.pdf'), w=7, h=4)
 	
+}
+
+RakaiFull.analyze.divergend.clades.170811<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)	
+	require(phytools)
+	
+	#	helper function
+	my.fastHeight<- function (tree, sp1, sp2) 
+	{
+		if (!inherits(tree, "phylo")) 
+			stop("tree should be an object of class \"phylo\".")
+		if (is.null(tree$edge.length)) 
+			stop("tree should have edge lengths.")
+		a1 <- c(sp1, phytools:::getAncestors(tree, sp1))
+		a2 <- c(sp2, phytools:::getAncestors(tree, sp2))
+		a12 <- intersect(a1, a2)
+		if (length(a12) > 1) {
+			a12 <- a12[2:length(a12) - 1]
+			h <- sapply(a12, function(i, tree) tree$edge.length[which(tree$edge[, 
+												2] == i)], tree = tree)
+			return(sum(h))
+		}
+		else return(0)
+	}
+	
+	
+	#	keep all potential contaminants
+	#	no downsampling so that no reads in clades are lost
+	tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
+	indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_cont'
+	infiles		<- data.table(F=list.files(indir, pattern='trees.rda$', full.names=TRUE))
+	outfile.base<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/divsubgraphs_170704_w250_s20_p35_stagetwo_rerun23_min30_cnt_"
+	#					
+	dd			<- infiles[, {
+				#F			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf3/ptyr10_trees.rda'
+				# load phs dfr
+				cat(basename(F),'\n')
+				load(F)	
+				#	for each tree in phs 
+				#	find divergent subgraphs
+				ans	<- lapply(seq_along(phs), function(i)
+						{
+							ph	<- phs[[i]]
+							df	<- data.table( 	NODE=seq_len(Nnode(ph, internal.only=FALSE)),
+									SUBGRAPH_MRCA=attr(ph,'SUBGRAPH_MRCA'),
+									INDIVIDUAL=attr(ph,'INDIVIDUAL'),
+									SPLIT=attr(ph,'SPLIT')
+							)
+							#	add counts for tip taxa
+							df[, COUNT:='']	
+							set(df, df[, which(NODE<=Ntip(ph))], 'COUNT', gsub(tip.regex, '\\3', ph$tip.label))
+							set(df, df[, which(!grepl('^[0-9]+$',COUNT))],'COUNT','0')
+							set(df, NULL, 'COUNT', df[, as.integer(COUNT)])
+							tmp	<- subset(df, !is.na(SPLIT))[, list(READS=sum(COUNT)), by=c('SPLIT','INDIVIDUAL')]
+							df	<- merge(subset(df, SUBGRAPH_MRCA, select=c(SPLIT, NODE)), tmp, by='SPLIT')
+							setnames(df, 'NODE', 'SUBGRAPH_MRCA')	
+							tmp	<- df[, list(	MAXCLADE_MRCA=SUBGRAPH_MRCA[which.max(READS)], MAXCLADE_READS=max(READS)), by='INDIVIDUAL']
+							df	<- merge(df, tmp, by='INDIVIDUAL')
+							tmp	<- df[, list(MAXCLADE_DIST=my.fastHeight(ph,SUBGRAPH_MRCA,SUBGRAPH_MRCA)+my.fastHeight(ph,MAXCLADE_MRCA,MAXCLADE_MRCA)-2*my.fastHeight(ph,SUBGRAPH_MRCA,MAXCLADE_MRCA)), by=c('INDIVIDUAL','SUBGRAPH_MRCA','MAXCLADE_MRCA')]
+							df	<- merge(df, tmp, by=c('INDIVIDUAL','SUBGRAPH_MRCA','MAXCLADE_MRCA'))
+							df	<- subset(df, MAXCLADE_DIST>0)
+							df[, NAME:= names(phs)[i]]
+							df
+						})
+				ans	<- do.call('rbind', ans)
+				ans
+			}, by='F']
+	save(dd, file=paste0(outfile.base,'info.rda'))	
 }
 
 RakaiFull.analyze.ffpairs.todi.170811<- function()
