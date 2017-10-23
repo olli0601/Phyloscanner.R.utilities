@@ -660,6 +660,58 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 
 RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 {
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10_zbl'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min50'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p45_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d100'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d1000'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s10_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf3'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf4'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf4.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf6'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf6.rda'	
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mt'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mt.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_prt'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_rg1'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg1.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_rg20'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg20.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_zbl'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl.rda'
+	
+	
 	#	load sequence data
 	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
 	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
@@ -727,43 +779,7 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	
 	#
 	#	from every phyloscanner run, select pairs that are closely related 
-	#
-	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_couples_170428_cl3.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_couples_170516_cl3.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior23.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun34d23'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170610/todi_couples_170610_cl3_prior34d23.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10_zbl'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min50'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p45_stagetwo_rerun23_min30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d30.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d100'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_d1000'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s10_p35_stagetwo_rerun23_min30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda'
-	
-	
+	#	
 	tmp		<- data.table(F=list.files(indir, pattern='_pairwise_relationships.rda$', full.names=TRUE))
 	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
 	paste(setdiff( 2:346, tmp[, PTY_RUN]), collapse=', ')
@@ -1443,6 +1459,24 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000.rda'		
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_rg20'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg20.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_rg1'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg1.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_prt'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_prt.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mt'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mt.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf6'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf6.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf4'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf4.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf3'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf3.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_zbl'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_zbl.rda'		
 	
 	#
 	#	load couples to search for in phyloscanner output
@@ -3747,6 +3781,14 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf4.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf6.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mt.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg1.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg20.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl.rda"
 	
 	outfile.base			<- gsub('\\.rda','_',infile.trmpairs.todi) 
 	if(confidence.cut!=0.66 | neff.cut!=3)
@@ -4416,6 +4458,24 @@ RakaiFull.preprocess.trmpairs.todi.addingmetadata.170811<- function()
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_"	
 	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10.rda'		
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min10_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg20.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg20_"
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg1.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg1_"
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_prt.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_prt_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mt.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mt_"
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf6.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf6_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf4.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf4_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf3.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf3_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj_"	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_zbl.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_zbl_"	
 	
 	outfile.save			<- paste0(outfile.base, 'withmetadata.rda')
 	#	now load second stage output
@@ -4846,6 +4906,27 @@ RakaiFull.analyze.trmpairs.community.anonymize.170522<- function()
 	ggsave(file=paste0(outfile.base,'_hubs_comm_locations_anonymized.pdf'), w=10, h=10)
 	
 }
+
+RakaiFull.divergent.clades.classify.170811<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+		
+	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/divsubgraphs_170704_w250_s20_p35_stagetwo_rerun23_min30_cnt_info.rda'
+	load(infile)
+	dd[, F:=NULL]
+	set(dd, NULL, 'INDIVIDUAL', dd[, as.character(INDIVIDUAL)])
+	set(dd, NULL, 'SPLIT', dd[, as.character(SPLIT)])
+	df		<- as.data.frame(dd)
+	
+}
+	
+
+
 
 
 RakaiFull.analyze.couples.todi.170421<- function()
@@ -5610,41 +5691,38 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	bam.covm	<- do.call('rbind',lapply(c(1,10,30,50), function(x)
 					{
 						bam.covm	<- subset(bam.cov, COV>=x)
-						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
 						bam.covm[, COV_MIN:=x]
 						bam.covm
 					}))
 	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
 	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
 	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	ans			<- bam.covm[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	ans[, TYPE:='all']
-	
-	tmp			<- subset(bam.covm, HCOV>=750)
-	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='cov_750']
-	ans			<- rbind(ans, tmp)
-	
+	ans			<- bam.covm[, list(	N=length(RID), 
+									XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+									HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+									), by='COV_MIN']
+	ans[, READL:=1L]
+		
 	#	same query but only on short reads that are 
 	#	at least 200 bp long
 	#	NOTE: paired ends are not merged!!
 	bam.cov200m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
 					{
 						bam.covm	<- subset(bam.cov200, COV>=x)
-						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']												
 						bam.covm[, COV_MIN:=x]
 						bam.covm
 					}))
 	bam.cov200m	<- merge(subset(dc, select=c(SID, RID)), bam.cov200m, by='SID')
 	tmp			<- bam.cov200m[, list(SID=SID[which.max(HCOV)]), by='RID']
 	bam.cov200m	<- merge(tmp, bam.cov200m, by=c('RID','SID'))
-	tmp			<- bam.cov200m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_200']
+	tmp			<- bam.cov200m[, list(	N=length(RID), 
+									XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+									HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+							), by='COV_MIN']
+	tmp[, READL:=200L]
 	ans			<- rbind(ans, tmp)	
-	tmp			<- subset(bam.cov200m, HCOV>=750)
-	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_200_cov_750']
-	ans			<- rbind(ans, tmp)
 	
 	#	same query but only on short reads that are 
 	#	at least 250 bp long
@@ -5652,21 +5730,19 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	bam.cov250m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
 					{
 						bam.covm	<- subset(bam.cov250, COV>=x)
-						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']												
 						bam.covm[, COV_MIN:=x]
 						bam.covm
 					}))
 	bam.cov250m	<- merge(subset(dc, select=c(SID, RID)), bam.cov250m, by='SID')
 	tmp			<- bam.cov250m[, list(SID=SID[which.max(HCOV)]), by='RID']
 	bam.cov250m	<- merge(tmp, bam.cov250m, by=c('RID','SID'))
-	tmp			<- bam.cov250m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_250']
+	tmp			<- bam.cov250m[, list(	N=length(RID), 
+										XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+										HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+								), by='COV_MIN']
+	tmp[, READL:=250L]
 	ans			<- rbind(ans, tmp)	
-	tmp			<- subset(bam.cov250m, HCOV>=750)
-	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_250_cov_750']
-	ans			<- rbind(ans, tmp)
-	
 	
 	#	same query but only on short reads that are 
 	#	at least 280 bp long
@@ -5674,43 +5750,35 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	bam.cov280m	<- do.call('rbind',lapply(c(1,10,30, 50), function(x)
 					{
 						bam.covm	<- subset(bam.cov280, COV>=x)
-						bam.covm	<- bam.covm[, list(HCOV=sum(REP), XCOV= sum(COV*REP)/9719), by='SID']												
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']												
 						bam.covm[, COV_MIN:=x]
 						bam.covm
 					}))
 	bam.cov280m	<- merge(subset(dc, select=c(SID, RID)), bam.cov280m, by='SID')
 	tmp			<- bam.cov280m[, list(SID=SID[which.max(HCOV)]), by='RID']
 	bam.cov280m	<- merge(tmp, bam.cov280m, by=c('RID','SID'))
-	tmp			<- bam.cov280m[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_280']
+	tmp			<- bam.cov280m[, list(	N=length(RID), 
+										XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+										HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+								), by='COV_MIN']
+	tmp[, READL:=280L]
 	ans			<- rbind(ans, tmp)	
-	tmp			<- subset(bam.cov280m, HCOV>=750)
-	tmp			<- tmp[, list(	N=length(RID), XCOV_MEAN=mean(XCOV), XCOV_MEDIAN=median(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV)), by='COV_MIN']
-	tmp[, TYPE:='reads_280_cov_750']
-	ans			<- rbind(ans, tmp)
-	
+		
 	#	make table
 	ans[, XCOV_LABEL:= paste0(round(XCOV_MEAN,d=0),'x ( ', round(XCOV_QL, d=1),'x - ',round(XCOV_QU, d=0),'x )')]
-	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & TYPE=='all', N], d=1), '%')]
-	dt			<- subset(ans, 	(COV_MIN==1 & TYPE=='all') |
-								(COV_MIN==1 & TYPE=='reads_200') | 
-								(COV_MIN==30 & TYPE=='reads_200_cov_750') | 
-								(COV_MIN==50 & TYPE=='reads_200_cov_750') |
-								(COV_MIN==1 & TYPE=='reads_250') | 
-								(COV_MIN==30 & TYPE=='reads_250_cov_750') | 
-								(COV_MIN==50 & TYPE=='reads_250_cov_750') |
-								(COV_MIN==1 & TYPE=='reads_280') | 
-								(COV_MIN==30 & TYPE=='reads_280_cov_750') | 
-								(COV_MIN==50 & TYPE=='reads_280_cov_750'), c(TYPE, COV_MIN, N, P, XCOV_LABEL))
-	write.csv(dt, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
+	ans[, HCOV_LABEL:= paste0(round(100*HCOV_MEAN,d=1),'% (', round(100*HCOV_QL, d=1),'% - ',round(100*HCOV_QU, d=1),'%)')]
+	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & READL==1, N], d=1), '%')]
+	set(ans, NULL, 'COV_MIN', ans[, factor(COV_MIN, levels=c(1,10,30,50), labels=c('1X','10X','30X','50X'))])
+	ans			<- subset(ans, select=c(COV_MIN, READL, N, P, HCOV_LABEL))
+	setkey(ans, COV_MIN, READL)
+	write.csv(ans, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
 	
 	
 	
 	#	roughly where are these 250 bp reads?
 	bam.cov250.30	<- subset(bam.cov250, COV>=30)
 	bam.cov250.30	<- merge(subset(dc, select=c(SID, RID)), bam.cov250.30, by='SID')
-	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]
-	tmp				<- subset(tmp, SUM_REP>=750)
+	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]	
 	tmp				<- tmp[, list(SID=SID[which.max(SUM_REP)]), by='RID']
 	bam.cov250.30	<- merge(tmp, bam.cov250.30, by=c('RID','SID'))
 	setkey(bam.cov250.30, RID, POS)
@@ -5727,46 +5795,6 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 			labs(x='\ngenomic position of mapped short reads', y='individuals\nwith minimum NGS output\n') +
 			theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
 	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=10, h=4)
-	
-	
-	# number individuals with bam files with coverage at least 1, 10, 30 on at least 3 chunks of at least 250 nt
-	bam.ch250	<- do.call('rbind',lapply(c(1,10,30), function(x)
-					{
-						bam.ch		<- subset(bam.cov250, COV>=x)
-						bam.ch[, POS_NEXT:= POS+REP]	
-						bam.ch		<- bam.ch[, list(POS=POS, COV=COV, REP=REP, CHUNK=cumsum(as.numeric(c(TRUE, POS[-1]!=POS_NEXT[-length(POS_NEXT)])))), by='SID']
-						bam.ch		<- bam.ch[, list(POS_CH=min(POS), REP_CH=sum(REP), COV_MEAN= sum(COV*REP)/sum(REP), COV_MAX=max(COV) ), by=c('SID','CHUNK')]
-						bam.ch[, COV_MIN:=x]
-						bam.ch
-					}))
-	bam.ch250	<- merge(subset(dc, select=c(SID, RID)), bam.ch250, by='SID')
-	tmp			<- subset(bam.ch250, REP_CH>=250)
-	tmp			<- tmp[, list(SUM_REP_CH=sum(REP_CH), COV_MEAN= sum(COV_MEAN*REP_CH)/sum(REP_CH), COV_MAX=max(COV_MAX)), by=c('SID','RID','COV_MIN')]
-	tmp			<- subset(tmp, SUM_REP_CH>=750)
-	tmp[, list(N=length(unique(RID)), COV_MEAN=mean(COV_MEAN), COV_MAX=max(COV_MAX)), by='COV_MIN']	
-	#   COV_MIN    N COV_MEAN COV_MAX
-	#1:       1 4032 1416.039  175417
-	#2:      10 3090 2151.617  175417
-	#3:      30 3004 2380.465  175417
-	
-	#	roughly where are these chunks?		
-	bam.ch30	<- subset(bam.ch, REP_CH>=250 & COV_MIN==30)
-	tmp			<- bam.ch30[, list(SUM_REP_CH=sum(REP_CH)), by=c('SID','RID','COV_MIN')]
-	tmp			<- subset(tmp, SUM_REP_CH>=750)
-	tmp			<- tmp[, list(SID=SID[which.max(SUM_REP_CH)]), by='RID']
-	bam.ch30	<- merge(tmp, bam.ch30, by=c('RID','SID'))
-	tmp			<- bam.ch30[, 	{
-									z	<- rep(COV_CH,REP_CH)
-									list(COV=z, POS=POS_CH+seq_along(z)-1L)
-								}, by=c('SID','RID','CHUNK')]
-	tmp			<- tmp[, list(N=length(RID)), by='POS']
-	ggplot(tmp, aes(x=POS, y=N)) + geom_area() +
-			theme_bw() +
-			scale_x_continuous(breaks=seq(0,10e3,500), expand=c(0,0)) +
-			scale_y_continuous(breaks=seq(0,10e3,500), expand=c(0,0)) +
-			coord_cartesian(ylim=c(0,3100)) +
-			labs(x='\ngenomic position of mapped short reads', y='individuals\nwith minimum NGS output\n')
-	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput.pdf'), w=10, h=4)
 }
 
 
@@ -7933,7 +7961,16 @@ RakaiFull.analyze.couples.todi.170811.compare.FF<- function()
 										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_s40_allwindows.rda',
 										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d30_allwindows.rda',
 										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d100_allwindows.rda',
-										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000_allwindows.rda'))
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_d1000_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf3_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf4_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mf6_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_mt_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_prt_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg1_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_rg20_allwindows.rda',
+										'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_zbl_allwindows.rda'
+												))
 	infiles[, CONFIDENCE_CUT:=0.66]
 	infiles[, NEFF_CUT:=3L]
 	tmp				<- data.table(	F='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_allwindows.rda', 
@@ -7989,7 +8026,15 @@ RakaiFull.analyze.couples.todi.170811.compare.DIRext<- function()
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d100_withmetadata.rda',
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000_withmetadata.rda',
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10_withmetadata.rda',
-									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40_withmetadata.rda',									
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40_withmetadata.rda',											
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf4_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf6_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mt_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg1_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg20_withmetadata.rda',
+									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl_withmetadata.rda',									
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_pcut50_ncut3_withmetadata.rda',
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_pcut60_ncut3_withmetadata.rda',
 									'~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_pcut70_ncut3_withmetadata.rda',
@@ -8098,35 +8143,68 @@ RakaiFull.analyze.couples.todi.170811.compare.DIRext<- function()
 	set(df, df[, which(grepl('s',F))], 'SANKHOFF_K', df[grepl('s',F),as.numeric(gsub('.*_s([0-9]+).*','\\1',F))])
 	df[, DOWNSAMPLE:= 50]
 	set(df, df[, which(grepl('d',F))], 'DOWNSAMPLE', df[grepl('d',F),as.numeric(gsub('.*_d([0-9]+).*','\\1',F))])
+	df[, ZBL:=0L]
+	set(df, df[, which(grepl('zbl',F))], 'ZBL', 1L)
+	df[, PRT:=0L]
+	set(df, df[, which(grepl('prt',F))], 'PRT', 1L)	
+	df[, MT:=0L]
+	set(df, df[, which(grepl('_mt',F))], 'MT', 1L)
+	df[, ROGUE_MIN:= 10]
+	set(df, df[, which(grepl('rg',F))], 'ROGUE_MIN', df[grepl('rg',F),as.numeric(gsub('.*_rg([0-9]+).*','\\1',F))])
+	df[, MULTIFURC:= 10^(-5)]
+	set(df, df[, which(grepl('mf',F))], 'MULTIFURC', df[grepl('mf',F),10^(-as.numeric(gsub('.*_mf([0-9]+).*','\\1',F)))])	
 	df[, CENTRAL:=0L]
-	set(df, df[, which(DOWNSAMPLE==50 & SANKHOFF_K==20 & DIST_CLOSE==3.5 & MIN_READ==30 & NEFF_CUT==3 & CONFIDENCE_CUT==0.66)], 'CENTRAL', 1L)
+	set(df, df[, which(DOWNSAMPLE==50 & SANKHOFF_K==20 & DIST_CLOSE==3.5 & MIN_READ==30 & NEFF_CUT==3 & CONFIDENCE_CUT==0.66 & ZBL==0 & PRT==0 & MT==0 & ROGUE_MIN==10 & MULTIFURC==10^(-5))], 'CENTRAL', 1L)	
 	#
 	save(df, file=paste0(outfile.base,'compare_linked_srces.rda'))
 	#
 	#	make supp table
 	#
-	tmp	<- subset(df, 	SANKHOFF_K!=20 | CENTRAL==1)[order(SANKHOFF_K), ]
+	#	rogue
+	tmp	<- subset(df, 	ROGUE_MIN!=10 | CENTRAL==1)[order(ROGUE_MIN), ]
 	tmp[, ROW:= 0+seq_len(nrow(tmp))]
 	ans	<- copy(tmp)
-	tmp	<- subset(df, 	DIST_CLOSE!=3.5 | CENTRAL==1)[order(DIST_CLOSE), ]
+	#	downsample
+	tmp	<- subset(df, 	DOWNSAMPLE!=50 | CENTRAL==1)[order(DOWNSAMPLE), ]
 	tmp[, ROW:= 10+seq_len(nrow(tmp))]
 	ans	<- rbind(ans, tmp)
-	tmp	<- subset(df, 	DOWNSAMPLE!=50 | CENTRAL==1)[order(DOWNSAMPLE), ]
-	tmp[, ROW:= 20+seq_len(nrow(tmp))]
-	ans	<- rbind(ans, tmp)
+	#	minimum reads
 	tmp	<- subset(df, 	MIN_READ!=30 | CENTRAL==1)[order(MIN_READ), ]
+	tmp[, ROW:= 20+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)	
+	#	prune blacklists before anything else
+	tmp	<- subset(df, 	PRT==1 | CENTRAL==1)[order(PRT), ]
 	tmp[, ROW:= 30+seq_len(nrow(tmp))]
 	ans	<- rbind(ans, tmp)
-	tmp	<- subset(df, 	CONFIDENCE_CUT!=0.66 | CENTRAL==1)[order(CONFIDENCE_CUT), ]
+	#	zero branch length
+	tmp	<- subset(df, 	ZBL==1 | CENTRAL==1)[order(ZBL), ]
 	tmp[, ROW:= 40+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)
+	#	collapse into multifurcations
+	tmp	<- subset(df, 	MULTIFURC!=10^(-5) | CENTRAL==1)[order(MULTIFURC), ]
+	tmp[, ROW:= 50+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)
+	#	Sankoff
+	tmp	<- subset(df, 	SANKHOFF_K!=20 | CENTRAL==1)[order(SANKHOFF_K), ]
+	tmp[, ROW:= 60+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)
+	#	allow multitrans
+	tmp	<- subset(df, 	MT==1 | CENTRAL==1)[order(MT), ]
+	tmp[, ROW:= 70+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)
+	#	close
+	tmp	<- subset(df, 	DIST_CLOSE!=3.5 | CENTRAL==1)[order(DIST_CLOSE), ]
+	tmp[, ROW:= 80+seq_len(nrow(tmp))]
+	ans	<- rbind(ans, tmp)
+	#	confidence cut
+	tmp	<- subset(df, 	CONFIDENCE_CUT!=0.66 | CENTRAL==1)[order(CONFIDENCE_CUT), ]
+	tmp[, ROW:= 90+seq_len(nrow(tmp))]	
 	ans	<- rbind(ans, tmp)	
 	ans[, linked_label:= paste0(linked, ' (',linked_pc,')')]
 	ans[, data_insufficient_label:= paste0(data_insufficient, ' (',data_insufficient_pc,')')]
 	ans[, linked_yesdir_label:= paste0(linked_yesdir, ' (',linked_yesdir_pc,')')]
-	ans	<- subset(ans, select=c(SANKHOFF_K, DIST_CLOSE, DOWNSAMPLE, MIN_READ, CONFIDENCE_CUT, 
-					data_insufficient_label, 
-					linked_label, linked_FDR, 
-					linked_yesdir_label, src_FDR))
+	ans[, type:= paste(ROGUE_MIN, DOWNSAMPLE, MIN_READ, PRT, ZBL, MULTIFURC, SANKHOFF_K, MT, DIST_CLOSE, CONFIDENCE_CUT)]
+	ans	<- subset(ans, select=c(type, data_insufficient_label, linked_label, linked_FDR, linked_yesdir_label, src_FDR))
 	write.csv(ans, file=paste0(outfile.base,'compare_linked_srces.csv'))
 }
 

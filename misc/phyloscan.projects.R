@@ -40,7 +40,18 @@ project.dual<- function()
 	}			 
 } 
 
-RakaiFull.analyze.divergend.clades.170811<- function()
+pty.various	<- function()
+{
+	#project.scan.superinfections()
+	#project.scan.contaminants()
+	#project.readlength.count.all()
+	#project.readlength.count.bam.150218()
+	#project.readlength.count.bam.171018()
+	#project.check.bam.integrity()
+	RakaiFull.analyze.divergend.clades.170811()
+}
+
+RakaiFull.divergent.clades.calculate.170811<- function()
 {	
 	require(data.table)
 	require(scales)
@@ -93,8 +104,8 @@ RakaiFull.analyze.divergend.clades.170811<- function()
 							ph	<- phs[[i]]
 							df	<- data.table( 	NODE=seq_len(Nnode(ph, internal.only=FALSE)),
 									SUBGRAPH_MRCA=attr(ph,'SUBGRAPH_MRCA'),
-									INDIVIDUAL=attr(ph,'INDIVIDUAL'),
-									SPLIT=attr(ph,'SPLIT')
+									INDIVIDUAL=as.character(attr(ph,'INDIVIDUAL')),
+									SPLIT=as.character(attr(ph,'SPLIT'))
 							)
 							#	add counts for tip taxa
 							df[, COUNT:='']	
@@ -116,17 +127,6 @@ RakaiFull.analyze.divergend.clades.170811<- function()
 				ans
 			}, by='F']
 	save(dd, file=paste0(outfile.base,'info.rda'))	
-}
-
-pty.various	<- function()
-{
-	#project.scan.superinfections()
-	#project.scan.contaminants()
-	#project.readlength.count.all()
-	#project.readlength.count.bam.150218()
-	#project.readlength.count.bam.171018()
-	#project.check.bam.integrity()
-	RakaiFull.analyze.divergend.clades.170811()
 }
 
 project.dual.alignments.missing<- function()
