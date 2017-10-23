@@ -48,7 +48,7 @@ pty.various	<- function()
 	#project.readlength.count.bam.150218()
 	#project.readlength.count.bam.171018()
 	#project.check.bam.integrity()
-	RakaiFull.analyze.divergend.clades.170811()
+	RakaiFull.divergent.clades.calculate.170811()
 }
 
 RakaiFull.divergent.clades.calculate.170811<- function()
