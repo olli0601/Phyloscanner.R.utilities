@@ -1477,6 +1477,8 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj.rda'		
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_zbl'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_zbl.rda'		
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_cont'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_cont.rda'		
 	
 	#
 	#	load couples to search for in phyloscanner output
@@ -4915,14 +4917,136 @@ RakaiFull.divergent.clades.classify.170811<- function()
 	require(grid)
 	require(gridExtra)
 	require(RColorBrewer)
+	infile.manual.classifications	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couplescouples_170811_min10__distances_consPatristic_manualassessed_v5.rda"		
+	infile.divergent.clades			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/divsubgraphs_170704_w250_s20_p35_stagetwo_rerun23_min30_cnt_info.rda'
+	outfile.base					<- gsub('info.rda','',infile.divergent.clades)
+	#infile.windows					<- 
+	load(infile.divergent.clades)
+	dd[, PTY_RUN:= as.integer(gsub('^([0-9]+)_([0-9]+)_([0-9]+)$','\\1',NAME))]
+	dd[, W_FROM:= as.integer(gsub('^([0-9]+)_([0-9]+)_([0-9]+)$','\\2',NAME))]
+	dd[, W_TO:= as.integer(gsub('^([0-9]+)_([0-9]+)_([0-9]+)$','\\3',NAME))]
+	setnames(dd, 'INDIVIDUAL','RID')
+	#	focus on distant divergent subtrees
+	div.thresh	<- 0.035
+	div.thresh	<- 0.05
+	div.thresh	<- 0.08
+	dd			<- subset(dd,MAXCLADE_DIST>div.thresh)
+	#	condense all divergent subtrees to weighted average if there is more than one
+	#	if there are subtrees of size 1, just keep the one furthest away
+	#	end results: windows with either at least one contaminant, or divergent subtrees of total size M
+	dd	<- dd[, {
+				z	<- c(max(MAXCLADE_DIST),1)
+				tmp	<- which(READS>1)					
+				if(length(tmp))
+					z<- c( sum(READS[tmp]*MAXCLADE_DIST[tmp]) / sum(READS[tmp]), sum(READS[tmp])) 
+				list(MAXCLADE_DIST=z[1], READS=z[2])
+			}, by=c('RID','PTY_RUN','W_FROM','W_TO')]
+	#
+	dd[, MAXCLADE_PDC:= factor(MAXCLADE_DIST<=div.thresh, levels=c(TRUE,FALSE),labels=c(paste0('<=',div.thresh*1e2,'%'),paste0('>',div.thresh*1e2,'%')))]
+	dd[, RC:= cut(READS, right=TRUE, breaks=c(0,1,9,1e5),labels=c('1','2-9','>=10'))]	
+	ddi	<- dd[, list(N= length(W_FROM)), by=c('RID','PTY_RUN','MAXCLADE_PDC','RC')]
+	#tmp	<- subset(dd,MAXCLADE_PDC=='>3.5%')[, list(N_g3.5= length(W_FROM)), by=c('RID','PTY_RUN')]	
+	#ddi	<- merge(ddi, tmp, by=c('RID','PTY_RUN'), all.x=TRUE)
+	#set(ddi, ddi[, which(is.na(N_g3.5))], 'N_g3.5', 0L)
+	tmp	<- dd[, list(N_TOTAL= length(W_FROM)), by=c('RID','PTY_RUN')]
+	ddi	<- merge(ddi, tmp, by=c('RID','PTY_RUN'))
+	ddi	<- dcast.data.table(ddi, RID+PTY_RUN+N_TOTAL~MAXCLADE_PDC+RC, value.var='N')
+	for(x in setdiff(colnames(ddi), c('RID','PTY_RUN')))
+		set(ddi, which(is.na(ddi[[x]])), x, 0L)
 		
-	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/divsubgraphs_170704_w250_s20_p35_stagetwo_rerun23_min30_cnt_info.rda'
-	load(infile)
-	dd[, F:=NULL]
-	set(dd, NULL, 'INDIVIDUAL', dd[, as.character(INDIVIDUAL)])
-	set(dd, NULL, 'SPLIT', dd[, as.character(SPLIT)])
-	df		<- as.data.frame(dd)
 	
+	tmp	<- subset(rca, select=c(FEMALE_RID, MALE_RID, PTY_RUN, SELECT))
+	tmp2<- subset(dfd5, select=c(FEMALE_RID, MALE_RID, CLASS_MANUAL))
+	tmp	<- merge(tmp, tmp2, by=c('FEMALE_RID','MALE_RID'), all.x=TRUE)
+	tmp2<- unique(subset(rp, select=c(COUPID, FEMALE_RID, MALE_RID)))
+	tmp	<- merge(tmp, tmp2, by=c('FEMALE_RID','MALE_RID'), all.x=TRUE)	
+	#	TODO add total number of windows here
+	tmp	<- melt(tmp, measure.vars=c('FEMALE_RID','MALE_RID'), value.name='RID', variable.name='SEX')
+	set(tmp, NULL, 'SEX', tmp[, substr(SEX,1,1)])
+	
+	ddi	<- merge(tmp, ddi, by=c('RID','PTY_RUN'), all.x=TRUE)	
+	tmp	<- ddi[, which(!grepl('insufficient deep sequence data',SELECT) & is.na(N_TOTAL))]
+	for(x in setdiff(colnames(ddi), c('RID','PTY_RUN','SELECT','CLASS_MANUAL','COUPID','SEX')))
+		set(ddi, tmp, x, 0L)
+	
+	ddj	<- subset(ddi, !grepl('insufficient deep sequence data',SELECT) & !is.na(CLASS_MANUAL))
+	ddj	<- melt(ddj, id.vars=c('RID','PTY_RUN','SELECT','CLASS_MANUAL','COUPID','SEX','N_TOTAL'))
+	ddj[, RC:= gsub('^(.*)_(.*)$','\\2',variable)]
+	ddj[, MAXCLADE_PDC:= gsub('^(.*)_(.*)$','\\1',variable)]
+	
+	tmp	<- subset(ddj, SEX=='F')
+	tmp[, SEX:=NULL]
+	setnames(tmp, setdiff(colnames(tmp), c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID',"RC","MAXCLADE_PDC","variable")), paste0('F_',setdiff(colnames(tmp), c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID',"RC","MAXCLADE_PDC","variable"))))
+	ddj	<- subset(ddj, SEX=='M')
+	ddj[, SEX:=NULL]
+	setnames(ddj, setdiff(colnames(ddj), c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID',"RC","MAXCLADE_PDC","variable")), paste0('M_',setdiff(colnames(ddj), c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID',"RC","MAXCLADE_PDC","variable"))))
+	ddj	<- merge(ddj, tmp, by=c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID',"RC","MAXCLADE_PDC","variable"))
+	#ddj[, MAX_value:= pmax(M_value, F_value)]
+	
+	dds	<- ddj[, list(MAX_TOTAL= max(M_N_TOTAL,F_N_TOTAL)), by=c('PTY_RUN','SELECT','CLASS_MANUAL','COUPID','M_RID','F_RID')]
+	tmp	<- subset(ddj, RC!='1')[, list(MAX_TOTAL_GT1= max(sum(M_value),sum(F_value))), by=c('PTY_RUN','M_RID','F_RID')]
+	dds	<- merge(dds, tmp, by=c('PTY_RUN','M_RID','F_RID'))
+	tmp	<- subset(ddj, RC=='>=10')[, list(MAX_TOTAL_GT10= max(sum(M_value),sum(F_value))), by=c('PTY_RUN','M_RID','F_RID')]
+	dds	<- merge(dds, tmp, by=c('PTY_RUN','M_RID','F_RID'))
+	dds[, MAX_N_GT10:= MAX_TOTAL_GT10]
+	dds[, MAX_N_29:= MAX_TOTAL_GT1-MAX_N_GT10]
+	dds[, MAX_N_1:= MAX_TOTAL-MAX_TOTAL_GT1]
+	
+	tmp	<- melt(dds, id.vars=c('PTY_RUN','COUPID','M_RID','F_RID','CLASS_MANUAL','SELECT'))
+	tmp	<- subset(tmp, !grepl('MAX_TOTAL',variable))
+	set(tmp, NULL, 'variable', tmp[, factor(as.character(variable), levels=c('MAX_N_1','MAX_N_29','MAX_N_GT10'), labels=c('1','2-9','>=10'))] )
+	ggplot(tmp, aes(x=COUPID, y=value, fill=variable)) +
+			geom_hline(yintercept=20) +
+			geom_bar(stat='sum') + facet_grid(~CLASS_MANUAL, scales='free_x', space='free_x') +
+			theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	ggsave(file=paste0(outfile.base, 'landscape_Ng',div.thresh*1e3,'.pdf'), w=20, h=10)
+	ggplot(ddj, aes(x=COUPID, y=MAX_value, fill=M_variable)) +
+			geom_bar(stat='sum', position='fill') +
+			geom_hline(yintercept=0.66) +
+			facet_grid(~CLASS_MANUAL, scales='free_x', space='free_x') +
+			theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	ggsave(file=paste0(outfile.base, 'landscape_Ng',div.thresh*1e3,'_prop.pdf'), w=20, h=10)
+	
+	dds[, CLASS_V1:= cut(MAX_TOTAL_GT1, breaks=c(-1,9,19,1e4), labels=c('normal','unclear','divergent'))]	
+	setnames(dds, c('M_RID','F_RID'), c('MALE_RID','FEMALE_RID'))
+	#ggplot(dds, aes(x=CLASS_MANUAL, y=MAX_N_g3.5)) + geom_boxplot() + coord_flip()
+	ggplot(dds, aes(x=CLASS_MANUAL, y=MAX_NGT_g1)) + geom_boxplot() + coord_flip()
+	#ggplot(dds, aes(x=CLASS_MANUAL, y=MAX_N_g3.5_g10)) + geom_boxplot() + coord_flip()
+	ggsave(file=paste0(outfile.base, 'MAX_Ng35_g1_by_manualclassification.pdf'), w=6, h=6)
+	
+	
+	#
+	#	
+	#
+	tmp3	<- copy(dfd5)		
+	set(tmp3, tmp3[,which(log10(PHSC_PD_Q50)< -3.1)], 'PHSC_PD_Q50', 10^(-3.1))
+	set(tmp3, NULL, 'CLASS', tmp3[, factor(CLASS, levels=c('0','1','2'), labels=c('broadly comparable','discordant','highly variable'))])
+	set(tmp3, tmp3[, which(is.na(CLASS_MANUAL))], 'CLASS_MANUAL', 'not manually checked')
+	tmp3	<- merge(tmp3, subset(dds, select=c(MALE_RID,FEMALE_RID,CLASS_V1)), by=c('FEMALE_RID','MALE_RID'))
+	ggplot(subset(tmp3, CLASS_MANUAL!='not manually checked'), aes(x=log10(CONS_GDRW))) +
+			#geom_ribbon(aes(ymin=PR_L, ymax=PR_U), fill='black',alpha=0.15) +
+			#geom_line(aes(y=PR)) +
+			geom_point(size=1.5, aes(y=log10(PHSC_PD_Q50), colour=CLASS_V1)) +
+			scale_shape_manual(values=c('discordant'=15,'broadly comparable'=16,'highly variable'=17)) +
+			scale_colour_manual(values=c(	'divergent'="red",'normal'="black",
+							"multiple infection/dual infection/recombinants"='orangered',              
+							"multiple infection/dual infection/recombinants, weak signal"='plum', 
+							"insufficient data"='grey50',                              
+							"not manually checked"='black',
+							"typical topological configurations"='black',
+							"unclear"='bisque4',                                        
+							"unusual subtree distances"='purple')) +
+			geom_abline(slope=1, intercept=0, colour='black', linetype='dotted') +				
+			scale_x_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			scale_y_continuous(labels=paste0(c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25),'%'), expand=c(0,0), breaks=log10(c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25))) +
+			coord_cartesian(xlim=log10(c(min(tmp3$CONS_GDRW, na.rm=TRUE), 0.25)), ylim=log10(c(0.0007, 0.5))) +
+			theme_bw() +
+			theme(axis.title=element_text(size=15), axis.text=element_text(size=15)) +
+			labs(	x='\ngenetic distance between consensus sequences\n(subst/site)',
+					y='subtree distance across genomic windows\n(subst/site)\n',
+					pch='subtree distances versus\nconsensus distances',
+					colour='topological configurations')
+	ggsave(file=paste0(outfile.base,'_distances_consRawGenetic_v1.pdf'), w=8, h=7)
 }
 	
 
@@ -7663,8 +7787,22 @@ RakaiFull.analyze.couples.todi.170811.DI.vs.TODI.vs.DIR<- function()
 	#
 	rpw2[, table(TYPE_TO)]
 	rpw2[, table(TYPE_TO)/nrow(rpw2)]
-	#      ancestral & no intermediate    intermingled & no intermediate        adjacent & no intermediate disconnected or with intermediate 
-    #                    0.34229600                        0.14258437                        0.05163276                        0.46348687
+	subset(rpw2, PATRISTIC_DISTANCE<=0.035)[, prop.table(table(TYPE_TO))]
+	subset(rpw2, PATRISTIC_DISTANCE>0.035)[, prop.table(table(TYPE_TO))]
+	
+	#	binary correlation of disconnected and large distance
+	rpw2[, DISCONNECTED_YES:= as.numeric(grepl('disconnected', TYPE_TO))]
+	rpw2[, DISTANT_YES:= as.numeric(PATRISTIC_DISTANCE>0.035)]
+	rpw2[, cor(DISCONNECTED_YES,DISTANT_YES, method='pearson')] # rho=0.868
+	#	Jaccard Index = 0.867
+	rpw2[, length(which(DISCONNECTED_YES==1 & DISTANT_YES==1)) / (  
+						length(which(DISCONNECTED_YES==1 & DISTANT_YES==1)) +
+						length(which(DISCONNECTED_YES==1 & DISTANT_YES==0)) +
+						length(which(DISCONNECTED_YES==0 & DISTANT_YES==1))
+						)]
+	
+	subset(rpw2, PATRISTIC_DISTANCE<=0.035 & grepl('disconnected', TYPE_TO))[, table(grepl('with intermediate', TYPE))]
+	#	0.8107
 
 	#
 	#	plot topology assignment by distance
@@ -8412,6 +8550,67 @@ RakaiFull.analyze.couples.todi.170811.siblings.not.contiguous<- function()
 
 }
 
+RakaiFull.analyze.couples.todi.170811.check.pruneBlacklist<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile.central	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_withmetadata.rda'	
+	infile.pruneb	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt_withmetadata.rda'
+	load(infile.pruneb)
+	rca2	<- copy(rca)
+	rpw2	<- copy(rpw)
+	load(infile.central)
+	rca		<- subset(rca, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	rca[, BL_PRUNED:='blacklists_not_pruned']
+	rca2	<- subset(rca2, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	rca2[, BL_PRUNED:='blacklists_pruned']
+	tmp		<- rbind(rca, rca2)
+	tmp2	<- dcast.data.table(tmp, MALE_RID+FEMALE_RID+PTY_RUN~BL_PRUNED, value.var='SELECT')
+	subset(tmp2, blacklists_not_pruned!=blacklists_pruned)
+	#	one pair in which same pty run was evaluated
+	
+	tmp3	<- dcast.data.table(tmp, MALE_RID+FEMALE_RID~BL_PRUNED, value.var='SELECT')
+	subset(tmp3, blacklists_not_pruned!=blacklists_pruned)
+	#	three more pairs in which other pty runs were evaluated
+	
+	z	<- subset(rpw, MALE_RID=='F107468' & FEMALE_RID=='C107562' & PTY_RUN==298 & GROUP=='TYPE_RAW')[, W_FROM]
+	z2	<- subset(rpw2, MALE_RID=='F107468' & FEMALE_RID=='C107562' & PTY_RUN==298 & GROUP=='TYPE_RAW')[, W_FROM]
+	setdiff(z2, z)
+	#	do the raw assignments agree on the rest
+	#	yes they do
+	tmp	<- merge(rpw, rpw2, by=c('MALE_RID','FEMALE_RID','PTY_RUN','SUFFIX','W_FROM','W_TO','GROUP'))
+	tmp	<- subset(tmp, MALE_RID=='F107468' & FEMALE_RID=='C107562' & PTY_RUN==298 & GROUP=='TYPE_RAW')
+	subset(tmp, ADJACENT.y!=ADJACENT.x)
+	subset(tmp, CONTIGUOUS.y!=CONTIGUOUS.x)
+	subset(tmp, PATHS_MF.y!=PATHS_MF.x)
+	subset(tmp, PATHS_FM.y!=PATHS_FM.x)
+	subset(tmp, FEMALE_R.y!=FEMALE_R.x)
+	subset(tmp, MALE_R.y!=MALE_R.x)
+	subset(tmp, TYPE.y!=TYPE.x)
+	subset(tmp, round(PATRISTIC_DISTANCE.y,d=5)!=round(PATRISTIC_DISTANCE.x,d=5))
+	
+	#	rpw2 has windows 800-975 but rpw has not
+	rpw[, min(ID_R_MIN)]
+	rpw2[, min(ID_R_MIN)]
+	#	both have trmw.min.read=30
+	infile.allwindows	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_170811_cl3_prior23_min30_adj_allwindows.rda'
+	load(infile.allwindows)
+	subset(rpw, ID2=='F107468' & ID1=='C107562' & PTY_RUN==298 & GROUP=='TYPE_RAW')
+	#	windows 800-975 are neither in allwindows.rda
+
+	infile.trees	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj/ptyr298_trees.rda'
+	load(infile.trees)
+	#	we don t even have trees from windows 800-975
+	
+	
+}
+	
 RakaiFull.analyze.couples.todi.170811.DIRext<- function()
 {	
 	require(data.table)
@@ -9269,6 +9468,7 @@ RakaiFull.analyze.couples.todi.170811.compare.to.consensus<- function()
 	dfd5	<- subset(dfd5, select=c(MALE_RID,FEMALE_RID,CLASS_MANUAL))
 	dfd5	<- merge(dfd2,dfd5,by=c('MALE_RID','FEMALE_RID'),all.x=TRUE)
 	
+	save(rca, gd, dfd5, file=paste0(outfile.base,'_distances_consPatristic_manualassessed_v5.rda'))
 	
 	
 	tmp3	<- copy(dfd5)		
