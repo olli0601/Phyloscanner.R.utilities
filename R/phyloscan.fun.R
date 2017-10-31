@@ -1271,7 +1271,6 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,5)])))
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI']]	<- tmp2
-	cols.type[['TYPE_PAIR_TODI2']]	<- tmp2
 	tmp2		<- data.table(	TYPE= c("chain", "intermediate distance", "distant"),
 								COLS= c(brewer.pal(11, 'RdBu')[c(2,4)], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
@@ -1288,7 +1287,7 @@ phsc.plot.default.colours.for.relationtypes<- function()
 			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TO']]	<- tmp2
-	tmp2		<- data.table(	TYPE= c("likely pair", "other"),
+	tmp2		<- data.table(	TYPE= c("linked", "unlinked"),
 			COLS= c(rev(brewer.pal(9, 'Greens'))[2], rev(brewer.pal(11, 'RdGy'))[4]))					
 	tmp2		<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_PAIR_TODI2']]	<- tmp2
@@ -2405,13 +2404,13 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS, n=', length(tmp),'--> other with no intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'other_nointermediate')
+	set(df, tmp, 'TYPE_BASIC', 'sibling_nointermediate')
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS, n=', length(tmp),'--> other with intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')
+	set(df, tmp, 'TYPE_BASIC', 'sibling_withintermediate')
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT )]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
-	set(df, tmp, 'TYPE_BASIC', 'other_withintermediate')	
+	set(df, tmp, 'TYPE_BASIC', 'other')	
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
 	#
@@ -2596,7 +2595,7 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	if('TYPE_NETWORK_SCORES'%in%get.groups)
 	{				
 		df[, TYPE_NETWORK_SCORES:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
-		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'ambiguous')
+		set(df, df[, which(grepl('sibling',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'ambiguous')
 		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'ambiguous')				
 		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'fm')
 		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'mf')
@@ -2611,16 +2610,18 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 		df[, TYPE_CHAIN_TODI:= 'distant']
 		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
-		set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
-		set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', NA_character_)
+		#set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+		#set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', NA_character_)
 	}
 	#
 	#	TYPE_DIR_TODI7x3 make pretty labels
 	#
 	if(make.pretty.labels)
 	{
-		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE_DIR_TODI7x3)))))])	
-		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE_DIR_TODI7x3))))))])		
+		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_close','other',gsub('other_distant','other',TYPE_DIR_TODI7x3))])	
+		set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE_DIR_TODI7x3)))))])		
+		#set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE_DIR_TODI7x3)))))])	
+		#set(df, NULL, 'TYPE_DIR_TODI7x3', df[, gsub('other_no','other\nno',gsub('([ho])intermediate','\\1 intermediate',gsub('intermediate_','intermediate\n',gsub('intermingled_','intermingled\n',gsub('(chain_[fm][mf])_','\\1\n',gsub('(chain_[12][21])_','\\1\n',TYPE_DIR_TODI7x3))))))])		
 		for(x in c('TYPE_DIR_TODI7x3',get.groups))
 			set(df, NULL, x, gsub('_',' ',df[[x]]))
 	}	
@@ -2717,7 +2718,7 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 #' @param n.obs Minimum number of windows to select a pair of individuals with confidence at least confidence.cut. 
 #' @param confidence.cut Confidence cut off.  
 #' @return Prior parameter n0 
-phsc.get.prior.parameter.n0<- function(n.states, keff=3, neff=4, confidence.cut=0.75)
+phsc.get.prior.parameter.n0<- function(n.states, keff=2, neff=3, confidence.cut=0.66)
 {
 	phsc.find.n0.aux<- function(n0, n.states, keff, neff, confidence.cut)
 	{
