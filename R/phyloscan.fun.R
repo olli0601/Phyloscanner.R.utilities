@@ -1244,8 +1244,12 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'PRGn'))[c(3,4,5)]),
 					data.table(	TYPE= c("intermingled\nwith intermediate\nclose","intermingled\nwith intermediate","intermingled\nwith intermediate\ndistant"),
 							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
-					data.table(	TYPE= c("other\nno intermediate\nclose","other close","other","other distant"),
-							COLS= rev(brewer.pal(11, 'RdGy'))[c(9,3,4,5)])))
+					data.table(	TYPE= c("other close","other","other distant"),
+							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)]),
+					data.table(	TYPE= c("sibling no intermediate\nclose","sibling no intermediate","sibling no intermediate\nclose"),
+							COLS= brewer.pal(11, 'BrBG')[c(5,4,3)]),
+					data.table(	TYPE= c("sibling with intermediate\nclose","sibling with intermediate","sibling with intermediate\nclose"),
+							COLS= brewer.pal(11, 'PuOr')[c(4,2,1)])))
 	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_BASIC']]		<- cols.type[['TYPE_DIR_TODI7x3']]
 	tmp2		<- do.call('rbind',list(
@@ -2375,42 +2379,56 @@ phsc.get.basic.pairwise.relationships<- function(df, trmw.close.brl, trmw.distan
 	#
 	#	chains_12 
 	#
-	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & ADJACENT & CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> chain_12 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_12_nointermediate')
-	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> chain_12 with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_12_withintermediate')	
 	#
 	#	chains_21
 	#
-	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & ADJACENT & CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21>0 & CONTIGUOUS, n=', length(tmp),'--> chain_21 with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_nointermediate')	
-	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & ADJACENT & !CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21>0 & !CONTIGUOUS, n=', length(tmp),'--> chain_21 with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'chain_21_withintermediate')
 	#
 	#	intermingled 
 	#
-	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & ADJACENT & CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & CONTIGUOUS, n=', length(tmp),'--> intermingled with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_nointermediate')
-	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & !CONTIGUOUS)]
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & ADJACENT & !CONTIGUOUS)]
 	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !CONTIGUOUS, n=', length(tmp),'--> intermingled with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'intermingled_withintermediate')
 	#
-	#	other
+	#	sibling
 	#
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS)]
-	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS, n=', length(tmp),'--> other with no intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & CONTIGUOUS, n=', length(tmp),'--> sibling with no intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'sibling_nointermediate')
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS)]
-	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS, n=', length(tmp),'--> other with intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & ADJACENT & !CONTIGUOUS, n=', length(tmp),'--> sibling with intermediate')
 	set(df, tmp, 'TYPE_BASIC', 'sibling_withintermediate')
+	#
+	#	other
+	#	
 	tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT )]
-	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other with intermediate')
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other')
+	set(df, tmp, 'TYPE_BASIC', 'other')
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & !ADJACENT )]
+	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21==0 & !ADJACENT, n=', length(tmp),'--> other')
 	set(df, tmp, 'TYPE_BASIC', 'other')	
+	tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & !ADJACENT )]
+	if(verbose) cat('\nFound PATHS_12==0 & PATHS_21>0 & !ADJACENT, n=', length(tmp),'--> other')
+	set(df, tmp, 'TYPE_BASIC', 'other')	
+	tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & !ADJACENT )]
+	if(verbose) cat('\nFound PATHS_12>0 & PATHS_21>0 & !ADJACENT, n=', length(tmp),'--> other')
+	set(df, tmp, 'TYPE_BASIC', 'other')	
+	
+	
 	#	check
 	stopifnot( !nrow(subset(df, TYPE_BASIC=='none'))	)
 	#

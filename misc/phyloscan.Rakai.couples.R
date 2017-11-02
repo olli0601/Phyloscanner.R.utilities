@@ -692,8 +692,6 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s40_p35_stagetwo_rerun23_min30'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf3'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_mf4'
@@ -711,6 +709,22 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_zbl'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl.rda'
 	
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib.rda'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_chain.rda'
+	
+	if(0)
+	{
+		linked.group	<- 'TYPE_PAIR_TODI2'
+		linked.type.yes	<- 'linked'
+		linked.type.no	<- 'unlinked'		
+	}
+	if(1)
+	{
+		linked.group	<- 'TYPE_CHAIN_TODI'
+		linked.type.yes	<- 'chain'
+		linked.type.no	<- 'distant'		
+	}
 	
 	#	load sequence data
 	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
@@ -792,10 +806,10 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 				cat(PTY_RUN,'\n')
 				load(F)
 				#	search for couples in this run, and keep if these are most likely not a couple
-				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2'))
+				rtp		<- merge(rps, subset(rplkl, GROUP==linked.group), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE=='unlinked')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='unlinked'), by=c('ID1','ID2'), all.x=1)
+				rtp		<- subset(rtp, TYPE_MLE==linked.type.no)
+				rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group & TYPE==linked.type.no), by=c('ID1','ID2'), all.x=1)
 				if(!use.posterior.mode)
 					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				if(use.posterior.mode)
@@ -825,10 +839,10 @@ RakaiFull.preprocess.couples.todi.phyloscanneroutput.170811<- function()
 				rtp[, SELECT:= 'couple most likely a pair']
 				ans		<- rbind(ans, rtp, use.names=TRUE)
 				#	find most likely trm pairs based on TODI2
-				rtp		<- merge(rps, subset(rplkl, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2'))
+				rtp		<- merge(rps, subset(rplkl, GROUP==linked.group), by=c('ID1','ID2'))
 				rtp		<- rtp[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE=='linked')
-				rtp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIR_TODI2' & TYPE=='linked'), by=c('ID1','ID2'), all.x=1)
+				rtp		<- subset(rtp, TYPE_MLE==linked.type.yes)
+				rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes), by=c('ID1','ID2'), all.x=1)
 				if(!use.posterior.mode)
 					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				if(use.posterior.mode)
@@ -3769,11 +3783,26 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	confidence.cut			<- 0.66	# do not change, because the prior is calibrated for 0.66
 	#confidence.cut			<- 0.5
 	neff.cut				<- 3
+	if(0)
+	{
+		linked.group	<- 'TYPE_PAIR_TODI2'
+		linked.type.yes	<- 'linked'
+		linked.type.no	<- 'unlinked'		
+	}
+	if(1)
+	{
+		linked.group	<- 'TYPE_CHAIN_TODI'
+		linked.type.yes	<- 'chain'
+		linked.type.no	<- 'distant'		
+	}
+	
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30.rda"
 	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib.rda"
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_chain.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min50.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl25_prior23_min30.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl45_prior23_min30.rda"	
@@ -3783,14 +3812,14 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_d1000.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s10.rda"
 	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_s40.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf4.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf6.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mt.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg1.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg20.rda"
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf3.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf4.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mf6.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_mt.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_prt.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg1.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_rg20.rda"
+	#infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_zbl.rda"
 	
 	outfile.base			<- gsub('\\.rda','_',infile.trmpairs.todi) 
 	if(confidence.cut!=0.66 | neff.cut!=3)
@@ -3888,19 +3917,18 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	#
 	#	select run with max NEFF for each pair
 	#
-	tmp			<- unique(subset(rtp.tpairs, GROUP=='TYPE_PAIR_TODI2', c(MALE_RID, FEMALE_RID, PTY_RUN, NEFF)))
+	tmp			<- unique(subset(rtp.tpairs, GROUP==linked.group, c(MALE_RID, FEMALE_RID, PTY_RUN, NEFF)))
 	tmp			<- tmp[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('MALE_RID','FEMALE_RID')]
 	rtp.tpairs	<- merge(rtp.tpairs, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	rpw			<- merge(rpw, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	rplkl		<- merge(rplkl, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
 	#
 	#	make selections
-	group 		<- 'TYPE_PAIR_TODI2'
-	rex			<- subset(rtp.tpairs, SELECT=='couple most likely not a pair' & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
-	rex			<- merge(rex, subset(rtp.tpairs, GROUP==group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
+	rex			<- subset(rtp.tpairs, SELECT=='couple most likely not a pair' & GROUP==linked.group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
+	rex			<- merge(rex, subset(rtp.tpairs, GROUP==linked.group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
 	rex			<- subset(rex, POSTERIOR_SCORE>=confidence.cut)		 
-	rtp			<- subset(rtp.tpairs, grepl('most likely a pair',SELECT) & GROUP==group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
-	rtp			<- merge(rtp, subset(rtp.tpairs, GROUP==group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
+	rtp			<- subset(rtp.tpairs, grepl('most likely a pair',SELECT) & GROUP==linked.group)[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')]	
+	rtp			<- merge(rtp, subset(rtp.tpairs, GROUP==linked.group), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
 	rtp			<- subset(rtp, POSTERIOR_SCORE>=confidence.cut)		# 218 on couples run; stage1 614; stage2 125
 	tmp			<- unique(subset(rtp, select=c('MALE_RID','FEMALE_RID','PTY_RUN')))		
 	rtpd		<- merge(tmp, subset(rtp.tpairs, GROUP=='TYPE_DIR_TODI2'), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
@@ -3908,7 +3936,7 @@ RakaiFull.preprocess.couples.todi.addingmetadata.170811<- function()
 	rtpa		<- unique(subset(rplkl, select=c(FEMALE_RID, MALE_RID)))
 	rtpa		<- subset(merge(rtpa, subset(rtp, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
 	rtpa		<- subset(merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rex, select=c(FEMALE_RID, MALE_RID, PTY_RUN)), by=c('FEMALE_RID','MALE_RID'), all.x=1), is.na(PTY_RUN))
-	rtpa		<- merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rplkl, GROUP==group & TYPE=='linked'), by=c('MALE_RID','FEMALE_RID'))
+	rtpa		<- merge(subset(rtpa, select=c(FEMALE_RID, MALE_RID)), subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes), by=c('MALE_RID','FEMALE_RID'))
 	#rtpa[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 	rtpa[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]	
 	rtpa		<- merge(rtpa, rtpa[, list(PTY_RUN=PTY_RUN[which.max(POSTERIOR_SCORE)]), by=c('MALE_RID','FEMALE_RID')], by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
@@ -8941,6 +8969,140 @@ RakaiFull.analyze.couples.todi.170811.siblings.not.contiguous<- function()
 
 }
 
+
+RakaiFull.analyze.couples.todi.170811.check.linkage<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	#
+	#	compare _adj_sib to rerun _adj_chain
+	#
+	infile1			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib_withmetadata.rda'	
+	infile2			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_chain_withmetadata.rda'
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_divsibchain_'
+	load(infile2)
+	rca2	<- copy(rca)
+	rpw2	<- copy(rpw)
+	rplkl2	<- copy(rplkl)
+	load(infile1)
+	tmp		<- subset(rca, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	tmp[, CHECK:='check1']
+	tmp2	<- subset(rca2, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	tmp2[, CHECK:='check2']
+	tmp		<- rbind(subset(tmp, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, CHECK)), subset(tmp2, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, CHECK)))
+	tmp2	<- dcast.data.table(tmp, MALE_RID+FEMALE_RID+PTY_RUN~CHECK, value.var='SELECT')
+	tmp2	<- subset(tmp2, check1!=check2)
+	#	check1 is old _adj_sib. Expect more linkages now, and potentially that direction is not only longer consistent across all pairs
+	#	check all others -- this looks good! evaluate trees and windows
+	if(0)
+	{
+		rps			<- merge(rca, subset(tmp2, select=c(MALE_RID, FEMALE_RID, PTY_RUN)), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+		rps			<- subset(rps, select=c(MALE_RID, FEMALE_RID, PTY_RUN, TYPE, POSTERIOR_SCORE))
+		rps			<- subset(rps, !is.na(PTY_RUN))
+		setkey(rps, TYPE, POSTERIOR_SCORE)
+		write.csv(rps, file=paste0(outfile.base,'summary.csv'))
+		rps[, DUMMY:=seq_len(nrow(rps))]
+		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
+		
+		group		<- 'TYPE_BASIC'
+		group		<- 'TYPE_PAIR_TODI2'	
+		group		<- "TYPE_CHAIN_TODI"
+		rpw3		<- subset(rpw, GROUP==group)
+		rplkl3		<- subset(rplkl, GROUP==group)	
+		plot.file	<- paste0(outfile.base,'windows_summary_sib_',group,'.pdf')
+		setnames(rps, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rpw3, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		setnames(rplkl3, c('MALE_RID','FEMALE_RID'), c('MALE_SANGER_ID','FEMALE_SANGER_ID'))
+		phsc.plot.windowsummaries.for.pairs(rps, rpw3, rplkl3, plot.file, cols=NULL, group=group)				
+	}
+	if(0)
+	{
+		require(colorspace)
+		rps			<- merge(rca, subset(tmp2, select=c(MALE_RID, FEMALE_RID, PTY_RUN)), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+		rps			<- subset(rps, select=c(MALE_RID, FEMALE_RID, PTY_RUN, TYPE, POSTERIOR_SCORE))
+		rps			<- subset(rps, !is.na(PTY_RUN))
+		setkey(rps, TYPE, POSTERIOR_SCORE)
+		write.csv(rps, file=paste0(outfile.base,'summary.csv'))
+		rps[, DUMMY:=seq_len(nrow(rps))]
+		rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',TYPE,' ',round(POSTERIOR_SCORE, d=3),'\n',PTY_RUN))]]
+		
+		zz	<- rtp[, which(MALE_RID%in%c('D030388','B035048'))]
+		zz	<- 1:10
+		#for(ii in seq_len(nrow(rtpdm))[-1])
+		for(ii in zz)
+		{		
+			indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj'
+			# load dfr and phs
+			load( file.path(indir, paste0('ptyr',rps[ii,PTY_RUN],'_trees.rda')) )
+			# setup plotting
+			ids			<- c(rps[ii, MALE_RID],rps[ii, FEMALE_RID])
+			dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+			dfs[, MALE_RID:=ids[1]]
+			dfs[, FEMALE_RID:=ids[2]]				
+			dfs[, TITLE:= dfs[, paste('male ', ids[1],'\nfemale ',ids[2],'\nrun ', rps[ii, PTY_RUN], '\nwindow ', W_FROM,'-', W_TO, sep='')]]
+			plot.file	<- paste0(outfile.base, 'run_', rps[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+			invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.blacklisted=FALSE, drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))						
+		}
+	}
+	
+	
+	#
+	#	compare _adj to rerun _adj_sib
+	#
+	infile1	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_withmetadata.rda'	
+	infile2	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib_withmetadata.rda'
+	load(infile2)
+	rca2	<- copy(rca)
+	rpw2	<- copy(rpw)
+	load(infile1)
+	rca		<- subset(rca, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	rca[, CHECK:='check1']
+	rca2	<- subset(rca2, select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT))
+	rca2[, CHECK:='check2']
+	tmp		<- rbind(rca, rca2)
+	tmp2	<- dcast.data.table(tmp, MALE_RID+FEMALE_RID+PTY_RUN~CHECK, value.var='SELECT')
+	tmp2	<- subset(tmp2, check1!=check2)
+	
+	#	check1 is old _adj. Expect exactly identical.. ..not sure why results are no longer identical, could be changes in the phyloscanner version
+	#	check all others
+	tmp2[c(12,13),]
+	
+	male	<- 'D105505'
+	female	<- 'B104540'
+	run		<- 294
+	z	<- subset(rpw, MALE_RID==male & FEMALE_RID==female & PTY_RUN==run & GROUP=='TYPE_BASIC')
+	z2	<- subset(rpw2, MALE_RID==male & FEMALE_RID==female & PTY_RUN==run & GROUP=='TYPE_BASIC')
+	z	<- merge(subset(z, select=c(MALE_RID,FEMALE_RID,W_FROM,ADJACENT,CONTIGUOUS,PATHS_FM,PATHS_MF,TYPE)), subset(z2, select=c(MALE_RID,FEMALE_RID,W_FROM,ADJACENT,CONTIGUOUS,PATHS_FM,PATHS_MF,TYPE)),by=c('MALE_RID','FEMALE_RID','W_FROM'))
+	subset(z, TYPE.x!=TYPE.y)
+	
+	subset(z, PATHS_FM.x!=PATHS_FM.y)
+	
+	dwin<- subset(rpw2, MALE_RID==male & FEMALE_RID==female & PTY_RUN==run & GROUP=='TYPE_RAW')
+	setnames(dwin, c('MALE_RID','FEMALE_RID','PATHS_FM','PATHS_MF','FEMALE_L','FEMALE_R','MALE_L','MALE_R'), c('ID1','ID2','PATHS_21','PATHS_12','ID2_L','ID2_R','ID1_L','ID1_R'))
+	set(dwin, NULL, 'TYPE', dwin[, gsub('fm','21',gsub('mf','12',TYPE))])
+	trmw.min.reads	<- 30
+	trmw.min.tips	<- 1
+	trmw.close.brl	<- 0.035
+	trmw.distant.brl<- 0.08
+	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
+	setnames(dwin, 'TYPE', 'TYPE_RAW')	
+	dwin	<- phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)
+	
+	subset(dwin, ID1==male & ID2==female & PTY_RUN==run & W_FROM==1050)
+	
+	if(verbose) cat('\nCalculate derived pairwise relationships for windows n=',nrow(dwin),'...')
+	setnames(dwin, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	#for backwards compatibility
+	dwin	<- phsc.get.pairwise.relationships(dwin, get.groups=relationship.types, make.pretty.labels=FALSE)
+	setnames(dwin, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
+
+}
+
 RakaiFull.analyze.couples.todi.170811.check.pruneBlacklist<- function()
 {	
 	require(data.table)
@@ -9022,6 +9184,8 @@ RakaiFull.analyze.couples.todi.170811.DIRext<- function()
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min10_zbl_"	
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'		
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib_withmetadata.rda'		
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_adj_sib_"	
 	
 	load(infile)
 	setkey(rca, MALE_RID, FEMALE_RID)
