@@ -2514,7 +2514,7 @@ phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trm
 #' @param get.groups names of relationship groups  
 #' @param make.pretty.labels Logical   
 #' @return input data.table with new columns. Each new column defines relationship states for a specific relationship group. 
-phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI'), make.pretty.labels=TRUE)
+phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI','TYPE_ADJ_NETWORK_SCORES','TYPE_ADJ_DIR_TODI2'), make.pretty.labels=TRUE)
 {
 	#	
 	#	group to define likely pair just based on distance
@@ -2598,7 +2598,8 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	#}
 	#
 	#	group to determine direction of transmission in likely pairs
-	#	
+	#	based on contiguous linkage
+	#
 	if('TYPE_DIR_TODI2'%in%get.groups)
 	{
 		df[, TYPE_DIR_TODI2:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
@@ -2608,8 +2609,21 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_DIR_TODI2', '21')
 	}
 	#
+	#	group to determine direction of transmission in likely pairs
+	#	based on adjacent linkage
+	#
+	if('TYPE_ADJ_DIR_TODI2'%in%get.groups)
+	{
+		df[, TYPE_ADJ_DIR_TODI2:= NA_character_]	# non-NA: all relationships of a likely pair that have a direction assigned	
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_DIR_TODI2', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_DIR_TODI2', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_DIR_TODI2', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_DIR_TODI2', '21')
+	}
+	#
 	#	group to determine probabilities for transmission networks
-	#		
+	#	based on contiguous linkage
+	#
 	if('TYPE_NETWORK_SCORES'%in%get.groups)
 	{				
 		df[, TYPE_NETWORK_SCORES:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
@@ -2619,7 +2633,21 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', 'mf')
 		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', '12')
 		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_NETWORK_SCORES', '21')
-	}	
+	}
+	#
+	#	group to determine probabilities for transmission networks
+	#	based on adjacent linkage
+	#
+	if('TYPE_ADJ_NETWORK_SCORES'%in%get.groups)
+	{				
+		df[, TYPE_ADJ_NETWORK_SCORES:= 'not close/disconnected']	# non-NA: all relationships that are used for likely pair	
+		set(df, df[, which(grepl('sibling',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', 'ambiguous')
+		set(df, df[, which(grepl('intermingled',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', 'ambiguous')				
+		set(df, df[, which(grepl('chain_fm',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', 'fm')
+		set(df, df[, which(grepl('chain_mf',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', 'mf')
+		set(df, df[, which(grepl('chain_12',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', '12')
+		set(df, df[, which(grepl('chain_21',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_ADJ_NETWORK_SCORES', '21')
+	}		
 	#
 	#	group to transmission networks
 	#	
@@ -2654,7 +2682,9 @@ phsc.get.pairwise.relationships.numbers<- function()
 					'TYPE_PAIR_TODI2','2',
 					'TYPE_DIR_TODI2','2',															
 					'TYPE_CHAIN_TODI','2',
-					'TYPE_NETWORK_SCORES','3',					
+					'TYPE_ADJ_DIR_TODI2','2',
+					'TYPE_NETWORK_SCORES','3',
+					'TYPE_ADJ_NETWORK_SCORES','3',
 					'TYPE_BASIC','24'), ncol=2,byrow=TRUE)
 	colnames(tmp)	<- c('GROUP','N_TYPE')
 	tmp				<- as.data.table(tmp)

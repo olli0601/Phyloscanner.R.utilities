@@ -46,7 +46,7 @@ if(args$rel.likely.pair.by.cross.table)
 if(args$rel.direction)
 	relationship.types	<- c(relationship.types,'TYPE_DIR_TODI2')
 if(args$rel.chain)
-	relationship.types	<- c(relationship.types,'TYPE_CHAIN_TODI','TYPE_NETWORK_SCORES')
+	relationship.types	<- c(relationship.types,'TYPE_CHAIN_TODI','TYPE_ADJ_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_ADJ_NETWORK_SCORES')
 ###############################################################################
 #	for testing / debugging
 ###############################################################################
