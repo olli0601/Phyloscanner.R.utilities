@@ -5453,7 +5453,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj_chain_mean")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5530,7 +5530,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
 		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]		
-		#pty.c	<- subset(pty.c, PTY_RUN%in%c(60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))		
+		pty.c	<- subset(pty.c, !PTY_RUN%in%c(139, 164, 177, 315, 60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))		
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -5548,9 +5548,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#pty.c[1,cat(CMD)]		
 		#stop()
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					

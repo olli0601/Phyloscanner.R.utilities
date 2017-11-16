@@ -2025,6 +2025,77 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 
 #' @export
 #' @import data.table grid ggtree
+#' @title Plot networks
+#' @description This function plots networks.  
+#' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","ID1_SEX","ID2_SEX","COUPLE","KEFF","LKL_MAX","POSTERIOR_MODE","POSTERIOR_MEAN" 
+#' @param point.size size of the individual points
+#' @param point.sizec.couple size of the outer ring around individuals in couples
+#' @param edge.gap value to adjust start / end points of edges
+#' @param edge.size multiplier by which the size of edges is shrunk/magnified
+#' @param curvature curvature of directed edges  
+#' @param arrow type of arrow to be plotted
+#' @param curv.shift offset to place the label for directed edges
+#' @param label.size size of label
+#' @return ggplot object
+phsc.plot.network<- function(df, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3)
+{	
+	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
+	layout	<- as.data.table(ggnet2(network(unique(subset(df, select=c(ID1,ID2))), directed=FALSE, matrix.type="edgelist"))$data[,c("label", "x", "y")])
+	setnames(layout, c('label','x','y'), c('ID1','ID1_X','ID1_Y'))
+	df		<- merge(df, layout, by='ID1')
+	setnames(layout, c('ID1','ID1_X','ID1_Y'), c('ID2','ID2_X','ID2_Y'))
+	df		<- merge(df, layout, by='ID2')
+	setnames(layout, c('ID2','ID2_X','ID2_Y'),  c('ID','X','Y'))
+	tmp		<- unique(data.table(ID=c(df$ID1,df$ID2), SEX=c(df$ID1_SEX,df$ID2_SEX), COUPLE=c(df$COUPLE,df$COUPLE)))
+	layout	<- merge(layout,tmp, by='ID')
+	set(layout, NULL, 'COUPLE', layout[, factor(COUPLE, levels=c(0,1),labels=c('pair','couple'))])
+	df[, EDGETEXT_X:= (ID1_X+ID2_X)/2]
+	df[, EDGETEXT_Y:= (ID1_Y+ID2_Y)/2]
+	df[, EDGE_COL:= 'NA']
+	tmp		<- df[, which(TYPE==12)]
+	set(df, tmp, 'EDGE_COL', df[tmp, ID1_SEX])
+	tmp		<- df[, which(TYPE==21)]
+	set(df, tmp, 'EDGE_COL', df[tmp, ID2_SEX])		
+	#	for edges, move the start and end points on the line between X and Y
+	#	define unit gradient
+	df[, MX:= (ID2_X - ID1_X)]	
+	df[, MY:= (ID2_Y - ID1_Y)]
+	tmp		<- df[, sqrt(MX*MX+MY*MY)]
+	set(df, NULL, 'MX', df[, MX/tmp])
+	set(df, NULL, 'MY', df[, MY/tmp])	
+	set(df, NULL, 'ID1_X', df[, ID1_X + MX*edge.gap])
+	set(df, NULL, 'ID1_Y', df[, ID1_Y + MY*edge.gap])
+	set(df, NULL, 'ID2_X', df[, ID2_X - MX*edge.gap])
+	set(df, NULL, 'ID2_Y', df[, ID2_Y - MY*edge.gap])	
+	#	label could just be move on the tangent vector to the line
+	#	define unit tangent
+	df[, TX:= -MY]
+	df[, TY:= MX]
+	tmp		<- df[, which(TYPE=='12')]
+	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X + TX*curv.shift])
+	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y + TY*curv.shift])
+	tmp		<- df[, which(TYPE=='21')]
+	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X - TX*curv.shift])
+	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])		
+	p		<- ggplot() +
+			geom_point(data=subset(layout, COUPLE=='couple'), aes(x=X, y=Y), size=point.size.couple, colour='grey70') +
+			geom_point(data=layout, aes(x=X, y=Y, colour=SEX, pch=COUPLE), size=point.size) +
+			geom_segment(data=subset(df, TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), lineend="butt") +
+			geom_curve(data=subset(df, TYPE=='12' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +
+			geom_curve(data=subset(df, TYPE=='21' & KEFF>0), aes(x=ID2_X, xend=ID1_X, y=ID2_Y, yend=ID1_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +						
+			scale_colour_manual(values=c('F'='hotpink2', 'M'='steelblue2', 'NA'='grey50')) +
+			scale_shape_manual(values=c('pair'=18,'couple'=16)) +
+			scale_fill_manual(values=c('F'='hotpink2', 'M'='steelblue2', 'NA'='grey50')) +
+			scale_size_identity() +
+			geom_text(data=subset(df, TYPE!='not close/disconnected' & KEFF>0), aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=paste0(round(100*LKL_MAX,d=1),'%')), size=label.size) +
+			geom_text(data=layout, aes(x=X, y=Y, label=ID)) +
+			theme_void() +
+			guides(colour='none', fill='none',size='none', pch='none')	
+	p
+}
+
+#' @export
+#' @import data.table grid ggtree
 #' @title Plot short read phylogenies and highlight individuals
 #' @description This function plots short read phylogenies and highlights the clades of two individuals in red and blue.  
 #' @param phs List of trees in ape format
@@ -2674,6 +2745,102 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	df
 }
 
+simplify.summary <- function(summary, arrow.threshold, total.trees, plot = F){
+	
+	done <- rep(FALSE, nrow(summary))
+	
+	for(line in 1:nrow(summary)){
+		if(!done[line]){
+			forwards.rows <- which(summary$host.1 == summary$host.1[line] & summary$host.2 == summary$host.2[line])
+			backwards.rows <- which(summary$host.1 == summary$host.2[line] & summary$host.2 == summary$host.1[line])
+			
+			done[forwards.rows] <- T
+			done[backwards.rows] <- T
+			
+			summary$ancestry[intersect(forwards.rows, which(summary$ancestry=="trans"))] <- "trans12"
+			summary$ancestry[intersect(forwards.rows, which(summary$ancestry=="multi_trans"))] <- "multi_trans12"
+			
+			summary$ancestry[intersect(backwards.rows, which(summary$ancestry=="trans"))] <- "trans21"
+			summary$ancestry[intersect(backwards.rows, which(summary$ancestry=="multi_trans"))] <- "multi_trans21"
+			
+			summary[backwards.rows,c(1,2)] <- summary[backwards.rows,c(2,1)]
+		}
+	}
+	
+	summary.wide <- reshape(summary, direction="w", idvar=c("host.1", "host.2"), timevar = "ancestry", v.names = "ancestry.tree.count",  drop=c("fraction"))
+	
+	summary.wide[is.na(summary.wide)] <- 0
+	
+	summary.wide$total.equiv <- summary.wide$ancestry.tree.count.none + summary.wide$ancestry.tree.count.complex
+	
+	if("ancestry.tree.count.trans12" %in% colnames(summary.wide)){
+		summary.wide$total.12 <- summary.wide$ancestry.tree.count.trans12
+	} else {
+		summary.wide$total.12 <- rep(0, nrow(summary.wide))
+	}
+	
+	if(!is.null(summary.wide$ancestry.tree.count.multi_trans12)){
+		summary.wide$total.12 <- summary.wide$total.12 + summary.wide$ancestry.tree.count.multi_trans12
+	}
+	
+	
+	if("ancestry.tree.count.trans21" %in% colnames(summary.wide)){
+		summary.wide$total.21 <- summary.wide$ancestry.tree.count.trans21
+	} else {
+		summary.wide$total.21 <- rep(0, nrow(summary.wide))
+	}
+	
+	if(!is.null(summary.wide$ancestry.tree.count.multi_trans21)){
+		summary.wide$total.21 <- summary.wide$total.21 + summary.wide$ancestry.tree.count.multi_trans21
+	}
+	
+	summary.wide$total <- summary.wide$total.21 + summary.wide$total.12 + summary.wide$total.equiv
+	
+	dir <- summary.wide$total.12 >= arrow.threshold*total.trees | summary.wide$total.21 >= arrow.threshold*total.trees
+	
+	summary.wide$arrow[!dir] <- "none"
+	
+	if(length(which(dir)>0)){
+		summary.wide$arrow[dir] <- sapply(which(dir), function(x)  if(summary.wide$total.12[x]>summary.wide$total.21[x]) "forwards" else "backwards")
+		summary.wide$label[dir] <- paste0(round(pmax(summary.wide$total.12[dir],summary.wide$total.21[dir])/total.trees, 2),"/", round(summary.wide$total[dir]/total.trees, 2))
+	}
+	
+	summary.wide$label[!dir] <- as.character(round(summary.wide$total[!dir]/total.trees, 2))
+	
+	out.table <- summary.wide[,c("host.1","host.2","arrow","label")]
+	
+	out.table[which(out.table$arrow=="backwards"),c(1,2)] <- out.table[which(out.table$arrow=="backwards"),c(2,1)] 
+	
+	out.table$arrow <- out.table$arrow!="none"
+	
+	out <- list(simp.table = out.table)
+	
+	if(plot){
+		
+		# okay so we're doing this
+		
+		arrangement <- ggnet2(out.table[,c(1,2)])$data[,c("label", "x", "y")]
+		
+		out.table$x.start <- sapply(out.table$host.1, function(x) arrangement$x[match(x, arrangement$label)]) 
+		out.table$y.start <- sapply(out.table$host.1, function(x) arrangement$y[match(x, arrangement$label)]) 
+		out.table$x.end <- sapply(out.table$host.2, function(x) arrangement$x[match(x, arrangement$label)]) 
+		out.table$y.end <- sapply(out.table$host.2, function(x) arrangement$y[match(x, arrangement$label)]) 
+		out.table$x.midpoint <- (out.table$x.end + out.table$x.start)/2
+		out.table$y.midpoint <- (out.table$y.end + out.table$y.start)/2
+		
+		out.diagram <- ggplot() + 
+				geom_segment(data=out.table[which(out.table$arrow),], aes(x=x.start, xend = x.end, y=y.start, yend = y.end), arrow = arrow(length = unit(0.01, "npc"), type="closed"), col="steelblue3", size=1.5, lineend="round") +
+				geom_segment(data=out.table[which(!out.table$arrow),], aes(x=x.start, xend = x.end, y=y.start, yend = y.end), col="chartreuse3", size=1.5, lineend="round") +
+				geom_label(data=arrangement, aes(x=x, y=y, label=label), alpha=0.25, fill="darkgoldenrod3") + 
+				geom_text(data=out.table, aes(x=x.midpoint, y=y.midpoint, label=label)) + 
+				theme_void()
+		
+		out$simp.diagram <- out.diagram
+	}
+	
+	return(out)
+}
+
 phsc.get.pairwise.relationships.numbers<- function()
 {
 	tmp	<- matrix(c('TYPE_PAIR_DI2','2',
@@ -2698,22 +2865,25 @@ phsc.get.pairwise.relationships.numbers<- function()
 #' @param df data.table with basic relationship types for paired individuals across windows. Must contain columns 'ID1','ID2','W_FROM','W_TO','TYPE_BASIC'. 
 #' @param get.groups names of relationship groups  
 #' @return new data.table with columns ID1 ID2 GROUP TYPE K KEFF N NEFF. 
-phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
+phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups, w.slide=NA)
 {
 	stopifnot(c('ID1','ID2','W_FROM','W_TO','TYPE_BASIC')%in%colnames(df))
 	#
 	#	identify chunks of contiguous windows
 	#	
 	setkey(df, ID1, ID2, W_FROM)
-	w.slide	<- df[, {
-				ans	<- NA_integer_
-				tmp	<- diff(W_FROM)
-				if(length(tmp))
-					ans	<- min(tmp)
-				list(W_SLIDE=ans)
-			}, by=c('ID1','ID2')]
-	w.slide	<- subset(w.slide, !is.na(W_SLIDE))
-	w.slide	<- ifelse(nrow(w.slide), w.slide[, min(W_SLIDE)], 1L)
+	if(is.na(w.slide))
+	{
+		w.slide	<- df[, {
+					ans	<- NA_integer_
+					tmp	<- diff(W_FROM)
+					if(length(tmp))
+						ans	<- min(tmp)
+					list(W_SLIDE=ans)
+				}, by=c('ID1','ID2')]
+		w.slide	<- subset(w.slide, !is.na(W_SLIDE))
+		w.slide	<- ifelse(nrow(w.slide), w.slide[, min(W_SLIDE)], 1L)		
+	}
 	#	define chunks
 	setkey(df, ID1, ID2, W_FROM)
 	tmp		<- df[, {
@@ -2768,10 +2938,15 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups)
 #' @return Prior parameter n0 
 phsc.get.prior.parameter.n0<- function(n.states, keff=2, neff=3, confidence.cut=0.66)
 {
+	#phsc.find.n0.aux<- function(n0, n.states, keff, neff, confidence.cut)
+	#{
+	#	abs( (n0+n.states*(keff-1))/ (n.states*(neff+n0-2)) - confidence.cut )
+	#}
 	phsc.find.n0.aux<- function(n0, n.states, keff, neff, confidence.cut)
 	{
-		abs( (n0+n.states*(keff-1))/ (n.states*(neff+n0-2)) - confidence.cut )
+		abs( (n0+n.states*keff)/ (n.states*(neff+n0)) - confidence.cut )
 	}	
+	
 	ans	<- optimize(phsc.find.n0.aux, c(.001,1e2), n.states=n.states, keff=keff, neff=neff, confidence.cut=confidence.cut)
 	ans	<- round(ans$minimum, d=4)
 	ans
