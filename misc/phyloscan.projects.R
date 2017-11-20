@@ -5550,7 +5550,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#stop()
 		tmp		<- subset(pty.c, !PTY_RUN%in%c(11,94,208,139, 164, 177, 315, 60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))
 		invisible(tmp[,	{					
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="5.8gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
