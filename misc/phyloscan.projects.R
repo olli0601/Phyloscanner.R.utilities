@@ -5437,9 +5437,6 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 {
 	require(big.phylo)
 	require(Phyloscanner.R.utilities)
-	
-	cat(paste(paste0('"',strsplit('aer bindrcpp blob car dbplyr dplyr ggplot2 htmltools htmlwidgets httpuv lahman lme4 microbenchmark minqa nmf nycflights13 pbkrtest phangorn pheatmap plyr prodlim pryr purrr rcpp rcpparmadillo rcppeigen reshape reshape2 rgl roxygen2 rsqlite scales shiny tibble tidyr tidyselect viridis xml2', split=' ')[[1]],'"'), collapse=', '))
-	
 	#
 	#	INPUT ARGS PLATFORM
 	#	
