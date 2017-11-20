@@ -5437,6 +5437,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 {
 	require(big.phylo)
 	require(Phyloscanner.R.utilities)
+	
+	cat(paste(paste0('"',strsplit('aer bindrcpp blob car dbplyr dplyr ggplot2 htmltools htmlwidgets httpuv lahman lme4 microbenchmark minqa nmf nycflights13 pbkrtest phangorn pheatmap plyr prodlim pryr purrr rcpp rcpparmadillo rcppeigen reshape reshape2 rgl roxygen2 rsqlite scales shiny tibble tidyr tidyselect viridis xml2', split=' ')[[1]],'"'), collapse=', '))
+	
 	#
 	#	INPUT ARGS PLATFORM
 	#	
@@ -5453,7 +5456,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj_chain_mean")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min20_adj_chain_mean")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5470,6 +5473,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	#	
 	if(1)	
 	{	
+		dir.create(out.dir, showWarnings=FALSE)
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft=NA, 
 				prog.raxml=NA, 
@@ -5509,7 +5513,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				split.readCountsMatterOnZeroBranches=TRUE,
 				split.pruneBlacklist=FALSE,
 				trms.allowMultiTrans=TRUE,
-				pw.trmw.min.reads=30,									
+				pw.trmw.min.reads=20,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.035,
 				pw.trmw.distant.brl=0.08,
@@ -5521,7 +5525,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				mem.save=0,
 				verbose=TRUE,				
 				select=NA 
-				)					 
+				)	
+		save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 	}
 	#
 	#	RERUN PHYLOSCANNER
@@ -5529,8 +5534,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 	if(1)
 	{
 		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
-		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]		
-		pty.c	<- subset(pty.c, !PTY_RUN%in%c(139, 164, 177, 315, 60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))		
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]				
 		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -5547,10 +5551,11 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				}, by='PTY_RUN']		
 		#pty.c[1,cat(CMD)]		
 		#stop()
-		invisible(pty.c[,	{					
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeph", hpc.mem="3600mb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="63500mb",  hpc.nproc=1, hpc.load=hpc.load)
+		tmp		<- subset(pty.c, !PTY_RUN%in%c(11,94,208,139, 164, 177, 315, 60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))
+		invisible(tmp[,	{					
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="5.8gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
@@ -5558,11 +5563,24 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
 							#stop()
 						}, by='PTY_RUN'])
+		tmp		<- subset(pty.c, PTY_RUN%in%c(11,94,208,139, 164, 177, 315, 60, 104, 116, 120, 136, 141, 144, 148, 151, 156, 165, 170, 178, 185, 218, 273, 319))
+		invisible(tmp[,	{					
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="5.8gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							#stop()
+						}, by='PTY_RUN'])
+		
 		quit('no')		
 	}
 	if(0)	#check runs
 	{
-		df	<- data.table(F=list.files('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min10', pattern='_pairwise_relationships.rda$', full.names=TRUE))
+		df	<- data.table(F=list.files('/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj_chain_mean', pattern='_pairwise_relationships.rda$', full.names=TRUE))
 		df[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(F)))]
 		paste(setdiff( 1:346, df[, PTY_RUN]), collapse=', ')		
 	}
