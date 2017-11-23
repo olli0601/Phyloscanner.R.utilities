@@ -2859,6 +2859,72 @@ phsc.get.pairwise.relationships.numbers<- function()
 	tmp
 }
 
+#' @title Construct maximum probability transmission network
+#' @description This function reconstructs a maximum probility transmission 
+#' network from the scores associated with directed and undirected edges.
+#' The algorithm starts by keeping the edge with highest score.
+#' It then removes the competitor in the opposite direction, and any conflicting edges that would result in indegrees larger than one.
+#' By construction, all removed edges have lower probability.
+#' The algorithm proceeds until all edges have been processed.
+#' @export    
+#' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE'.   
+#' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
+phsc.get.maximum.probability.transmission.network<- function(rtnn, verbose=0)
+{
+	stopifnot(c('ID1','ID2','IDCLU','TYPE','POSTERIOR_SCORE')%in%colnames(rtnn))		
+	stopifnot( !length(setdiff(c('ambiguous','21','12'), rtnn[, unique(TYPE)])) )
+	
+	rtnn[, ID1_IN_WEIGHT:=0]
+	set(rtnn, rtnn[, which(TYPE=='ambiguous')],'ID1_IN_WEIGHT', 0.5)
+	set(rtnn, rtnn[, which(TYPE=='21')],'ID1_IN_WEIGHT', 1)
+	rtnn[, ID2_IN_WEIGHT:=0]
+	set(rtnn, rtnn[, which(TYPE=='ambiguous')],'ID2_IN_WEIGHT', 0.5)
+	set(rtnn, rtnn[, which(TYPE=='12')],'ID2_IN_WEIGHT', 1)
+	rtm		<- rtnn[, list(PROB_21= sum(POSTERIOR_SCORE*ID1_IN_WEIGHT), PROB_12= sum(POSTERIOR_SCORE*ID2_IN_WEIGHT)), by=c('IDCLU','ID1','ID2')]
+	#	split into separate networks
+	#	this should save time when networks are large because the searching will be much faster
+	rtmm	<- lapply(rtm[, unique(IDCLU)], function(x) subset(rtm, IDCLU==x))
+	for(i in seq_along(rtmm))
+	{
+		#	reconstruct maximum path network
+		ans	<- rtmm[[i]]
+		if(verbose) cat('\nprocessing network',i)
+		#	iterate: pick most likely edge and remove competing ones
+		set(ans, NULL, c('LINK_12','LINK_21'), 0L)	
+		set(ans, NULL, 'PROB_MAX', ans[, pmax(PROB_12,PROB_21)])
+		while( ans[, any(PROB_MAX>0)] )
+		{
+			z		<- ans[, which.max(PROB_MAX)]
+			set(ans, z, ifelse(ans[z, PROB_12>PROB_21], 'LINK_12', 'LINK_21'), 1L)
+			#delete direct competitor in pair
+			set(ans, z, ifelse(ans[z, PROB_12>PROB_21], 'PROB_21', 'PROB_12'), 0)	
+			#delete any conflicting incoming edge probabilities into recipient
+			rec							<- ifelse(ans[z, LINK_12==1], 'ID2', 'ID1')
+			conflicting.inprob.name		<- ifelse(rec=='ID2', 'PROB_12', 'PROB_21')
+			conflicting.inprob.idx		<- setdiff(which( ans[[rec]]==ans[[rec]][z] ),z)
+			set(ans, conflicting.inprob.idx, conflicting.inprob.name, 0)
+			#is the recipient also possibly in the other column?
+			rec2						<- ifelse(ans[z, LINK_12==1], 'ID1', 'ID2')
+			conflicting.inprob.name		<- ifelse(rec2=='ID1', 'PROB_21', 'PROB_12')
+			conflicting.inprob.idx		<- setdiff(which( ans[[rec2]]==ans[[rec]][z] ),z)
+			set(ans, conflicting.inprob.idx, conflicting.inprob.name, 0)
+			#reset probs (we have dealt with this edge)
+			set(ans, z, c('PROB_MAX'), 0)
+			#	re-calculate max probs
+			tmp	<- ans[, which(LINK_12==0 & LINK_21==0)]
+			set(ans, tmp, 'PROB_MAX', ans[tmp, pmax(PROB_12,PROB_21)])	
+			if(verbose)  cat('\nnumber of edges to process ', ans[, length(which(PROB_MAX>0))])
+		}
+		rtmm[[i]]	<- ans
+	}
+	rtm		<- do.call('rbind',rtmm)
+	setnames(rtm, c('PROB_21','PROB_12'), c('MX_PROB_21','MX_PROB_12'))
+	set(rtm, NULL, 'PROB_MAX', NULL)
+	rtnn	<- merge(rtnn, rtm, by=c('ID1','ID2','IDCLU'))
+	set(rtnn, NULL, c('ID1_IN_WEIGHT','ID2_IN_WEIGHT'), NULL)
+	rtnn
+}
+
 #' @title Count observed relationship states
 #' @description This function counts for each pair of individuals their relationship states across all windows (KEFF), and the total number of windows (NEFF). Since windows can be overlapping, the count is a real value.
 #' @export    
