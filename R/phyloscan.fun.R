@@ -2749,11 +2749,17 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	#	set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'close')
 	#	set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIRSCORE_DI', 'distant')			
 	#}	
-	if('TYPE_PAIR_DI2'%in%get.groups)
+	if('TYPE_PAIR_DI2_NOAMB'%in%get.groups)
 	{
 		df[, TYPE_PAIR_DI2:= 'not close']
 		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI2', 'close')			
-	}	
+	}
+	if('TYPE_PAIR_DI2'%in%get.groups)
+	{
+		df[, TYPE_PAIR_DI2:= 'ambiguous']
+		set(df, df[, which(grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI2', 'close')
+		set(df, df[, which(grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_DI2', 'distant')
+	}		
 	#	
 	#	group to define likely pair just based on topology
 	#	
@@ -2776,12 +2782,17 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	#
 	#	group to determine linkage - only 2 states, linked / unlinked
 	#
+	if('TYPE_PAIR_TODI2_NOAMB'%in%get.groups)
+	{
+		df[, TYPE_PAIR_TODI2:= 'unlinked']			 		
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'linked')
+	}
 	if('TYPE_PAIR_TODI2'%in%get.groups)
 	{
 		df[, TYPE_PAIR_TODI2:= 'unlinked']	
-		#	this counts close siblings 'other_nointermediate_close' as evidence for linkage 		
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3) & !grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'ambiguous')
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_PAIR_TODI2', 'linked')
-	}	
+	}		
 	#
 	#	group to determine likely pairs
 	#
@@ -2869,13 +2880,19 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 	#
 	#	group to transmission networks
 	#	
+	if('TYPE_CHAIN_TODI_NOAMB'%in%get.groups)
+	{
+		df[, TYPE_CHAIN_TODI:= 'distant']
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')		
+	}
 	if('TYPE_CHAIN_TODI'%in%get.groups)
 	{
 		df[, TYPE_CHAIN_TODI:= 'distant']
 		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
 		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
-		#set(df, df[, which(grepl('other',TYPE_DIR_TODI7x3) & grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'chain')
-		#set(df, df[, which(!grepl('distant',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', NA_character_)
+		set(df, df[, which(grepl('withintermediate',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3) & !grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'ambiguous')
+		set(df, df[, which(grepl('nointermediate',TYPE_DIR_TODI7x3) & !grepl('close',TYPE_DIR_TODI7x3) & !grepl('distant',TYPE_DIR_TODI7x3))], 'TYPE_CHAIN_TODI', 'ambiguous')		
 	}
 	#
 	#	TYPE_DIR_TODI7x3 make pretty labels
@@ -2990,11 +3007,14 @@ simplify.summary <- function(summary, arrow.threshold, total.trees, plot = F){
 
 phsc.get.pairwise.relationships.numbers<- function()
 {
-	tmp	<- matrix(c('TYPE_PAIR_DI2','2',
+	tmp	<- matrix(c('TYPE_PAIR_DI2_NOAMB','2',
+					'TYPE_PAIR_DI2','3',
 					'TYPE_PAIR_TO','2',
 					'TYPE_PAIR_TODI2x2','4',					
-					'TYPE_PAIR_TODI2','2',
-					'TYPE_DIR_TODI2','2',															
+					'TYPE_PAIR_TODI2_NOAMB','2',
+					'TYPE_PAIR_TODI2','3',
+					'TYPE_DIR_TODI2','2',
+					'TYPE_CHAIN_TODI_NOAMB','3',
 					'TYPE_CHAIN_TODI','2',
 					'TYPE_ADJ_DIR_TODI2','2',
 					'TYPE_NETWORK_SCORES','3',
@@ -3014,6 +3034,7 @@ phsc.get.pairwise.relationships.numbers<- function()
 #' By construction, all removed edges have lower probability.
 #' The algorithm proceeds until all edges have been processed.
 #' @export    
+#' @import sna igraph
 #' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
 phsc.get.maximum.probability.transmission.network<- function(rtnn, verbose=0)
@@ -3196,11 +3217,12 @@ phsc.get.pairwise.relationships.posterior<- function(df, n.type=2, n.obs=3, n.ty
 	stopifnot(c('GROUP')%in%colnames(df))
 	tmp		<- phsc.get.pairwise.relationships.numbers()	
 	tmp		<- tmp[, {
-				if(!grepl('_DIR',GROUP))
-					z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)
-				if(grepl('_DIR',GROUP))
-					z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type.dir, neff=n.obs.dir, confidence.cut=confidence.cut)
-				list(PAR_PRIOR=z)
+				#if(!grepl('_DIR',GROUP))
+				#	z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type, neff=n.obs, confidence.cut=confidence.cut)
+				#if(grepl('_DIR',GROUP))
+				#	z<- phsc.get.prior.parameter.n0(N_TYPE, keff=n.type.dir, neff=n.obs.dir, confidence.cut=confidence.cut)
+				#list(PAR_PRIOR=z)
+				list(PAR_PRIOR=N_TYPE)
 			}, by=c('GROUP','N_TYPE')]
 	df		<- merge(df, tmp, by=c('GROUP'))
 	df[, POSTERIOR_ALPHA:= PAR_PRIOR/N_TYPE+KEFF]

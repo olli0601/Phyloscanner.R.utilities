@@ -5453,7 +5453,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30_adj_chain_mean")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5513,7 +5513,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				pw.trmw.min.reads=30,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.025,
-				pw.trmw.distant.brl=0.08,
+				pw.trmw.distant.brl=0.05,
 				pw.prior.keff=2,
 				pw.prior.neff=3,
 				pw.prior.keff.dir=2,
