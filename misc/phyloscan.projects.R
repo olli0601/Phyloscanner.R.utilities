@@ -6175,6 +6175,7 @@ project.bam.check.integrity<- function()
 
 project.bam.read.distribution<- function() 
 {
+	require(big.phylo)
 	require(Phyloscanner.R.utilities)
 	#
 	#	INPUT ARGS PLATFORM
