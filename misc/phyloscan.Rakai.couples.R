@@ -2088,6 +2088,8 @@ RakaiFull.preprocess.phyloscanneroutput.couples.171122<- function()
 	infile.preprocessed.phcs	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl35_prior23_min30_networksallpairs.rda'
 	indir						<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30_adj_chain_mean'
 	infile.preprocessed.phcs	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30_networksallpairs.rda'
+	indir						<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
+	infile.preprocessed.phcs	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'
 	
 	outfile						<- gsub('_networksallpairs','_withmetadata',gsub('_pairs_','_couples_',gsub('full_run','couples/171119',infile.preprocessed.phcs)))
 	
@@ -2151,18 +2153,18 @@ RakaiFull.preprocess.phyloscanneroutput.couples.171122<- function()
 	tmp			<- subset(rtp, ID1_SEX=='F')
 	setnames(tmp, c('ID1','ID2','ID1_SEX','ID2_SEX'), c('ID2','ID1','ID2_SEX','ID1_SEX'))
 	rtp			<- rbind(subset(rtp, ID1_SEX=='M'), tmp)
-	tmp			<- unique(subset(rd, select=c('RID','SEX')))
-	setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
-	setnames(tmp, c('ID1_RID'), c('ID1'))
-	stopifnot( !length(setdiff(rplkl[, ID1], tmp[, ID1])) )
-	stopifnot( !length(setdiff(rpw[, ID1], tmp[, ID1])) )
-	rplkl		<- merge(rplkl, tmp, by=c('ID1'))
-	rpw			<- merge(rpw, tmp, by=c('ID1'))	
-	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
-	stopifnot( !length(setdiff(rplkl[, ID2], tmp[, ID2])) )
-	stopifnot( !length(setdiff(rpw[, ID2], tmp[, ID2])) )	
-	rplkl		<- merge(rplkl, tmp, by=c('ID2'))
-	rpw			<- merge(rpw, tmp, by=c('ID2'))	
+	#tmp			<- unique(subset(rd, select=c('RID','SEX')))
+	#setnames(tmp, colnames(tmp), paste0('ID1_',colnames(tmp)))
+	#setnames(tmp, c('ID1_RID'), c('ID1'))
+	#stopifnot( !length(setdiff(rplkl[, ID1], tmp[, ID1])) )
+	#stopifnot( !length(setdiff(rpw[, ID1], tmp[, ID1])) )
+	#rplkl		<- merge(rplkl, tmp, by=c('ID1'))
+	#rpw			<- merge(rpw, tmp, by=c('ID1'))	
+	#setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
+	#stopifnot( !length(setdiff(rplkl[, ID2], tmp[, ID2])) )
+	#stopifnot( !length(setdiff(rpw[, ID2], tmp[, ID2])) )	
+	#rplkl		<- merge(rplkl, tmp, by=c('ID2'))
+	#rpw			<- merge(rpw, tmp, by=c('ID2'))	
 	tmp			<- subset(rplkl, ID1_SEX=='F')
 	setnames(tmp, c('ID1','ID2','ID1_SEX','ID2_SEX'), c('ID2','ID1','ID2_SEX','ID1_SEX'))
 	set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
@@ -2190,16 +2192,20 @@ RakaiFull.preprocess.phyloscanneroutput.couples.171122<- function()
 	tmp		<- rbind(tmp, rtnn)
 	rtp		<- merge(rtp, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
 	
+	#	merge data on unlinked for everyone
+	tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.no)	
+	tmp[, POSTERIOR_SCORE_UNLINKED:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+	rtp		<- merge(rtp, subset(tmp, select=c(ID1, ID2, PTY_RUN, POSTERIOR_SCORE_UNLINKED)), by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
 	#
 	#	define SELECT
 	rtp[, SELECT:= NA_character_]
 	set(rtp, rtp[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
-	set(rtp, rtp[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<1-confidence.cut)], 'SELECT', 'couple most likely not a pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>=1-confidence.cut & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved')	
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED>confidence.cut)], 'SELECT', 'couple most likely not a pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved')	
 	setkey(rtp, ID1, ID2)
 	rtp[, PAIRID:=seq_len(nrow(rtp))]
 	
@@ -2414,6 +2420,8 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl40_prior23_min30.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_stagetwo_rerun23_min30_adj_chain_mean'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30.rda'
 	
 	
 	neff.cut	<- 3
@@ -2430,6 +2438,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	{
 		close.group		<- 'TYPE_PAIR_DI2'
 		close.type.yes	<- 'close'
+		close.type.no	<- 'distant'
 		linked.group	<- 'TYPE_CHAIN_TODI'
 		linked.type.yes	<- 'chain'
 		linked.type.no	<- 'distant'	
@@ -2505,29 +2514,29 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 	setkey(infiles, PTY_RUN)
 	rtp.todi2<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj_chain_mean/ptyr2_pairwise_relationships.rda'
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean/ptyr2_pairwise_relationships.rda'
 				#cat(PTY_RUN,'\n')
 				load(F)
 				#	fix up PAR_PRIOR
-				set(rplkl,NULL,'PAR_PRIOR', 1)
-				set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[, KEFF+PAR_PRIOR])
-				set(rplkl,NULL,'POSTERIOR_BETA', rplkl[, NEFF-KEFF+(N_TYPE-1)*PAR_PRIOR])
+				#set(rplkl, rplkl[, which(GROUP=='TYPE_CHAIN_TODI')], c('N_TYPE','PAR_PRIOR'), 3)
+				#set(rplkl,NULL,'POSTERIOR_ALPHA', rplkl[, KEFF+PAR_PRIOR/N_TYPE])
+				#set(rplkl,NULL,'POSTERIOR_BETA', rplkl[, NEFF+N_TYPE-KEFF-PAR_PRIOR/N_TYPE])				
+				##set(rplkl,NULL,'PAR_PRIOR', 1)
 				save(dwin, rplkl, file=F)
 				#	ML likely transmission pairs by distance
-				rtp		<- subset(rplkl, GROUP==close.group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE==close.type.yes)
-				rtp		<- merge(rtp, subset(rplkl, GROUP==close.group & TYPE==close.type.yes), by=c('ID1','ID2'), all.x=1)
+				rtp		<- subset(rplkl, GROUP==close.group)[, list(TYPE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE!=close.type.no)
+				rtp		<- merge(rtp, subset(rplkl, GROUP==close.group), by=c('ID1','ID2','TYPE'), all.x=1)
 				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]								
 				ans		<- copy(rtp)
 				#	ML likely transmission pairs by distance + topology
-				rtp		<- subset(rplkl, GROUP==linked.group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE==linked.type.yes)
-				rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes), by=c('ID1','ID2'), all.x=1)
+				rtp		<- subset(rplkl, GROUP==linked.group)[, list(TYPE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE!=linked.type.no)
+				rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group), by=c('ID1','ID2','TYPE'), all.x=1)
 				rtp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
 				ans		<- rbind(ans, rtp)				
 				ans				
 			}, by=c('PTY_RUN')]		
-	set(rtp.todi2, NULL, 'TYPE_MLE', NULL)	
 	set(rtp.todi2, NULL, 'GROUP', rtp.todi2[, as.character(GROUP)])
 	
 	#
@@ -2600,6 +2609,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
 	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)
 	
+	
 	#
 	#	construct max prob network among all possible pairs regardless of gender
 	#	above NEFF cut
@@ -2626,7 +2636,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	rtc[, CLU_SIZE:=NULL]
 	setnames(rtc, c('ID1'), c('ID2'))
 	rtn		<- merge(rtn, rtc, by=c('ID2','IDCLU'))
-	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE, ID1_SEX, ID2_SEX))
+	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE))
 	#	add posterior mean for network types
 	tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=c('ID1','ID2','PTY_RUN'))
 	tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
@@ -2691,7 +2701,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 	rtc[, CLU_SIZE:=NULL]
 	setnames(rtc, c('ID1'), c('ID2'))
 	rtn		<- merge(rtn, rtc, by=c('ID2','IDCLU'))
-	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE, ID1_SEX, ID2_SEX))
+	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE))
 	#	add posterior mean for network types
 	tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=c('ID1','ID2','PTY_RUN'))
 	tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
@@ -7136,6 +7146,7 @@ RakaiFull.preprocess.phyloscanneroutput.trmpairs.171122<- function()
 	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/community_sampling_170522.rda')	
 	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl35_prior23_min30_networksallpairs.rda'
 	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30_networksallpairs.rda'
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'
 	outfile.base			<- gsub('networksallpairs.rda','',infile.trmpairs.todi)
 	
 	#	now load second stage output
@@ -7145,8 +7156,8 @@ RakaiFull.preprocess.phyloscanneroutput.trmpairs.171122<- function()
 	#	get runs in which pairs have highest NEFF
 	#	select only M-F pairs in networks
 	rtp			<- rtn[ID1_SEX!=ID2_SEX, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2','ID1_SEX','ID2_SEX')]	
-	rplkl		<- merge(rtp, rplkl, by=c('ID1','ID2','PTY_RUN'))
-	rpw			<- merge(rtp, rpw, by=c('ID1','ID2','PTY_RUN'))
+	rplkl		<- merge(rtp, rplkl, by=c('ID1','ID2','ID1_SEX','ID2_SEX','PTY_RUN'))
+	rpw			<- merge(rtp, rpw, by=c('ID1','ID2','ID1_SEX','ID2_SEX','PTY_RUN'))
 	rtnn		<- merge(rtp, rtnn, by=c('ID1','ID2','PTY_RUN'))
 	
 	#
@@ -7171,18 +7182,22 @@ RakaiFull.preprocess.phyloscanneroutput.trmpairs.171122<- function()
 	#	merge linkage and direction probabilities
 	rtp		<- merge(rtp, rtnn, by=c('ID1','ID2','PTY_RUN','ID1_SEX','ID2_SEX'), all.x=TRUE)
 	
+	#	merge data on unlinked for everyone
+	tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.no)	
+	tmp[, POSTERIOR_SCORE_UNLINKED:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+	rtp		<- merge(rtp, subset(tmp, select=c(ID1, ID2, PTY_RUN, POSTERIOR_SCORE_UNLINKED)), all.x=1, by=c('ID1','ID2','PTY_RUN'))
+	
 	#
 	#	define SELECT
 	rtp[, SELECT:= NA_character_]
 	set(rtp, rtp[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
-	set(rtp, rtp[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<1-confidence.cut)], 'SELECT', 'couple most likely not a pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>=1-confidence.cut & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
-	set(rtp, rtp[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED>confidence.cut)], 'SELECT', 'couple most likely not a pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
 	setkey(rtp, ID1, ID2)
-
 	
 	#
 	#	rename to MALE_RID and FEMALE_RID
@@ -9333,7 +9348,9 @@ RakaiFull.analyze.couples.todi.171119.demographic.table<- function()
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_withmetadata.rda'
 	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/170811/todi_couples_170811_cl3_prior23_min30_"
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_withmetadata.rda'
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_"	
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_"
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_"		
 	load(infile)
 	
 	setkey(rca, MALE_RID, FEMALE_RID)
@@ -9466,6 +9483,175 @@ RakaiFull.analyze.couples.todi.171119.demographic.table<- function()
 	tmp[, WHO:='pair']
 	ans		<- rbind(ans, tmp)
 	tmp		<- melt(subset(rca, grepl('with resolved direction', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	
+	ans		<- merge(ans, ans[, list(P=N/sum(N), FACTOR=FACTOR), by=c('GROUP','WHO')],by=c('GROUP','WHO','FACTOR'))
+	ans[, LABEL:= paste0(N,' (',round(P*100,d=0),'%)')]
+	
+	tmp		<- dcast.data.table(ans, GROUP+FACTOR~WHO, value.var='LABEL')
+	set(tmp, tmp[, which(is.na(FACTOR))], 'FACTOR', 'Unknown')
+	set(tmp, NULL, 'FACTOR', tmp[, factor(FACTOR, levels=c("agrarian","trading","fisherfolk",                         
+									"<2012","2012","2013","2014",
+									"sero-positive","sero-incident","sero-discordant",     
+									"<20","20-24","25-29","30-34","35-39","40-44","45+","Unknown",                 	               
+									"female >5 yrs older","female 1-5 yrs older","male/female +-1 yrs","male 1-5 yrs older","male >5 yrs older"))])	
+	set(tmp, NULL, 'GROUP', tmp[, factor(GROUP, levels=c('FIRSTCONCPOS','FEMALE_COMM_TYPE','COUP_SC2','FEMALE_AGE','MALE_AGE','AGEDIFF'))])
+	setkey(tmp, GROUP, FACTOR)
+	tmp		<- subset(tmp, select=c('GROUP','FACTOR','all','data','not a pair','ambiguous if pair','pair','pair direction'))
+	write.csv(tmp, row.names=FALSE, file=paste0(outfile.base,'couples_demographics.csv'))	
+}
+
+RakaiFull.analyze.couples.todi.171122.demographic.table<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
+	outfile.base			<- gsub('withmetadata.rda','',infile)
+			
+	load(infile)
+	
+	setkey(rca, MALE_RID, FEMALE_RID)
+	subset(rca[, list(N=length(PTY_RUN)), by=c('MALE_RID','FEMALE_RID')], N>1)
+	unique(rca, by=c('MALE_RID','FEMALE_RID'))
+	
+	#	add couple status
+	tmp		<- unique(subset(rp, select=c(FEMALE_RID, MALE_RID, COUP_SC)))
+	rca		<- merge(rca, tmp, by=c('FEMALE_RID','MALE_RID'), all.x=1)
+	
+	
+	#	table
+	#	location female (community type)
+	group	<- 'FEMALE_COMM_TYPE'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- copy(tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)	
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	#	year first concordant positive
+	rca[, FIRSTCONCPOS:=as.character(round(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE), d=0))]
+	set(rca, rca[, which(FIRSTCONCPOS<'2012')], 'FIRSTCONCPOS', '<2012')
+	group	<- 'FIRSTCONCPOS'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)	
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	rca[, COUP_SC2:= 'sero-positive']
+	set(rca, rca[, which(grepl('seroinc',COUP_SC))], 'COUP_SC2', 'sero-incident')
+	set(rca, rca[, which(grepl('M->F|F->M',COUP_SC))], 'COUP_SC2', 'sero-discordant')
+	group	<- 'COUP_SC2'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)	
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	#	age of female at time first conc pos
+	rca[, FEMALE_AGE:=cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-FEMALE_BIRTHDATE, breaks=c(0,20,25,30,35,40,45,80),labels=c('<20','20-24','25-29','30-34','35-39','40-44','45+'))]
+	group	<- 'FEMALE_AGE'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)	
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	#	age of male at time first conc pos
+	rca[, MALE_AGE:=cut(pmax(MALE_FIRSTPOSDATE,FEMALE_FIRSTPOSDATE)-MALE_BIRTHDATE, breaks=c(0,20,25,30,35,40,45,80),labels=c('<20','20-24','25-29','30-34','35-39','40-44','45+'))]
+	group	<- 'MALE_AGE'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)	
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair direction']
+	ans		<- rbind(ans, tmp)
+	#	age difference
+	rca[, AGEDIFF:= cut(FEMALE_BIRTHDATE-MALE_BIRTHDATE, breaks=c(-30,-5,-1,1,5,30), labels=c('female >5 yrs older','female 1-5 yrs older','male/female +-1 yrs','male 1-5 yrs older','male >5 yrs older'))]
+	group	<- 'AGEDIFF'
+	tmp		<- melt(rca[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='all']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, !grepl('insufficient deep sequence data', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='data']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely not a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='not a pair']	
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple ambiguous if pair or not pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='ambiguous if pair']	
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('couple most likely a pair', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
+	tmp[, WHO:='pair']
+	ans		<- rbind(ans, tmp)
+	tmp		<- melt(subset(rca, grepl('direction resolved', SELECT))[, list(N=length(FEMALE_RID)), by=group], id.vars='N', measure.vars=c(group), value.name='FACTOR', variable.name='GROUP')
 	tmp[, WHO:='pair direction']
 	ans		<- rbind(ans, tmp)
 	
@@ -12141,6 +12327,284 @@ RakaiFull.analyze.couples.todi.171119.networks<- function()
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
 
+RakaiFull.analyze.couples.todi.171122.networks<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(igraph)
+	require(Phyloscanner.R.utilities)
+	
+	infile.trmpairs.todi	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'			
+	outfile.base			<- gsub('.rda','',infile.trmpairs.todi)		
+		
+	#	now load second stage output
+	load(infile.trmpairs.todi)
+	
+	#	networks with spouses
+	idclus	<- subset(rca, !is.na(IDCLU))[, unique(sort(IDCLU))]
+	rtn		<- subset(rtn, IDCLU%in%idclus)
+	rtnn	<- subset(rtnn, IDCLU%in%idclus)
+	tmp		<- unique(subset(rtn, select=c(ID1,ID2,PTY_RUN,ID1_SEX,ID2_SEX)))
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'))	
+	rtnn	<- subset(rtnn, LINK_12>0 | LINK_21>0)
+	tmp		<- subset(rtnn, ID1_SEX=='F')	
+	setnames(tmp, c('ID1','ID2','ID1_SEX','ID2_SEX'), c('ID2','ID1','ID2_SEX','ID1_SEX'))
+	setnames(tmp, colnames(tmp), gsub('xx','21',gsub('21','12',gsub('12','xx',colnames(tmp)))))
+	rtnn	<- rbind(subset(rtnn, ID1_SEX=='M'),tmp)
+	
+	#	recalculate distinct networks
+	set(rtnn, NULL, 'IDCLU', NULL)
+	tmp		<- subset(rtnn, select=c(ID1, ID2))			
+	tmp		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc		<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2	<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc		<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)
+	setnames(rtc, 'ID', 'ID1')
+	rtnn	<- merge(rtnn, rtc, by='ID1')	
+	rtnn[, SXO:= paste0(ID1_SEX,ID2_SEX)]
+	rtnn[, SELECT:= NA_character_]
+	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<1-confidence.cut)], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>=1-confidence.cut & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')
+	
+	#
+	#	plot network	
+	di		<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
+	di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
+	setnames(di, 'RID', 'ID')	
+	df		<- copy(rtn) #df		<- subset(rtn, IDCLU==idclus[1:2])
+	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
+	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+			edge.gap=0.005, 
+			edge.size=0.4, 
+			curvature= -0.2, 
+			arrow=arrow(length=unit(0.005, "npc"), type="open"), 
+			curv.shift=0.008, 
+			label.size=3, 
+			node.label=NA_character_, 
+			node.shape='IN_COUPLE', 
+			node.fill='SEX', 
+			node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+			node.fill.values=c('F'='hotpink2', 'M'='steelblue2'))
+	pdf(file=paste0(outfile.base,'_probnetworks_allpairs.pdf'), w=50, h=50)		
+	print(p)
+	dev.off()
+	
+
+	#	none are unlinked, but some ambiguous. exlude ambiguous
+	rtnn	<- subset(rtnn, !grepl('ambiguous|not a pair|insufficient', SELECT))
+	tmp		<- subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))
+	setnames(tmp, c('MALE_RID','FEMALE_RID'),c('ID1','ID2'))
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+	
+	#
+	#	network info
+	rti		<- rtnn[, list(	TRMS= length(SXO),
+					TRMS_HSX= length(which(SXO=='MF')),					
+					TRMS_CPL= length(which(SXO=='MF' & !is.na(PAIRID))),
+					TRMS_FF= length(which(SXO=='FF')),
+					TRMS_MM= length(which(SXO=='MM')),
+					TRMS_HSX_DIR= length(which(SXO=='MF' & grepl('direction resolved',SELECT))),
+					TRMS_HSX_DIR_MF= length(which(SXO=='MF' & grepl('direction resolved to 12',SELECT))),
+					TRMS_HSX_DIR_FM= length(which(SXO=='MF' & grepl('direction resolved to 21',SELECT))),							
+					CLU_SIZE= length(unique(c(ID1,ID2))),
+					CLU_SIZE_HSX= length(unique(c(ID1[SXO=='MF'],ID2[SXO=='MF']))),
+					CLU_SIZE_CPL= length(unique(c(ID1[SXO=='MF' & !is.na(PAIRID)],ID2[SXO=='MF' & !is.na(PAIRID)]))),					
+					CLU_SIZE_FF= length(unique(c(ID1[SXO=='FF'],ID2[SXO=='FF']))),
+					CLU_SIZE_MM= length(unique(c(ID1[SXO=='MM'],ID2[SXO=='MM']))),
+					CLU_SIZE_HSX_DIR= length(unique(c(ID1[SXO=='MF' & grepl('direction resolved',SELECT)],ID2[SXO=='MF' & grepl('direction resolved',SELECT)]))),
+					MALES_HSX_DIR_MF= length(unique(c(ID1[SXO=='MF' & grepl('direction resolved to 12',SELECT)]))),
+					FEMALES_HSX_DIR_MF= length(unique(c(ID2[SXO=='MF' & grepl('direction resolved to 12',SELECT)]))),
+					MALES_HSX_DIR_FM= length(unique(c(ID1[SXO=='MF' & grepl('direction resolved to 21',SELECT)]))),
+					FEMALES_HSX_DIR_FM= length(unique(c(ID2[SXO=='MF' & grepl('direction resolved to 21',SELECT)])))
+			), by='IDCLU']
+	rti		<- subset(rti, TRMS_HSX>0)					
+	rti[, length(unique(IDCLU))]	
+	#	123 networks
+	rti[, table(CLU_SIZE_HSX)]
+	#	CLU_SIZE_HSX
+	#	2  3   4  5  6 
+	#	98 13  7  4  1
+
+	rti[, list(		HSX_LINKED= sum(CLU_SIZE_HSX),
+					CPL_LINKED= sum(CLU_SIZE_CPL),
+					FF_LINKED= sum(CLU_SIZE_FF), 
+					MM_LINKED= sum(CLU_SIZE_MM),
+					HSX_DIR= sum(CLU_SIZE_HSX_DIR),
+					M_TRANSMITTERS= sum(MALES_HSX_DIR_MF),
+					F_RECIPIENTS= sum(FEMALES_HSX_DIR_MF),
+					F_TRANSMITTERS= sum(FEMALES_HSX_DIR_FM),
+					M_RECIPIENTS= sum(MALES_HSX_DIR_FM),
+					EVENTS_HSX_LINKED= sum(TRMS_HSX),
+					EVENTS_CPL_LINKED= sum(TRMS_CPL),
+					EVENTS_HSX_DIR= sum(TRMS_HSX_DIR)
+					)]	
+	#   HSX_LINKED CPL_LINKED FF_LINKED MM_LINKED HSX_DIR M_TRANSMITTERS F_RECIPIENTS F_TRANSMITTERS M_RECIPIENTS EVENTS_HSX_LINKED EVENTS_CPL_LINKED EVENTS_HSX_DIR
+	# 	       289        242        12        17     185             58           63             32           34               156               122             97
+	
+	
+	
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu	<- idclus[i]
+				di		<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
+				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
+				setnames(di, 'RID', 'ID')
+				df		<- subset(rtn, IDCLU==idclu)
+				set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
+				p		<- phsc.plot.probability.network(df, di, point.size=10, 
+						edge.gap=0.04, 
+						edge.size=0.4, 
+						curvature= -0.2, 
+						arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+						curv.shift=0.08, 
+						label.size=3, 
+						node.label='ID', 
+						node.shape='IN_COUPLE', 
+						node.fill='SEX', 
+						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'))
+				p	
+			})
+	qns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu	<- idclus[i]
+				layout	<- pns[[i]]$layout 
+				di	<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
+				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
+				setnames(di, 'RID', 'ID')
+				df	<- subset(rtnn, IDCLU==idclu)				
+				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+						edge.gap=0.04, 
+						edge.size=0.4, 
+						curvature= -0.2, 
+						arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+						curv.shift=0.08, 
+						label.size=3, 
+						node.label='ID', 
+						node.shape='IN_COUPLE', 
+						node.fill='SEX', 
+						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						layout=layout)
+				p	
+			})		
+	pdf(file=gsub('withmetadata.rda','probabilitynetworks.pdf',outfile), w=8, h=8)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()
+	pdf(file=gsub('withmetadata.rda','maxprobabilitynetworks.pdf',outfile), w=8, h=8)
+	for(i in seq_along(qns))	
+		print(qns[[i]])
+	dev.off()
+	
+	
+	#	above NEFF cut
+	tmp			<- subset(rtp.todi2, GROUP==linked.group & TYPE==linked.type.yes & NEFF>neff.cut, select=c(ID1, ID2, PTY_RUN))
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
+	#	likely transmission pairs, using topology and distance
+	#	select one patient pairing across runs: that with highest NEFF		
+	rtn		<- subset(rtp.todi2, GROUP==linked.group)[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]
+	rtn		<- subset(rtn, ID1!=ID2)
+	rtn		<- merge(rtn, subset(rtp.todi2, GROUP==linked.group), by=c('ID1','ID2','PTY_RUN'))	
+	#rtn		<- subset(rtn, POSTERIOR_SCORE>confidence.cut)			
+	#	get transmission chains with igraph
+	tmp		<- subset(rtn, select=c(ID1, ID2))			
+	tmp		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc		<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2	<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc			<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)
+	#	add info on edges
+	setnames(rtc, c('ID'), c('ID1'))
+	rtn		<- merge(rtn, rtc, by='ID1')
+	rtc[, CLU_SIZE:=NULL]
+	setnames(rtc, c('ID1'), c('ID2'))
+	rtn		<- merge(rtn, rtc, by=c('ID2','IDCLU'))
+	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE, ID1_SEX, ID2_SEX))
+	#	add posterior mean for network types
+	tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=c('ID1','ID2','PTY_RUN'))
+	tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=POSTERIOR_ALPHA/sum(POSTERIOR_ALPHA) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
+	rtn		<- rbind(tmp, rtn)
+	
+	#	generate maximum branch transmission network
+	rtnn	<- subset(rtn, GROUP==scores.group)
+	rtnn	<- phsc.get.maximum.probability.transmission.network(rtnn, verbose=0)
+	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
+	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
+}
+
+RakaiFull.analyze.ffpairs.171122.intermingled<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(igraph)
+	require(Phyloscanner.R.utilities)
+	
+	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
+	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
+	load(infile)
+		
+	rtp			<- rtn[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2','ID1_SEX','ID2_SEX')]
+	rtnn		<- merge(rtp, rtnn, by=c('ID1','ID2','PTY_RUN'))
+	rtnn		<- subset(rtnn, LINK_12>0 | LINK_21>0)
+	rtnn[, SELECT:= NA_character_]
+	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<1-confidence.cut)], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>=1-confidence.cut & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
+	#	none are unlinked, but some ambiguous. exlude ambiguous
+	rtnn	<- subset(rtnn, !grepl('ambiguous|not a pair|insufficient', SELECT))
+	
+	#
+	#	get networks and network size. re-run igraph on max prob network
+	set(rtnn, NULL, 'IDCLU', NULL)
+	tmp		<- subset(rtnn, select=c(ID1, ID2))			
+	tmp		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc		<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2	<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc		<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)
+	setnames(rtc, 'ID', 'ID1')
+	rtnn	<- merge(rtnn, rtc, by='ID1')
+	
+	#	find FF pairs with no one else
+	ffnn	<- subset(rtnn, CLU_SIZE==2 & ID1_SEX=='F' & ID2_SEX=='F')
+	
+	#	check if any most frequent intermingled
+	tmp		<- subset(ffnn, select=c(ID1,ID2,PTY_RUN))
+	ffrpw	<- merge(subset(rplkl, GROUP=='TYPE_ADJ_NETWORK_SCORES'),tmp,by=c('ID1','ID2','PTY_RUN'))
+	tmp		<- ffrpw[, list(TYPE=TYPE[which.max(KEFF)], NEFF=NEFF[1]), by=c('ID1','ID2','PTY_RUN') ]
+	ffd		<- subset(tmp, TYPE=='ambiguous')
+}
+	
 RakaiFull.analyze.trmpairs.todi.171122.networks<- function()
 {	
 	require(data.table)
@@ -12152,21 +12616,6 @@ RakaiFull.analyze.trmpairs.todi.171122.networks<- function()
 	require(Hmisc)
 	require(igraph)
 	require(Phyloscanner.R.utilities)
-	confidence.cut			<- 0.66	
-	neff.cut				<- 3	
-	if(0)
-	{
-		linked.group	<- 'TYPE_PAIR_TODI2'
-		linked.type.yes	<- 'linked'			
-		dir.group		<- 'TYPE_DIR_TODI2'		
-	}
-	if(1)
-	{
-		linked.group	<- 'TYPE_CHAIN_TODI'
-		linked.type.yes	<- 'chain'
-		dir.group		<- 'TYPE_ADJ_DIR_TODI2'	
-		scores.group	<- 'TYPE_ADJ_NETWORK_SCORES'
-	}
 	
 	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30_networksallpairs.rda'		
 	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
@@ -12835,7 +13284,7 @@ RakaiFull.analyze.couples.todi.171119.checkalphabeta<- function()
 	subset(tmp, abs(TOTAL-1)>1e-6)[, table(GROUP)]
 }
 
-RakaiFull.analyze.couples.todi.171119.birdseyeview<- function()
+RakaiFull.analyze.couples.todi.171122.birdseyeview<- function()
 {	
 	require(data.table)
 	require(scales)
@@ -12851,9 +13300,9 @@ RakaiFull.analyze.couples.todi.171119.birdseyeview<- function()
 	scores.group			<- 'TYPE_ADJ_NETWORK_SCORES'
 	scores.type.no			<- c('ambiguous','not close/disconnected') 
 	dir.group				<- 'TYPE_ADJ_DIR_TODI2'
-	
-	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_withmetadata.rda'
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_"	
+		
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
+	outfile.base			<- gsub('withmetadata.rda','',infile)		
 	load(infile)	
 	setkey(rca, MALE_RID, FEMALE_RID)
 	rca[, PAIRID:=seq_len(nrow(rca))]
@@ -12862,13 +13311,13 @@ RakaiFull.analyze.couples.todi.171119.birdseyeview<- function()
 	#	get posterior prob for likely pair
 	rpp					<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes)
 	rpp					<- merge(rpp,unique(subset(rca, select=c(MALE_RID,FEMALE_RID,PTY_RUN,PAIRID))),by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
-	rpp					<- rpp[order((POSTERIOR_ALPHA)/(POSTERIOR_ALPHA+POSTERIOR_BETA)),]	
+	rpp					<- rpp[order((POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-3)),]	
 	set(rpp, NULL, 'PAIRID',rpp[, factor(PAIRID, levels=rpp$PAIRID)])	
 	rpd					<- subset(rplkl, GROUP=='TYPE_DIR_TODI2')
 	rpd					<- merge(rpd, rpd[, list(TYPE=TYPE[which.max(KEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN')], by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE'))
 	setnames(rpd, c('TYPE','POSTERIOR_ALPHA','POSTERIOR_BETA'), c('TYPE_DIR','POSTERIOR_ALPHA_DIR','POSTERIOR_BETA_DIR'))
 	rpd					<- merge(subset(rpp, select=c(MALE_RID, FEMALE_RID, PTY_RUN, PAIRID, TYPE, POSTERIOR_ALPHA, POSTERIOR_BETA)), rpd, by=c('MALE_RID','FEMALE_RID','PTY_RUN'), all.x=TRUE)
-	set(rpd, rpd[, which((POSTERIOR_ALPHA)/(POSTERIOR_ALPHA+POSTERIOR_BETA)<=0.66)],c('POSTERIOR_ALPHA_DIR','POSTERIOR_BETA_DIR'), NA_real_)	
+	set(rpd, rpd[, which((POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)<=0.66)],c('POSTERIOR_ALPHA_DIR','POSTERIOR_BETA_DIR'), NA_real_)	
 	tmp					<- subset(rplkl, GROUP==scores.group)
 	rpd					<- merge(rpd, tmp[, list(TYPE_SCORE=TYPE[which.max(KEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN')], by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
 	set(rpd, rpd[, which(grepl('disconnected|ambiguous',TYPE_SCORE))],c('POSTERIOR_ALPHA_DIR','POSTERIOR_BETA_DIR'), NA_real_)
@@ -12877,7 +13326,7 @@ RakaiFull.analyze.couples.todi.171119.birdseyeview<- function()
 	p3	<- ggplot(rpp, aes(x=PAIRID)) +
 			geom_segment(aes(xend=PAIRID, y=qbeta(0.025, POSTERIOR_ALPHA, POSTERIOR_BETA),yend=qbeta(0.975, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='grey50') +
 			#geom_point(aes(y=qbeta(0.5, POSTERIOR_ALPHA, POSTERIOR_BETA)), colour='black') +
-			geom_point(aes(y=(POSTERIOR_ALPHA)/(POSTERIOR_ALPHA+POSTERIOR_BETA)), colour='black') +
+			geom_point(aes(y=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-3)), colour='black') +
 			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.25), labels=scales::percent) +					
 			theme_bw() + 			
 			theme(axis.text.x=element_blank()) +
@@ -12886,7 +13335,7 @@ RakaiFull.analyze.couples.todi.171119.birdseyeview<- function()
 			labs(x='',y='',fill='')
 	p5	<- ggplot(rpd, aes(x=PAIRID)) +
 			geom_segment(aes(xend=PAIRID, y=qbeta(0.025, POSTERIOR_ALPHA_DIR, POSTERIOR_BETA_DIR),yend=qbeta(0.975, POSTERIOR_ALPHA_DIR, POSTERIOR_BETA_DIR)), colour='grey50') +
-			geom_point(aes(y=(POSTERIOR_ALPHA_DIR)/(POSTERIOR_ALPHA_DIR+POSTERIOR_BETA_DIR), colour=TYPE_DIR)) +
+			geom_point(aes(y=(POSTERIOR_ALPHA_DIR-1)/(POSTERIOR_ALPHA_DIR+POSTERIOR_BETA_DIR-2), colour=TYPE_DIR)) +
 			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.25), labels=scales::percent) +					
 			scale_colour_manual(values=c('mf'='steelblue2','fm'='hotpink2')) +
 			theme_bw() + 			
@@ -13148,8 +13597,9 @@ RakaiFull.analyze.couples.todi.171119.DI.vs.TODI.vs.DIR<- function()
 	require(Hmisc)
 	
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_withmetadata.rda'		
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_"	
-	
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171119_cl3_prior23_min30_"
+	dist.cut				<- 0.035
+	#todi_couples_171122_cl25_d50_prior23_min30_withmetadata
 	load(infile)
 	#	per pair:
 	#	make pair topology assignments: TYPE_PAIR_TO ancestral/intermingled; other; ambiguous as usual
@@ -13223,6 +13673,96 @@ RakaiFull.analyze.couples.todi.171119.DI.vs.TODI.vs.DIR<- function()
 			guides(fill=FALSE)
 	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count2.pdf'), w=6, h=4)
 }
+
+RakaiFull.analyze.couples.todi.171119.DI.vs.TODI.vs.DIR<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
+	outfile.base			<- gsub('withmetadata.rda','',infile)	
+	dist.cut				<- 0.025
+	#
+	load(infile)
+	#	per pair:
+	#	make pair topology assignments: TYPE_PAIR_TO ancestral/intermingled; other; ambiguous as usual
+	#	stratify mean patristic distance
+	#	make boxplot
+	#	OK if not too coarse, just a pain
+	tmp		<- unique(subset(rca, !is.na(PTY_RUN), c(MALE_RID,FEMALE_RID,PTY_RUN)))
+	rpw		<- merge(rpw, tmp, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	
+	#	per window:
+	#	make window topology assignments: TYPE_PAIR_TO ancestral/intermingled; withintermediate; other (include adjacent other here)
+	#	make boxplot
+	rpw2	<- subset(rpw, GROUP=='TYPE_BASIC')
+	rpw2[, TYPE_TO:= 'disconnected']
+	set(rpw2, rpw2[,which(grepl('chain', TYPE))], 'TYPE_TO', 'ancestral')
+	set(rpw2, rpw2[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(rpw2, rpw2[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
+	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c('ancestral','intermingled','sibling','disconnected'))])
+	rpw2[, PATRISTIC_DISTANCE_LOG:= log10(PATRISTIC_DISTANCE)]
+	rpw2[, PATRISTIC_DISTANCE_LOGC:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, 0.01, 0.02, 0.035, 0.08, 2e3)),labels=c('<0.5%', '0.5%-1%', '1%-2%', '2%-3.5%', '3.5%-8%', '>8%'))]
+	rpw2[, PATRISTIC_DISTANCE_LOGC2:= cut(PATRISTIC_DISTANCE_LOG, breaks=log10(c(1e-12, 0.005, seq(0.01,0.1,0.01),2e3)), labels=c('<0.5%','0.5%-0.99%', paste(paste0(seq(0.01,0.09,0.01)*100,'%'),paste0(seq(0.01,0.09,0.01)*100+0.99,'%'), sep='-'),'>10%'))]	
+	#
+	rpw2[, table(TYPE_TO)]
+	rpw2[, table(TYPE_TO)/nrow(rpw2)]
+	subset(rpw2, PATRISTIC_DISTANCE<=dist.cut)[, prop.table(table(TYPE_TO))]
+	subset(rpw2, PATRISTIC_DISTANCE>dist.cut)[, prop.table(table(TYPE_TO))]
+	
+	#	binary correlation of disconnected and large distance
+	rpw2[, DISCONNECTED_YES:= as.numeric(grepl('disconnected|sibling', TYPE_TO))]
+	rpw2[, DISTANT_YES:= as.numeric(PATRISTIC_DISTANCE>dist.cut)]
+	rpw2[, cor(DISCONNECTED_YES,DISTANT_YES, method='pearson')] 
+	# rho=0.825
+	
+	#	Jaccard Index = 0.867
+	rpw2[, length(which(DISCONNECTED_YES==1 & DISTANT_YES==1)) / (  
+						length(which(DISCONNECTED_YES==1 & DISTANT_YES==1)) +
+						length(which(DISCONNECTED_YES==1 & DISTANT_YES==0)) +
+						length(which(DISCONNECTED_YES==0 & DISTANT_YES==1))
+						)]
+	
+	subset(rpw2, PATRISTIC_DISTANCE<=dist.cut & grepl('disconnected|sibling', TYPE_TO))[, table(grepl('with intermediate', TYPE))]
+	#	0.8107
+	
+	#
+	#	plot topology assignment by distance
+	#		
+	#cols.typet			<- c(brewer.pal(11, 'PuOr')[2], rev(brewer.pal(11, 'PuOr'))[c(3,4)], rev(brewer.pal(11, 'RdGy'))[4])
+	#names(cols.typet)	<- c("ancestral/intermingled", "with intermediate", 'sibling', "disconnected")
+	cols.typet			<- c("ancestral"=brewer.pal(11, 'PuOr')[2], "intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])	
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='fill') +
+			scale_y_continuous(labels=percent, breaks=seq(0,1,0.2), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\nsubtree distance\n(subst/site)', y='subtree relationships\nacross genomic windows\n', fill='pairwise\ntopological relationship') +
+			guides(fill=FALSE)
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_prop.pdf'), w=5, h=2.25)
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC, fill=TYPE_TO)) +
+			geom_bar(position='stack') +
+			scale_y_continuous(breaks=seq(0,20e3,2e3), expand=c(0,0)) +
+			theme_bw() + theme(legend.position='bottom') +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\nsubtree distance\n(subst/site)', y='subtree relationships\nacross genomic windows\n', fill='pairwise\ntopological relationship') +
+			guides(fill=FALSE)
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count.pdf'), w=5, h=2.25)
+	ggplot(rpw2, aes(x=PATRISTIC_DISTANCE_LOGC2, fill=TYPE_TO)) +
+			geom_bar(position='stack') +
+			scale_y_continuous(breaks=seq(0,20e3,2e3), expand=c(0,0), limits=c(0,8500)) +
+			theme_bw() + theme(legend.position='bottom', axis.text.x = element_text(angle = 45, hjust = 1)) +
+			scale_fill_manual(values=cols.typet) +
+			labs(x='\nsubtree distance (subst/site)', y='subtree relationships\n', fill='pairwise\ntopological relationship') +
+			guides(fill=FALSE)
+	ggsave(file=paste0(outfile.base, 'topodist_pairtypes_count2.pdf'), w=6, h=4)
+}
+
 
 RakaiFull.analyze.couples.todi.170811.DI.vs.TODI.vs.DIR<- function()
 {	
@@ -14876,6 +15416,7 @@ RakaiFull.analyze.couples.todi.171122.DIRext<- function()
 	
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl35_prior23_min30_withmetadata.rda'
 	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_prior23_min30_withmetadata.rda'
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
 	outfile.base			<- gsub('withmetadata.rda','',infile)
 	load(infile)
 	

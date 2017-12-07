@@ -758,6 +758,72 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 }	
 
 #' @import data.table
+#' @title Generate bash commands to calculate read distribution in bam file
+#' @description This function generates bash commands to calculate read distribution in bam file   
+#' @param pty.runs data.table with columns SAMPLE_ID and PTY_RUN
+#' @param pty.args List of input variables containing the fields "prog.bam.distr.calculator", "data.dir", "out.dir", "work.dir"
+#' @return character string of bash commands.
+phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args) 		
+{
+	#
+	#	associate BAM and REF files with each scheduled phylotype run
+	#	
+	set(pty.runs, NULL, 'SAMPLE_ID',  pty.runs[, gsub('\\.bam$','',SAMPLE_ID)])
+	#	get available Bam files
+	ptyd		<- data.table(FILE=list.files(pty.args[['data.dir']], full.names=TRUE))
+	ptyd[, TYPE:=NA_character_]
+	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
+	#	get Reference files
+	#	if reference files that were used in assembly are not specified in pty.runs, search for SAMPLE_ID+'_ref.fasta'
+	if(!any(colnames(pty.runs)=='REFERENCE_ID'))
+	{		
+		set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')		
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')		
+	}
+	#	if reference files that were used in assembly are specified in pty.runs, use these
+	if(any(colnames(pty.runs)=='REFERENCE_ID'))
+	{
+		tmp			<- subset(ptyd, is.na(TYPE))
+		tmp[, REFERENCE_ID:= gsub('\\.bam','',basename(FILE))]
+		tmp			<- merge(subset(pty.runs, select=c(SAMPLE_ID, REFERENCE_ID)), subset(tmp, select=c(REFERENCE_ID, FILE)), by='REFERENCE_ID')
+		tmp[, TYPE:='REF']
+		tmp[, REFERENCE_ID:=NULL]
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam$','',basename(FILE))]
+		ptyd		<- rbind(ptyd, tmp)
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
+	}
+	#	merge
+	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)	
+	if(ptyd[,any(is.na(BAM))])
+		warning('\nCould not find location of BAM files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(BAM)))],'\nMissing individuals are ignored. Please check.')	
+	if(ptyd[,any(is.na(REF))])
+		warning('\nCould not find location of reference files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(REF)))],'\nMissing individuals are ignored. Please check.')
+	ptyd	<- subset(ptyd, !is.na(BAM) & !is.na(REF))
+	setkey(ptyd, PTY_RUN)
+	#
+	#	write pty.run files and get pty command lines
+	#
+	pty.c		<- ptyd[, {
+				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]				
+				file.input		<- file.path(pty.args[['work.dir']], paste('bamr',PTY_RUN,'_input.csv',sep=''))
+				file.output		<- file.path(pty.args[['out.dir']], paste('bamr',PTY_RUN,'_read_distributions.csv',sep=''))
+				tmp				<- cbind(BAM[!is.na(BAM)&!is.na(REF)], REF[!is.na(BAM)&!is.na(REF)])
+				write.table(tmp, file=file.input, row.names=FALSE, col.names=FALSE, quote=FALSE, sep=',')
+				cmd				<- paste0( 	pty.args[['prog.bam.distr.calculator']],
+											' "',file.input,'"',
+											' --out-filename "',file.output,'"',
+											' --overlapping-insert-sizes',
+											' --dont-plot')				
+				list(CMD= cmd)				
+			},by='PTY_RUN']
+	pty.c
+}	
+
+
+#' @import data.table
 #' @title Generate bash commands to process phyloscanner output
 #' @description This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit   
 #' @param tmp.dir Directory with phyloscanner output.
@@ -3014,8 +3080,8 @@ phsc.get.pairwise.relationships.numbers<- function()
 					'TYPE_PAIR_TODI2_NOAMB','2',
 					'TYPE_PAIR_TODI2','3',
 					'TYPE_DIR_TODI2','2',
-					'TYPE_CHAIN_TODI_NOAMB','3',
-					'TYPE_CHAIN_TODI','2',
+					'TYPE_CHAIN_TODI_NOAMB','2',
+					'TYPE_CHAIN_TODI','3',
 					'TYPE_ADJ_DIR_TODI2','2',
 					'TYPE_NETWORK_SCORES','3',
 					'TYPE_ADJ_NETWORK_SCORES','3',

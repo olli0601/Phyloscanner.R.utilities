@@ -16,7 +16,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	project.bam.read.distribution()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
@@ -6148,7 +6149,7 @@ project.readlength.count.all<- function()
 	}
 }
 
-project.check.bam.integrity<- function()
+project.bam.check.integrity<- function()
 {
 	require(Rsamtools)
 	require(data.table)
@@ -6170,6 +6171,72 @@ project.check.bam.integrity<- function()
 	#subset(pty.runs, SID=='15080_1_28')[, cat(paste(PTY_RUN, collapse="','"))]
 	#these are 61 runs:
 	#c('682','707','732','757','782','807','832','857','882','907','932','957','982','1007','1032','1057','1082','1107','1132','1157','1182','1207','1232','1257','1282','1307','1332','1357','1382','1407','1432','1457','1482','1507','1532','1557','1582','1606','1629','1651','1672','1692','1711','1729','1746','1762','1777','1791','1804','1816','1827','1837','1847','1848','1849','1850','1851','1852','1853','1854','1855')
+}
+
+project.bam.read.distribution<- function() 
+{
+	require(Phyloscanner.R.utilities)
+	#
+	#	INPUT ARGS PLATFORM
+	#
+	
+	#
+	#	TEST ARGS
+	#		
+	if(0)
+	{
+		#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
+		load( file.path(HOME,"data","PANGEA_HIV_n5003_Imperial_v160110_UG_gag_coinfinput_160219.rda") )
+		setnames(pty.runs, c('FILE_ID'), c('SAMPLE_ID'))
+		pty.runs					<- subset(pty.runs, select=c(SAMPLE_ID, PTY_RUN))
+		pty.data.dir				<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'
+		work.dir					<- '/Users/Oliver/duke/2016_PANGEAphylotypes/Rakai_ptinput'
+		out.dir						<- '/Users/Oliver/duke/2016_PANGEAphylotypes/test_ptoutput'	
+		prog.bam.distr.calculator	<- '/Users/Oliver/git/phylotypes/tools/EstimateReadCountPerWindow.py'				
+		hpc.load					<- ""		
+	}
+	#
+	#	INPUT ARGS
+	#
+	if(1)
+	{
+		in.dir						<- file.path(HOME,"RakaiAll_input_170301")
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
+		#load( file.path(in.dir, 'Rakai_phyloscanner_170704_stagethree.rda') )
+		#print(pty.runs)
+		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
+		pty.runs					<- subset(pty.runs, select=c(SAMPLE_ID, PTY_RUN))		
+		work.dir					<- file.path(HOME,"RakaiAll_work_170704")
+		out.dir						<- file.path(HOME,"RakaiAll_output_170704_bamdistr")		
+		prog.bam.distr.calculator	<- '/work/or105/libs/phylotypes/tools/EstimateReadCountPerWindow.py'
+		pty.data.dir				<- '/work/or105/PANGEA_mapout/data'
+		hpc.load					<- "module load intel-suite/2015.1 anaconda/2.3.0 samtools"										
+	}
+	#
+	#	make scripts
+	#
+	pty.args			<- list( 	prog.bam.distr.calculator=prog.bam.distr.calculator,
+									data.dir=pty.data.dir,
+									out.dir=out.dir,
+									work.dir=work.dir#,
+									#quality.trim.ends=23, 
+									#min.internal.quality=23 
+									)					
+	pty.c				<- phsc.cmd.bam.calculate.read.distribution(pty.runs, pty.args)		
+	#pty.c[1,cat(CMD)]	
+	#
+	#	submit
+	#
+	invisible(pty.c[,	{
+						cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=5, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=1, hpc.load=hpc.load)
+						#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63850mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)						
+						cmd			<- paste(cmd,CMD,sep='\n')
+						cat(cmd)					
+						outfile		<- paste("bd",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+						cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						stop()
+					}, by='PTY_RUN'])
+	quit('no')	
 }
 
 project.readlength.count.bam.171018<- function()
