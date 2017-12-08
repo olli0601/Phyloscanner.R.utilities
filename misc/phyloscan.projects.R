@@ -6323,7 +6323,7 @@ project.bam.read.distribution.calculate<- function()
 						cat(cmd)					
 						outfile		<- paste("bd",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 						cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
-						stop()
+						#stop()
 					}, by='PTY_RUN'])
 	quit('no')	
 }
