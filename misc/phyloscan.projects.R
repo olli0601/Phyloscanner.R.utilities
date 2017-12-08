@@ -6311,7 +6311,8 @@ project.bam.read.distribution.calculate<- function()
 									#quality.trim.ends=23, 
 									#min.internal.quality=23 
 									)					
-	pty.c				<- phsc.cmd.bam.calculate.read.distribution(pty.runs, pty.args)		
+	pty.c				<- phsc.cmd.bam.calculate.read.distribution(pty.runs, pty.args)
+	pty.c				<- subset(pty.c, PTY_RUN>1140)
 	#pty.c[1,cat(CMD)]	
 	#
 	#	submit
