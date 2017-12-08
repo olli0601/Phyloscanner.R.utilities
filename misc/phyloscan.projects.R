@@ -6173,7 +6173,94 @@ project.bam.check.integrity<- function()
 	#c('682','707','732','757','782','807','832','857','882','907','932','957','982','1007','1032','1057','1082','1107','1132','1157','1182','1207','1232','1257','1282','1307','1332','1357','1382','1407','1432','1457','1482','1507','1532','1557','1582','1606','1629','1651','1672','1692','1711','1729','1746','1762','1777','1791','1804','1816','1827','1837','1847','1848','1849','1850','1851','1852','1853','1854','1855')
 }
 
-project.bam.read.distribution<- function() 
+project.bam.read.distribution.readcsvs<- function() 
+{
+	outfile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_readdistr.rda'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'
+	df		<- data.table(F=list.files(indir, full.names=TRUE))
+	df[, PTY_RUN:= as.integer(gsub('^bamr([0-9]+)_.*','\\1',basename(F)))]
+	df		<- subset(df, PTY_RUN!=1)
+	db		<- df[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/bamr10_read_distributions.csv.csv'
+				ans	<- as.data.table(read.csv(F))
+				setnames(ans, c('Bam.file','Size.of.overlapping.read.pair.or.length.of.read.in.non.overlapping.pair','Count'), c('BAM','LEN','COUNT'))
+				set(ans, NULL, 'BAM', ans[,gsub('\\.bam','',as.character(BAM))])
+				ans
+			}, by='PTY_RUN']
+	db[, DATA:='Rakai']
+	tmp		<- unique(subset(db, select=c(BAM,PTY_RUN)))[, list(PTY_RUN=min(PTY_RUN)), by='BAM']
+	db		<- merge(tmp, db, by=c('BAM','PTY_RUN'))
+	set(db, NULL, 'PTY_RUN',NULL)
+	
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_OverlappingInsertSizes'
+	df		<- data.table(F=list.files(indir, full.names=TRUE))	
+	tmp		<- df[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_OverlappingInsertSizes/BEE0001-1.csv'
+				ans	<- as.data.table(read.csv(F))
+				setnames(ans, c('Bam.file','Size.of.overlapping.read.pair.or.length.of.read.in.non.overlapping.pair','Count'), c('BAM','LEN','COUNT'))
+				set(ans, NULL, 'BAM', ans[,gsub('\\.bam','',as.character(BAM))])
+				ans
+			}, by='F']
+	set(tmp, NULL, 'F',NULL)
+	tmp[, DATA:='BEEHIVE']
+	db		<- rbind(db, tmp)
+	save(db, file=outfile)
+}
+
+project.bam.read.distribution.evaluate<- function() 
+{
+	infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_readdistr.rda'
+	load(infile)
+	#	quantiles
+	qs		<- c(0.01,seq(0.1,0.9,0.1),0.99)
+	ans		<- db[, list(	Q= as.numeric(quantile(rep(LEN, COUNT),prob=qs)), P= paste0(100*qs,'%')), by=c('DATA','BAM')]
+	#	sort individuals by 50% quantile
+	tmp		<- subset(ans, P=='50%')
+	setkey(tmp, DATA, Q)
+	tmp[, SORTID:= seq_len(nrow(tmp))]
+	ans		<- merge(ans, subset(tmp, select=c(DATA,BAM,SORTID)), by=c('DATA','BAM'))	
+	#	sort individuals by each quantile
+	setkey(ans, DATA, P, Q)
+	tmp		<- ans[, list(BAM=BAM, SORTID2=seq_along(BAM)), by=c('DATA','P')]
+	ans		<- merge(ans, tmp, by=c('DATA','BAM','P'))
+	setkey(ans, DATA, P, Q)
+	#	make plot
+	tmp		<- subset(ans, P%in%c('1%','10%','30%','50%','70%','90%','99%'))
+	tmp		<- subset(ans, P%in%c('50%','90%','99%'))
+	set(tmp, NULL, 'P', tmp[, factor(P, levels=c('50%','90%','99%'), labels=c('50%','10%','1%'))])
+	ggplot(tmp, aes(y=SORTID2, x=Q, colour=P, group=interaction(DATA,P))) +
+			geom_line() +
+			theme_bw() + 
+			labs(y='number of samples\n',x='\nlength of merged read fragments',colour='proportion\nof reads\nper sample') +
+			facet_wrap(~DATA, scales='free_x', ncol=2)
+	ggsave(file=gsub('.rda','_propreadsatleastx.pdf',outfile), w=8, h=6)
+	
+	
+	#	read len cutoffs
+	ps		<- seq(200, 350, 50)
+	ans2	<- db[, list( P=ps,	LEN=ecdf(rep(LEN, COUNT))(ps)), by=c('DATA','BAM')]
+	#set(ans2, NULL, 'P', ans2[, as.integer(gsub('%','',P))/100])
+	tmp		<- ans2[, list(	STAT=c('ymin','lower','middle','upper','ymax'), 
+							Q=quantile(LEN, p=c(0.025,0.25,0.5,0.75,0.975))
+							), by=c('DATA','P')]
+	tmp		<- dcast.data.table(tmp, DATA+P~STAT, value.var='Q')
+	ggplot(tmp, aes(x=P, ymin=ymin, lower=lower, middle=middle, upper=upper, ymax=ymax, fill=DATA)) + 
+			geom_boxplot(stat='identity') +
+			theme_bw() + 
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			labs(x='min length of\nmerged read fragments\n',y='reads per sample discarded\n(%)\n', fill='study')
+	ggsave(file=gsub('.rda','_propreadsdiscarded.pdf',outfile), w=5, h=5)
+	tmp		<- ans2[, list( Q= length(which(LEN>0.9)) ), by=c('DATA','P')]	
+	ggplot(tmp, aes(x=P, y=Q, fill=DATA)) + 
+			geom_bar(stat='identity', position='dodge') +
+			theme_bw() + 
+			scale_y_continuous(expand=c(0,0), lim=c(0,1260)) +
+			labs(x='min length of\nmerged read fragments\n',y='samples with >90% of reads discarded\n(#)\n', fill='study')
+	ggsave(file=gsub('.rda','_samplesreadsdiscarded.pdf',outfile), w=5, h=5)
+			
+}
+
+project.bam.read.distribution.calculate<- function() 
 {
 	require(big.phylo)
 	require(Phyloscanner.R.utilities)
@@ -6202,11 +6289,12 @@ project.bam.read.distribution<- function()
 	if(1)
 	{
 		in.dir						<- file.path(HOME,"RakaiAll_input_170301")
-		load( file.path(in.dir, 'Rakai_phyloscanner_170301_stagetwo.rda') )
-		#load( file.path(in.dir, 'Rakai_phyloscanner_170704_stagethree.rda') )
-		#print(pty.runs)
-		setnames(pty.runs, c('SID','RENAME_SID','RID'), c('SAMPLE_ID','RENAME_ID','UNIT_ID'))
-		pty.runs					<- subset(pty.runs, select=c(SAMPLE_ID, PTY_RUN))		
+		load( file.path(in.dir, 'Rakai_phyloscanner_170301_b75.rda') )
+		tmp							<- subset(pty.runs, select=c(SID, PTY_RUN))
+		load( file.path(in.dir, 'Rakai_phyloscanner_170704_b75_part2.rda') )
+		pty.runs					<- subset(pty.runs, select=c(SID, PTY_RUN))
+		pty.runs					<- rbind(tmp, pty.runs)
+		setnames(pty.runs, c('SID'), c('SAMPLE_ID'))
 		work.dir					<- file.path(HOME,"RakaiAll_work_170704")
 		out.dir						<- file.path(HOME,"RakaiAll_output_170704_bamdistr")		
 		prog.bam.distr.calculator	<- '/work/or105/libs/phylotypes/tools/EstimateReadCountPerWindow.py'
