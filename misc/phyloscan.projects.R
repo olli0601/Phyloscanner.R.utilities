@@ -6176,9 +6176,11 @@ project.bam.check.integrity<- function()
 project.bam.read.distribution.readcsvs<- function() 
 {
 	outfile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_readdistr.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/all'
 	df		<- data.table(F=list.files(indir, full.names=TRUE))
 	df[, PTY_RUN:= as.integer(gsub('^bamr([0-9]+)_.*','\\1',basename(F)))]
+	paste( setdiff(1:1891, df[,PTY_RUN]), collapse=',' )
+	
 	df		<- subset(df, PTY_RUN!=1)
 	db		<- df[, {
 				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/bamr10_read_distributions.csv.csv'
@@ -6312,7 +6314,7 @@ project.bam.read.distribution.calculate<- function()
 									#min.internal.quality=23 
 									)					
 	pty.c				<- phsc.cmd.bam.calculate.read.distribution(pty.runs, pty.args)
-	pty.c				<- subset(pty.c, PTY_RUN>1140)
+	pty.c				<- subset(pty.c, PTY_RUN%in%c(774,775,776,778,779,780,781,782,783,784,785,786,787,788,789,811,814,838,844,855,856,859,860,861,865,867,870,871,872,877,887,888,896,897,906,907,910,945,946,947,949,951,953,955,963,964,967,968,969,972,974,975,981,982,983,987,988,989,995,996,999,1004,1007,1009,1010,1013,1014,1015,1016,1018,1019,1021,1022,1023,1024,1025,1026,1027,1031,1032,1033,1035,1036,1037,1038,1039,1040,1042,1046,1047,1048,1049,1050,1051,1052,1053,1054,1055,1056,1570,1574,1575,1580,1582,1584,1585,1587,1589,1591,1592,1593,1595,1599,1600,1601,1602,1603,1604,1606,1609,1610,1611,1613,1614,1615,1616,1621,1624,1626,1627,1628,1629,1635,1636,1654,1655,1675,1686,1692,1695,1701,1702,1708,1709,1710,1721,1724,1726,1732,1733,1735,1736,1737,1738,1739,1740,1746,1747,1753,1755,1756,1757,1758,1759,1760,1761,1764,1765,1767,1769,1770,1773,1774,1775,1778,1779,1781,1782,1783,1785,1786,1787,1788,1789,1790,1791,1793,1794,1795,1796,1797,1798,1799,1800,1801,1802,1804,1805,1806,1807,1808,1809,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822,1823,1824,1825,1826,1828,1829,1830,1831,1832,1833,1834,1835,1836,1837,1838,1839,1840,1841,1843,1844,1845,1846,1847,1848,1849,1850,1852,1853,1854,1855,1856,1857,1858,1859,1860,1861,1862,1863,1864,1865,1866,1867,1868,1869,1870,1871,1872,1873,1874,1875,1876,1877,1878,1879,1880))
 	#pty.c[1,cat(CMD)]	
 	#
 	#	submit
