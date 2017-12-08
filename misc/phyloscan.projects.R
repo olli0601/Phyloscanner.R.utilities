@@ -16,8 +16,8 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
-	project.bam.read.distribution.calculate()
+	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#project.bam.read.distribution.calculate()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
@@ -5454,7 +5454,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rcmozbFALSE")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5508,7 +5508,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				split.rule='s',
 				split.kParam=20,
 				split.proximityThreshold=0,
-				split.readCountsMatterOnZeroBranches=TRUE,
+				split.readCountsMatterOnZeroBranches=FALSE,
 				split.pruneBlacklist=FALSE,
 				trms.allowMultiTrans=TRUE,
 				pw.trmw.min.reads=30,									
@@ -6176,12 +6176,11 @@ project.bam.check.integrity<- function()
 project.bam.read.distribution.readcsvs<- function() 
 {
 	outfile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_readdistr.rda'
-	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/all'
-	df		<- data.table(F=list.files(indir, full.names=TRUE))
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'
+	df		<- data.table(F=list.files(indir, pattern='csv$', full.names=TRUE))
 	df[, PTY_RUN:= as.integer(gsub('^bamr([0-9]+)_.*','\\1',basename(F)))]
 	paste( setdiff(1:1891, df[,PTY_RUN]), collapse=',' )
-	
-	df		<- subset(df, PTY_RUN!=1)
+		
 	db		<- df[, {
 				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/bamr10_read_distributions.csv.csv'
 				ans	<- as.data.table(read.csv(F))
@@ -6239,7 +6238,7 @@ project.bam.read.distribution.evaluate<- function()
 	
 	
 	#	read len cutoffs
-	ps		<- seq(200, 350, 50)
+	ps		<- seq(200, 350, 25)
 	ans2	<- db[, list( P=ps,	LEN=ecdf(rep(LEN, COUNT))(ps)), by=c('DATA','BAM')]
 	#set(ans2, NULL, 'P', ans2[, as.integer(gsub('%','',P))/100])
 	tmp		<- ans2[, list(	STAT=c('ymin','lower','middle','upper','ymax'), 
@@ -6256,10 +6255,9 @@ project.bam.read.distribution.evaluate<- function()
 	ggplot(tmp, aes(x=P, y=Q, fill=DATA)) + 
 			geom_bar(stat='identity', position='dodge') +
 			theme_bw() + 
-			scale_y_continuous(expand=c(0,0), lim=c(0,1260)) +
+			scale_y_continuous(expand=c(0,0), lim=c(0,2700)) +
 			labs(x='min length of\nmerged read fragments\n',y='samples with >90% of reads discarded\n(#)\n', fill='study')
-	ggsave(file=gsub('.rda','_samplesreadsdiscarded.pdf',outfile), w=5, h=5)
-			
+	ggsave(file=gsub('.rda','_samplesreadsdiscarded.pdf',outfile), w=5, h=5)			
 }
 
 project.bam.read.distribution.calculate<- function() 
