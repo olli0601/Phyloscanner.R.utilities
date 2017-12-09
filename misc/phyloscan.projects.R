@@ -4,7 +4,7 @@ project.dual<- function()
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
 	#project.readlength.count.bam.150218()
-	project.readlength.count.bam.171208()
+	#project.readlength.count.bam.171208()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
@@ -29,7 +29,7 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -50,7 +50,8 @@ pty.various	<- function()
 	#project.readlength.count.bam.150218()
 	#project.readlength.count.bam.171018()
 	#project.check.bam.integrity()
-	RakaiFull.divergent.clades.calculate.170811()
+	#RakaiFull.divergent.clades.calculate.170811()
+	project.readlength.count.bam.171208()
 }
 
 project.dual.alignments.missing<- function()
