@@ -6347,7 +6347,7 @@ project.readlength.count.bam.171208<- function()
 	tmp[, FILE_ID:= gsub('_mergedfragmentlen.rda','',basename(FILE_OUT))]
 	bfiles	<- merge(bfiles, tmp, by='FILE_ID', all.x=1)
 	print(bfiles)
-	bfiles	<- subset(bfiles, is.na(FILE_ID))
+	bfiles	<- subset(bfiles, is.na(FILE_OUT))
 	setkey(bfiles, FILE_ID)		
 	print(bfiles)
 	
