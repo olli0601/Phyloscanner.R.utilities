@@ -4,6 +4,7 @@ project.dual<- function()
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
 	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
 	#project.readlength.count.bam.150218()
+	project.readlength.count.bam.171208()
 	#project.dual.distances.231015()
 	#project.dual.examl.231015()
 	#pty.pipeline.fasta()
@@ -16,7 +17,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#project.bam.read.distribution.calculate()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
@@ -6327,6 +6328,53 @@ project.bam.read.distribution.calculate<- function()
 						#stop()
 					}, by='PTY_RUN'])
 	quit('no')	
+}
+
+project.readlength.count.bam.171208<- function()
+{
+	require(ggplot2)
+	require(data.table)
+	require(Rsamtools)		
+	#pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'	
+	pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
+	out.dir			<- '/work/or105/PANGEA_mapout/mergedfragmentlen'
+	outfile			<- file.path(pty.data.dir,'bam_len_171208.rda')			
+		
+	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
+	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
+	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
+	invisible(bfiles[,{
+				cat('\nCOV reading',FILE)
+				#FILE<- '13548_1_27.bam'
+				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qname','qwidth','pos','rname','isize','strand')))[[1]]
+				z	<- as.data.table(z)
+				setnames(z, colnames(z), toupper(colnames(z)))
+				#	check we have at most two segments per template
+				tmp	<- z[, list(N_SEGMENTS=length(STRAND)), by='QNAME']
+				stopifnot( tmp[, all(N_SEGMENTS<3)] )
+				z[, END:= POS+QWIDTH-1L]
+				#	determine if segments overlap
+				tmp	<- z[, list(OVERLAP= as.numeric(max(POS)<=min(END)), LEN= max(END)-min(POS)+1L ), by='QNAME']
+				z	<- merge(z, tmp, by='QNAME')
+				#	set LEN for segments that don t overlap
+				tmp	<- z[, which(OVERLAP==0)]
+				set(z, tmp, 'LEN', z[tmp, QWIDTH])		
+				#	get segments that don t overlap
+				tmp	<- subset(z, OVERLAP==0)
+				set(tmp, NULL, 'QNAME', tmp[, paste0(QNAME,':',STRAND)])
+				tmp	<- subset(tmp, select=c(QNAME, POS, LEN))
+				#	get segments that overlap
+				z	<- z[, list(POS=min(POS), LEN=LEN[1]), by='QNAME']
+				z	<- rbind(z, tmp)
+				z[, QNAME:=NULL]				
+				save(z, file.path(out.dir,paste0(gsub('\\.bam','_mergedfragmentlen.rda',FILE))))
+				#				
+				#	use next lines to determine coverage on the fly!
+				#tmp	<- IRanges(start=z$pos, width=z$qwidth)
+				#tmp <- coverage(tmp)
+				#list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
+				NULL
+			}, by='FILE_ID'])
 }
 
 project.readlength.count.bam.171018<- function()
