@@ -6343,6 +6343,14 @@ project.readlength.count.bam.171208<- function()
 	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
 	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
 	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
+	tmp				<- data.table(FILE_OUT=list.files(out.dir, pattern='_mergedfragmentlen.rda', full.names=TRUE))
+	tmp[, FILE_ID:= gsub('_mergedfragmentlen.rda','',basename(FILE_OUT))]
+	bfiles	<- merge(bfiles, tmp, by='PTY_RUN', all.x=1)
+	print(bfiles)
+	bfiles	<- subset(bfiles, is.na(FILE_ID))
+	setkey(bfiles, FILE_ID)		
+	print(bfiles)
+	
 	invisible(bfiles[,{
 				cat('\nreading',FILE)
 				#FILE<- '13548_1_27.bam'
