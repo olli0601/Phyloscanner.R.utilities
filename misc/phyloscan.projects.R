@@ -17,7 +17,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#project.bam.read.distribution.calculate()
 	#pty.pipeline.phyloscanner.170301.thirdstage()
 	#project.Rakai.ExaMLTree.170601()		
@@ -29,7 +29,7 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various   
-	if(1) 
+	if(0) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -5456,7 +5456,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rcmozbFALSE")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_amtrFALSE")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5510,9 +5510,9 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				split.rule='s',
 				split.kParam=20,
 				split.proximityThreshold=0,
-				split.readCountsMatterOnZeroBranches=FALSE,
+				split.readCountsMatterOnZeroBranches=TRUE,
 				split.pruneBlacklist=FALSE,
-				trms.allowMultiTrans=TRUE,
+				trms.allowMultiTrans=FALSE,
 				pw.trmw.min.reads=30,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.025,
