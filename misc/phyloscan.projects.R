@@ -6344,30 +6344,30 @@ project.readlength.count.bam.171208<- function()
 	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
 	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
 	invisible(bfiles[,{
-				cat('\nCOV reading',FILE)
+				cat('\nreading',FILE)
 				#FILE<- '13548_1_27.bam'
-				z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qname','qwidth','pos','rname','isize','strand')))[[1]]
-				z	<- as.data.table(z)
-				setnames(z, colnames(z), toupper(colnames(z)))
+				dlen	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qname','qwidth','pos','rname','isidlene','strand')))[[1]]
+				dlen	<- as.data.table(dlen)
+				setnames(dlen, colnames(dlen), toupper(colnames(dlen)))
 				#	check we have at most two segments per template
-				tmp	<- z[, list(N_SEGMENTS=length(STRAND)), by='QNAME']
+				tmp		<- dlen[, list(N_SEGMENTS=length(STRAND)), by='QNAME']
 				stopifnot( tmp[, all(N_SEGMENTS<3)] )
-				z[, END:= POS+QWIDTH-1L]
+				dlen[, END:= POS+QWIDTH-1L]
 				#	determine if segments overlap
-				tmp	<- z[, list(OVERLAP= as.numeric(max(POS)<=min(END)), LEN= max(END)-min(POS)+1L ), by='QNAME']
-				z	<- merge(z, tmp, by='QNAME')
+				tmp		<- dlen[, list(OVERLAP= as.numeric(max(POS)<=min(END)), LEN= max(END)-min(POS)+1L ), by='QNAME']
+				dlen	<- merge(dlen, tmp, by='QNAME')
 				#	set LEN for segments that don t overlap
-				tmp	<- z[, which(OVERLAP==0)]
-				set(z, tmp, 'LEN', z[tmp, QWIDTH])		
+				tmp		<- dlen[, which(OVERLAP==0)]
+				set(dlen, tmp, 'LEN', dlen[tmp, QWIDTH])		
 				#	get segments that don t overlap
-				tmp	<- subset(z, OVERLAP==0)
+				tmp		<- subset(dlen, OVERLAP==0)
 				set(tmp, NULL, 'QNAME', tmp[, paste0(QNAME,':',STRAND)])
-				tmp	<- subset(tmp, select=c(QNAME, POS, LEN))
+				tmp		<- subset(tmp, select=c(QNAME, POS, LEN))
 				#	get segments that overlap
-				z	<- z[, list(POS=min(POS), LEN=LEN[1]), by='QNAME']
-				z	<- rbind(z, tmp)
-				z[, QNAME:=NULL]				
-				save(z, file.path(out.dir,paste0(gsub('\\.bam','_mergedfragmentlen.rda',FILE))))
+				dlen	<- dlen[, list(POS=min(POS), LEN=LEN[1]), by='QNAME']
+				dlen	<- rbind(dlen, tmp)
+				dlen[, QNAME:=NULL]				
+				save(dlen, file=file.path(out.dir,paste0(gsub('\\.bam','_mergedfragmentlen.rda',FILE))))
 				#				
 				#	use next lines to determine coverage on the fly!
 				#tmp	<- IRanges(start=z$pos, width=z$qwidth)
