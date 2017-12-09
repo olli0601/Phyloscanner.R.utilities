@@ -6346,7 +6346,7 @@ project.readlength.count.bam.171208<- function()
 	invisible(bfiles[,{
 				cat('\nreading',FILE)
 				#FILE<- '13548_1_27.bam'
-				dlen	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qname','qwidth','pos','rname','isidlene','strand')))[[1]]
+				dlen	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qname','qwidth','pos','rname','isize','strand')))[[1]]
 				dlen	<- as.data.table(dlen)
 				setnames(dlen, colnames(dlen), toupper(colnames(dlen)))
 				#	check we have at most two segments per template
