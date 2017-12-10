@@ -19,7 +19,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
 	pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#project.bam.read.distribution.calculate()
-	#pty.pipeline.phyloscanner.170301.thirdstage()
+	#pty.pipeline.phyloscanner.170301.thirdstage() 
 	#project.Rakai.ExaMLTree.170601()		
 	#pty.pipeline.phyloscanner.170301.secondbatchofall()	
 	#project.Rakai.FastTree.170704()
@@ -5456,7 +5456,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_amtrFALSE")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_pblTRUE")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5511,8 +5511,8 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				split.kParam=20,
 				split.proximityThreshold=0,
 				split.readCountsMatterOnZeroBranches=TRUE,
-				split.pruneBlacklist=FALSE,
-				trms.allowMultiTrans=FALSE,
+				split.pruneBlacklist=TRUE,
+				trms.allowMultiTrans=TRUE,
 				pw.trmw.min.reads=30,									
 				pw.trmw.min.tips=1,
 				pw.trmw.close.brl=0.025,
@@ -6331,6 +6331,127 @@ project.bam.read.distribution.calculate<- function()
 	quit('no')	
 }
 
+project.readlength.calculate.coverage.171208<- function()
+{
+	require(ggplot2)
+	require(data.table)
+	require(Rsamtools)		
+	indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'		
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208'	
+	bfiles			<- data.table(FILE=list.files(indir, pattern='_mergedfragmentlen.rda$', full.names=TRUE))		
+	bfiles[, FILE_ID:=gsub('_mergedfragmentlen.rda','',basename(FILE))]	
+	
+	bam.cov		<- bfiles[,	{
+				#FILE<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/12559_1_1_mergedfragmentlen.rda'
+				load(FILE)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)	
+			}, by='FILE_ID']
+	save(bam.cov, file=paste0(outfile.base,'_covall.rda'))
+	bam.cov		<- NULL
+	gc()
+	
+	bam.cov175	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=175)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)				
+			}, by='FILE_ID']
+	save(bam.cov175, file=paste0(outfile.base,'_cov175.rda'))
+	bam.cov175	<- NULL
+	gc()
+	
+	bam.cov200	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=200)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov200, file=paste0(outfile.base,'_cov200.rda'))
+	bam.cov200	<- NULL
+	gc()
+	
+	bam.cov225	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=225)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov225, file=paste0(outfile.base,'_cov225.rda'))
+	bam.cov225	<- NULL
+	gc()
+	
+	bam.cov250	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=250)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov250, file=paste0(outfile.base,'_cov250.rda'))
+	bam.cov250	<- NULL
+	gc()
+	
+	bam.cov275	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=275)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov275, file=paste0(outfile.base,'_cov275.rda'))
+	bam.cov275	<- NULL
+	gc()
+	
+	bam.cov300	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=300)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov300, file=paste0(outfile.base,'_cov300.rda'))
+	bam.cov300	<- NULL
+	gc()
+	
+	#
+	bam.cov325	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=325)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov325, file=paste0(outfile.base,'_cov325.rda'))
+	bam.cov325	<- NULL
+	gc()
+	
+	bam.cov350	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=350)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov350, file=paste0(outfile.base,'_cov350.rda'))
+	bam.cov350	<- NULL
+	gc()
+	
+	bam.cov375	<- bfiles[,{
+				load(FILE)
+				dlen<- subset(dlen, LEN>=375)
+				tmp	<- coverage(IRanges(start=dlen$POS, width=dlen$LEN))				
+				list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths)
+			}, by='FILE_ID']
+	save(bam.cov375, file=paste0(outfile.base,'_cov375.rda'))
+	bam.cov375	<- NULL
+	gc()
+	
+	bam.len		<- bfiles[,{
+				#FILE<- "14939_1_80.bam"				
+				load(FILE)				
+				list(QU=seq(0,320,20), CDF=ecdf(dlen$LEN)(seq(0,320,20)))								
+			}, by='FILE_ID']	
+	save(bam.len, file=paste0(outfile.base,'_lendist.rda'))
+	bam.len		<- NULL
+	gc()
+}
+	
 project.readlength.count.bam.171208<- function()
 {
 	require(ggplot2)
@@ -6399,8 +6520,7 @@ project.readlength.count.bam.171018<- function()
 	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
 	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
 	bfiles[, FILE_ID:=gsub('.bam','',FILE)]	
-	if(0)
-	{
+	
 	#FILE<- "14939_1_80.bam"
 	#cat('\nreading',FILE)
 	#bam<- scanBam(file.path(pty.data.dir,FILE))[[1]]	#scan entire file
@@ -6456,20 +6576,6 @@ project.readlength.count.bam.171018<- function()
 				list(QU=seq(0,320,20), CDF=ecdf(z[[1]][['qwidth']])(seq(0,320,20)))
 				#list(PR=seq(0.01,0.99,0.01), QU=quantile(z[[1]][['qwidth']], p=seq(0.01,0.99,0.01)))				
 			}, by='FILE']	
-	}
-	if(1)
-	{
-		load(outfile)
-		bam.cov280	<- bfiles[,{
-					cat('\nCOV reading',FILE)
-					z	<- scanBam(file.path(pty.data.dir,FILE), param=ScanBamParam(what=c('qwidth','pos','rname')))[[1]]
-					tmp	<- z[['qwidth']]>=280
-					z	<- lapply(z, function(x) x[tmp])					
-					tmp	<- IRanges(start=z$pos, width=z$qwidth)
-					tmp <- coverage(tmp)
-					list(POS= cumsum(c(1L,tmp@lengths[-length(tmp@lengths)])), COV=tmp@values, REP=tmp@lengths, REF=z$rname[1])
-				}, by='FILE_ID']	
-	}
 	#
 	save(bam.len, bam.cov, bam.cov175, bam.cov200, bam.cov250, bam.cov280, file= outfile)
 }

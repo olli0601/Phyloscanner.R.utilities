@@ -9118,7 +9118,301 @@ RakaiFull.analyze.couples.todi.170811.NGS.success<- function()
 	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=10, h=4)
 }
 
-
+RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
+	infile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208_'
+	infile.bams	<- paste0(infile.base,c('covall.rda','cov175.rda','cov200.rda','cov225.rda','cov250.rda','cov275.rda','cov300.rda','cov325.rda','cov350.rda','cov375.rda','lendist.rda'))
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_'
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_750nt_'
+	
+	load(infile)
+	dc		<- subset(dc, !is.na(SID))
+	
+	for(i in seq_along(infile.bams))		
+		load(infile.bams[i])	
+	setnames(bam.cov, 'FILE_ID', 'SID')
+	bam.cov		<- subset(bam.cov, !is.na(COV))
+	setnames(bam.cov175, 'FILE_ID', 'SID')
+	bam.cov175	<- subset(bam.cov175, !is.na(COV))
+	setnames(bam.cov200, 'FILE_ID', 'SID')
+	bam.cov200	<- subset(bam.cov200, !is.na(COV))
+	setnames(bam.cov225, 'FILE_ID', 'SID')
+	bam.cov225	<- subset(bam.cov225, !is.na(COV))	
+	setnames(bam.cov250, 'FILE_ID', 'SID')
+	bam.cov250	<- subset(bam.cov250, !is.na(COV))
+	setnames(bam.cov275, 'FILE_ID', 'SID')
+	bam.cov275	<- subset(bam.cov275, !is.na(COV))
+	setnames(bam.cov300, 'FILE_ID', 'SID')
+	bam.cov300	<- subset(bam.cov300, !is.na(COV))
+	setnames(bam.cov325, 'FILE_ID', 'SID')
+	bam.cov325	<- subset(bam.cov325, !is.na(COV))	
+	setnames(bam.cov350, 'FILE_ID', 'SID')
+	bam.cov350	<- subset(bam.cov350, !is.na(COV))
+	setnames(bam.cov375, 'FILE_ID', 'SID')
+	bam.cov375	<- subset(bam.cov375, !is.na(COV))
+	
+	setnames(bam.len, 'FILE_ID', 'SID')
+	bam.len	<- merge(bam.len, subset(dc, select=c(SID, RID)))
+	bam.len[, LONGER:= factor(CDF>1-1e-4, levels=c(TRUE,FALSE), labels=c('no','yes'))]
+	
+	ggplot(subset(bam.len,QU>=40 & QU<320), aes(y=1-CDF, x=factor(QU))) + 
+			geom_boxplot() +
+			scale_y_continuous(lab=scales:::percent, expand=c(0,0)) +
+			theme_bw() + labs(y='proportion of reads longer than x in one individual\n(boxplot over all individuals)', x='\nx=length of quality-trimmed short reads\n(nt)', fill='sequence run') +
+			theme(legend.position='bottom')
+	ggsave(file=paste0(outfile.base,'bamlen_longer_than_xnt.pdf'), w=6, h=6)
+	
+	ggplot(subset(bam.len,QU>=40 & QU<320 & LONGER=='yes'), aes(x=QU)) + 
+			geom_bar() +
+			#scale_y_continuous(lab=scales:::percent, expand=c(0,0)) +
+			theme_bw() +
+			labs(x='\nx=length of quality-trimmed short reads\n(nt)', y='samples with any reads longer than x\n(number)\n', fill='any reads in sample that are longer than x')
+	ggsave(file=paste0(outfile.base,'bamlen_anylonger_than_xnt.pdf'), w=6, h=6)
+	
+	
+	df			<- copy(bam.cov)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	ans			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	ans[, READL:=1L]
+	#
+	df			<- copy(bam.cov175)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=175L]
+	ans			<- rbind(ans, tmp)		
+	#
+	df			<- copy(bam.cov200)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=200L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov225)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=225L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov250)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=250L]
+	ans			<- rbind(ans, tmp)		
+	#
+	df			<- copy(bam.cov275)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=275L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov300)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=300L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov325)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=325L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov350)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=350L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov375)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{						
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>750/9719)
+	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
+	tmp			<- bam.covm[, list(	N=length(RID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=375L]
+	ans			<- rbind(ans, tmp)	
+	#	make table
+	ans[, XCOV_LABEL:= paste0(round(XCOV_MEAN,d=0),'x ( ', round(XCOV_QL, d=1),'x - ',round(XCOV_QU, d=0),'x )')]
+	ans[, HCOV_LABEL:= paste0(round(100*HCOV_MEAN,d=1),'% (', round(100*HCOV_QL, d=1),'% - ',round(100*HCOV_QU, d=1),'%)')]
+	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & READL==1, N], d=1), '%')]
+	set(ans, NULL, 'COV_MIN', ans[, factor(COV_MIN, levels=c(1,10,20,30,50,100), labels=c('1X','10X','20X','30X','50X','100X'))])
+	ans			<- subset(ans, select=c(COV_MIN, READL, N, P, HCOV_LABEL, HCOV_MEAN))
+	setkey(ans, COV_MIN, READL)
+	write.csv(ans, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
+	
+	ggplot(subset(ans, READL>1), aes(x=READL, y=N, group=COV_MIN, pch=COV_MIN)) + 
+			geom_line(colour='grey50') +
+			geom_point() + 			 
+			scale_y_continuous(breaks=seq(0,5000,200)) +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(x='\nmin read length', y='subjects retained\n',pch='min sequencing\ndepth')
+	ggsave(file=paste0(outfile.base,'subjectsretained_by_minreads.pdf'), w=3.5, h=6)
+	ggplot(subset(ans, READL>1), aes(x=READL, y=HCOV_MEAN*9719, group=COV_MIN, pch=COV_MIN)) + 
+			geom_line(colour='grey50') +
+			geom_point() + 			 
+			scale_y_continuous(breaks=seq(0,10000,500)) +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(x='\nmin read length', y='average coverage of HIV-1 genome\n(nt)',pch='min sequencing\ndepth')
+	ggsave(file=paste0(outfile.base,'coverage_by_minreads.pdf'), w=3.5, h=6)
+	
+	
+	#	roughly where are these 250 bp reads?
+	bam.cov250.30	<- subset(bam.cov250, COV>=30)
+	bam.cov250.30	<- merge(subset(dc, select=c(SID, RID)), bam.cov250.30, by='SID')
+	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]
+	tmp				<- subset(tmp, SUM_REP>750)
+	tmp				<- tmp[, list(SID=SID[which.max(SUM_REP)]), by='RID']
+	bam.cov250.30	<- merge(tmp, bam.cov250.30, by=c('RID','SID'))
+	setkey(bam.cov250.30, RID, POS)
+	tmp				<- bam.cov250.30[, 	{
+				z	<- rep(COV,REP)
+				list(COV=z, POS2=POS+seq_along(z)-1L)
+			}, by=c('SID','RID','POS')]
+	tmp			<- tmp[, list(N=length(RID)), by='POS2']
+	ggplot(tmp, aes(x=POS2, y=N)) + geom_area() +
+			theme_bw() +
+			scale_x_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
+			scale_y_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,3100)) +
+			labs(x='\nposition on HIV-1 genome', y='individuals\nwith NGS reads at position\n') +
+			theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
+	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=8, h=2)
+}
 RakaiFull.analyze.couples.todi.170811.computing.effort.couples<- function()
 {	
 	require(data.table)
