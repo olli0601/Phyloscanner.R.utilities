@@ -824,6 +824,7 @@ phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args)
 
 #' @import Rsamtools
 #' @import data.table
+#' @export
 #' @title Calculate position and length of merged reads
 #' @description This function calculates the position and length of the two sequenced segments from a single RNA template, potentially after merging when both segments overlap.    
 #' @param bam.file.name full path name to bam file.
