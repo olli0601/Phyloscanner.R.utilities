@@ -5456,7 +5456,7 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner.py'
 		in.dir				<- file.path(HOME,'RakaiAll_output_170704_w250_s20_p35_stagetwo')
 		#in.dir				<- file.path(HOME,'RakaiAll_output_170301_w250_s20_p35_stagetwo_rerun23')		
-		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_pblTRUE")
+		out.dir				<- file.path(HOME,"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_mft1e-3")
 		work.dir			<- file.path(HOME,"RakaiAll_work_170704")
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'		
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py.py'
@@ -5506,12 +5506,12 @@ pty.pipeline.phyloscanner.170301.secondstage.rerun<- function()
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=10,
 				dwns.maxReadsPerPatient=50,	
-				multifurcation.threshold=1e-5,
+				multifurcation.threshold=1e-3,
 				split.rule='s',
 				split.kParam=20,
 				split.proximityThreshold=0,
 				split.readCountsMatterOnZeroBranches=TRUE,
-				split.pruneBlacklist=TRUE,
+				split.pruneBlacklist=FALSE,
 				trms.allowMultiTrans=TRUE,
 				pw.trmw.min.reads=30,									
 				pw.trmw.min.tips=1,
