@@ -822,6 +822,36 @@ phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args)
 	pty.c
 }	
 
+#' @import Rsamtools
+#' @import data.table
+#' @title Calculate position and length of merged reads
+#' @description This function calculates the position and length of the two sequenced segments from a single RNA template, potentially after merging when both segments overlap.    
+#' @param bam.file.name full path name to bam file.
+#' @return data.table with columns QNAME (template query ID), POS (leftmost position of read), LEN (length of read)
+phsc.bam.get.length.and.pos.of.mergedreads<- function(bam.file.name)
+{
+	dlen	<- scanBam(bam.file.name, param=ScanBamParam(what=c('qname','qwidth','pos','rname','isize','strand')))[[1]]
+	dlen	<- as.data.table(dlen)
+	setnames(dlen, colnames(dlen), toupper(colnames(dlen)))
+	#	check we have at most two segments per template
+	tmp		<- dlen[, list(N_SEGMENTS=length(STRAND)), by='QNAME']
+	stopifnot( tmp[, all(N_SEGMENTS<3)] )
+	dlen[, END:= POS+QWIDTH-1L]
+	#	determine if segments overlap
+	tmp		<- dlen[, list(OVERLAP= as.numeric(max(POS)<=min(END)), LEN= max(END)-min(POS)+1L ), by='QNAME']
+	dlen	<- merge(dlen, tmp, by='QNAME')
+	#	set LEN for segments that don t overlap
+	tmp		<- dlen[, which(OVERLAP==0)]
+	set(dlen, tmp, 'LEN', dlen[tmp, QWIDTH])		
+	#	get segments that don t overlap
+	tmp		<- subset(dlen, OVERLAP==0)
+	set(tmp, NULL, 'QNAME', tmp[, paste0(QNAME,':',STRAND)])
+	tmp		<- subset(tmp, select=c(QNAME, POS, LEN))
+	#	get segments that overlap
+	dlen	<- dlen[, list(POS=min(POS), LEN=LEN[1]), by='QNAME']
+	dlen	<- rbind(dlen, tmp)
+	dlen
+}
 
 #' @import data.table
 #' @title Generate bash commands to process phyloscanner output
