@@ -17,7 +17,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()	
 	#project.bam.read.distribution.calculate()
 	#pty.pipeline.phyloscanner.170301.thirdstage() 
 	#project.Rakai.ExaMLTree.170601()		
@@ -29,10 +29,11 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=21, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=10, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=10, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
 		cmd		<- paste(cmd,tmp,sep='\n')
 		cat(cmd)	 								
@@ -51,7 +52,8 @@ pty.various	<- function()
 	#project.readlength.count.bam.171018()
 	#project.check.bam.integrity()
 	#RakaiFull.divergent.clades.calculate.170811()
-	project.readlength.count.bam.171208()
+	#project.readlength.count.bam.171208()
+	project.readlength.calculate.coverage.171208()
 }
 
 project.dual.alignments.missing<- function()
@@ -6336,8 +6338,11 @@ project.readlength.calculate.coverage.171208<- function()
 	require(ggplot2)
 	require(data.table)
 	require(Rsamtools)		
-	indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'		
-	outfile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208'	
+	#indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'		
+	#outfile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208'	
+	indir			<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE'
+	outfile.base	<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE_'
+	
 	bfiles			<- data.table(FILE=list.files(indir, pattern='_mergedfragmentlen.rda$', full.names=TRUE))		
 	bfiles[, FILE_ID:=gsub('_mergedfragmentlen.rda','',basename(FILE))]	
 	

@@ -15698,6 +15698,28 @@ RakaiFull.analyze.couples.todi.171119.DIRext<- function()
 	}
 }
 
+RakaiFull.analyze.couples.todi.171122.linkageanalysis<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'
+	outfile.base			<- gsub('withmetadata.rda','',infile)
+	load(infile)
+	
+	rca2	<- subset(rca, !grepl('insufficient',SELECT), select=c(MALE_RID, FEMALE_RID, PTY_RUN, SELECT, FEMALE_COMM_TYPE))
+	rca2[, SELECT2:= 'linked']
+	set(rca2, rca2[, which(grepl('not a pair',SELECT))], 'SELECT2', 'unlinked')
+	set(rca2, rca2[, which(!grepl('fisher',FEMALE_COMM_TYPE))], 'FEMALE_COMM_TYPE', 'not fisherfolk')
+	rca2	<- rca2[, as.matrix(table(FEMALE_COMM_TYPE, SELECT2))]
+	fisher.test(rca2, alternative='less')
+}
+
 RakaiFull.analyze.couples.todi.171122.DIRext<- function()
 {	
 	require(data.table)
