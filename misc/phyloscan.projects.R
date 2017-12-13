@@ -6345,6 +6345,7 @@ project.readlength.calculate.coverage.171208<- function()
 	
 	bfiles			<- data.table(FILE=list.files(indir, pattern='_mergedfragmentlen.rda$', full.names=TRUE))		
 	bfiles[, FILE_ID:=gsub('_mergedfragmentlen.rda','',basename(FILE))]	
+	print(bfiles)
 	
 	bam.cov		<- bfiles[,	{
 				#FILE<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr/12559_1_1_mergedfragmentlen.rda'
