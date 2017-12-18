@@ -9127,14 +9127,24 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	require(Hmisc)
-	infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
-	infile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208_'
-	infile.bams	<- paste0(infile.base,c('covall.rda','cov175.rda','cov200.rda','cov225.rda','cov250.rda','cov275.rda','cov300.rda','cov325.rda','cov350.rda','cov375.rda','lendist.rda'))
-	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_'
-	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_750nt_'
-	
-	load(infile)
-	dc		<- subset(dc, !is.na(SID))
+	ana	<- 'BEEHIVE'
+	ana	<- 'Rakai'
+	if(ana=='Rakai')
+	{
+		infile		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_assemblystatus.rda'
+		infile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats/PANGEA/bam_stats_171208_'
+		infile.bams	<- paste0(infile.base,c('covall.rda','cov175.rda','cov200.rda','cov225.rda','cov250.rda','cov275.rda','cov300.rda','cov325.rda','cov350.rda','cov375.rda','lendist.rda'))
+		outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_'
+		outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/all_bams_171208_750nt_'		
+		load(infile)
+		dc		<- subset(dc, !is.na(SID))		
+	}
+	if(ana=='BEEHIVE')
+	{		
+		infile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats/BEEHIVE/mergedfragmentlen_BEE__'
+		infile.bams	<- paste0(infile.base,c('covall.rda','cov175.rda','cov200.rda','cov225.rda','cov250.rda','cov275.rda','cov300.rda','cov325.rda','cov350.rda','cov375.rda','lendist.rda'))		
+		outfile.base<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats/BEEHIVE_750nt_'						
+	}
 	
 	for(i in seq_along(infile.bams))		
 		load(infile.bams[i])	
@@ -9157,11 +9167,14 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 	setnames(bam.cov350, 'FILE_ID', 'SID')
 	bam.cov350	<- subset(bam.cov350, !is.na(COV))
 	setnames(bam.cov375, 'FILE_ID', 'SID')
-	bam.cov375	<- subset(bam.cov375, !is.na(COV))
-	
+	bam.cov375	<- subset(bam.cov375, !is.na(COV))	
 	setnames(bam.len, 'FILE_ID', 'SID')
-	bam.len	<- merge(bam.len, subset(dc, select=c(SID, RID)))
 	bam.len[, LONGER:= factor(CDF>1-1e-4, levels=c(TRUE,FALSE), labels=c('no','yes'))]
+	
+	if(ana=='Rakai')
+	{
+		bam.len	<- merge(bam.len, subset(dc, select=c(SID, RID)))
+	}
 	
 	ggplot(subset(bam.len,QU>=40 & QU<320), aes(y=1-CDF, x=factor(QU))) + 
 			geom_boxplot() +
@@ -9187,10 +9200,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	ans			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	ans			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9205,10 +9221,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}	
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9224,10 +9243,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}	
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9243,10 +9265,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9262,10 +9287,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9281,10 +9309,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9300,10 +9331,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9319,10 +9353,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9338,10 +9375,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9357,10 +9397,13 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 						bam.covm
 					}))
 	bam.covm	<- subset(bam.covm, HCOV>750/9719)
-	bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
-	tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
-	bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))	
-	tmp			<- bam.covm[, list(	N=length(RID), 
+	if(ana=='Rakai')
+	{		
+		bam.covm	<- merge(subset(dc, select=c(SID, RID)), bam.covm, by='SID')
+		tmp			<- bam.covm[, list(SID=SID[which.max(HCOV)]), by='RID']
+		bam.covm	<- merge(tmp, bam.covm, by=c('RID','SID'))
+	}
+	tmp			<- bam.covm[, list(	N=length(SID), 
 					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
 					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
 			), by='COV_MIN']
@@ -9375,17 +9418,17 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 	setkey(ans, COV_MIN, READL)
 	write.csv(ans, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
 	
-	ggplot(subset(ans, READL>1), aes(x=READL, y=N, group=COV_MIN, pch=COV_MIN)) + 
+	ggplot(subset(ans, READL>1), aes(x=READL, y=N/max(N), group=COV_MIN, pch=COV_MIN)) + 
 			geom_line(colour='grey50') +
 			geom_point() + 			 
-			scale_y_continuous(breaks=seq(0,5000,200)) +
+			scale_y_continuous(label=scales:::percent, lim=c(0.65,1), expand=c(0,0)) +
 			theme_bw() + theme(legend.position='bottom') +
 			labs(x='\nmin read length', y='subjects retained\n',pch='min sequencing\ndepth')
 	ggsave(file=paste0(outfile.base,'subjectsretained_by_minreads.pdf'), w=3.5, h=6)
 	ggplot(subset(ans, READL>1), aes(x=READL, y=HCOV_MEAN*9719, group=COV_MIN, pch=COV_MIN)) + 
 			geom_line(colour='grey50') +
 			geom_point() + 			 
-			scale_y_continuous(breaks=seq(0,10000,500)) +
+			scale_y_continuous(breaks=seq(0,10000,200)) +
 			theme_bw() + theme(legend.position='bottom') +
 			labs(x='\nmin read length', y='average coverage of HIV-1 genome\n(nt)',pch='min sequencing\ndepth')
 	ggsave(file=paste0(outfile.base,'coverage_by_minreads.pdf'), w=3.5, h=6)
@@ -9393,7 +9436,14 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 	
 	#	roughly where are these 250 bp reads?
 	bam.cov250.30	<- subset(bam.cov250, COV>=30)
-	bam.cov250.30	<- merge(subset(dc, select=c(SID, RID)), bam.cov250.30, by='SID')
+	if(ana=='Rakai')
+	{		
+		bam.cov250.30	<- merge(subset(dc, select=c(SID, RID)), bam.cov250.30, by='SID')
+	}		
+	if(ana=='BEEHIVE')
+	{
+		bam.cov250.30[, RID:= SID]
+	}
 	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]
 	tmp				<- subset(tmp, SUM_REP>750)
 	tmp				<- tmp[, list(SID=SID[which.max(SUM_REP)]), by='RID']
@@ -9408,11 +9458,12 @@ RakaiFull.analyze.couples.todi.171122.NGS.success<- function()
 			theme_bw() +
 			scale_x_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
 			scale_y_continuous(breaks=seq(0,10e3,1e3), expand=c(0,0)) +
-			coord_cartesian(ylim=c(0,3100)) +
+			#coord_cartesian(ylim=c(0,NA)) +
 			labs(x='\nposition on HIV-1 genome', y='individuals\nwith NGS reads at position\n') +
 			theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
 	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=8, h=2)
 }
+
 RakaiFull.analyze.couples.todi.170811.computing.effort.couples<- function()
 {	
 	require(data.table)
