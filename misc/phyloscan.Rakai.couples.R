@@ -424,48 +424,6 @@ RakaiCirc.seq.get.phylogenies<- function()
 	}
 }
 
-RakaiFull.preprocess.closepairs.calculate.170421	<- function()
-{
-	#
-	#	from every phyloscanner run, select pairs that are closely related 
-	#		
-	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
-	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170428.rda'
-	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
-	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed'
-	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35.rda'
-	
-	
-	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
-	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
-	setkey(infiles, PTY_RUN)
-	rtp	<- infiles[, {
-				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed/ptyr667_pairwise_relationships.rda'
-				#cat(PTY_RUN,'\n')
-				load(F)
-				group	<- 'TYPE_PAIR_DI2'
-				rtp		<- subset(rplkl, GROUP==group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
-				rtp		<- subset(rtp, TYPE_MLE=='close')
-				rtp		<- merge(rtp, subset(rplkl, GROUP==group & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				#tmp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIRSCORE_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
-				#rtp		<- rbind(rtp, tmp)				
-				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
-				rtp[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
-				rtp				
-			}, by=c('PTY_RUN')]			
-	dmin	<- infiles[,{
-				#cat(PTY_RUN,'\n')
-				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed/ptyr1_pairwise_relationships.rda'
-				load(F)
-				tmp		<- dwin[, list(PATRISTIC_DISTANCE_MIN=min(PATRISTIC_DISTANCE), PATRISTIC_DISTANCE_MEAN=mean(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
-				tmp
-			}, by='PTY_RUN']	
-	save(rtp, dmin, file=outfile)	
-}
-
 RakaiFull.preprocess.couples.todi.phyloscanneroutput.170421<- function()
 {
 	#	load sequence data

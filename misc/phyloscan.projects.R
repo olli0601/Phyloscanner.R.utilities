@@ -17,7 +17,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyr1()		
 	#pty.pipeline.phyloscanner.170301.firstbatchsecondbatchofall.fix()	
 	#pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees() 	
-	pty.pipeline.phyloscanner.170301.secondstage.rerun()	
+	#pty.pipeline.phyloscanner.170301.secondstage.rerun()
 	#project.bam.read.distribution.calculate()
 	#pty.pipeline.phyloscanner.170301.thirdstage() 
 	#project.Rakai.ExaMLTree.170601()		
@@ -29,11 +29,11 @@ project.dual<- function()
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()	
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
-		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=10, hpc.q="pqeelab", hpc.mem="11000mb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=10, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=20, hpc.q="pqeelab", hpc.mem="11gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
+		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=10, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
 		cmd		<- paste(cmd,tmp,sep='\n')
 		cat(cmd)	 								
@@ -53,7 +53,8 @@ pty.various	<- function()
 	#project.check.bam.integrity()
 	#RakaiFull.divergent.clades.calculate.170811()
 	#project.readlength.count.bam.171208()
-	project.readlength.calculate.coverage.171208()
+	#project.readlength.calculate.coverage.171208()
+	project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing()
 }
 
 project.dual.alignments.missing<- function()
@@ -1057,6 +1058,52 @@ project.RakaiAll.setup.RAxMLmodel.evaluate.170301<- function()
 			labs(y='model prob in model averaging') +
 			geom_smooth(se=TRUE, fill='grey80', span=2)
 	ggsave(file=file.path(indir,'Best_Subst_Model_trends_by_ntaxa.pdf'), w=5, h=4)	 
+}
+
+project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing	<- function()
+{
+	require(data.table)
+	#
+	#	from every phyloscanner run, select pairs that are closely related 
+	#		
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_tb_blnormed'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170428.rda'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed'
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35.rda'
+	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_save'
+	outfile	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/close_pairs_170704_cl35.rda'
+	
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	setkey(infiles, PTY_RUN)
+	rtp	<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed/ptyr667_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				group	<- 'TYPE_PAIR_DI2'
+				rtp		<- subset(rplkl, GROUP==group)[, list(TYPE_MLE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+				rtp		<- subset(rtp, TYPE_MLE=='close')
+				rtp		<- merge(rtp, subset(rplkl, GROUP==group & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				#tmp		<- merge(rtp, subset(rplkl, GROUP=='TYPE_PAIRSCORE_DI' & TYPE=='close'), by=c('ID1','ID2'), all.x=1)
+				#rtp		<- rbind(rtp, tmp)				
+				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
+				rtp[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
+				rtp				
+			}, by=c('PTY_RUN')]			
+	dmin	<- infiles[,{
+				#cat(PTY_RUN,'\n')
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl5_blnormed/ptyr1_pairwise_relationships.rda'
+				load(F)
+				tmp		<- dwin[, list(		PATRISTIC_DISTANCE_MIN=min(PATRISTIC_DISTANCE), 
+								PATRISTIC_DISTANCE_MEAN=mean(PATRISTIC_DISTANCE),
+								PATRISTIC_DISTANCE_MEDIAN=median(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
+				tmp
+			}, by='PTY_RUN']	
+	save(rtp, dmin, file=outfile)	
 }
 
 project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
@@ -2700,6 +2747,29 @@ project.RakaiAll.setup.phyloscanner.170301<- function()
 		save(dc, dc.it2, pty.runs, file=file.path(indir,'Rakai_phyloscanner_170301_b75_part2.rda'))		
 	}
 
+}
+
+project.RakaiAll.setup.phyloscanner.171219<- function()
+{
+	#	load all UVRI files on HPC
+	
+	du		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/UVRI_bams.txt', header=FALSE, col.names='BAM', stringsAsFactors=FALSE))
+	set(du, NULL, 'SID', du[, gsub('\\.bam','',basename(BAM))])
+	
+	tmp[, HPC_BAM:='Y']
+	
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to bams from SANGER
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_BAM))], 'HPC_BAM', 'N')	
+	tmp		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/listOfRefs170704.txt', header=FALSE, col.names='SID', stringsAsFactors=FALSE))
+	tmp[, HPC_REF:='Y']
+	set(tmp, NULL, 'SID', tmp[, gsub('_ref.fasta','',SID)])
+	tmp		<- subset(tmp, grepl('^[0-9]+_[0-9]_[0-9]+',SID))	#	reduce to refs from SANGER	
+	stopifnot( !length(setdiff( tmp[, SID], dc[, SID] )) )	
+	dc		<- merge(dc, tmp, by='SID',all.x=TRUE)
+	set(dc, dc[, which(is.na(HPC_REF))], 'HPC_REF', 'N')
+	
 }
 
 project.RakaiAll.setup.phyloscanner.170704<- function()
