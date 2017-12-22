@@ -1076,6 +1076,7 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing	<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35.rda'
 	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_save'
 	outfile	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/close_pairs_170704_cl35.rda'
+
 	
 	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
 	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
@@ -1093,6 +1094,12 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing	<- function()
 				#rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
 				rtp[, POSTERIOR_SCORE:=(POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-2)]
 				rtp				
+			}, by=c('PTY_RUN')]		
+	rn	<- infiles[, {
+				load(F)
+				group	<- 'TYPE_PAIR_DI2'
+				rtp		<- subset(rplkl, GROUP==group & TYPE=='close', select=c(ID1, ID2, NEFF))
+				rtp				
 			}, by=c('PTY_RUN')]			
 	dmin	<- infiles[,{
 				#cat(PTY_RUN,'\n')
@@ -1103,7 +1110,7 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing	<- function()
 								PATRISTIC_DISTANCE_MEDIAN=median(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
 				tmp
 			}, by='PTY_RUN']	
-	save(rtp, dmin, file=outfile)	
+	save(rtp, rn, dmin, file=outfile)	
 }
 
 project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()

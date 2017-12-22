@@ -16066,7 +16066,100 @@ RakaiFull.analyze.couples.todi.170522.distance.histogram<- function()
 	
 }
 
-RakaiFull.analyze.couples.todi.171119.distance.histogram<- function()
+RakaiFull.analyze.couples.todi.171119.distance.histogram.stage1<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda'		
+	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_"		
+	load(infile)
+	
+	#	add RID and SEX
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	#	add GENDER
+	tmp		<- unique(subset(rd, select=c(RID, SEX)))
+	setnames(tmp, c('RID','SEX'), c('ID1','ID1_SEX'))
+	dmin	<- merge(dmin, tmp, by='ID1')
+	setnames(tmp, c('ID1','ID1_SEX'), c('ID2','ID2_SEX'))
+	dmin	<- merge(dmin, tmp, by='ID2')
+	#	keep only HSX pairings
+	dmin	<- subset(dmin, ID1_SEX!=ID2_SEX)
+	#	keep average median distance per pair in all runs
+	dmin	<- dmin[, list(PATRISTIC_DISTANCE_MEDIAN=mean(PATRISTIC_DISTANCE_MEDIAN)), by=c('ID1','ID2','ID1_SEX','ID2_SEX')]
+	setnames(dmin, 'PATRISTIC_DISTANCE_MEDIAN', 'PHSC_PD_MEAN')
+	#	make histogram on log scale
+	dfds	<- subset(dmin, PHSC_PD_MEAN>1e-3 & PHSC_PD_MEAN<1)
+	ggplot(dfds) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.025), ymin=1, ymax=1e6, fill=brewer.pal(11, 'PuOr')[2], alpha=0.5) +
+			geom_histogram(aes(x=log(PHSC_PD_MEAN)), binwidth=0.2, colour='white', fill='skyblue3') +
+			#geom_line(data=densm, aes(x=X, y=Y), colour='black') +			
+			scale_y_log10(expand=c(0,0), lim=c(1,1e6), breaks=c(10,100,1000,10000,100000)) +
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			#coord_cartesian(ylim=c(0,1e3)) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nmedian subtree distance (subst/site)', y='', colour='')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_hist.pdf'), w=8, h=5)
+}
+
+
+RakaiFull.analyze.couples.todi.171119.distance.histogram.couples<- function()
 {	
 	require(data.table)
 	require(scales)
