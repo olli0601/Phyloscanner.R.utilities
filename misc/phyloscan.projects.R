@@ -5160,6 +5160,9 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 
 pty.pipeline.phyloscanner.180302.beehive67.process<- function() 
 {
+	require(big.phylo)
+	require(Phyloscanner.R.utilities)
+	
 	# set up pty.runs file
 	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
 	if(0)	
@@ -5255,6 +5258,9 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 						}, by=c('PTY_RUN','W_FROM')])
 		quit('no')
 	}
+	#
+	# generate trees
+	
 }
 	
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
