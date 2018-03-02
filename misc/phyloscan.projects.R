@@ -5230,8 +5230,8 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 							select=pty.select	#of 240
 					)											
 					pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args,regex.ref='_ref.fasta$', postfix.sample.id='_remap_dedup\\.bam|_remap_ref\\.fasta')
-					cat(pty.c$CMD)
-					stop()
+					#cat(pty.c$CMD)
+					#stop()
 					pty.c[, W_FROM:= ptyi[i]]
 					pty.c
 				})
@@ -5241,8 +5241,8 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
 		pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
 		pty.c	<- subset(pty.c, is.na(FO))		
-		print(pty.c)
-		stop()		 
+		#print(pty.c)
+		#stop()		 
 		invisible(pty.c[,	{
 							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
