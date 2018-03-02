@@ -5199,7 +5199,7 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	
 	#
 	# generate read alignments
-	if(1)
+	if(0)
 	{		
 		ptyi		<- seq(800,9150,25) 
 		pty.c		<- lapply(seq_along(ptyi), function(i)
@@ -5260,14 +5260,14 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	}
 	#
 	# generate trees
-	if(0)
+	if(1)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 171; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
-		
-		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		#hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 171; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		hpc.select	<- 1; hpc.nproc<- 16; 	hpc.walltime<- 71; hpc.mem<-"1.9gb"; hpc.q<- NA
+		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
 		in.dir		<- file.path(HOME,"BEEHIVE_67_180302_out")
 		out.dir		<- in.dir
@@ -5288,8 +5288,8 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 		#print(infiles)	 		
 		
 		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
-		df[, ID:=ceiling(seq_len(nrow(df))/5)]
-		df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+		df[, ID:=ceiling(seq_len(nrow(df))/1)]
+		#df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
 		
 		#df[1, cat(CMD)]
 		#stop()
