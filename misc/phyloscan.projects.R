@@ -5247,7 +5247,7 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 		#print(pty.c)
 		#stop()		 
 		invisible(pty.c[,	{
-							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
 							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							cmd		<- paste(cmd,CMD,sep='\n')
@@ -5260,7 +5260,51 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	}
 	#
 	# generate trees
+	if(0)
+	{
+		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
+		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 171; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		
+		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+		in.dir		<- file.path(HOME,"BEEHIVE_67_180302_out")
+		out.dir		<- in.dir
+		work.dir	<- file.path(HOME,"BEEHIVE_67_180302_work")
+		
+		infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+		infiles[, FO:= gsub('fasta$','tree',FI)]
+		infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+		infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
+		tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+		infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		infiles	<- subset(infiles, is.na(FT))	
+		setkey(infiles, PTY_RUN, W_FROM)			
+		#infiles	<- subset(infiles, PTY_RUN>=240 & PTY_RUN<300)
+		#infiles	<- subset(infiles, PTY_RUN>=186 & PTY_RUN<239)
+		#print(infiles)	 		
+		
+		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+		df[, ID:=ceiling(seq_len(nrow(df))/5)]
+		df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+		
+		#df[1, cat(CMD)]
+		#stop()
+		invisible(df[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)							
+							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+						}, by=c('ID')])
+	}
+
 	
+
 }
 	
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
