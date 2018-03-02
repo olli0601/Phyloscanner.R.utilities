@@ -27,9 +27,10 @@ project.dual<- function()
 	#pty.pipeline.compress.phyloscanner.output()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
-	#project.dualinfecions.phylotypes.evaluatereads.150119()	
+	#project.dualinfecions.phylotypes.evaluatereads.150119()
+	pty.pipeline.phyloscanner.180302.beehive67.process()
 	#	various   
-	if(1) 
+	if(0) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=20, hpc.q="pqeelab", hpc.mem="11gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -5156,7 +5157,105 @@ pty.pipeline.phyloscanner.170301.secondstage.ptyrtrees<- function()
 	quit('no')	
 }
 
+
+pty.pipeline.phyloscanner.180302.beehive67.process<- function() 
+{
+	# set up pty.runs file
+	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	if(0)	
+	{
+		infile	<- '~/Dropbox (SPH Imperial College)/2017_phyloscanner_beehive_cluster/Cluster_67_wClose_in.csv'
+		outfile	<- '~/Dropbox (SPH Imperial College)/2017_phyloscanner_beehive_cluster/Cluster_67_wClose_in.rda'
+		df		<- as.data.table(read.csv(infile, header=FALSE, stringsAsFactors=FALSE))
+		setnames(df, c('V1','V2','V3'), c('BAM','REF','RENAME_ID'))
+		df[, SAMPLE_ID:= gsub('_remap_dedup.bam','',basename(BAM))]
+		df[, UNIT_ID:= gsub('^([^-]+)-.*','\\1',RENAME_ID)]
+		df		<- df[, list(SAMPLE_ID=SAMPLE_ID, RENAME_ID=paste0(UNIT_ID,'-',1:length(SAMPLE_ID))), by= 'UNIT_ID']		
+		df[, PTY_RUN:=67]
+		pty.runs<- subset(df, select=c(PTY_RUN, SAMPLE_ID, RENAME_ID, UNIT_ID  ))		
+		save(pty.runs, file=outfile)
+	}
+	#
+	#	INPUT ARGS
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+		in.dir				<- file.path(HOME,"BEEHIVE_67_180302_in")
+		work.dir			<- file.path(HOME,"BEEHIVE_67_180302_work")
+		out.dir				<- file.path(HOME,"BEEHIVE_67_180302_out")		
+		load( file.path(in.dir, 'Cluster_67_wClose_in.rda') )
+		print(pty.runs)
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 1							
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
+		pty.data.dir		<- '/work/cw109/BEEHIVE/BamsDeduped'
+		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		pty.select			<- 67		
+	}	
 	
+	#
+	# generate read alignments
+	if(1)
+	{		
+		ptyi		<- seq(800,9150,25) 
+		pty.c		<- lapply(seq_along(ptyi), function(i)
+				{
+					pty.args			<- list(	prog.pty=prog.pty, 
+							prog.mafft='mafft', 
+							prog.raxml=prog.raxml, 
+							data.dir=pty.data.dir, 
+							work.dir=work.dir, 
+							out.dir=out.dir, 
+							alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+							alignments.root='REF_CPX_AF460972', 
+							alignments.pairwise.to='REF_B_K03455',
+							window.automatic= '', 
+							merge.threshold=0, 
+							min.read.count=1, 
+							quality.trim.ends=23, 
+							min.internal.quality=23, 
+							merge.paired.reads=TRUE, 
+							no.trees=TRUE, 
+							dont.check.duplicates=FALSE,
+							dont.check.recombination=TRUE,
+							num.bootstraps=1,
+							all.bootstrap.trees=TRUE,
+							strip.max.len=350, 
+							min.ureads.individual=NA, 
+							win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+							keep.overhangs=FALSE,
+							mem.save=0,
+							verbose=TRUE,					
+							select=pty.select	#of 240
+					)											
+					pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args,regex.ref='_ref.fasta$', postfix.sample.id='_remap_dedup\\.bam|_remap_ref\\.fasta')
+					cat(pty.c$CMD)
+					stop()
+					pty.c[, W_FROM:= ptyi[i]]
+					pty.c
+				})
+		pty.c	<- do.call('rbind', pty.c)	
+		tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
+		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
+		pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		pty.c	<- subset(pty.c, is.na(FO))		
+		print(pty.c)
+		stop()		 
+		invisible(pty.c[,	{
+							cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=998, hpc.q="pqeelab", hpc.mem="5900mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd		<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile	<- paste("bee",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+						}, by=c('PTY_RUN','W_FROM')])
+		quit('no')
+	}
+}
 	
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
 {

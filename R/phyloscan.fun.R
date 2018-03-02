@@ -670,7 +670,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 #' @return Data.table with columns 'PTY_RUN' (run id) and 'CMD' (bash commands for that run). 
 #' @description This function generates bash commands for multiple phyloscanner runs, that can be called via 'system' in R, or written to file to run on a UNIX system.
 #' @example example/ex.cmd.phyloscanner.multi.R  
-phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args) 		
+phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args, regex.ref='_ref.fasta$', postfix.sample.id='\\.bam|_ref\\.fasta') 		
 {
 	#
 	#	associate BAM and REF files with each scheduled phylotype run
@@ -684,9 +684,9 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 	#	if reference files that were used in assembly are not specified in pty.runs, search for SAMPLE_ID+'_ref.fasta'
 	if(!any(colnames(pty.runs)=='REFERENCE_ID'))
 	{		
-		set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')		
+		set(ptyd, ptyd[, which(grepl(regex.ref,FILE))], 'TYPE', 'REF')		
 		ptyd		<- subset(ptyd, !is.na(TYPE))
-		ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
+		ptyd[, SAMPLE_ID:= gsub(postfix.sample.id,'',basename(FILE))]
 		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')		
 	}
 	#	if reference files that were used in assembly are specified in pty.runs, use these
@@ -1343,9 +1343,9 @@ phsc.plot.default.colours.for.relationtypes<- function()
 							COLS= rev(brewer.pal(11, 'RdBu'))[c(3,4,5)]),
 					data.table(	TYPE= c("other close","other","other distant"),
 							COLS= rev(brewer.pal(11, 'RdGy'))[c(3,4,5)]),
-					data.table(	TYPE= c("sibling no intermediate\nclose","sibling no intermediate","sibling no intermediate\nclose"),
+					data.table(	TYPE= c("sibling no intermediate\nclose","sibling no intermediate","sibling no intermediate\ndistant"),
 							COLS= brewer.pal(11, 'BrBG')[c(5,4,3)]),
-					data.table(	TYPE= c("sibling with intermediate\nclose","sibling with intermediate","sibling with intermediate\nclose"),
+					data.table(	TYPE= c("sibling with intermediate\nclose","sibling with intermediate","sibling with intermediate\ndistant"),
 							COLS= brewer.pal(11, 'PuOr')[c(4,2,1)])))
 	cols.type[['TYPE_DIR_TODI7x3']]	<- { tmp<- tmp2[, COLS]; names(tmp) <- tmp2[, TYPE]; tmp }
 	cols.type[['TYPE_BASIC']]		<- cols.type[['TYPE_DIR_TODI7x3']]
@@ -1495,6 +1495,51 @@ phsc.plot.windowassignments.by.runs <- function(rplkl2, plot.file, plot.prob.sel
 	dev.off()	
 }
 
+phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+{		
+	#	make manual plot to show intermingled
+	if(is.null(ylim))
+		ylim	<- c(1e-3,0.4)
+	if(is.null(cols.typet))
+		cols.typet			<- c(	"ancestral 1->2"=brewer.pal(11, 'PiYG')[1],
+				'ancestral m->f'='steelblue2',
+				"ancestral 2->1"=brewer.pal(11, 'PiYG')[2],
+				'ancestral f->m'='hotpink2',
+				"intermingled"=brewer.pal(11, 'PuOr')[4], 
+				'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], 
+				"disconnected"=rev(brewer.pal(11, 'RdGy'))[4])		
+	group		<- 'TYPE_BASIC'
+	stopifnot(group%in%unique(rpw2$GROUP))
+	stopifnot(id.cols%in%colnames(rpw2))
+	#
+	rpw3		<- subset(rpw2, GROUP==group)
+	rpw3[, TYPE_TO:= 'disconnected']
+	rpw3[, Y:=1e-3]
+	set(rpw3, rpw3[, which(PATRISTIC_DISTANCE<1e-3)],'PATRISTIC_DISTANCE',1.1e-3)
+	set(rpw3, rpw3[,which(grepl('chain 12', TYPE))], 'TYPE_TO', 'ancestral 1->2')
+	set(rpw3, rpw3[,which(grepl('chain 21', TYPE))], 'TYPE_TO', 'ancestral 2->1')
+	set(rpw3, rpw3[,which(grepl('chain mf', TYPE))], 'TYPE_TO', 'ancestral m->f')
+	set(rpw3, rpw3[,which(grepl('chain fm', TYPE))], 'TYPE_TO', 'ancestral f->m')	
+	set(rpw3, rpw3[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(rpw3, rpw3[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
+	set(rpw3, NULL, 'TYPE_TO', rpw3[, factor(TYPE_TO, levels=c('ancestral 1->2','ancestral m->f','ancestral 2->1','ancestral f->m','intermingled','sibling','disconnected'))])	
+	setnames(rpw3, id.cols, c('PRIVATECOL_ID1','PRIVATECOL_ID2'))	
+	#
+	ggplot(rpw3, aes(x=W_FROM)) +
+			geom_hline(yintercept=0.025, colour='grey50') +
+			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
+			geom_point(aes(y=PATRISTIC_DISTANCE), size=1) +				
+			labs(x='\ngenomic position\n(relative to HXB2)', y='subgraph distance\n(subst/site)\n',fill='topological subgraph\nrelationship') +
+			scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)], rpw2[, max(W_FROM)])) +
+			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+			coord_cartesian(ylim=ylim) +
+			scale_fill_manual(values=cols.typet) +
+			theme_bw() + 
+			theme(legend.position='bottom', panel.spacing = unit(1, "lines")) +
+			facet_grid(PRIVATECOL_ID1+PRIVATECOL_ID2~.)	
+	ggsave(file=plot.file, w=plot.w, h=plot.h, useDingbats=FALSE)
+}	
+
 #' @export
 #' @import data.table ggplot2 scales
 #' @title Plot window summaries for pairs of individuals
@@ -1520,6 +1565,7 @@ phsc.plot.windowsummaries.for.pairs<- function(plot.select, rpw2, rplkl2, plot.f
 		cols.type	<- phsc.plot.default.colours.for.relationtypes()
 		stopifnot(group%in%names(cols.type))
 		cols		<- cols.type[[group]]
+		print(cols)
 	}
 	#	re-define dimensions if group specified
 	if(!is.na(group))
@@ -2139,8 +2185,9 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 #' @param node.fill column name in di by which each node is coloured
 #' @param node.shape.values named vector associating shapes to the values in the node.shape column
 #' @param node.fill.values named vector associating colours to the values in the node.fill column
+#' @param threshold.linked treshold value between 0 and 1. Edges with weight above this treshold are shown in black.
 #' @return ggplot object
-phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, layout=NULL)
+phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_, layout=NULL)
 {
 	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
 	#node.label='ID'; node.shape='IN_COUPLE'; node.fill='SEX'
@@ -2191,7 +2238,7 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 	df[, EDGETEXT_X:= (ID1_X+ID2_X)/2]
 	df[, EDGETEXT_Y:= (ID1_Y+ID2_Y)/2]
 	df[, EDGE_LABEL:= paste0('D',round(100*pmax(NETWORK_SCORE_12,NETWORK_SCORE_21),d=1),'%',' // ','L',round(100*POSTERIOR_SCORE_LINKED,d=1),'%' ) ]
-	df[, EDGE_COL:= as.character(factor(POSTERIOR_SCORE_LINKED>confidence.cut, levels=c(TRUE,FALSE),labels=c('edge_col_2','edge_col_1')))]	
+	df[, EDGE_COL:= as.character(factor(POSTERIOR_SCORE_LINKED>threshold.linked, levels=c(TRUE,FALSE),labels=c('edge_col_2','edge_col_1')))]	
 	#	for edges, move the start and end points on the line between X and Y
 	#	define unit gradient
 	df[, MX:= (ID2_X - ID1_X)]	
@@ -2207,7 +2254,7 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 			geom_point(data=layout, aes(x=X, y=Y, colour=NODE_FILL, pch=NODE_SHAPE), size=point.size) +
 			geom_segment(data=subset(df, LINK_12==1), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*MX_KEFF_12, colour=EDGE_COL), arrow=arrow, lineend="butt") +			
 			geom_segment(data=subset(df, LINK_21==1), aes(x=ID2_X, xend=ID1_X, y=ID2_Y, yend=ID1_Y, size=edge.size*MX_KEFF_21, colour=EDGE_COL), arrow=arrow, lineend="butt") +						
-			scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey70', 'edge_col_2'='grey30','NA'='grey50')) +
+			scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey80', 'edge_col_2'='grey40','NA'='grey50')) +
 			scale_shape_manual(values=c(node.shape.values, 'NA'=16)) +
 			scale_fill_manual(values=c(node.fill.values, 'NA'='grey50')) +
 			scale_size_identity() +
@@ -2240,8 +2287,9 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 #' @param node.fill column name in di by which each node is coloured
 #' @param node.shape.values named vector associating shapes to the values in the node.shape column
 #' @param node.fill.values named vector associating colours to the values in the node.fill column
+#' @param threshold.linked treshold value between 0 and 1. Edges with weight above this treshold are shown in black.
 #' @return ggplot object
-phsc.plot.probability.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_)
+phsc.plot.probability.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_)
 {	
 	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
 	#node.label='ID'; node.shape='IN_COUPLE'; node.fill='SEX'
@@ -2290,11 +2338,21 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 	
 	df[, EDGETEXT_X:= (ID1_X+ID2_X)/2]
 	df[, EDGETEXT_Y:= (ID1_Y+ID2_Y)/2]
-	df	<- merge(df,df[, 	{
-						z<- rep('edge_col_1', length(TYPE))
-						z[which.max(POSTERIOR_SCORE)]	<- 'edge_col_2'
-						list(EDGE_COL=z, TYPE=TYPE)	
-					}, by=c('ID1','ID2')], by=c('ID1','ID2','TYPE'))
+	#
+	#	calculate score for linked
+	if(is.na(threshold.linked))
+	{
+		df	<- merge(df,df[, 	{
+									z<- rep('edge_col_1', length(TYPE))
+									z[which.max(POSTERIOR_SCORE)]	<- 'edge_col_2'
+									list(EDGE_COL=z, TYPE=TYPE)	
+								}, by=c('ID1','ID2')], by=c('ID1','ID2','TYPE'))		
+	}
+	if(!is.na(threshold.linked))
+	{
+		tmp	<- subset(df, TYPE!='not close/disconnected')[, list( EDGE_COL=as.character(factor(sum(POSTERIOR_SCORE)>=threshold.linked, levels=c(TRUE, FALSE), labels=c('edge_col_2','edge_col_1'))) ), by=c('ID1','ID2')]
+		df	<- merge(df, tmp, by=c('ID1','ID2'))		
+	}	
 	#	for edges, move the start and end points on the line between X and Y
 	#	define unit gradient
 	df[, MX:= (ID2_X - ID1_X)]	
@@ -2315,7 +2373,8 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y + TY*curv.shift])
 	tmp		<- df[, which(TYPE=='21')]
 	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X - TX*curv.shift])
-	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])		
+	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])
+	#
 	p		<- ggplot() +			
 			geom_point(data=layout, aes(x=X, y=Y, colour=NODE_FILL, pch=NODE_SHAPE), size=point.size) +
 			geom_segment(data=subset(df, EDGE_COL=='edge_col_1' & TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), lineend="butt") +
@@ -2324,14 +2383,14 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 			geom_segment(data=subset(df, EDGE_COL=='edge_col_2' & TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), lineend="butt") +
 			geom_curve(data=subset(df, EDGE_COL=='edge_col_2' & TYPE=='12' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +
 			geom_curve(data=subset(df, EDGE_COL=='edge_col_2' & TYPE=='21' & KEFF>0), aes(x=ID2_X, xend=ID1_X, y=ID2_Y, yend=ID1_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +									
-			scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey70', 'edge_col_2'='grey30','NA'='grey50')) +
+			scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey80', 'edge_col_2'='grey40','NA'='grey50')) +
 			scale_shape_manual(values=c(node.shape.values, 'NA'=16)) +
 			scale_fill_manual(values=c(node.fill.values, 'NA'='grey50')) +
 			scale_size_identity() +
 			geom_text(data=subset(df, TYPE!='not close/disconnected' & KEFF>0), aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=paste0(round(100*POSTERIOR_SCORE,d=1),'%')), size=label.size) +
 			geom_text(data=layout, aes(x=X, y=Y, label=NODE_LABEL)) +
 			theme_void() +
-			guides(colour='none', fill='none',size='none', pch='none')
+			guides(colour='none', fill='none',size='none', pch='none') 
 	layout		<- subset(layout, select=c(ID,X,Y))
 	setnames(layout, c('ID','X','Y'), c('label','x','y'))	
 	p$layout	<- layout
@@ -3123,6 +3182,17 @@ phsc.get.pairwise.relationships.numbers<- function()
 	tmp
 }
 
+
+phsc.get.maximum.probability.transmission.network<- function(rtnn, verbose=0, method='Edmonds')
+{
+	if(method=='greedy')
+		return(phsc.get.maximum.probability.transmission.network.greedy(rtnn, verbose=verbose))
+	if(method=='Edmonds')
+		return(phsc.get.maximum.probability.transmission.network.RBGLedmonds(rtnn, verbose=verbose))
+	
+}
+		
+
 #' @title Construct maximum probability transmission network
 #' @description This function reconstructs a maximum probility transmission 
 #' network from the scores associated with directed and undirected edges.
@@ -3134,7 +3204,7 @@ phsc.get.pairwise.relationships.numbers<- function()
 #' @import sna igraph
 #' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
-phsc.get.maximum.probability.transmission.network<- function(rtnn, verbose=0)
+phsc.get.maximum.probability.transmission.network.greedy<- function(rtnn, verbose=0)
 {
 	stopifnot(c('ID1','ID2','IDCLU','TYPE','POSTERIOR_SCORE','KEFF')%in%colnames(rtnn))		
 	stopifnot( !length(setdiff(c('ambiguous','21','12'), rtnn[, unique(TYPE)])) )
@@ -3206,6 +3276,86 @@ phsc.get.maximum.probability.transmission.network<- function(rtnn, verbose=0)
 	rtnn	<- merge(rtnn, rtm, by=c('ID1','ID2','IDCLU'))
 	set(rtnn, NULL, c('ID1_IN_WEIGHT','ID2_IN_WEIGHT'), NULL)
 	rtnn
+}
+
+#' @title Construct maximum probability transmission network
+#' @description This function reconstructs a maximum probility transmission 
+#' network from the scores associated with directed and undirected edges.
+#' The algorithm starts by keeping the edge with highest score.
+#' It then removes the competitor in the opposite direction, and any conflicting edges that would result in indegrees larger than one.
+#' By construction, all removed edges have lower probability.
+#' The algorithm proceeds until all edges have been processed.
+#' @export    
+#' @import sna igraph RBGL
+#' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
+#' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
+phsc.get.maximum.probability.transmission.network.RBGLedmonds<- function(rtnn, verbose=0)
+{
+	require(igraph)
+	require(RBGL)
+	
+	stopifnot(c('ID1','ID2','IDCLU','TYPE','POSTERIOR_SCORE','KEFF')%in%colnames(rtnn))		
+	stopifnot( !length(setdiff(c('ambiguous','21','12'), rtnn[, unique(TYPE)])) )
+	
+	rtnn[, ID1_IN_WEIGHT:=0]
+	set(rtnn, rtnn[, which(TYPE=='ambiguous')],'ID1_IN_WEIGHT', 0.5)
+	set(rtnn, rtnn[, which(TYPE=='21')],'ID1_IN_WEIGHT', 1)
+	rtnn[, ID2_IN_WEIGHT:=0]
+	set(rtnn, rtnn[, which(TYPE=='ambiguous')],'ID2_IN_WEIGHT', 0.5)
+	set(rtnn, rtnn[, which(TYPE=='12')],'ID2_IN_WEIGHT', 1)
+	rtm		<- rtnn[, list(	PROB_21= sum(POSTERIOR_SCORE*ID1_IN_WEIGHT), 
+					KEFF_21= sum(KEFF*ID1_IN_WEIGHT),
+					PROB_12= sum(POSTERIOR_SCORE*ID2_IN_WEIGHT),
+					KEFF_12= sum(KEFF*ID2_IN_WEIGHT)), by=c('IDCLU','CLU_SIZE','ID1','ID2')]
+	#
+	#	handle networks of size 2 - this is easy
+	#
+	ans		<- subset(rtm, CLU_SIZE==2)
+	set(ans, NULL, c('LINK_12','LINK_21'), 0L)
+	set(ans, ans[, which(PROB_12>PROB_21)], 'LINK_12', 1L)
+	set(ans, ans[, which(PROB_21>PROB_12)], 'LINK_21', 1L)
+		
+	#
+	#	handle networks of size >2 - use Edmonds algorithm 
+	#
+	rtm		<- subset(rtm, CLU_SIZE>2)
+	rtmm	<- lapply(rtm[, unique(IDCLU)], function(x) subset(rtm, IDCLU==x))
+	for(i in seq_along(rtmm))
+	{
+		#	
+		#i	<- 13 
+		if(verbose)
+			cat('\nIDCLU ',i)
+		adj	<- rtmm[[i]]
+		adj2<- melt(adj, id.vars=c('ID1','ID2'), measure.vars=c('PROB_12','PROB_21'), value.name='weight')
+		tmp	<- subset(adj2, variable=='PROB_21')
+		setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+		adj2<- rbind(subset(adj2, variable=='PROB_12'), tmp)
+		adj2<- subset(adj2, weight>0)
+		#	maximisation is over sum of weights, so transform to log prob
+		#	since edmonds cannot handle negative values or zeros, add some constant
+		set(adj2, NULL, 'weight', adj2[, log(weight) - min(log(weight)) + 1])
+		adj2[, variable:=NULL]		
+		g	<- graph.data.frame(adj2)	
+		g2	<- igraph.to.graphNEL(g)
+		g3	<- edmondsOptimumBranching(g2)
+		g3	<- as.data.table(t(g3$edgeList))
+		setnames(g3, c('from','to'), c('ID1','ID2'))
+		g3[, LINK_12:= 1L]
+		g3[, LINK_21:= 0L]
+		tmp	<- copy(g3)
+		setnames(tmp, c('ID1','ID2', 'LINK_12', 'LINK_21'), c('ID2','ID1', 'LINK_21', 'LINK_12'))
+		tmp	<- rbind(g3, tmp)
+		adj	<- merge(adj, tmp, by=c('ID1','ID2'))
+		rtmm[[i]] <- adj		
+	}
+	rtm		<- do.call('rbind',rtmm)
+	ans		<- rbind(ans, rtm)
+	set(ans, ans[, which(LINK_12==1)], 'PROB_21', 0)
+	set(ans, ans[, which(LINK_21==1)], 'PROB_12', 0)	
+	setnames(ans, c('PROB_21','PROB_12','KEFF_21','KEFF_12'), c('MX_PROB_21','MX_PROB_12','MX_KEFF_21','MX_KEFF_12'))	
+	ans		<- merge(rtnn, ans, by=c('ID1','ID2','IDCLU','CLU_SIZE'))	
+	ans
 }
 
 #' @title Count observed relationship states
