@@ -3900,6 +3900,500 @@ RakaiFull.phylogeography.171122.samplinglocations<- function()
 	ggsave(file=paste0(outfile.base,'_comm_seqcov.pdf'), w=10, h=5)
 }
 
+RakaiFull.gender.171122.explore<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+		
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	#rtpdm[, table(PAIR_COMM_TYPE)]
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	
+	ans		<- rtpdm[, 	list(	ANA='overall m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )
+								), ]
+	ans		<- dcast.data.table(ans, ANA+TOTAL~STAT, value.var='V')
+	#	by community type
+	tmp		<- rtpdm[, 	list(	ANA='by commtype m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+								), 
+						by=c('PAIR_COMM_TYPE')]
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+PAIR_COMM_TYPE~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by couple status
+	tmp		<- rtpdm[, 	list(	ANA='by couple m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+						), 
+						by=c('COUPLE2')]
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by couple and community status
+	tmp		<- rtpdm[, 	list(	ANA='by commtype & couple m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+						), 
+						by=c('PAIR_COMM_TYPE','COUPLE2')]
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+PAIR_COMM_TYPE+COUPLE2~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by "same household" status
+	tmp		<- rtpdm[, 	list(	ANA='by household m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+						), 
+						by=c('SAMEHH')]
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+SAMEHH~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by "same household" status and community status
+	tmp		<- rtpdm[, 	list(	ANA='by household & couple m->f',
+								TOTAL=length(MALE_RID),
+								STAT=c('CENTRAL','L95','U95'),
+								V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+						), 
+						by=c('PAIR_COMM_TYPE','SAMEHH')]
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+PAIR_COMM_TYPE+SAMEHH~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by community --> sample sizes too small
+	#
+	# 	by eduction of female partner
+	tmp		<- rtpdm[, 	list(	ANA='by education female m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('FEMALE_EDUCAT')]
+	tmp		<- subset(tmp, !is.na(FEMALE_EDUCAT))
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+FEMALE_EDUCAT~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	# 	by sex partners in 1yr male and couple
+	tmp		<- rtpdm[, 	list(	ANA='by sex partners in 1yr male m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('MALE_SEXP1YR','COUPLE2')]	
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2+MALE_SEXP1YR~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	# 	by sex partners out male and couple
+	tmp		<- rtpdm[, 	list(	ANA='by sex partners out male m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('MALE_SEXP1OUT2','COUPLE2')]	
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2+MALE_SEXP1OUT2~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by male circumcision status
+	tmp		<- rtpdm[, 	list(	ANA='by circum couple m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('MALE_CIRCUM','COUPLE2')]	
+	tmp		<- subset(tmp, !is.na(MALE_CIRCUM))
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2+MALE_CIRCUM~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by female primary occupation and couple
+	tmp		<- rtpdm[, 	list(	ANA='by female occupation couple m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('FEMALE_OCCUP_OLLI','COUPLE2')]		
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2+FEMALE_OCCUP_OLLI~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	by male primary occupation and couple
+	tmp		<- rtpdm[, 	list(	ANA='by male occupation couple m->f',
+					TOTAL=length(MALE_RID),
+					STAT=c('CENTRAL','L95','U95'),
+					V=as.numeric( binconf( length(MALE_RID[grepl('mf',SELECT)]), length(MALE_RID) ) )	
+			), 
+			by=c('MALE_OCCUP_OLLI','COUPLE2')]		
+	tmp		<- dcast.data.table(tmp, ANA+TOTAL+COUPLE2+MALE_OCCUP_OLLI~STAT, value.var='V')
+	ans		<- rbind(ans, tmp, fill=TRUE)
+	#	TODO gradient by MALE_RECENTVL ?
+	
+
+	require(rethinking)
+	
+	df		<- subset(rtpdm, select=c(MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, MALE_RECENTVL, MALE_CIRCUM, MALE_SEXP1OUT2, MALE_SEXP1YR, MALE_OCCUP_OLLI, FEMALE_EDUCAT, FEMALE_OCCUP_OLLI))
+	#	missing data: fill in
+	set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)	
+	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
+	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')	
+	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
+	#	prepare data for STAN
+	df[, COUPLE3:= as.integer(COUPLE2=='couple')]
+	df[, SAMEHH3:= as.integer(SAMEHH=='same hh')]
+	df[, COMM_FISH:= as.integer(PAIR_COMM_TYPE=='fisherfolk')]
+	df[, COMM_AGR:= as.integer(PAIR_COMM_TYPE=='agrarian')]
+	df[, COMM_TRAD:= as.integer(PAIR_COMM_TYPE=='trading')]
+	df[, COMM_MXD:= as.integer(PAIR_COMM_TYPE=='mixed')]
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]
+	df[, FE_NOEDU_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, MA_CIRCUM:= as.integer(MALE_CIRCUM=='Y')]
+	df[, MA_CIRCUM_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	df[, MA_OC_AGRO:= as.integer(MALE_OCCUP_OLLI=='Agro/House')]
+	df[, MA_OC_BAR:= as.integer(MALE_OCCUP_OLLI=='Bar/waitress')]	
+	df[, MA_OC_BODA:= as.integer(MALE_OCCUP_OLLI=='Boda/Trucking')]
+	df[, MA_OC_CAS:= as.integer(MALE_OCCUP_OLLI=='Casual laborer/unemployed')]
+	df[, MA_OC_CONSTR:= as.integer(MALE_OCCUP_OLLI=='Construction/Mechanic')]
+	df[, MA_OC_FISH:= as.integer(MALE_OCCUP_OLLI=='Fishing')]
+	df[, MA_OC_GOV:= as.integer(MALE_OCCUP_OLLI=='Government/clerical/related')]
+	df[, MA_OC_OTH:= as.integer(MALE_OCCUP_OLLI=='Other')]
+	df[, MA_OC_STUD:= as.integer(MALE_OCCUP_OLLI=='Student')]
+	df[, MA_OC_TRAD:= as.integer(MALE_OCCUP_OLLI=='Trading/Shopkeeper/Hair')]
+	
+	
+	#
+	#	GLMS
+	#
+	
+	mf.1	<- glm(data=df, LINK_MF~COUPLE2, family=binomial)	
+	summary(mf.1)
+	logistic(  c(	'no couple'=sum(coef(mf.1)[c('(Intercept)')]),
+					'couple'=sum(coef(mf.1)[c('(Intercept)','COUPLE2couple')])					
+					))
+	mf.3	<- glm(data=df, LINK_MF~COUPLE2:PAIR_COMM_TYPE, family=binomial)
+	summary(mf.3)	#no converge
+	#
+	#	STAN
+	#
+
+	#	couples effect
+	mg.1 <- map2stan(
+						alist(
+								LINK_MF ~ dbinom(1, pmf),
+								logit(pmf) <- base + couple_b*COUPLE3, 
+								base ~ dnorm(0,100),
+								couple_b ~ dnorm(0,10)
+						),
+						data=as.data.frame(df), 
+						start=list(base=logit(0.5), couple_b=0),			
+						warmup=5e2, iter=2e3, chains=1, cores=4
+					)
+	post	<- extract.samples(mg.1)
+	dp		<- data.table(	MC= seq_along(post$base),
+							PI_OVERALL_NOCOUPLE=logistic( post$base ),
+							OR_OVERALL_NOCOUPLE=exp( post$base ),
+							PI_OVERALL_COUPLE=logistic( post$base+post$couple_b ),
+							OR_OVERALL_COUPLE=exp( post$base+post$couple_b ),
+							ORC_OVERALL_COUPLE= exp(post$couple_b))
+	dp		<- melt(dp, id.vars='MC')	
+	ds.1	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+							V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.1	<- dcast.data.table(ds.1, variable~STAT, value.var='V')
+	ds.1[, MODEL:= 'couple overall']
+	#	household effect
+	mg.2 <- map2stan(
+						alist(
+								LINK_MF ~ dbinom(1, pmf),
+								logit(pmf) <- base + samehh_b*SAMEHH3, 
+								base ~ dnorm(0,100),
+								samehh_b ~ dnorm(0,10)
+						),
+						data=as.data.frame(df), 
+						start=list(base=logit(0.5), samehh_b=0),			
+						warmup=5e2, iter=2e3, chains=1, cores=4
+					)
+	post	<- extract.samples(mg.2)
+	dp		<- data.table(	MC= seq_along(post$base),
+							PI_OVERALL_DIFFHH=logistic( post$base ),
+							OR_OVERALL_DIFFHH=exp( post$base ),
+							PI_OVERALL_SAMEHH=logistic( post$base+post$samehh_b ),
+							OR_OVERALL_SAMEHH=exp( post$base+post$samehh_b ),
+							ORC_OVERALL_SAMEHH= exp(post$samehh_b))
+	dp		<- melt(dp, id.vars='MC')	
+	ds.2	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+							V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.2	<- dcast.data.table(ds.2, variable~STAT, value.var='V')
+	ds.2[, MODEL:= 'same household']
+	#	couples community interaction model
+	mg.3 	<- map2stan(
+							alist(
+									LINK_MF ~ dbinom(1, pmf),
+									logit(pmf) <- 	fish*COMM_FISH + fish_couple*COMM_FISH*COUPLE3 +
+												 	agr*COMM_AGR + agr_couple*COMM_AGR*COUPLE3 +
+													trad*COMM_TRAD + trad_couple*COMM_TRAD*COUPLE3 +
+													cmxd*COMM_MXD + cmxd_couple*COMM_MXD*COUPLE3, 
+									c(fish,agr,trad,cmxd) ~ dnorm(0,100),
+									c(fish_couple,agr_couple,trad_couple,cmxd_couple) ~ dnorm(0,10)
+							),
+							data=as.data.frame(df), 
+							start=list(fish=0,agr=0,trad=0,cmxd=0,fish_couple=0,agr_couple=0,trad_couple=0,cmxd_couple=0),			
+							warmup=5e2, iter=4e3, chains=1, cores=4
+					)
+	post	<- extract.samples(mg.3)
+	dp		<- data.table(	MC= seq_along(post$fish),
+							PI_FISH_NOCOUPLE= logistic( post$fish ),
+							OR_FISH_NOCOUPLE= exp(post$fish),
+							PI_FISH_COUPLE=logistic( post$fish+post$fish_couple ),	
+							OR_FISH_COUPLE= exp(post$fish+post$fish_couple),							
+							PI_AGR_NOCOUPLE=logistic( post$agr ),
+							OR_AGR_NOCOUPLE= exp(post$agr),							
+							PI_AGR_COUPLE=logistic( post$agr+post$agr_couple ),	
+							OR_AGR_COUPLE= exp(post$agr+post$agr_couple),
+							PI_TRAD_NOCOUPLE=logistic( post$trad ),
+							OR_TRAD_NOCOUPLE=exp( post$trad ),
+							PI_TRAD_COUPLE=logistic( post$trad+post$trad_couple ),
+							OR_TRAD_COUPLE=exp( post$trad+post$trad_couple ),							
+							PI_MXD_NOCOUPLE=logistic( post$cmxd ),
+							OR_MXD_NOCOUPLE=exp( post$cmxd ),
+							PI_MXD_COUPLE=logistic( post$cmxd+post$cmxd_couple ),	
+							OR_MXD_COUPLE=exp( post$cmxd+post$cmxd_couple ),							
+							ORX_AGR_NOCOUPLE= exp(post$agr-post$fish),
+							ORX_AGR_COUPLE= exp(post$agr+post$agr_couple-post$fish-post$fish_couple),
+							ORX_TRAD_NOCOUPLE= exp(post$trad-post$fish),
+							ORX_TRAD_COUPLE= exp(post$trad+post$trad_couple-post$fish-post$fish_couple),
+							ORX_MXD_NOCOUPLE= exp(post$cmxd-post$fish),
+							ORX_MXD_COUPLE= exp(post$cmxd+post$cmxd_couple-post$fish-post$fish_couple),
+							ORC_FISH_COUPLE= exp(post$fish_couple),
+							ORC_AGR_COUPLE= exp(post$agr_couple),
+							ORC_TRAD_COUPLE= exp(post$trad_couple),
+							ORC_MXD_COUPLE= exp(post$cmxd_couple)
+							)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.3	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+							V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.3	<- dcast.data.table(ds.3, variable~STAT, value.var='V')
+	ds.3[, MODEL:= 'couple, community type']
+	#	couples female education interaction model
+	mg.4 	<- map2stan(
+							alist(
+									LINK_MF ~ dbinom(1, pmf),
+									logit(pmf) <- 	nocouple*(1-COUPLE3) + nocouple_noedu*(1-COUPLE3)*FE_NOEDU +
+													couple*COUPLE3 + couple_noedu*COUPLE3*FE_NOEDU,
+									c(couple,nocouple) ~ dnorm(0,100),
+									c(couple_noedu,nocouple_noedu) ~ dnorm(0,10)
+							),
+							data=as.data.frame(df), 
+							start=list(couple=0,nocouple=0,couple_noedu=0,nocouple_noedu=0),			
+							warmup=5e2, iter=4e3, chains=1, cores=4
+						)
+	post	<- extract.samples(mg.4)
+	dp		<- data.table(	MC= seq_along(post$nocouple),
+							PI_YESEDU_NOCOUPLE=logistic( post$nocouple ), 
+							OR_YESEDU_NOCOUPLE=exp( post$nocouple ), 
+							PI_NOEDU_NOCOUPLE=logistic( post$nocouple+post$nocouple_noedu ),
+							OR_NOEDU_NOCOUPLE=exp( post$nocouple+post$nocouple_noedu ),							
+							PI_YESEDU_COUPLE=logistic( post$couple ),
+							OR_YESEDU_COUPLE=exp( post$couple ),
+							PI_NOEDU_COUPLE=logistic( post$couple+post$couple_noedu ),
+							OR_NOEDU_COUPLE=exp( post$couple+post$couple_noedu ),							
+							ORX_NOEDU_NOCOUPLE=exp( post$nocouple_noedu ), 
+							ORX_NOEDU_COUPLE=exp( post$couple_noedu ),
+							ORC_YESEDU_COUPLE=exp( post$couple-post$nocouple ),
+							ORC_NOEDU_COUPLE=exp( post$couple_noedu-post$nocouple_noedu )
+						)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.4	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.4	<- dcast.data.table(ds.4, variable~STAT, value.var='V')
+	ds.4[, MODEL:= 'couple, female eduction']
+	# couples circumcision interaction model
+	mg.5 	<- map2stan(
+							alist(
+									LINK_MF ~ dbinom(1, pmf),
+									logit(pmf) <- 	nocouple*(1-COUPLE3) + nocouple_circ*(1-COUPLE3)*MA_CIRCUM +
+													couple*COUPLE3 + couple_circ*COUPLE3*MA_CIRCUM,
+									c(couple,nocouple) ~ dnorm(0,100),
+									c(couple_circ,nocouple_circ) ~ dnorm(0,10)
+							),
+							data=as.data.frame(df), 
+							start=list(couple=0,nocouple=0,nocouple_circ=0,couple_circ=0),			
+							warmup=5e2, iter=4e3, chains=1, cores=4
+						)
+	post	<- extract.samples(mg.5)
+	dp		<- data.table(	MC= seq_along(post$nocouple),
+							PI_NOCIRC_NOCOUPLE=logistic( post$nocouple ),
+							OR_NOCIRC_NOCOUPLE=exp( post$nocouple ),
+							PI_CIRC_NOCOUPLE=logistic( post$nocouple+post$nocouple_circ ),	
+							OR_CIRC_NOCOUPLE=exp( post$nocouple+post$nocouple_circ ),							
+							PI_NOCIRC_COUPLE=logistic( post$couple ),
+							OR_NOCIRC_COUPLE=exp( post$couple ),
+							PI_CIRC_COUPLE=logistic( post$couple+post$couple_circ ),
+							OR_CIRC_COUPLE=exp( post$couple+post$couple_circ ),							
+							ORX_CIRC_NOCOUPLE= exp(post$nocouple_circ),
+							ORX_CIRC_COUPLE= exp(post$couple_circ),
+							ORC_CIRC_COUPLE= exp(post$couple_circ-post$nocouple_circ),
+							ORC_NOCIRC_COUPLE= exp(post$couple-post$nocouple)
+							)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.5	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+							V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.5	<- dcast.data.table(ds.5, variable~STAT, value.var='V')
+	ds.5[, MODEL:= 'couple, male circumcision']
+	#	couples "male more sex partners" interaction model
+	mg.6 	<- map2stan(
+							alist(
+									LINK_MF ~ dbinom(1, pmf),
+									logit(pmf) <- 	nocouple*(1-COUPLE3) + nocouple_moresexp*(1-COUPLE3)*MA_SEXP1YR_G1 +
+													couple*COUPLE3 + couple_moresexp*COUPLE3*MA_SEXP1YR_G1,
+									c(couple,nocouple) ~ dnorm(0,100),
+									c(couple_moresexp,nocouple_moresexp) ~ dnorm(0,10)
+							),
+							data=as.data.frame(df), 
+							start=list(couple=0,nocouple=0,nocouple_moresexp=0,couple_moresexp=0),			
+							warmup=5e2, iter=4e3, chains=1, cores=4
+						)
+	post	<- extract.samples(mg.6)
+	dp		<- data.table(	MC= seq_along(post$nocouple),
+							PI_ONESEXP_NOCOUPLE=logistic( post$nocouple ),
+							OR_ONESEXP_NOCOUPLE=exp( post$nocouple ),
+							PI_MORESEXP_NOCOUPLE=logistic( post$nocouple+post$nocouple_moresexp ),	
+							OR_MORESEXP_NOCOUPLE=exp( post$nocouple+post$nocouple_moresexp ),							
+							PI_ONESEXP_COUPLE=logistic( post$couple ),
+							OR_ONESEXP_COUPLE=exp( post$couple ),
+							PI_MORESEXP_COUPLE=logistic( post$couple+post$couple_moresexp ),
+							OR_MORESEXP_COUPLE=exp( post$couple+post$couple_moresexp ),							
+							ORX_MORESEXP_NOCOUPLE= exp(post$nocouple_moresexp),
+							ORX_MORESEXP_COUPLE= exp(post$couple_moresexp),
+							ORC_ONESEXP_COUPLE= exp(post$couple-post$nocouple),
+							ORC_MORESEXP_COUPLE= exp(post$couple_moresexp-post$nocouple_moresexp)
+							)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.6	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.6	<- dcast.data.table(ds.6, variable~STAT, value.var='V')
+	ds.6[, MODEL:= 'couple, male sex partners']
+	#	couples "male primary occupation" interaction model
+	mg.7 	<- map2stan(
+							alist(
+									LINK_MF ~ dbinom(1, pmf),
+									logit(pmf) <- 	nocouple_agro*(1-COUPLE3)*MA_OC_AGRO + nocouple_bar*(1-COUPLE3)*MA_OC_BAR +  nocouple_boda*(1-COUPLE3)*MA_OC_BODA +  nocouple_casual*(1-COUPLE3)*MA_OC_CAS +
+													nocouple_constr*(1-COUPLE3)*MA_OC_CONSTR + nocouple_fish*(1-COUPLE3)*MA_OC_FISH +  nocouple_gov*(1-COUPLE3)*MA_OC_GOV +  nocouple_other*(1-COUPLE3)*MA_OC_OTH +
+													nocouple_student*(1-COUPLE3)*MA_OC_STUD + nocouple_trad*(1-COUPLE3)*MA_OC_TRAD +
+													couple_agro*COUPLE3*MA_OC_AGRO + couple_bar*COUPLE3*MA_OC_BAR + couple_boda*COUPLE3*MA_OC_BODA + couple_casual*COUPLE3*MA_OC_CAS +
+													couple_constr*COUPLE3*MA_OC_CONSTR + couple_fish*COUPLE3*MA_OC_FISH + couple_gov*COUPLE3*MA_OC_GOV + couple_other*COUPLE3*MA_OC_OTH +
+													couple_student*COUPLE3*MA_OC_STUD + couple_trad*COUPLE3*MA_OC_TRAD,										
+									c(nocouple_agro, nocouple_bar, nocouple_boda, nocouple_casual, nocouple_constr, nocouple_fish, nocouple_gov, nocouple_other, nocouple_student, nocouple_trad) ~ dnorm(0,100),
+									c(couple_agro, couple_bar, couple_boda, couple_casual, couple_constr, couple_fish, couple_gov, couple_other, couple_student, couple_trad) ~ dnorm(0,10)
+							),
+							data=as.data.frame(df), 
+							start=list(	nocouple_agro=0, nocouple_bar=0, nocouple_boda=0, nocouple_casual=0, nocouple_constr=0, nocouple_fish=0, 
+										nocouple_gov=0, nocouple_other=0, nocouple_student=0, nocouple_trad=0,
+										couple_agro=0, couple_bar=0, couple_boda=0, couple_casual=0, couple_constr=0, couple_fish=0, 
+										couple_gov=0, couple_other=0, couple_student=0, couple_trad=0),			
+							warmup=5e2, iter=4e3, chains=1, cores=4
+						)
+	post	<- extract.samples(mg.7)
+	dp		<- data.table(	MC= seq_along(post$nocouple_agro),
+							PI_AGRO_NOCOUPLE=logistic( post$nocouple_agro ), 
+							PI_BAR_NOCOUPLE=logistic( post$nocouple_bar ),	
+							PI_BODA_NOCOUPLE=logistic( post$nocouple_boda ),							
+							PI_CAS_NOCOUPLE=logistic( post$nocouple_casual ),
+							PI_CONSTR_NOCOUPLE=logistic( post$nocouple_constr ),
+							PI_FISH_NOCOUPLE=logistic( post$nocouple_fish ),
+							PI_GOV_NOCOUPLE=logistic( post$nocouple_gov ),
+							PI_OTH_NOCOUPLE=logistic( post$nocouple_other ),							
+							PI_STUD_NOCOUPLE=logistic( post$nocouple_student ),
+							PI_TRAD_NOCOUPLE=logistic( post$nocouple_trad ),							
+							PI_AGRO_COUPLE=logistic( post$couple_agro ), 
+							PI_BAR_COUPLE=logistic( post$couple_bar ),	
+							PI_BODA_COUPLE=logistic( post$couple_boda ),							
+							PI_CAS_COUPLE=logistic( post$couple_casual ),
+							PI_CONSTR_COUPLE=logistic( post$couple_constr ),
+							PI_FISH_COUPLE=logistic( post$couple_fish ),
+							PI_GOV_COUPLE=logistic( post$couple_gov ),
+							PI_OTH_COUPLE=logistic( post$couple_other ),							
+							PI_STUD_COUPLE=logistic( post$couple_student ),
+							PI_TRAD_COUPLE=logistic( post$couple_trad ),							
+							OR_AGRO_NOCOUPLE=exp( post$nocouple_agro ), 
+							OR_BAR_NOCOUPLE=exp( post$nocouple_bar ),	
+							OR_BODA_NOCOUPLE=exp( post$nocouple_boda ),							
+							OR_CAS_NOCOUPLE=exp( post$nocouple_casual ),
+							OR_CONSTR_NOCOUPLE=exp( post$nocouple_constr ),
+							OR_FISH_NOCOUPLE=exp( post$nocouple_fish ),
+							OR_GOV_NOCOUPLE=exp( post$nocouple_gov ),
+							OR_OTH_NOCOUPLE=exp( post$nocouple_other ),							
+							OR_STUD_NOCOUPLE=exp( post$nocouple_student ),
+							OR_TRAD_NOCOUPLE=exp( post$nocouple_trad ),							
+							OR_AGRO_COUPLE=exp( post$couple_agro ), 
+							OR_BAR_COUPLE=exp( post$couple_bar ),	
+							OR_BODA_COUPLE=exp( post$couple_boda ),							
+							OR_CAS_COUPLE=exp( post$couple_casual ),
+							OR_CONSTR_COUPLE=exp( post$couple_constr ),
+							OR_FISH_COUPLE=exp( post$couple_fish ),
+							OR_GOV_COUPLE=exp( post$couple_gov ),
+							OR_OTH_COUPLE=exp( post$couple_other ),							
+							OR_STUD_COUPLE=exp( post$couple_student ),
+							OR_TRAD_COUPLE=exp( post$couple_trad ),					
+							ORX_AGRO_NOCOUPLE=exp( post$nocouple_agro - post$nocouple_fish),
+							ORX_BAR_NOCOUPLE=exp( post$nocouple_bar - post$nocouple_fish),
+							ORX_BODA_NOCOUPLE=exp( post$nocouple_boda - post$nocouple_fish),
+							ORX_CAS_NOCOUPLE=exp( post$nocouple_casual - post$nocouple_fish),
+							ORX_CONSTR_NOCOUPLE=exp( post$nocouple_constr - post$nocouple_fish),
+							ORX_GOV_NOCOUPLE=exp( post$nocouple_gov - post$nocouple_fish),
+							ORX_OTH_NOCOUPLE=exp( post$nocouple_other - post$nocouple_fish),
+							ORX_STUD_NOCOUPLE=exp( post$nocouple_student - post$nocouple_fish),
+							ORX_TRAD_NOCOUPLE=exp( post$nocouple_trad - post$nocouple_fish),							
+							ORX_AGRO_COUPLE=exp( post$couple_agro - post$couple_fish),
+							ORX_BAR_COUPLE=exp( post$couple_bar - post$couple_fish),
+							ORX_BODA_COUPLE=exp( post$couple_boda - post$couple_fish),
+							ORX_CAS_COUPLE=exp( post$couple_casual - post$couple_fish),
+							ORX_CONSTR_COUPLE=exp( post$couple_constr - post$couple_fish),
+							ORX_GOV_COUPLE=exp( post$couple_gov - post$couple_fish),
+							ORX_OTH_COUPLE=exp( post$couple_other - post$couple_fish),
+							ORX_STUD_COUPLE=exp( post$couple_student - post$couple_fish),
+							ORX_TRAD_COUPLE=exp( post$couple_trad - post$couple_fish),							
+							ORC_AGRO_COUPLE=exp( post$couple_agro - post$nocouple_agro),
+							ORC_BAR_COUPLE=exp( post$couple_bar - post$nocouple_bar),
+							ORC_BODA_COUPLE=exp( post$couple_boda - post$nocouple_boda),
+							ORC_CAS_COUPLE=exp( post$couple_casual - post$nocouple_casual),
+							ORC_FISH_COUPLE=exp( post$couple_fish - post$nocouple_fish),
+							ORC_CONSTR_COUPLE=exp( post$couple_constr - post$nocouple_constr),
+							ORC_GOV_COUPLE=exp( post$couple_gov - post$nocouple_gov),
+							ORC_OTH_COUPLE=exp( post$couple_other - post$nocouple_other),
+							ORC_STUD_COUPLE=exp( post$couple_student - post$nocouple_student),
+							ORC_TRAD_COUPLE=exp( post$couple_trad - post$nocouple_trad)	
+					)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.7	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.7	<- dcast.data.table(ds.7, variable~STAT, value.var='V')
+	ds.7[, MODEL:= 'couple, male primary occupation']
+	
+	ds		<- rbind(ds.1,ds.3,ds.4,ds.5,ds.6,ds.7)
+	ds[, LABEL:= paste0(round(MED, d=2), '\n[', round(CL, d=2),'-', round( CU, d=2),']')]
+	ds[, COUPLE:= as.character(factor(grepl('_COUPLE',variable), levels=c(TRUE,FALSE), labels=c('couple','no couple')))]
+	ds[, STAT:= factor(gsub('^([^_]+)_.*','\\1',variable), levels=c('PI','OR','ORX','ORC'), labels=c('proportion MF','odds ratio MF vs FM','odds ratio factor vs base','odds ratio couple vs casual'))]
+	ds[, FACTOR:=gsub('^([^_]+)_([^_]+)_.*','\\2',variable)]				
+					
+	ds		<- dcast.data.table(ds, MODEL+FACTOR~COUPLE+STAT, value.var='LABEL')
+	
+	write.csv(ds, row.names=FALSE, file=paste0(outfile.base,'_propmf_factors.csv'))
+}
+
 RakaiFull.phylogeography.171122.flows.on.map<- function()
 {
 	require(data.table)
@@ -18456,6 +18950,23 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 	outfile.base			<- gsub('withmetadata.rda','',infile.trmpairs.todi)
 	load(infile.trmpairs.todi)
 	rca	<- copy(rtp)
+	# anonymize labels
+	dfa		<- unique(subset(rd, select=c(RID,SEX)))
+	setkey(dfa, RID)	
+	dfa[, AID:= paste0('RkA',sprintf("%05d", seq_len(nrow(dfa))),SEX)]
+	setnames(dfa, 'RID', 'ID')
+	# add anonymised labels
+	setnames(dfa, c('ID','AID'), c('MALE_RID','MALE_ARID'))
+	rca		<- merge(rca, subset(dfa, select=c(MALE_RID, MALE_ARID)), by='MALE_RID')
+	setnames(dfa, c('MALE_RID','MALE_ARID'), c('FEMALE_RID','FEMALE_ARID'))
+	rca		<- merge(rca, subset(dfa, select=c(FEMALE_RID, FEMALE_ARID)), by='FEMALE_RID')
+	# add sampling dates
+	tmp		<- rs[, list(SEQ_DATE=min(SEQ_DATE)), by='RID'] 
+	setnames(tmp, c('RID','SEQ_DATE'), c('MALE_RID','MALE_SEQ_DATE'))
+	rca		<- merge(rca, tmp, by='MALE_RID')
+	setnames(tmp, c('MALE_RID','MALE_SEQ_DATE'), c('FEMALE_RID','FEMALE_SEQ_DATE'))
+	rca		<- merge(rca, tmp, by='FEMALE_RID')
+	
 	#
 	#	prepare extending serodiscordant couples	
 	rca[, EXT_TYPE:=NA_character_]
@@ -18520,8 +19031,182 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 	write.csv(ans, row.names=FALSE, file=paste0(outfile.base,'testdirection_summary.csv'))
 	#
 	#	make figure
-	#
+	#	rd, rs, rca, rplkl
 	plot.file	<- paste0(outfile.base,'testdirection_summary.pdf')
+	RakaiFull.analyze.trmpairs.DIRext.plot.timelines(rd, rs, rca, rplkl, plot.file)
+	
+	plot.file	<- paste0(outfile.base,'testdirection_summary_correct_couples.pdf')
+	tmp			<- subset(rca, COUPLE!='no couple' & DIRECTION=='correct')
+	RakaiFull.analyze.trmpairs.DIRext.plot.timelines(rd, rs, tmp, rplkl, plot.file, plot.h=11.69*1)
+	plot.file	<- paste0(outfile.base,'testdirection_summary_correct_casual.pdf')
+	tmp			<- subset(rca, COUPLE=='no couple' & DIRECTION=='correct')
+	RakaiFull.analyze.trmpairs.DIRext.plot.timelines(rd, rs, tmp, rplkl, plot.file, plot.h=11.69*1.7)
+	plot.file	<- paste0(outfile.base,'testdirection_summary_incorrect_couples.pdf')
+	tmp			<- subset(rca, COUPLE!='no couple' & DIRECTION=='incorrect')
+	RakaiFull.analyze.trmpairs.DIRext.plot.timelines(rd, rs, tmp, rplkl, plot.file, plot.h=11.69*0.2)
+	plot.file	<- paste0(outfile.base,'testdirection_summary_incorrect_casual.pdf')
+	tmp			<- subset(rca, COUPLE=='no couple' & DIRECTION=='incorrect')
+	RakaiFull.analyze.trmpairs.DIRext.plot.timelines(rd, rs, tmp, rplkl, plot.file, plot.h=11.69*0.6, epilines.breaks.x=seq(-20,20,1))
+	
+
+	#
+	#	plot incorrect cases
+	#
+	ffd			<- subset(rca, DIRECTION=='incorrect', c(MALE_RID, FEMALE_RID, MALE_ARID, FEMALE_ARID, PTY_RUN))
+	#	plot windows
+	ffd[, DUMMY:=seq_len(nrow(ffd))]
+	ffd[, LABEL:=ffd[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',PTY_RUN))]]
+	write.csv(ffd, file=paste0(outfile.base,'_incorrect_direction.csv'))
+	#	make manual plot to show intermingled
+	plot.file	<- paste0(outfile.base,'_incorrect_direction_scanplot.pdf')
+	rpw2		<- merge(subset(ffd, select=c(MALE_RID,FEMALE_RID,MALE_ARID,FEMALE_ARID,PTY_RUN)), rpw, by=c('MALE_RID', 'FEMALE_RID','PTY_RUN'))
+	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=12, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)	
+	plot.file	<- paste0(outfile.base,'_correct_direction_scanplot.pdf')
+	tmp			<- subset(rca, DIRECTION=='correct', c(MALE_RID, FEMALE_RID, MALE_ARID, FEMALE_ARID, PTY_RUN))
+	rpw2		<- merge(subset(tmp, select=c(MALE_RID,FEMALE_RID,MALE_ARID,FEMALE_ARID,PTY_RUN)), rpw, by=c('MALE_RID', 'FEMALE_RID','PTY_RUN'))
+	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=55, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)
+	
+	require(colorspace)
+	for(ii in seq_len(nrow(ffd)))
+	{	
+		indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
+		# load dfr and phs
+		load( file.path(indir, paste0('ptyr',ffd[ii,PTY_RUN],'_trees.rda')) )
+		ids			<- c(ffd[ii, MALE_RID],ffd[ii, FEMALE_RID])
+		# anonymize labels	
+		tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
+		tmp			<- subset(dfr[, {
+							ph	<- phs[[ IDX ]]
+							list(ID= unique(gsub(tip.regex,'\\1',ph$tip.label)))													  				
+						}, by='IDX'], !grepl('REF', ID))
+		tmp			<- data.table( ID=unique(tmp$ID) )
+		df			<- merge(tmp, dfa, by='ID')					
+		# setup plotting			
+		dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
+		dfs[, MALE_RID:=ids[1]]
+		dfs[, FEMALE_RID:=ids[2]]
+		dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'))
+		dfs[, MALE_RID:= df[ID==ids[1], AID]]
+		dfs[, FEMALE_RID:= df[ID==ids[2], AID]]
+		ids			<- c(df[ID==ids[1], AID], df[ID==ids[2], AID])		
+		dfs[, TITLE:= dfs[, paste('window ', W_FROM,'-', W_TO,'\npaths mf ',PATHS_MF,' paths fm ',PATHS_FM, ' \nadjacent ',as.integer(ADJACENT),' contiguous ',as.numeric(CONTIGUOUS),'\nsubtree distance ', round(PATRISTIC_DISTANCE, d=5), sep='')]]
+		# anonymize phs
+		for(k in seq_along(phs))				
+			for(j in seq_len(nrow(df)))
+			{
+				phs[[k]]$tip.label				<- gsub(df[j,ID],df[j,AID],phs[[k]]$tip.label)					
+				attr(phs[[k]], "INDIVIDUAL")	<- gsub(df[j,ID],df[j,AID],attr(phs[[k]], "INDIVIDUAL"))
+				#attr(*, "SPLIT")
+				#attr(*, "BRANCH_COLOURS")
+			}		
+		plot.file	<- paste0(outfile.base, '_incorrect_direction_run_', ffd[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
+		invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))												
+	}
+	
+	#
+	#	describe timelines
+	#
+	df		<- subset(rca, EXT_EVAL=='correct'|EXT_EVAL=='incorrect')
+	#	sampling date difference
+	df[, SEQDATE_REC_MINUS_SOURCE:= FEMALE_SEQ_DATE-MALE_SEQ_DATE]
+	tmp		<- df[, which(EXT_DIR=='fm')]
+	set(df, tmp, 'SEQDATE_REC_MINUS_SOURCE', df[tmp, MALE_SEQ_DATE-FEMALE_SEQ_DATE])
+	set(df, NULL, 'DIRECTION', df[, factor(DIRECTION, levels=c('correct','incorrect'))])
+	ggplot(df, aes(y=DIRECTION, x=SEQDATE_REC_MINUS_SOURCE)) + 
+			geom_point() + 
+			theme_bw() +
+			labs(x='\ndate sample for sequencing taken from recipient - date from source\n(years)', y='phylogenetically inferred\ndirection of transmission\n')
+	ggsave(file=paste0(outfile.base,'_direction_differencesamplingdates.pdf'),w=7,h=2)
+	df[, table(DIRECTION, SEQDATE_REC_MINUS_SOURCE<0)]
+	#DIRECTION   FALSE TRUE
+	#correct      34   12
+	#incorrect     4    5
+	fisher.test( matrix( c(4,34,5,12) , 2, 2) )	
+	#odds ratio 		p-value = 0.1162
+	#0.2899597	
+	fisher.test( matrix( c(4,34,3,14) , 2, 2) ) 	#fixed for CD4 issue
+	#0.5554989			p-value = 0.6636
+
+	ans	<- df[, list(   QUANTILE= c(0.025,0.25,0.5,0.75,0.975),
+						SEQDATE_SOURCE_MINUS_REC=quantile(SEQDATE_SOURCE_MINUS_REC, prob=c(0.025,0.25,0.5,0.75,0.975))
+						), 
+						by='DIRECTION']
+	#	width of seroconversion difference
+	df[, LEN_REC_NEG:= FEMALE_LASTNEGDATE-MALE_FIRSTPOSDATE]
+	tmp		<- df[, which(EXT_DIR=='fm')]
+	set(df, tmp, 'LEN_REC_NEG', df[tmp, MALE_LASTNEGDATE-FEMALE_FIRSTPOSDATE])
+	set(df, NULL, 'LEN_REC_NEG_C', df[, LEN_REC_NEG<1/12])
+	ggplot(subset(df,EXT_TYPE=='serodisc'), aes(y=DIRECTION, x=LEN_REC_NEG)) + 
+			geom_point() + 
+			theme_bw() +
+			labs(x='\nminimum time recipient negative while source positive\n(years)', y='phylogenetically inferred\ndirection of transmission\n')
+	ggsave(file=paste0(outfile.base,'_direction_mintimerecnegative.pdf'),w=7,h=2)
+	subset(df,EXT_TYPE=='serodisc')[, table(DIRECTION, LEN_REC_NEG_C)]
+	#DIRECTION   FALSE TRUE
+	#correct      13   14
+	#incorrect     2    2
+	fisher.test( matrix( c(2,13,2,14) , 2, 2) )
+	#95 percent confidence interval:
+	#		0.06846667 16.86374300
+	#sample estimates:
+	#		odds ratio 
+	#1.074329
+
+	# width of CD4 difference
+	df[, CD4DATE_REC_MINUS_SRC:= FEMALE_RECENTCD4DATE-MALE_RECENTCD4DATE]
+	tmp		<- df[, which(EXT_DIR=='fm')]
+	set(df, tmp, 'CD4DATE_REC_MINUS_SRC', df[tmp, MALE_RECENTCD4DATE-FEMALE_RECENTCD4DATE])
+	set(df, NULL, 'CD4DATE_REC_MINUS_SRC_C', df[, CD4DATE_REC_MINUS_SRC< -1])
+	ggplot(subset(df,EXT_TYPE=='CD4disc'), aes(y=DIRECTION, x=CD4DATE_REC_MINUS_SRC)) + 
+			geom_point() + 
+			theme_bw() +
+			labs(x='\ntime between CD4 measurement in recipient - CD4 measurement in source\n(years)', y='phylogenetically inferred\ndirection of transmission\n')
+	ggsave(file=paste0(outfile.base,'_direction_differenceCD4.pdf'),w=7,h=2)
+	subset(df,EXT_TYPE=='CD4disc')[, table(DIRECTION, CD4DATE_REC_MINUS_SRC_C)]
+	#DIRECTION   FALSE TRUE
+	#correct      16    3
+	#incorrect     3    2
+	fisher.test( matrix( c(2,3,3,16) , 2, 2) )
+	#	odds ratio 	p-value = 0.2705
+	#  3.330837 
+
+
+	df[, TIME_TO_SEQ_MALE:= MALE_SEQ_DATE-MALE_FIRSTPOSDATE]
+	df[, TIME_TO_SEQ_FEMALE:= FEMALE_SEQ_DATE-FEMALE_FIRSTPOSDATE]
+	df[, table(TIME_TO_SEQ_MALE<1/12, TIME_TO_SEQ_FEMALE<1/12)]
+	c( 9*2+6+3, 37*2+6+3 )
+	# 27 83 most individuals: sample from first pos test
+	df[, {
+				z<- c(TIME_TO_SEQ_MALE,TIME_TO_SEQ_MALE)
+				list( QUANTILE= c(0.025,0.25,0.5,0.75,0.975),
+					  TIME_TO_SEQ=quantile(z, prob=c(0.025,0.25,0.5,0.75,0.975)))				
+			}, by='DIRECTION']
+	
+	df[, POS_REC_MINUS_SOURCE:= FEMALE_FIRSTPOSDATE-MALE_FIRSTPOSDATE]
+	tmp		<- df[, which(EXT_DIR=='fm')]
+	set(df, tmp, 'POS_REC_MINUS_SOURCE', df[tmp, MALE_FIRSTPOSDATE-FEMALE_FIRSTPOSDATE])
+	ggplot(df, aes(y=DIRECTION, x=POS_REC_MINUS_SOURCE)) + 
+			geom_point() + 
+			theme_bw() +
+			labs(x='\ndate recipient positive - date source positive\n(years)', y='phylogenetically inferred\ndirection of transmission\n')
+	ggsave(file=paste0(outfile.base,'_direction_timerecpos.pdf'),w=7,h=2)
+	df[, table(DIRECTION, POS_REC_MINUS_SOURCE<0)]
+	#DIRECTION   FALSE TRUE
+	#correct      40    6
+	#incorrect     4    5
+	fisher.test( matrix( c(4,40,5,6) , 2, 2) )
+	#odds ratio  p-value = 0.01088
+	#0.1270718 
+	
+	tmp	<- df[, list(   QUANTILE= c(0.025,0.25,0.5,0.75,0.975),
+						POS_REC_MINUS_SOURCE=quantile(POS_REC_MINUS_SOURCE, prob=c(0.025,0.25,0.5,0.75,0.975))
+			), 
+			by='DIRECTION']
+	ans	<- merge(ans, tmp, by=c('DIRECTION','QUANTILE'))
+}
+
+RakaiFull.analyze.trmpairs.DIRext.plot.timelines<- function(rd, rs, rca, rplkl, plot.file, plot.w=8.27*1.6, plot.h=11.69*2.5, epilines.breaks.x=seq(-20,20,5))
+{	
 	t.posneg	<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
 	setnames(t.posneg, c('BIRTHDATE','EST_DATEDIED'), c('DOB','DOD'))
 	t.seq		<- unique(subset(rs, !is.na(PID), select=c(RID, PID, SEQ_DATE)))
@@ -18570,7 +19255,7 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 	plot.nudge		<- 0.2
 	plot.nudge.seq	<- 0.1
 	plot.nudge.cd4	<- 0.2
-	#	epilines
+	#	epilines 
 	p2	<- ggplot(df) + 				
 			geom_text(data=sm, aes(x=DATE, y=PAIRID, label='M'), position=position_nudge(x=0, y=plot.nudge), size=2.5) +
 			geom_text(data=sf, aes(x=DATE, y=PAIRID, label='F'), position=position_nudge(x=0, y=-plot.nudge), size=2.5) +				
@@ -18588,7 +19273,7 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 			geom_text(data=subset(tsf, !is.na(DATE)), aes(x=DATE, y=PAIRID, label='S'), position=position_nudge(x=0, y=-plot.nudge), size=2) +				
 			#geom_point(data=subset(tsm, !is.na(DATE)), aes(x=DATE, y=PAIRID), position=position_nudge(x=0, y=plot.nudge.seq), pch=83, size=3, colour='black') +
 			#geom_point(data=subset(tsf, !is.na(DATE)), aes(x=DATE, y=PAIRID), position=position_nudge(x=0, y=-plot.nudge.seq), pch=83, size=3, colour='black') +
-			scale_x_continuous(breaks=seq(-20,20,5), minor_breaks=seq(-20,20,1), limit=c(plot.min.date-.2,plot.max.date+.2), expand=c(0,0)) +
+			scale_x_continuous(breaks=epilines.breaks.x, minor_breaks=epilines.breaks.x, limit=c(plot.min.date-.2,plot.max.date+.2), expand=c(0,0)) +
 			scale_fill_manual(values=c('<400'=brewer.pal(9, 'YlOrRd')[6],'400-799'=brewer.pal(9, 'YlOrRd')[4],'800+'=brewer.pal(9, 'YlGn')[6])) +
 			labs(x='', y='', fill='') +
 			theme_bw() +
@@ -18628,8 +19313,8 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 			theme(axis.text.y=element_blank()) +
 			theme(axis.ticks.y=element_blank(), panel.border=element_blank()) +
 			labs(x='',y='',fill='') +	
-			coord_flip()
-	pdf(file=plot.file, w=8.27*1.6, h=11.69*2.5)
+			coord_flip()	
+	pdf(file=plot.file, w=plot.w, h=plot.h)
 	grid.newpage()	
 	pushViewport(viewport(layout=grid.layout(1, 4, widths=unit(c(1.3,6,3.5,2.5), "null"))))   	
 	print(p1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
@@ -18638,91 +19323,6 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 	print(p4, vp=viewport(layout.pos.row=1, layout.pos.col=4))
 	#grid.draw(p3)
 	dev.off()
-	#
-	#	plot incorrect cases
-	#
-	ffd			<- subset(rca, DIRECTION=='incorrect', c(MALE_RID, FEMALE_RID, PTY_RUN))
-	#	plot windows
-	ffd[, DUMMY:=seq_len(nrow(ffd))]
-	ffd[, LABEL:=ffd[, factor(DUMMY, levels=DUMMY, labels=paste0('m ',MALE_RID,' f ', FEMALE_RID,'\n',PTY_RUN))]]
-	write.csv(ffd, file=paste0(outfile.base,'_incorrect_direction.csv'))
-	#	make manual plot to show intermingled
-	group		<- 'TYPE_BASIC'
-	rpw2		<- merge(subset(ffd, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), subset(rpw, GROUP==group), by=c('MALE_RID', 'FEMALE_RID','PTY_RUN'))	
-	rpw2[, TYPE_TO:= 'disconnected']
-	rpw2[, Y:=1e-3]
-	set(rpw2, rpw2[, which(PATRISTIC_DISTANCE<1e-3)],'PATRISTIC_DISTANCE',1.1e-3)
-	set(rpw2, rpw2[,which(grepl('chain fm', TYPE))], 'TYPE_TO', 'ancestral f->m')
-	set(rpw2, rpw2[,which(grepl('chain mf', TYPE))], 'TYPE_TO', 'ancestral m->f')
-	set(rpw2, rpw2[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
-	set(rpw2, rpw2[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
-	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c('ancestral f->m','ancestral m->f','intermingled','sibling','disconnected'))])	
-	cols.typet			<- c("ancestral f->m"="hotpink2", "ancestral m->f"='steelblue2',"intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])	
-	#	brewer.pal(11, 'PuOr')[2]
-	
-	# anonymize labels
-	dfa		<- unique(subset(rd, select=c(RID,SEX)))
-	setkey(dfa, RID)	
-	dfa[, AID:= paste0('RkA',sprintf("%05d", seq_len(nrow(dfa))),SEX)]
-	setnames(dfa, 'RID', 'ID')
-	# add anonymised labels
-	setnames(dfa, c('ID','AID'), c('MALE_RID','MALE_ARID'))
-	rpw2	<- merge(rpw2, subset(dfa, select=c(MALE_RID, MALE_ARID)), by='MALE_RID')
-	setnames(dfa, c('MALE_RID','MALE_ARID'), c('FEMALE_RID','FEMALE_ARID'))
-	rpw2	<- merge(rpw2, subset(dfa, select=c(FEMALE_RID, FEMALE_ARID)), by='FEMALE_RID')
-	
-	ggplot(rpw2, aes(x=W_FROM)) +
-			geom_hline(yintercept=0.025, colour='grey50') +
-			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
-			geom_point(aes(y=PATRISTIC_DISTANCE), size=1) +				
-			labs(x='\ngenomic position\n(relative to HXB2)', y='subtree distance\n(subst/site)\n',fill='topological relationship\nbetween subtrees') +
-			scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)-100], rpw2[, max(W_FROM)+100])) +
-			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
-			coord_cartesian(ylim=c(1e-3,0.11)) +
-			scale_fill_manual(values=cols.typet) +
-			theme_bw() + 
-			theme(legend.position='bottom') +
-			facet_grid(MALE_ARID+FEMALE_ARID~.)
-	plot.file	<- paste0(outfile.base,'_incorrect_direction_windows_summary_TYPETO.pdf')
-	ggsave(file=plot.file, w=8, h=12)
-	
-	
-	require(colorspace)
-	for(ii in seq_len(nrow(ffd)))
-	{	
-		indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
-		# load dfr and phs
-		load( file.path(indir, paste0('ptyr',ffd[ii,PTY_RUN],'_trees.rda')) )
-		ids			<- c(ffd[ii, MALE_RID],ffd[ii, FEMALE_RID])
-		# anonymize labels	
-		tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
-		tmp			<- subset(dfr[, {
-							ph	<- phs[[ IDX ]]
-							list(ID= unique(gsub(tip.regex,'\\1',ph$tip.label)))													  				
-						}, by='IDX'], !grepl('REF', ID))
-		tmp			<- data.table( ID=unique(tmp$ID) )
-		df			<- merge(tmp, dfa, by='ID')					
-		# setup plotting			
-		dfs			<- subset(dfr, select=c(W_FROM, W_TO, IDX))
-		dfs[, MALE_RID:=ids[1]]
-		dfs[, FEMALE_RID:=ids[2]]
-		dfs			<- merge(dfs, subset(rpw, GROUP=='TYPE_RAW'), by=c('MALE_RID','FEMALE_RID','W_FROM','W_TO'))
-		dfs[, MALE_RID:= df[ID==ids[1], AID]]
-		dfs[, FEMALE_RID:= df[ID==ids[2], AID]]
-		ids			<- c(df[ID==ids[1], AID], df[ID==ids[2], AID])		
-		dfs[, TITLE:= dfs[, paste('window ', W_FROM,'-', W_TO,'\npaths mf ',PATHS_MF,' paths fm ',PATHS_FM, ' \nadjacent ',as.integer(ADJACENT),' contiguous ',as.numeric(CONTIGUOUS),'\nsubtree distance ', round(PATRISTIC_DISTANCE, d=5), sep='')]]
-		# anonymize phs
-		for(k in seq_along(phs))				
-			for(j in seq_len(nrow(df)))
-			{
-				phs[[k]]$tip.label				<- gsub(df[j,ID],df[j,AID],phs[[k]]$tip.label)					
-				attr(phs[[k]], "INDIVIDUAL")	<- gsub(df[j,ID],df[j,AID],attr(phs[[k]], "INDIVIDUAL"))
-				#attr(*, "SPLIT")
-				#attr(*, "BRANCH_COLOURS")
-			}		
-		plot.file	<- paste0(outfile.base, '_incorrect_direction_run_', ffd[ii, PTY_RUN],'_M_',ids[1],'_F_', ids[2],'_collapsed.pdf')					
-		invisible(phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids, plot.cols=c('red','blue'), drop.less.than.n.ids=2, plot.file=plot.file, pdf.h=10, pdf.rw=5, pdf.ntrees=20, pdf.title.size=10, tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'))												
-	}
 }
 
 RakaiFull.analyze.couples.todi.171122.DIRext<- function()

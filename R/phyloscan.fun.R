@@ -1524,20 +1524,20 @@ phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10,
 	set(rpw3, rpw3[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
 	set(rpw3, NULL, 'TYPE_TO', rpw3[, factor(TYPE_TO, levels=c('ancestral 1->2','ancestral m->f','ancestral 2->1','ancestral f->m','intermingled','sibling','disconnected'))])	
 	setnames(rpw3, id.cols, c('PRIVATECOL_ID1','PRIVATECOL_ID2'))	
-	#
+	#	
 	ggplot(rpw3, aes(x=W_FROM)) +
 			geom_hline(yintercept=0.025, colour='grey50') +
 			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
 			geom_point(aes(y=PATRISTIC_DISTANCE), size=1) +				
 			labs(x='\ngenomic position\n(relative to HXB2)', y='subgraph distance\n(subst/site)\n',fill='topological subgraph\nrelationship') +
-			scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)], rpw2[, max(W_FROM)])) +
+			scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw3[, min(W_FROM)]-diff(rpw3[1:2, W_FROM]), rpw3[, max(W_FROM)]+diff(rpw3[1:2, W_FROM]))) +
 			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
 			coord_cartesian(ylim=ylim) +
 			scale_fill_manual(values=cols.typet) +
 			theme_bw() + 
 			theme(legend.position='bottom', panel.spacing = unit(1, "lines")) +
 			facet_grid(PRIVATECOL_ID1+PRIVATECOL_ID2~.)	
-	ggsave(file=plot.file, w=plot.w, h=plot.h, useDingbats=FALSE)
+	ggsave(file=plot.file, w=plot.w, h=plot.h, useDingbats=FALSE, limitsize=FALSE)
 }	
 
 #' @export
