@@ -5422,7 +5422,7 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 				win=c(800,9400,25,250), 				
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				tip.regex='^(.*)-[0-9]+_read_([0-9]+)_count_([0-9]+)$',
 				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
