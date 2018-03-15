@@ -5391,6 +5391,9 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	#	Input args 2
 	if(1)	
 	{	
+		in.dir				<- file.path(HOME,"BEEHIVE_67_180302_out")
+		out.dir				<- in.dir
+		work.dir			<- file.path(HOME,"BEEHIVE_67_180302_work")						
 		dir.create(out.dir, showWarnings=FALSE)
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft=NA, 
