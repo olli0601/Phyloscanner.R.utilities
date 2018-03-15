@@ -5304,7 +5304,7 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	}
 	#
 	#	combine all the data	
-	if(1)
+	if(0)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
@@ -5387,8 +5387,95 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 			}
 		}					
 	}
+	#
+	#	Input args 2
+	if(1)	
+	{	
+		dir.create(out.dir, showWarnings=FALSE)
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft=NA, 
+				prog.raxml=NA, 
+				data.dir=NA, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,25,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				tip.regex='^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,
+				pw.trmw.min.reads=30,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.025,
+				pw.trmw.distant.brl=0.05,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
+				pw.prior.calibrated.prob=0.6,
+				mem.save=0,
+				verbose=TRUE,				
+				select=NA 
+		)	
+		save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 	
-
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]				
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+		setkey(pty.c, PTY_RUN)		
+		pty.c	<- pty.c[, { 
+					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#FILE_BAM<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#cat('\n',FILE_BAM)
+					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
+					print(prefix.infiles)
+					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
+					list(CMD=cmd) 
+				}, by='PTY_RUN']		
+		pty.c[1,cat(CMD)]		
+		#stop()		
+		invisible(pty.c[,	{					
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						}, by='PTY_RUN'])		
+		quit('no')		
+	}
 }
 	
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
