@@ -5260,7 +5260,7 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 	}
 	#
 	# generate trees
-	if(1)
+	if(0)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -5302,7 +5302,91 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 							#stop()
 						}, by=c('ID')])
 	}
-
+	#
+	#	combine all the data	
+	if(1)
+	{
+		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
+		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
+		#
+		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		#allwin	<- data.table(W_FROM=seq(800,9050,125))
+		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
+		for(i in seq_along(indirs))
+		{
+			indir	<- indirs[i]
+			pty.run	<- as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(indir)))
+			#	check if we have all fasta and tree files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
+			missfs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(missfs))
+				cat('\nIn',indir,'Found missing fasta files for',paste(missfs,collapse=', '))
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(misstrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
+			zipit	<- 0
+			if(!length(missfs) & !length(misstrs))
+			{
+				cat('\nIn',indir,'Found all fasta and tree files')
+				zipit	<- 1
+			}				
+			if(!length(setdiff(misstrs,missfs)))
+			{ 
+				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+				zipit	<- 1
+			}	
+			#
+			if(zipit)
+			{			
+				cat('\nProcess',indir)
+				#	first combine all zip files into ptyrXXX_otherstuff.zip
+				infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+				cat('\nZip to file', tmp,'...\n')
+				suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+				invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip fasta files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip tree files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	remove tmp dir
+				invisible( file.remove( file.path(indir,'tmp42') ) )
+				#	move one level down
+				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				cat('\nDone',indir)
+			}
+			#if(!length(misstrs))
+			if(zipit)
+				invisible(unlink(indir, recursive=TRUE))
+			#	expand again if asked to
+			#if(length(misstrs))
+			if(0)
+			{
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
+		}					
+	}
 	
 
 }
@@ -6377,6 +6461,32 @@ project.readlength.count.all<- function()
 				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3, scales='free')
 		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)	
 	}
+}
+
+project.TillHIV2.power<- function()
+{
+	require(TrialSize)
+	
+	alpha	<- 0.05
+	beta	<- 1-0.8
+	p1		<- 0.9		#	actual success DBS
+	p2		<- 0.95		#	success blood
+	k		<- 1		#	equal group size
+	diff	<- p1-p2
+	margin	<- 0.2		#	delta, noninferiority threshold is -delta
+	
+	# ( qnorm(1-alpha) + qnorm(1-beta) )^2 / (p2-p1-margin)^2 * (p1*(1-p1)/k + p2*(1-p2))	
+	TwoSampleProportion.NIS(0.05,0.2,0.9,0.95,1,-0.05,0.2)
+	TwoSampleProportion.NIS(0.05,0.2,0.9,0.95,1,-0.05,0.15)
+	TwoSampleProportion.NIS(0.05,0.2,0.9,0.95,1,-0.05,0.1)
+	
+	TwoSampleProportion.NIS(0.05,0.2,0.85,0.9,1,-0.05,0.2)
+	TwoSampleProportion.NIS(0.05,0.2,0.85,0.9,1,-0.05,0.15)
+	TwoSampleProportion.NIS(0.05,0.2,0.85,0.9,1,-0.05,0.1)
+	
+	TwoSampleProportion.NIS(0.05,0.2,0.75,0.8,1,-0.05,0.2)
+	TwoSampleProportion.NIS(0.05,0.2,0.75,0.8,1,-0.05,0.15)
+	TwoSampleProportion.NIS(0.05,0.2,0.75,0.8,1,-0.05,0.1)
 }
 
 project.bam.check.integrity<- function()
