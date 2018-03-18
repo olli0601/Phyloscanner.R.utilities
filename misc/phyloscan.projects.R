@@ -5468,9 +5468,11 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 		pty.c[1,cat(CMD)]		
 		#stop()		
 		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q="pqeelab", hpc.mem="48gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
 							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=1, hpc.load=hpc.load)
 							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					

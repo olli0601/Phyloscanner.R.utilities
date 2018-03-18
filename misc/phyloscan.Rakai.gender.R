@@ -1704,7 +1704,7 @@ RakaiFull.gender.171122.couplesinteractionmodels.stan.with.threshold<- function(
 }
 
 
-RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups<- function()
+RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups.all<- function()
 {
 	require(data.table)
 	require(scales)
@@ -1749,7 +1749,7 @@ RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups<- function(
 	df	<- subset(df, VISIT%in%c(15,15.1,16))
 	
 	#	select relevant communities
-	tmp	<- sort(unique(c(as.character(rtpdm$MALE_COMM_NUM), as.character(rtpdm$MALE_COMM_NUM))))
+	tmp	<- sort(unique(c(as.character(rtpdm$MALE_COMM_NUM), as.character(rtpdm$FEMALE_COMM_NUM))))
 	tmp	<- data.table(COMM_NUM=tmp)
 	df	<- merge(df, tmp, by=c('COMM_NUM'))
 	df[, FEMALE:= FEMALE_NEG+FEMALE_POS]
@@ -1772,8 +1772,8 @@ RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups<- function(
 	
 	#	add community groups to rtpdm
 	tmp	<- unique(subset(df, select=c(COMM_NUM,FEMALE_POS_C)))
-	setnames(tmp, 'COMM_NUM', 'MALE_COMM_NUM')
-	tmp	<- merge(subset(rtpdm, MALE_COMM_TYPE==FEMALE_COMM_TYPE), tmp, by='MALE_COMM_NUM')
+	rtpdm[, COMM_NUM:= FEMALE_COMM_NUM]	
+	tmp	<- merge(rtpdm, tmp, by='COMM_NUM')
 	tmp	<- tmp[, {
 				z<- as.numeric(binconf(length(which(grepl('mf',SELECT))), length(SELECT)))
 				list(	MF_TRM	= length(which(grepl('mf',SELECT))),
@@ -1828,7 +1828,188 @@ RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups<- function(
 	ggsave(file=paste0(outfile.base,'_trmMF_vs_diagFM_by_commgroup.pdf'), w=6, h=4.5)
 }
 
-
+RakaiFull.gender.171122.highfemaletomaleprevratio.importations<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)	
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_hivprev_byGenderStudyVisit.rda"
+	load(infile)
+	df	<- as.data.table(melt(female.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_NEG'))	
+	tmp	<- as.data.table(melt(male.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_NEG'))	
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)	
+	tmp	<- as.data.table(melt(female.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	tmp	<- as.data.table(melt(male.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	#	add coordinates
+	load("~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_geography.rda")
+	comgps	<- as.data.table(comgps)
+	set(comgps, NULL, 'COMM_NUM', comgps[, as.integer(as.character(COMM_NUM))])
+	df	<- merge(df, comgps, by='COMM_NUM', all.x=TRUE)	
+	set(df, NULL, 'COMM_NUM', df[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(COMM_NUM)))))])
+	for(x in c('FEMALE_NEG','MALE_NEG','FEMALE_POS','MALE_POS'))
+		set(df, which(is.na(df[[x]])), x, 0L)
+	df	<- subset(df, FEMALE_NEG!=0 | MALE_NEG!=0 | FEMALE_POS!=0 | MALE_POS!=0)
+	#	sum by merged communities that are essentially the same
+	df	<- df[, list(FEMALE_NEG=sum(FEMALE_NEG), MALE_NEG=sum(MALE_NEG), FEMALE_POS=sum(FEMALE_POS), MALE_POS=sum(MALE_POS), longitude=mean(longitude), latitude=mean(latitude)), by= c('COMM_NUM','VISIT')]
+	
+	#	select relevant communities
+	tmp	<- unique(subset(rtpdm, select=c(MALE_COMM_NUM,MALE_COMM_TYPE)))
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('COMM_NUM','COMM_TYPE'))
+	tmp2<- unique(subset(rtpdm, select=c(FEMALE_COMM_NUM,FEMALE_COMM_TYPE)))
+	setnames(tmp2, c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'), c('COMM_NUM','COMM_TYPE'))
+	tmp	<- unique(rbind(tmp, tmp2))
+	df	<- merge(tmp, df, by='COMM_NUM')
+	df[, FEMALE:= FEMALE_NEG+FEMALE_POS]
+	df[, MALE:= MALE_NEG+MALE_POS]
+	df[, POS:= MALE_POS+FEMALE_POS]
+	df[, NEG:= MALE_NEG+FEMALE_NEG]
+	#	new clean community numbers
+	tmp	<- unique(subset(df, select=c(COMM_NUM,COMM_TYPE)))
+	tmp[, COMM_NUM2:= seq_len(nrow(tmp))]
+	tmp[, COMM_TYPE2:= as.integer(as.character(factor(COMM_TYPE,levels=c('agrarian','trading','fisherfolk'), labels=c('1','2','3'))))]
+	df	<- merge(df, tmp, by=c('COMM_NUM','COMM_TYPE'))
+	
+	#	estimate prevalence ratio for each community
+	dg		<- subset(df, VISIT%in%c(15,15.1,16))	
+	mpr.1 	<- map2stan(
+			alist(
+					FEMALE_POS ~ dbinom(FEMALE, seropos_f),
+					MALE_POS ~ dbinom(MALE, seropos_m),
+					logit(seropos_f) <- afc[COMM_NUM2],
+					logit(seropos_m) <- amc[COMM_NUM2],					
+					afc[COMM_NUM2] ~ dnorm(0, 10),
+					amc[COMM_NUM2] ~ dnorm(0, 10)										
+			),
+			data=as.data.frame(dg), 
+			start=list(	afc=rep(0,length(unique(dg$COMM_NUM2))), amc=rep(0,length(unique(dg$COMM_NUM2)))),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mpr.1)			
+	dgg		<- unique(subset(dg, select=c(COMM_NUM, COMM_TYPE, COMM_NUM2, longitude, latitude)))
+	tmp		<- dgg[, 
+			list(	STAT=c('M','CL','IL','IU','CU'),
+					PF= as.numeric(quantile(logistic(post$afc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975))),
+					PM= as.numeric(quantile(logistic(post$amc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975))),
+					RFM= as.numeric(quantile(logistic(post$afc[, COMM_NUM2])/logistic(post$amc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975)))
+			), 
+			by='COMM_NUM2']
+	tmp		<- melt(tmp, id.vars=c('COMM_NUM2','STAT'))	
+	tmp		<- dcast.data.table(tmp, variable+COMM_NUM2~STAT, value.var='value')
+	dgg		<- merge(dgg, tmp, by='COMM_NUM2')
+	#
+	#	order communities by ratio, and and make groups
+	#
+	tmp	<- dcast.data.table(dgg, COMM_NUM+COMM_NUM2+COMM_TYPE~variable, value.var='M')
+	#tmp2<- subset(rtpdm, MALE_COMM_NUM==FEMALE_COMM_NUM)[, list(TRM=length(MALE_RID)), by='MALE_COMM_NUM']
+	tmp2<- rtpdm[, list(TRM=length(MALE_RID)), by='FEMALE_COMM_NUM']
+	setnames(tmp2, 'FEMALE_COMM_NUM', 'COMM_NUM')	
+	tmp	<- merge(tmp, tmp2, by='COMM_NUM')		
+	tmp	<- tmp[order(RFM),]		
+	tmp[, CO_RFM:= seq_len(nrow(tmp))]
+	tmp[, CO_RFM_GR:= cut(RFM, breaks=c(1,1.3,1.4,1.62,1.8,2.5,3.4))]
+	ggplot(tmp, aes(x=RFM, fill=CO_RFM_GR)) + geom_histogram()
+	tmp[, list(sum(TRM)), by='CO_RFM_GR']
+	dgg	<- merge(dgg, subset(tmp, select=c(COMM_NUM, CO_RFM_GR)), by='COMM_NUM')
+	
+	#	calculate extra-comm-transmissions by group
+	tmp2<- subset(tmp, select=c(COMM_NUM, CO_RFM_GR))
+	rtpdm[, COMM_NUM:=FEMALE_COMM_NUM]
+	tmp2<- merge(rtpdm, tmp2, by='COMM_NUM')
+	tmp2<- tmp2[, {
+				z<- as.numeric(binconf(length(which(FEMALE_COMM_NUM!=MALE_COMM_NUM)), length(SELECT)))
+				list(	EXTRACOMM_TRM	= length(which(FEMALE_COMM_NUM!=MALE_COMM_NUM)),
+						TRM = length(SELECT),
+						EXTRACOMM_TRM_M	= z[1],
+						EXTRACOMM_TRM_CL	= z[2],
+						EXTRACOMM_TRM_CU	= z[3])
+			}, by=c('CO_RFM_GR')]	
+	#	calculate avg FM ratio by group and merge
+	dh	<- subset(dgg, variable=='RFM')[, list(CL=mean(CL), M=mean(M), CU=mean(CU)), by='CO_RFM_GR']
+	dh	<- merge(dh, tmp2, by=c('CO_RFM_GR'))
+	
+	#	estimate relationship RFM and extra community transmission
+	
+	dg		<- subset(df, VISIT%in%c(15,15.1,16))	
+	tmp		<- rtpdm[, list(EXTRACOMM_TRM= length(which(FEMALE_COMM_NUM!=MALE_COMM_NUM)), TRM= length(SELECT)), by='COMM_NUM']	
+	dg		<- merge(dg, tmp, by='COMM_NUM')
+	mim.1 	<- map2stan(
+			alist(	EXTRACOMM_TRM ~ dbinom(TRM, pimports),
+					FEMALE_POS ~ dbinom(FEMALE, seropos_f),
+					MALE_POS ~ dbinom(MALE, seropos_m),
+					logit(seropos_f) <- afc[COMM_NUM2],
+					logit(seropos_m) <- amc[COMM_NUM2],
+					logit(pimports) <- aimports + bimports*log_seropos_fm_ratio,
+					log_seropos_fm_ratio <- log(1 + exp(-amc[COMM_NUM2])) - log(1 + exp(-afc[COMM_NUM2])),
+					afc[COMM_NUM2] ~ dnorm(0, 10),	
+					amc[COMM_NUM2] ~ dnorm(0, 10),
+					aimports ~ dnorm(0,100),
+					bimports ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(aimports=0, bimports=0, afc=rep(0,length(unique(dg$COMM_NUM2))), amc=rep(0,length(unique(dg$COMM_NUM2))) ),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	precis(mim.1, depth=1, prob=0.95)	
+	#     Mean StdDev lower 0.95 upper 0.95 n_eff Rhat
+	#atm 0.21   0.17      -0.12       0.52  4106    1
+	#btm 1.11   0.40       0.35       1.94  3833    1
+	#pretty much a straight line ...
+	
+	post	<- extract.samples(mim.1)
+	dummy	<- function(z) quantile(logistic(with(post, aimports+bimports*z)), prob=c(0.5, 0.025, 0.975))
+	tmp		<- data.table(FM_PREV_RATIO=seq(1,4,0.01))
+	tmp		<- tmp[, {
+				z<- dummy(log(FM_PREV_RATIO))
+				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
+			}, by='FM_PREV_RATIO']
+	tmp2	<- dg[, list(EXTRACOMM_TRM_RAW=mean(EXTRACOMM_TRM/TRM), FM_PREV_RATIO_RAW=mean( (FEMALE_POS/FEMALE)/(MALE_POS/MALE) ) ), by='COMM_NUM']
+	ggplot(dh) +
+			geom_ribbon(data=tmp, aes(x=FM_PREV_RATIO, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
+			geom_line(data=tmp, aes(x=FM_PREV_RATIO, y=EST_MF_TRM_M), colour='grey50', size=1) +			
+			geom_point(aes(x=M, y=EXTRACOMM_TRM_M, colour=CO_RFM_GR), size=2) +
+			geom_errorbar(aes(x=M, ymin=EXTRACOMM_TRM_CL, ymax=EXTRACOMM_TRM_CU, colour=CO_RFM_GR), width=0.1, size=0.9) +
+			geom_errorbarh(aes(x=M, y=EXTRACOMM_TRM_M, xmin=CL, xmax=CU, colour=CO_RFM_GR), height=0.03, size=0.9) +
+			geom_point(data=tmp2, aes(x=FM_PREV_RATIO_RAW, y=EXTRACOMM_TRM_RAW), colour='black', size=2, pch=17, alpha=1) +
+			scale_colour_hue(h = c(-120, 60)) +
+			#scale_colour_brewer(palette='Oranges') +
+			coord_cartesian( xlim=c(1,3.3), ylim=c(-0.01,1.01) ) +
+			theme_bw() +
+			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1), expand=c(0,0)) +
+			labs(	x='\nfemale-to-male prevalence ratio', 
+					y='proportion of extra-community transmissions\n',
+					colour='community group')
+	ggsave(file=paste0(outfile.base,'_trmMF_extracommunity_by_commgroup2.pdf'), w=6, h=4.5)
+}
+	
 RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- function()
 {
 	require(data.table)
@@ -1986,8 +2167,9 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 	#	order communities by ratio, male prev, female prev, and and make groups
 	#
 	tmp	<- dcast.data.table(dgg, COMM_NUM+COMM_NUM2+COMM_TYPE~variable, value.var='M')
-	tmp2<- subset(rtpdm, MALE_COMM_NUM==FEMALE_COMM_NUM)[, list(TRM=length(MALE_RID)), by='MALE_COMM_NUM']
-	setnames(tmp2, 'MALE_COMM_NUM', 'COMM_NUM')	
+	#tmp2<- subset(rtpdm, MALE_COMM_NUM==FEMALE_COMM_NUM)[, list(TRM=length(MALE_RID)), by='MALE_COMM_NUM']
+	tmp2<- rtpdm[, list(TRM=length(MALE_RID)), by='FEMALE_COMM_NUM']
+	setnames(tmp2, 'FEMALE_COMM_NUM', 'COMM_NUM')	
 	tmp	<- merge(tmp, tmp2, by='COMM_NUM')	
 	#	group PF
 	tmp	<- tmp[order(PF),]
@@ -1999,19 +2181,19 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 	tmp	<- tmp[order(PM),]
 	ggplot(tmp, aes(x=PM)) + geom_histogram()
 	tmp[, CO_PM:= seq_len(nrow(tmp))]
-	tmp[, CO_PM_GR:= cut(PM, breaks=c(0.05,0.092,0.105,0.2,0.4))]
+	tmp[, CO_PM_GR:= cut(PM, breaks=c(0.04,0.092,0.105,0.2,0.4))]
 	tmp[, list(sum(TRM)), by='CO_PM_GR']
 	#	group RFM
 	tmp	<- tmp[order(RFM),]	
 	ggplot(tmp, aes(x=RFM)) + geom_histogram()
 	tmp[, CO_RFM:= seq_len(nrow(tmp))]
-	tmp[, CO_RFM_GR:= cut(RFM, breaks=c(1,1.3,1.4,1.62,1.8,2.1))]
+	tmp[, CO_RFM_GR:= cut(RFM, breaks=c(1,1.3,1.4,1.62,1.8,3.4))]
 	tmp[, list(sum(TRM)), by='CO_RFM_GR']
 	dgg	<- merge(dgg, subset(tmp, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR)), by='COMM_NUM')
 	
 	#	calculate TRM by group
 	tmp2<- subset(tmp, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR))
-	rtpdm[, COMM_NUM:=MALE_COMM_NUM]
+	rtpdm[, COMM_NUM:=FEMALE_COMM_NUM]
 	tmp2<- merge(rtpdm, tmp2, by='COMM_NUM')
 	tmp2<- subset(tmp2, select=c(CO_PF_GR, CO_PM_GR, CO_RFM_GR, SELECT))
 	tmp2<- melt(tmp2, id.vars='SELECT')	
@@ -2080,7 +2262,293 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
 					colour='community group')
 	ggsave(file=paste0(outfile.base,'_trmMF_vs_maleprevalence_by_commgroup.pdf'), w=6, h=5)
-		
+	#	
+	#	estimate relationship between MF transm and FM prev ratio
+	#
+	dg		<- subset(df, VISIT%in%c(15,15.1,16))
+	tmp		<- unique(subset(dgg, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR)))
+	dg2		<- merge(dg, tmp, by='COMM_NUM')
+	tmp		<- rtpdm[, list(MF_TRM	= length(which(grepl('mf',SELECT))), TRM= length(SELECT)), by='COMM_NUM']
+	dg2		<- merge(dg2, tmp, by='COMM_NUM')
+	mpr.2 	<- map2stan(
+							alist(
+									FEMALE_POS ~ dbinom(FEMALE, seropos_f),
+									MALE_POS ~ dbinom(MALE, seropos_m),
+									MF_TRM ~ dbinom(TRM, ptm),
+									logit(seropos_f) <- afc[COMM_NUM2],
+									logit(seropos_m) <- amc[COMM_NUM2],
+									logit(ptm) <- atm + btm*log_seropos_fm_ratio,
+									log_seropos_fm_ratio <- log(1 + exp(-amc[COMM_NUM2])) - log(1 + exp(-afc[COMM_NUM2])),
+									afc[COMM_NUM2] ~ dnorm(0, 10),
+									amc[COMM_NUM2] ~ dnorm(0, 10),
+									atm ~ dnorm(0,100),
+									btm ~ dnorm(0,10)
+							),
+							data=as.data.frame(dg2), 
+							start=list(	atm=0, btm=0,
+										afc=rep(0,length(unique(dg$COMM_NUM2))), amc=rep(0,length(unique(dg$COMM_NUM2)))),
+							warmup=5e2, iter=5e3, chains=1, cores=4
+					)		
+	precis(mpr.2, depth=1, prob=0.95)	
+	#     Mean StdDev lower 0.95 upper 0.95 n_eff Rhat
+	#atm  0.68   0.33       0.05       1.36  1545    1
+	#btm -0.85   0.85      -2.54       0.83  1468    1
+	#negative,  but not significant
+	post	<- extract.samples(mpr.2)
+	dummy	<- function(z) quantile(logistic(with(post, atm+btm*z)), prob=c(0.5, 0.025, 0.975))
+	tmp		<- data.table(FM_PREV_RATIO=seq(1.01,2.5,0.01))
+	tmp		<- tmp[, {
+				z<- dummy(log(FM_PREV_RATIO))
+				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
+			}, by='FM_PREV_RATIO']
+	ggplot(subset(dh, variable=='CO_RFM_GR')) +
+			geom_ribbon(data=tmp, aes(x=FM_PREV_RATIO, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
+			geom_line(data=tmp, aes(x=FM_PREV_RATIO, y=EST_MF_TRM_M), colour='grey50', size=1) +			
+			geom_point(aes(x=M, y=MF_MED, colour=value), size=2) +
+			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=value), width=0.03, size=0.9) +
+			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=value), height=0.05, size=0.9) +
+			scale_colour_brewer(palette='Set2') +			
+			theme_bw() +
+			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1)) +
+			labs(	x='\nfemale-to-male prevalence ratio', 
+					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
+					colour='community group')
+	ggsave(file=paste0(outfile.base,'_trmMF_vs_prevalenceratio_by_commgroup_fitted.pdf'), w=6, h=5)
+	#	
+	#	estimate relationship between MF transm and F prev 
+	#
+	dg		<- subset(df, VISIT%in%c(15,15.1,16))
+	tmp		<- unique(subset(dgg, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR)))
+	dg2		<- merge(dg, tmp, by='COMM_NUM')
+	tmp		<- rtpdm[, list(MF_TRM	= length(which(grepl('mf',SELECT))), TRM= length(SELECT)), by='COMM_NUM']
+	dg2		<- merge(dg2, tmp, by='COMM_NUM')
+	mpr.3 	<- map2stan(
+							alist(
+									FEMALE_POS ~ dbinom(FEMALE, seropos_f),									
+									MF_TRM ~ dbinom(TRM, ptm),
+									logit(seropos_f) <- afc[COMM_NUM2],									
+									logit(ptm) <- atm + btm*log_seropos_f,
+									log_seropos_f <- -log(1 + exp(-afc[COMM_NUM2])),
+									afc[COMM_NUM2] ~ dnorm(0, 10),
+									atm ~ dnorm(0,100),
+									btm ~ dnorm(0,10)
+							),
+							data=as.data.frame(dg2), 
+							start=list(	atm=0, btm=0, afc=rep(0,length(unique(dg$COMM_NUM2)))),
+							warmup=5e2, iter=5e3, chains=1, cores=4
+						)		
+	precis(mpr.3, depth=1, prob=0.95)		
+	#   Mean StdDev lower 0.95 upper 0.95 n_eff Rhat
+	#	atm  0.15   0.19      -0.22        0.5  4140    1
+	#	btm -0.20   0.16      -0.52        0.1  4098    1
+	#negative,  but not significant
+	post	<- extract.samples(mpr.3)
+	dummy	<- function(z) quantile(logistic(with(post, atm+btm*z)), prob=c(0.5, 0.025, 0.975))
+	tmp		<- data.table(F_PREV=seq(0.1,0.5,0.005))
+	tmp		<- tmp[, {
+				z<- dummy(log(F_PREV))
+				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
+			}, by='F_PREV']	 
+	ggplot(subset(dh, variable=='CO_PF_GR')) +	
+			geom_ribbon(data=tmp, aes(x=F_PREV, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
+			geom_line(data=tmp, aes(x=F_PREV, y=EST_MF_TRM_M), colour='grey50', size=1) +						
+			geom_point(aes(x=M, y=MF_MED, colour=value), size=2) +
+			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=value), width=0.03, size=0.9) +
+			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=value), height=0.05, size=0.9) +
+			scale_colour_brewer(palette='Set2') +			
+			theme_bw() +
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0,1,0.05)) +
+			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1)) +
+			labs(	x='\nfemale prevalence', 
+					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
+					colour='community group')
+	ggsave(file=paste0(outfile.base,'_trmMF_vs_femaleprevalence_by_commgroup_fitted.pdf'), w=6, h=5)	
+}
+
+RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups.noexports<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)	
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_hivprev_byGenderStudyVisit.rda"
+	load(infile)
+	df	<- as.data.table(melt(female.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_NEG'))	
+	tmp	<- as.data.table(melt(male.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_NEG'))	
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)	
+	tmp	<- as.data.table(melt(female.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	tmp	<- as.data.table(melt(male.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	#	add coordinates
+	load("~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_geography.rda")
+	comgps	<- as.data.table(comgps)
+	set(comgps, NULL, 'COMM_NUM', comgps[, as.integer(as.character(COMM_NUM))])
+	df	<- merge(df, comgps, by='COMM_NUM', all.x=TRUE)	
+	set(df, NULL, 'COMM_NUM', df[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(COMM_NUM)))))])
+	for(x in c('FEMALE_NEG','MALE_NEG','FEMALE_POS','MALE_POS'))
+		set(df, which(is.na(df[[x]])), x, 0L)
+	df	<- subset(df, FEMALE_NEG!=0 | MALE_NEG!=0 | FEMALE_POS!=0 | MALE_POS!=0)
+	#	sum by merged communities that are essentially the same
+	df	<- df[, list(FEMALE_NEG=sum(FEMALE_NEG), MALE_NEG=sum(MALE_NEG), FEMALE_POS=sum(FEMALE_POS), MALE_POS=sum(MALE_POS), longitude=mean(longitude), latitude=mean(latitude)), by= c('COMM_NUM','VISIT')]
+	
+	#	select relevant communities
+	tmp	<- unique(subset(rtpdm, select=c(MALE_COMM_NUM,MALE_COMM_TYPE)))
+	setnames(tmp, c('MALE_COMM_NUM','MALE_COMM_TYPE'), c('COMM_NUM','COMM_TYPE'))
+	tmp2<- unique(subset(rtpdm, select=c(FEMALE_COMM_NUM,FEMALE_COMM_TYPE)))
+	setnames(tmp2, c('FEMALE_COMM_NUM','FEMALE_COMM_TYPE'), c('COMM_NUM','COMM_TYPE'))
+	tmp	<- unique(rbind(tmp, tmp2))
+	df	<- merge(tmp, df, by='COMM_NUM')
+	df[, FEMALE:= FEMALE_NEG+FEMALE_POS]
+	df[, MALE:= MALE_NEG+MALE_POS]
+	df[, POS:= MALE_POS+FEMALE_POS]
+	df[, NEG:= MALE_NEG+FEMALE_NEG]
+	#	new clean community numbers
+	tmp	<- unique(subset(df, select=c(COMM_NUM,COMM_TYPE)))
+	tmp[, COMM_NUM2:= seq_len(nrow(tmp))]
+	tmp[, COMM_TYPE2:= as.integer(as.character(factor(COMM_TYPE,levels=c('agrarian','trading','fisherfolk'), labels=c('1','2','3'))))]
+	df	<- merge(df, tmp, by=c('COMM_NUM','COMM_TYPE'))
+	
+	dg	<- subset(df, VISIT%in%c(14,15,15.1,16,17))
+	#	the prop of females among HIV+ can vary quite a bit 
+	ggplot(dg, aes(x=factor(VISIT), group=COMM_NUM)) +			
+			geom_line(aes(y= FEMALE_POS/POS), colour='hotpink2') +			
+			geom_point(aes(y= FEMALE_POS/POS), colour='hotpink2') +
+			theme_bw() +
+			facet_wrap(~COMM_TYPE+COMM_NUM, ncol=4) +
+			labs(x='\nvisit', y='gender specific HIV prevalence estimate\n')
+	ggsave(file=paste0(outfile.base,'_trmMF_propfemaleprevalence.pdf'), w=9, h=9)
+	
+	
+	#	estimate prop female diagnosed for each community
+	dg		<- subset(df, VISIT%in%c(14,15,15.1,16))	
+	mfp.1 	<- map2stan(
+							alist(
+									FEMALE_POS ~ dbinom(POS, seropos_f),					
+									logit(seropos_f) <- afc[COMM_NUM2],				
+									afc[COMM_NUM2] ~ dnorm(0, 10)								
+							),
+							data=as.data.frame(dg), 
+							start=list(	afc=rep(0,length(unique(dg$COMM_NUM2))) ),
+							warmup=5e2, iter=5e3, chains=1, cores=4
+						)	
+	post	<- extract.samples(mfp.1)			
+	dgg		<- unique(subset(dg, select=c(COMM_NUM, COMM_TYPE, COMM_NUM2, longitude, latitude)))
+	tmp		<- dgg[, 
+			list(	STAT=c('M','CL','IL','IU','CU'),
+					PF= as.numeric(quantile(logistic(post$afc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975)))					
+			), 
+			by='COMM_NUM2']
+	tmp		<- melt(tmp, id.vars=c('COMM_NUM2','STAT'))	
+	tmp		<- dcast.data.table(tmp, variable+COMM_NUM2~STAT, value.var='value')
+	dgg		<- merge(dgg, tmp, by='COMM_NUM2')
+	ggplot(subset(dgg, variable=='PF'), aes(x=COMM_NUM)) +
+			geom_boxplot(aes(middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=variable), stat='identity') +
+			theme_bw() + 
+			facet_grid(~COMM_TYPE, space='free', scale='free') +
+			scale_fill_manual(values=c('PF'='hotpink2')) +
+			scale_y_continuous(labels=scales:::percent) +
+			labs(x='\ncommunity', y='proportion of female HIV prevalence\nvisits 14, 15, 15.1, 16\n', fill='gender')
+	ggsave(file=paste0(outfile.base,'_trmMF_propfemaleprevalence_boxplots.pdf'), w=12, h=6)		
+	#
+	#	order communities by female prop among prev
+	#
+	dgg[, FEMALE_POS_C:= cut(M, breaks=c(0.5, 0.55, 0.56, 0.58, 0.69, 0.71,  1))]
+	ggplot(dgg, aes(x=M, fill=FEMALE_POS_C)) + geom_histogram()
+	
+	#	calculate TRM by group
+	tmp2<- subset(dgg, select=c(COMM_NUM, FEMALE_POS_C))
+	rtpdm[, COMM_NUM:=FEMALE_COMM_NUM]
+	tmp2<- merge(rtpdm, tmp2, by='COMM_NUM')
+	tmp2<- subset(tmp2, FEMALE_COMM_NUM==MALE_COMM_NUM | (FEMALE_COMM_NUM!=MALE_COMM_NUM & grepl('mf',SELECT)) )	
+	tmp2<- tmp2[, {
+				z<- as.numeric(binconf(length(which(grepl('mf',SELECT))), length(SELECT)))
+				list(	MF_TRM	= length(which(grepl('mf',SELECT))),
+						MF_TRM_RATIO	= length(which(grepl('mf',SELECT)))/length(which(grepl('fm',SELECT))),
+						LMF_TRM_RATIO	= log(length(which(grepl('mf',SELECT)))/length(which(grepl('fm',SELECT)))),
+						TRM		= length(SELECT),
+						MF_MED	= z[1],
+						MF_CL	= z[2],
+						MF_CU	= z[3])
+			}, by=c('FEMALE_POS_C')]	
+	#	calculate avg female prop by group and merge
+	dh	<- dgg[, list(CL=mean(CL), M=mean(M), CU=mean(CU)), by='FEMALE_POS_C']		 
+	dh	<- merge(dh, tmp2, by=c('FEMALE_POS_C'))	
+	#	
+	#	estimate relationship between MF transm and FM prev ratio
+	#
+	dg		<- subset(df, VISIT%in%c(14,15,15.1,16))
+	tmp		<- subset(rtpdm, FEMALE_COMM_NUM==MALE_COMM_NUM | (FEMALE_COMM_NUM!=MALE_COMM_NUM & grepl('mf',SELECT)) )
+	tmp		<- tmp[, list(MF_TRM	= length(which(grepl('mf',SELECT))), TRM= length(SELECT)), by='COMM_NUM']
+	tmp[, COMM_NUM3:= seq_len(nrow(tmp))]
+	dg		<- merge(dg, tmp, by='COMM_NUM')
+	mfp.2 	<- map2stan(
+			alist(
+					FEMALE_POS ~ dbinom(POS, prop_f),					
+					MF_TRM ~ dbinom(TRM, ptm),
+					logit(prop_f) <- afc[COMM_NUM3],
+					logit(ptm) <- atm + btm*logit( 1/(1 + exp(-afc[COMM_NUM3])) ),
+					#logit(ptm) <- atm + btm*log( 1/(1 + exp(-afc[COMM_NUM3])) ),
+					afc[COMM_NUM3] ~ dnorm(0, 10),					
+					atm ~ dnorm(0,100),
+					btm ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	atm=0, btm=0, afc=rep(0,length(unique(dg$COMM_NUM3)))),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	precis(mfp.2, depth=1, prob=0.95)	
+	#     Mean StdDev lower 0.95 upper 0.95 n_eff Rhat
+	#atm 0.21   0.17      -0.12       0.52  4106    1
+	#btm 1.11   0.40       0.35       1.94  3833    1
+	#pretty much a straight line ...
+
+	post	<- extract.samples(mfp.2)
+	dummy	<- function(z) quantile(logistic(with(post, atm+btm*z)), prob=c(0.5, 0.025, 0.975))
+	tmp		<- data.table(FEMALE_PROP=seq(0.5,0.85,0.005))
+	tmp		<- tmp[, {
+				z<- dummy(logit(FEMALE_PROP))
+				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
+			}, by='FEMALE_PROP']
+	ggplot(dh) +
+			geom_ribbon(data=tmp, aes(x=FEMALE_PROP, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
+			geom_line(data=tmp, aes(x=FEMALE_PROP, y=EST_MF_TRM_M), colour='grey50', size=1) +			
+			geom_point(aes(x=M, y=MF_MED, colour=FEMALE_POS_C), size=2) +
+			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=FEMALE_POS_C), width=0.03, size=0.9) +
+			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=FEMALE_POS_C), height=0.05, size=0.9) +
+			scale_colour_brewer(palette='Set2') +			
+			theme_bw() +
+			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1)) +
+			labs(	x='\nproportion of females among seropositives', 
+					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
+					colour='community group')
+	ggsave(file=paste0(outfile.base,'_trmMF_vs_diagFM_by_commgroup2.pdf'), w=6, h=4.5)		
 }
 
 
