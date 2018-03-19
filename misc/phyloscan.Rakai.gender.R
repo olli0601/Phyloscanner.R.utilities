@@ -265,7 +265,111 @@ RakaiFull.gender.171122.propfemalepos.communitytype<- function()
 	ggsave(file=paste0(outfile.base,'_trmMF_vs_diagFM_by_commtype.pdf'), w=6, h=4.5)
 }
 
-RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
+RakaiFull.gender.171122.hh.are.femalerecipients.transmitters<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	dfr	<- subset(rtpdm, grepl('mf',SELECT), select=c(FEMALE_RID, SAMEHH))
+	setnames(dfr, 'SAMEHH', 'SAMEHH_OF_FEMALE_RECIPIENT')
+	tmp	<- subset(rtpdm, grepl('fm',SELECT))
+	dfr	<- merge(dfr, tmp, by='FEMALE_RID', all.x=1)
+	tmp	<- dfr[, list(N_TRMS= length(which(!is.na(MALE_RID))) ), by=c('FEMALE_RID','SAMEHH_OF_FEMALE_RECIPIENT')]
+	tmp[, table(SAMEHH_OF_FEMALE_RECIPIENT, N_TRMS>=1)]
+	
+	fisher.test( matrix(c(6,1,83,83),2,2) )
+	#	p-value = 0.1185
+	#	alternative hypothesis: true odds ratio is not equal to 1
+	#95 percent confidence interval:
+   	#	0.6984958 278.8704511
+	#	sample estimates:
+	#odds ratio 
+  	#	5.949555 
+}
+
+RakaiFull.gender.171122.hh.sources.of.transmitters<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	dft	<- subset(rtpdm, grepl('mf',SELECT), select=c(MALE_RID, SAMEHH))
+	setnames(dft, 'SAMEHH', 'SAMEHH_OF_MALE_TRANSMITTER')
+	tmp	<- subset(rtpdm, grepl('fm',SELECT))
+	dft	<- merge(dft, tmp, by='MALE_RID', all.x=1)
+	tmp	<- dft[, list(N_TRMS= length(which(!is.na(FEMALE_RID))) ), by=c('MALE_RID','SAMEHH_OF_MALE_TRANSMITTER')]
+	tmp[, table(SAMEHH_OF_MALE_TRANSMITTER, N_TRMS>=1)]
+	
+	fisher.test( matrix(c(6,1,83,83),2,2) )
+	#	p-value = 0.1185
+	#	alternative hypothesis: true odds ratio is not equal to 1
+	#95 percent confidence interval:
+	#	0.6984958 278.8704511
+	#	sample estimates:
+	#odds ratio 
+	#	5.949555 
+}
+
+RakaiFull.gender.171122.hh.multivariatemodelswithprevalence.stan.with.threshold<- function()
 {
 	require(data.table)
 	require(scales)
@@ -303,7 +407,7 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
 	
 	
-	df		<- subset(rtpdm, FEMALE_HH_NUM==MALE_HH_NUM, select=c(	MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, 
+	df		<- subset(rtpdm, FEMALE_HH_NUM==MALE_HH_NUM, select=c(	MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, FEMALE_COMM_NUM,
 					MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCCUP_OLLI, MALE_OCAT, MALE_EDUCAT, MALE_CIRCUM,
 					FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCCUP_OLLI, FEMALE_OCAT, FEMALE_EDUCAT 
 			))
@@ -313,6 +417,13 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
 	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
 	set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	#	add estimated HIV prevalences (medians)
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
+	load(infile)
+	tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
+	setnames(tmp, 'COMM_NUM', 'FEMALE_COMM_NUM')
+	df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
+	
 	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
 	#	prepare data for STAN
 	df[, COMM_FISH:= as.integer(PAIR_COMM_TYPE=='fisherfolk')]
@@ -335,7 +446,9 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 	df[, FE_OC_BAR:= as.integer(FEMALE_OCAT=='Bar/waitress')]			
 	df[, FE_OC_TRAD:= as.integer(FEMALE_OCAT=='Trading/Shop keeper')]
 	df[, FE_OC_OTH:= as.integer(FEMALE_OCAT%in%c('zother','Student'))]		
-	
+	df[, PF2:= PF-mean(PF)]
+	df[, PM2:= PM-mean(PM)]
+	df[, RFM2:= RFM-mean(RFM)]
 	#
 	#	STAN
 	#
@@ -345,29 +458,32 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 			alist(
 					LINK_MF ~ dbinom(1, pmf),
 					logit(pmf) <- base + 
-							# comm_fish*COMM_FISH +	this is base 
+							# comm_fish*COMM_FISH is base 
 							comm_agr*COMM_AGR + comm_trad*COMM_TRAD + comm_mxd*COMM_MXD +
 							noedu_f*FE_NOEDU + noedu_m*MA_NOEDU +
 							sexp_f*FE_SEXP1YR_G1 + sexp_m*MA_SEXP1YR_G1 +
-							circum_m*MA_CIRCUM +										
-							# other occupation is baseline
-							mocc_agro*MA_OC_AGRO + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD +										
-							focc_agro*FE_OC_AGRO + focc_bar*FE_OC_BAR +  focc_trad*FE_OC_TRAD,
+							circum_m*MA_CIRCUM +								
+							prev_m*PM2 + prev_f*PF2 + prev_ratio_fm*RFM2 +
+							# agro occupation is baseline
+							mocc_other*MA_OC_OTH + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD +										
+							focc_other*FE_OC_OTH + focc_bar*FE_OC_BAR +  focc_trad*FE_OC_TRAD,
 					base ~ dnorm(0,100),								
 					c(comm_agr, comm_trad, comm_mxd) ~ dnorm(0,10),
 					c(noedu_f, noedu_m) ~ dnorm(0,10),								
 					c(sexp_f, sexp_m, circum_m) ~ dnorm(0,10),
-					c(mocc_agro, mocc_fish, mocc_trad) ~ dnorm(0,10),
-					c(focc_agro, focc_bar, focc_trad) ~ dnorm(0,10)
+					c(prev_m, prev_f, prev_ratio_fm) ~ dnorm(0,10),
+					c(mocc_other, mocc_fish, mocc_trad) ~ dnorm(0,10),
+					c(focc_other, focc_bar, focc_trad) ~ dnorm(0,10)
 			),
 			data=as.data.frame(df), 
-			start=list(	base=0, comm_agr=0, comm_trad=0, comm_mxd=0, noedu_f=0, noedu_m=0, sexp_f=0, sexp_m=0, circum_m=0, 
-					focc_agro=0, focc_bar=0, focc_trad=0,
-					mocc_agro=0, mocc_fish=0, mocc_trad=0),			
+			start=list(	base=0, comm_agr=0, comm_trad=0, comm_mxd=0, noedu_f=0, noedu_m=0, sexp_f=0, sexp_m=0, circum_m=0,
+					prev_m=0, prev_f=0, prev_ratio_fm=0,
+					focc_other=0, focc_bar=0, focc_trad=0,
+					mocc_other=0, mocc_fish=0, mocc_trad=0),			
 			warmup=1e3, iter=5e3, chains=1, cores=4
 	)		
 	#plot(precis(ms.1, prob=0.95))
-	#pairs(mm.2)
+	#pairs(ms.1)
 	post	<- extract.samples(ms.1)
 	dp		<- data.table(	MC= seq_along(post$base),
 			PI_COMM_FISH=logistic( post$base ),				
@@ -379,12 +495,15 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 			PI_FESEXP1YR_G1=logistic( post$base+post$sexp_f ),
 			PI_MASEXP1YR_G1=logistic( post$base+post$sexp_m ),							
 			PI_CIRC_YES=logistic( post$base+post$circum_m ),							
-			PI_MOCC_AGRO=logistic( post$base+post$mocc_agro ),
+			PI_MOCC_OTH=logistic( post$base+post$mocc_other ),
 			PI_MOCC_FISH=logistic( post$base+post$mocc_fish ),
 			PI_MOCC_TRAD=logistic( post$base+post$mocc_trad ),
-			PI_FOCC_AGRO=logistic( post$base+post$focc_agro ),
+			PI_FOCC_OTH=logistic( post$base+post$focc_other ),
 			PI_FOCC_BAR=logistic( post$base+post$focc_bar ),
-			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),							
+			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),			
+			PI_PREV_MALE=logistic( post$base+post$prev_m ),
+			PI_PREV_FEMALE=logistic( post$base+post$prev_f ),
+			PI_PREV_RATIOFM=logistic( post$base+post$prev_ratio_fm ),			
 			OR_COMM_FISH=exp( post$base ),				
 			OR_COMM_AGRO=exp( post$base+post$comm_agr ), 											
 			OR_COMM_TRAD=exp( post$base+post$comm_trad ),							
@@ -394,12 +513,15 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 			OR_FESEXP1YR_G1=exp( post$base+post$sexp_f ),
 			OR_MASEXP1YR_G1=exp( post$base+post$sexp_m ),
 			OR_CIRC_YES=exp( post$base+post$circum_m ),							
-			OR_MOCC_AGRO=exp( post$base+post$mocc_agro ),
+			OR_MOCC_OTH=exp( post$base+post$mocc_other ),
 			OR_MOCC_FISH=exp( post$base+post$mocc_fish ),
 			OR_MOCC_TRAD=exp( post$base+post$mocc_trad ),
-			OR_FOCC_AGRO=exp( post$base+post$focc_agro ),
+			OR_FOCC_OTH=exp( post$base+post$focc_other ),
 			OR_FOCC_BAR=exp( post$base+post$focc_bar ),
-			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),											
+			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),			
+			OR_PREV_MALE=exp( post$base+post$prev_m ),
+			OR_PREV_FEMALE=exp( post$base+post$prev_f ),
+			OR_PREV_RATIOFM=exp( post$base+post$prev_ratio_fm ),
 			ORX_COMM_AGRO=exp( post$comm_agr ), 											
 			ORX_COMM_TRAD=exp( post$comm_trad ),							
 			ORX_COMM_MXD=exp( post$comm_mxd ),
@@ -408,18 +530,21 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 			ORX_FESEXP1YR_G1=exp( post$sexp_f ),
 			ORX_MASEXP1YR_G1=exp( post$sexp_m ),							
 			ORX_CIRC_YES=exp( post$circum_m ),							
-			ORX_MOCC_AGRO=exp( post$mocc_agro ),
+			ORX_MOCC_OTH=exp( post$mocc_other ),
 			ORX_MOCC_FISH=exp( post$mocc_fish ),
 			ORX_MOCC_TRAD=exp( post$mocc_trad ),
-			ORX_FOCC_AGRO=exp( post$focc_agro ),
+			ORX_FOCC_OTH=exp( post$focc_other ),
 			ORX_FOCC_BAR=exp( post$focc_bar ),
-			ORX_FOCC_TRAD=exp( post$focc_trad )								
+			ORX_FOCC_TRAD=exp( post$focc_trad ),
+			ORX_PREV_MALE=exp( post$prev_m ),
+			ORX_PREV_FEMALE=exp( post$prev_f ),
+			ORX_PREV_RATIOFM=exp( post$prev_ratio_fm )
 	)
 	dp		<- melt(dp, id.vars='MC')	
 	dss.1	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
 					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
 	dss.1	<- dcast.data.table(dss.1, variable~STAT, value.var='V')
-	dss.1[, MODEL:= 'multivariate ms2']
+	dss.1[, MODEL:= 'multivariate ms3']
 	ds		<- copy(dss.1)
 	ds[, LABEL:= paste0(round(MED, d=2), '\n[', round(CL, d=2),'-', round( CU, d=2),']')]
 	ds[, STAT:= factor(gsub('^([^_]+)_.*','\\1',variable), levels=c('PI','OR','ORX'), labels=c('proportion MF','odds MF','odds ratio'))]
@@ -432,14 +557,14 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 											"FEDU-NONE", "MEDU-NONE",      
 											"FESEXP1YR-G1","MASEXP1YR-G1", 
 											"CIRC-YES",                   
-											"FOCC-AGRO","FOCC-BAR","FOCC-TRAD",
-											"MOCC-AGRO","MOCC-FISH","MOCC-TRAD"   
+											"FOCC-BAR","FOCC-TRAD","FOCC-OTH",
+											"MOCC-FISH","MOCC-OTH","MOCC-TRAD"   
 									)), labels=rev(c("Agrarian community vs. fishing community", "Trading community vs. fishing community", "Mixed vs. fishing community",
 											"Female education: None vs. at least primary education", "Male education: None vs. at least primary education",
 											"Female sex partners in last year: >1 vs. 1", "Male sex partners in last year: >1 vs. 1",
 											"Male circumcised: yes vs. no",
-											"Female occupation: agricultural/house vs. other", "Female occupation: bar/waitress vs. other", "Female occupation: trading/shopkeeper vs. other",
-											"Male occupation: agricultural/house vs. other", "Male occupation: fishing vs. other", "Male occupation: trading/shopkeeper vs. other"
+											"Female occupation: bar/waitress vs. agricultural/house", "Female occupation: trading/shopkeeper vs. agricultural/house","Female occupation: other vs. agricultural/house", 
+											"Male occupation: fishing vs. agricultural/house", "Male occupation: other vs. agricultural/house", "Male occupation: trading/shopkeeper vs. agricultural/house"
 									)))])
 	setkey(ds, MOFA)	
 	dp		<- subset(ds, !MOFA%in%c('COMM-TRAD','COMM-MXD'))
@@ -458,8 +583,943 @@ RakaiFull.gender.171122.hhmultivariatemodels.stan.with.threshold<- function()
 	ggsave(file=paste0(outfile.base,'_propmf_factors_univariate_samehh.pdf'), w=12, h=7)		
 }
 
+RakaiFull.gender.171122.hh.multivariatemodels.stan.with.threshold<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	
+	#rtpdm[, table(PAIR_COMM_TYPE)]
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	
+	df		<- subset(rtpdm, FEMALE_HH_NUM==MALE_HH_NUM, select=c(	MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, FEMALE_COMM_NUM,
+					MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCCUP_OLLI, MALE_OCAT, MALE_EDUCAT, MALE_CIRCUM,
+					FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCCUP_OLLI, FEMALE_OCAT, FEMALE_EDUCAT 
+			))
+	#	missing data: fill in
+	set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)
+	set(df, df[, which(is.na(FEMALE_RECENTVL))], 'FEMALE_RECENTVL', -1)
+	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
+	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')	
+	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
+	#	add estimated HIV prevalences (medians)
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
+	load(infile)
+	tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
+	setnames(tmp, 'COMM_NUM', 'FEMALE_COMM_NUM')
+	df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
 
-RakaiFull.gender.171122.couplesmultivariateadditivemodels.stan.with.threshold<- function()
+	#	prepare data for STAN
+	df[, COMM_FISH:= as.integer(PAIR_COMM_TYPE=='fisherfolk')]
+	df[, COMM_AGR:= as.integer(PAIR_COMM_TYPE=='agrarian')]
+	df[, COMM_TRAD:= as.integer(PAIR_COMM_TYPE=='trading')]
+	df[, COMM_MXD:= as.integer(PAIR_COMM_TYPE=='mixed')]
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]
+	df[, FE_NOEDU_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	df[, MA_NOEDU_MISS:= as.integer(MALE_EDUCAT=='Unknown')]	
+	df[, MA_CIRCUM:= as.integer(MALE_CIRCUM=='Y')]
+	df[, MA_CIRCUM_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	df[, MA_OC_AGRO:= as.integer(MALE_OCAT=='Agro/House')]	
+	df[, MA_OC_FISH:= as.integer(MALE_OCAT=='Fishing')]
+	df[, MA_OC_TRAD:= as.integer(MALE_OCAT=='Trading/Shop keeper')]
+	df[, MA_OC_OTH:= as.integer(MALE_OCAT%in%c('zother','Bar/waitress','Student','Boda/Trucking'))]	
+	df[, FE_OC_AGRO:= as.integer(FEMALE_OCAT=='Agro/House')]
+	df[, FE_OC_BAR:= as.integer(FEMALE_OCAT=='Bar/waitress')]			
+	df[, FE_OC_TRAD:= as.integer(FEMALE_OCAT=='Trading/Shop keeper')]
+	df[, FE_OC_OTH:= as.integer(FEMALE_OCAT%in%c('zother','Student'))]		
+	df[, RFM_ABOVE_MEAN:=  as.integer( RFM>=subset(dgg, variable=='RFM')[, mean(M)] ) ]
+	
+	
+	#
+	#	STAN
+	#
+	
+	#	same household definitely stronger effect than couples	
+	ms.1 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + 
+							# comm_fish*COMM_FISH is base 
+							comm_agr*COMM_AGR + comm_trad*COMM_TRAD + comm_mxd*COMM_MXD +
+							noedu_f*FE_NOEDU + noedu_m*MA_NOEDU +
+							sexp_f*FE_SEXP1YR_G1 + sexp_m*MA_SEXP1YR_G1 +
+							circum_m*MA_CIRCUM +	
+							prevratio_fm * RFM_ABOVE_MEAN +
+							# agro occupation is baseline
+							mocc_other*MA_OC_OTH + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD +										
+							focc_other*FE_OC_OTH + focc_bar*FE_OC_BAR +  focc_trad*FE_OC_TRAD,
+					base ~ dnorm(0,100),								
+					c(comm_agr, comm_trad, comm_mxd) ~ dnorm(0,10),
+					c(noedu_f, noedu_m) ~ dnorm(0,10),								
+					c(sexp_f, sexp_m, circum_m, prevratio_fm) ~ dnorm(0,10),					
+					c(mocc_other, mocc_fish, mocc_trad) ~ dnorm(0,10),
+					c(focc_other, focc_bar, focc_trad) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, comm_agr=0, comm_trad=0, comm_mxd=0, noedu_f=0, noedu_m=0, sexp_f=0, sexp_m=0, circum_m=0,						
+						prevratio_fm=0, focc_other=0, focc_bar=0, focc_trad=0, mocc_other=0, mocc_fish=0, mocc_trad=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+		)		
+	#plot(precis(ms.1, prob=0.95))
+	#pairs(ms.1)
+	post	<- extract.samples(ms.1)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_COMM_FISH=logistic( post$base ),				
+			PI_COMM_AGRO=logistic( post$base+post$comm_agr ), 											
+			PI_COMM_TRAD=logistic( post$base+post$comm_trad ),							
+			PI_COMM_MXD=logistic( post$base+post$comm_mxd ),
+			PI_FEDU_NONE=logistic( post$base+post$noedu_f ),
+			PI_MEDU_NONE=logistic( post$base+post$noedu_m ),							
+			PI_FESEXP1YR_G1=logistic( post$base+post$sexp_f ),
+			PI_MASEXP1YR_G1=logistic( post$base+post$sexp_m ),							
+			PI_CIRC_YES=logistic( post$base+post$circum_m ),							
+			PI_MOCC_OTH=logistic( post$base+post$mocc_other ),
+			PI_MOCC_FISH=logistic( post$base+post$mocc_fish ),
+			PI_MOCC_TRAD=logistic( post$base+post$mocc_trad ),
+			PI_FOCC_OTH=logistic( post$base+post$focc_other ),
+			PI_FOCC_BAR=logistic( post$base+post$focc_bar ),
+			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),
+			PI_PREV_FMRATIO=logistic( post$base+post$prevratio_fm ),
+			OR_COMM_FISH=exp( post$base ),				
+			OR_COMM_AGRO=exp( post$base+post$comm_agr ), 											
+			OR_COMM_TRAD=exp( post$base+post$comm_trad ),							
+			OR_COMM_MXD=exp( post$base+post$comm_mxd ),
+			OR_FEDU_NONE=exp( post$base+post$noedu_f ),
+			OR_MEDU_NONE=exp( post$base+post$noedu_m ),							
+			OR_FESEXP1YR_G1=exp( post$base+post$sexp_f ),
+			OR_MASEXP1YR_G1=exp( post$base+post$sexp_m ),
+			OR_CIRC_YES=exp( post$base+post$circum_m ),							
+			OR_MOCC_OTH=exp( post$base+post$mocc_other ),
+			OR_MOCC_FISH=exp( post$base+post$mocc_fish ),
+			OR_MOCC_TRAD=exp( post$base+post$mocc_trad ),
+			OR_FOCC_OTH=exp( post$base+post$focc_other ),
+			OR_FOCC_BAR=exp( post$base+post$focc_bar ),
+			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),	
+			OR_PREV_FMRATIO=exp( post$base+post$prevratio_fm ),
+			ORX_COMM_AGRO=exp( post$comm_agr ), 											
+			ORX_COMM_TRAD=exp( post$comm_trad ),							
+			ORX_COMM_MXD=exp( post$comm_mxd ),
+			ORX_FEDU_NONE=exp( post$noedu_f ),
+			ORX_MEDU_NONE=exp( post$noedu_m ),
+			ORX_FESEXP1YR_G1=exp( post$sexp_f ),
+			ORX_MASEXP1YR_G1=exp( post$sexp_m ),							
+			ORX_CIRC_YES=exp( post$circum_m ),							
+			ORX_MOCC_OTH=exp( post$mocc_other ),
+			ORX_MOCC_FISH=exp( post$mocc_fish ),
+			ORX_MOCC_TRAD=exp( post$mocc_trad ),
+			ORX_FOCC_OTH=exp( post$focc_other ),
+			ORX_FOCC_BAR=exp( post$focc_bar ),
+			ORX_FOCC_TRAD=exp( post$focc_trad ),
+			ORX_PREV_FMRATIO=logistic( post$prevratio_fm )
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	dss.1	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	dss.1	<- dcast.data.table(dss.1, variable~STAT, value.var='V')
+	dss.1[, MODEL:= 'multivariate ms2']
+	ds		<- copy(dss.1)
+	ds[, LABEL:= paste0(round(MED, d=2), '\n[', round(CL, d=2),'-', round( CU, d=2),']')]
+	ds[, STAT:= factor(gsub('^([^_]+)_.*','\\1',variable), levels=c('PI','OR','ORX'), labels=c('proportion MF','odds MF','odds ratio'))]
+	ds[, FACTOR:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\3',variable)]
+	ds[, MOFA:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\2-\\3',variable)]
+	ds[, MODELTYPE:= factor(grepl('univariate',MODEL), levels=c(TRUE,FALSE),labels=c('univariate','multivariate'))]	
+	ds		<- subset(ds, STAT=='odds ratio')
+	set(ds, NULL, 'MOFA2', ds[, factor(MOFA, levels=rev(c(
+											"PREV-FMRATIO",
+											"COMM-AGRO","COMM-TRAD","COMM-MXD",																						
+											"FEDU-NONE", "MEDU-NONE",      
+											"FESEXP1YR-G1","MASEXP1YR-G1", 
+											"CIRC-YES",                   
+											"FOCC-BAR","FOCC-TRAD","FOCC-OTH",
+											"MOCC-FISH","MOCC-OTH","MOCC-TRAD"   
+									)), labels=rev(c("female-to-male prevalence ratio above average vs. below average",
+											"Agrarian community vs. fishing community", "Trading community vs. fishing community", "Mixed vs. fishing community",
+											"Female education: None vs. at least primary education", "Male education: None vs. at least primary education",
+											"Female sex partners in last year: >1 vs. 1", "Male sex partners in last year: >1 vs. 1",
+											"Male circumcised: yes vs. no",
+											"Female occupation: bar/waitress vs. agricultural/house", "Female occupation: trading/shopkeeper vs. agricultural/house","Female occupation: other vs. agricultural/house", 
+											"Male occupation: fishing vs. agricultural/house", "Male occupation: other vs. agricultural/house", "Male occupation: trading/shopkeeper vs. agricultural/house"
+									)))])
+	setkey(ds, MOFA)	
+	dp		<- subset(ds, !MOFA%in%c('COMM-TRAD','COMM-MXD'))
+	dp[, FILL:= '0']
+	set(dp, dp[, which(IL>1 | IU<1)], 'FILL', '1')
+	set(dp, dp[, which(CL>1 | CU<1)], 'FILL', '2')
+	ggplot(dp, aes(x=MOFA2)) +
+			geom_hline(yintercept=1, colour='grey50', lwd=1) +
+			geom_boxplot(aes(middle=MED, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=FILL), stat='identity') +
+			theme_bw() +
+			scale_y_continuous(trans='log', breaks=c(1/20, 1/10, 1/6, 1/3,1/2,1,2,3, 6,10,20), labels=c('1/20','1/10','1/6','1/3','1/2','1','2','3','6','10', '20'), expand=c(0,0)) +
+			scale_fill_manual(values=c('0'='white', '1'='orange', '2'='red')) +
+			coord_flip(ylim=c(1/20,20)) +
+			guides(fill=FALSE) +
+			labs(x='Partner characteristics\n', y='\nOdds ratio of male-to-female transmission\nbetween partner characteristics')
+	ggsave(file=paste0(outfile.base,'_propmf_factors_univariate_samehh.pdf'), w=8, h=3.5)		
+}
+
+RakaiFull.gender.171122.nonhh.multivariatemodels.stan.with.threshold<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	
+	#rtpdm[, table(PAIR_COMM_TYPE)]
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	
+	df		<- subset(rtpdm, FEMALE_HH_NUM!=MALE_HH_NUM, select=c(	MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, FEMALE_COMM_NUM,
+					MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCCUP_OLLI, MALE_OCAT, MALE_EDUCAT, MALE_CIRCUM,
+					FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCCUP_OLLI, FEMALE_OCAT, FEMALE_EDUCAT 
+				))
+	#	missing data: fill in
+	set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)
+	set(df, df[, which(is.na(FEMALE_RECENTVL))], 'FEMALE_RECENTVL', -1)
+	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
+	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')	
+	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
+	#	prepare data for STAN
+
+	#	add estimated HIV prevalences (medians)
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
+	load(infile)
+	tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
+	setnames(tmp, 'COMM_NUM', 'FEMALE_COMM_NUM')
+	df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
+
+	df[, COMM_FISH:= as.integer(PAIR_COMM_TYPE=='fisherfolk')]
+	df[, COMM_AGR:= as.integer(PAIR_COMM_TYPE=='agrarian')]
+	df[, COMM_TRAD:= as.integer(PAIR_COMM_TYPE=='trading')]
+	df[, COMM_MXD:= as.integer(PAIR_COMM_TYPE=='mixed')]
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]
+	df[, FE_NOEDU_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	df[, MA_NOEDU_MISS:= as.integer(MALE_EDUCAT=='Unknown')]	
+	df[, MA_CIRCUM:= as.integer(MALE_CIRCUM=='Y')]
+	df[, MA_CIRCUM_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	df[, MA_OC_AGRO:= as.integer(MALE_OCAT=='Agro/House')]	
+	df[, MA_OC_FISH:= as.integer(MALE_OCAT=='Fishing')]
+	df[, MA_OC_TRAD:= as.integer(MALE_OCAT=='Trading/Shop keeper')]
+	df[, MA_OC_OTH:= as.integer(MALE_OCAT%in%c('zother','Bar/waitress','Student','Boda/Trucking'))]	
+	df[, FE_OC_AGRO:= as.integer(FEMALE_OCAT=='Agro/House')]
+	df[, FE_OC_BAR:= as.integer(FEMALE_OCAT=='Bar/waitress')]			
+	df[, FE_OC_TRAD:= as.integer(FEMALE_OCAT=='Trading/Shop keeper')]
+	df[, FE_OC_OTH:= as.integer(FEMALE_OCAT%in%c('zother','Student'))]		
+	df[, RFM_ABOVE_MEAN:=  as.integer( RFM>=subset(dgg, variable=='RFM')[, mean(M)] ) ]
+	#
+	#	STAN
+	#
+	
+	#	same household definitely stronger effect than couples	
+	ms.2 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + 
+							# comm_fish*COMM_FISH is base 
+							comm_agr*COMM_AGR + comm_trad*COMM_TRAD + comm_mxd*COMM_MXD +
+							noedu_f*FE_NOEDU + noedu_m*MA_NOEDU +
+							sexp_f*FE_SEXP1YR_G1 + sexp_m*MA_SEXP1YR_G1 +
+							circum_m*MA_CIRCUM +	
+							prevratio_fm * RFM_ABOVE_MEAN +
+							# agro occupation is baseline
+							mocc_other*MA_OC_OTH + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD +										
+							focc_other*FE_OC_OTH + focc_bar*FE_OC_BAR +  focc_trad*FE_OC_TRAD,
+					base ~ dnorm(0,100),								
+					c(comm_agr, comm_trad, comm_mxd) ~ dnorm(0,10),
+					c(noedu_f, noedu_m) ~ dnorm(0,10),								
+					c(sexp_f, sexp_m, circum_m, prevratio_fm) ~ dnorm(0,10),					
+					c(mocc_other, mocc_fish, mocc_trad) ~ dnorm(0,10),
+					c(focc_other, focc_bar, focc_trad) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, comm_agr=0, comm_trad=0, comm_mxd=0, noedu_f=0, noedu_m=0, sexp_f=0, sexp_m=0, circum_m=0,						
+					prevratio_fm=0, focc_other=0, focc_bar=0, focc_trad=0, mocc_other=0, mocc_fish=0, mocc_trad=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+	)		
+	#plot(precis(ms.2, prob=0.95))
+	#pairs(ms.2)
+	post	<- extract.samples(ms.2)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_COMM_FISH=logistic( post$base ),				
+			PI_COMM_AGRO=logistic( post$base+post$comm_agr ), 											
+			PI_COMM_TRAD=logistic( post$base+post$comm_trad ),							
+			PI_COMM_MXD=logistic( post$base+post$comm_mxd ),
+			PI_FEDU_NONE=logistic( post$base+post$noedu_f ),
+			PI_MEDU_NONE=logistic( post$base+post$noedu_m ),							
+			PI_FESEXP1YR_G1=logistic( post$base+post$sexp_f ),
+			PI_MASEXP1YR_G1=logistic( post$base+post$sexp_m ),							
+			PI_CIRC_YES=logistic( post$base+post$circum_m ),							
+			PI_MOCC_OTH=logistic( post$base+post$mocc_other ),
+			PI_MOCC_FISH=logistic( post$base+post$mocc_fish ),
+			PI_MOCC_TRAD=logistic( post$base+post$mocc_trad ),
+			PI_FOCC_OTH=logistic( post$base+post$focc_other ),
+			PI_FOCC_BAR=logistic( post$base+post$focc_bar ),
+			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),	
+			PI_PREV_FMRATIO=logistic( post$base+post$prevratio_fm ),
+			OR_COMM_FISH=exp( post$base ),				
+			OR_COMM_AGRO=exp( post$base+post$comm_agr ), 											
+			OR_COMM_TRAD=exp( post$base+post$comm_trad ),							
+			OR_COMM_MXD=exp( post$base+post$comm_mxd ),
+			OR_FEDU_NONE=exp( post$base+post$noedu_f ),
+			OR_MEDU_NONE=exp( post$base+post$noedu_m ),							
+			OR_FESEXP1YR_G1=exp( post$base+post$sexp_f ),
+			OR_MASEXP1YR_G1=exp( post$base+post$sexp_m ),
+			OR_CIRC_YES=exp( post$base+post$circum_m ),							
+			OR_MOCC_OTH=exp( post$base+post$mocc_other ),
+			OR_MOCC_FISH=exp( post$base+post$mocc_fish ),
+			OR_MOCC_TRAD=exp( post$base+post$mocc_trad ),
+			OR_FOCC_OTH=exp( post$base+post$focc_other ),
+			OR_FOCC_BAR=exp( post$base+post$focc_bar ),
+			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),	
+			OR_PREV_FMRATIO=exp( post$base+post$prevratio_fm ),
+			ORX_COMM_AGRO=exp( post$comm_agr ), 											
+			ORX_COMM_TRAD=exp( post$comm_trad ),							
+			ORX_COMM_MXD=exp( post$comm_mxd ),
+			ORX_FEDU_NONE=exp( post$noedu_f ),
+			ORX_MEDU_NONE=exp( post$noedu_m ),
+			ORX_FESEXP1YR_G1=exp( post$sexp_f ),
+			ORX_MASEXP1YR_G1=exp( post$sexp_m ),							
+			ORX_CIRC_YES=exp( post$circum_m ),							
+			ORX_MOCC_OTH=exp( post$mocc_other ),
+			ORX_MOCC_FISH=exp( post$mocc_fish ),
+			ORX_MOCC_TRAD=exp( post$mocc_trad ),
+			ORX_FOCC_OTH=exp( post$focc_other ),
+			ORX_FOCC_BAR=exp( post$focc_bar ),
+			ORX_FOCC_TRAD=exp( post$focc_trad ),
+			ORX_PREV_FMRATIO=exp( post$prevratio_fm )
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	dss.2	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	dss.2	<- dcast.data.table(dss.2, variable~STAT, value.var='V')
+	dss.2[, MODEL:= 'multivariate ms2']
+	ds		<- copy(dss.2)
+	ds[, LABEL:= paste0(round(MED, d=2), '\n[', round(CL, d=2),'-', round( CU, d=2),']')]
+	ds[, STAT:= factor(gsub('^([^_]+)_.*','\\1',variable), levels=c('PI','OR','ORX'), labels=c('proportion MF','odds MF','odds ratio'))]
+	ds[, FACTOR:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\3',variable)]
+	ds[, MOFA:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\2-\\3',variable)]
+	ds[, MODELTYPE:= factor(grepl('univariate',MODEL), levels=c(TRUE,FALSE),labels=c('univariate','multivariate'))]	
+	ds		<- subset(ds, STAT=='odds ratio')
+	set(ds, NULL, 'MOFA2', ds[, factor(MOFA, levels=rev(c(
+											"PREV-FMRATIO",
+											"COMM-AGRO","COMM-TRAD","COMM-MXD",																						
+											"FEDU-NONE", "MEDU-NONE",      
+											"FESEXP1YR-G1","MASEXP1YR-G1", 
+											"CIRC-YES",                   
+											"FOCC-BAR","FOCC-TRAD","FOCC-OTH",
+											"MOCC-FISH","MOCC-OTH","MOCC-TRAD"   
+									)), labels=rev(c("female-to-male prevalence ratio above average vs. below average",
+											"Agrarian community vs. fishing community", "Trading community vs. fishing community", "Mixed vs. fishing community",
+											"Female education: None vs. at least primary education", "Male education: None vs. at least primary education",
+											"Female sex partners in last year: >1 vs. 1", "Male sex partners in last year: >1 vs. 1",
+											"Male circumcised: yes vs. no",
+											"Female occupation: bar/waitress vs. agricultural/house", "Female occupation: trading/shopkeeper vs. agricultural/house","Female occupation: other vs. agricultural/house", 
+											"Male occupation: fishing vs. agricultural/house", "Male occupation: other vs. agricultural/house", "Male occupation: trading/shopkeeper vs. agricultural/house"
+									)))])
+	setkey(ds, MOFA)	
+	dp		<- subset(ds, !MOFA%in%c('COMM-TRAD','COMM-MXD'))
+	dp[, FILL:= '0']
+	set(dp, dp[, which(IL>1 | IU<1)], 'FILL', '1')
+	set(dp, dp[, which(CL>1 | CU<1)], 'FILL', '2')
+	ggplot(dp, aes(x=MOFA2)) +
+			geom_hline(yintercept=1, colour='grey50', lwd=1) +
+			geom_boxplot(aes(middle=MED, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=FILL), stat='identity') +
+			theme_bw() +
+			scale_y_continuous(trans='log', breaks=c(1/20, 1/10, 1/6, 1/3,1/2,1,2,3, 6,10,20), labels=c('1/20','1/10','1/6','1/3','1/2','1','2','3','6','10', '20'), expand=c(0,0)) +
+			scale_fill_manual(values=c('0'='white', '1'='orange', '2'='red')) +
+			coord_flip(ylim=c(1/20,20)) +
+			guides(fill=FALSE) +
+			labs(x='Partner characteristics\n', y='\nOdds ratio of male-to-female transmission\nbetween partner characteristics')
+	ggsave(file=paste0(outfile.base,'_propmf_factors_univariate_diffhh.pdf'), w=8, h=3.5)		
+}
+
+RakaiFull.gender.171122.couples.multivariateadditivemodels.stan.with.threshold<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	load(infile)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	
+	#rtpdm[, table(PAIR_COMM_TYPE)]
+	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
+	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
+	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
+	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(MALE_SEXP1OUT=='Unknown')], 'MALE_SEXP1OUT2', 'Unknown')
+	rtpdm[, FEMALE_SEXP1OUT2:= factor(FEMALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
+	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
+	
+	
+	df		<- subset(rtpdm, select=c(	MALE_RID, FEMALE_RID, PTY_RUN, IDCLU, LINK_MF, POSTERIOR_SCORE_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE,FEMALE_COMM_NUM, 
+					MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCCUP_OLLI, MALE_OCAT, MALE_EDUCAT, MALE_CIRCUM,
+					FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCCUP_OLLI, FEMALE_OCAT, FEMALE_EDUCAT 
+			))
+	#	missing data: fill in
+	set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)
+	set(df, df[, which(is.na(FEMALE_RECENTVL))], 'FEMALE_RECENTVL', -1)
+	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
+	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+	set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
+	#	prepare data for STAN
+	
+	#	add estimated HIV prevalences (medians)
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
+	load(infile)
+	tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
+	setnames(tmp, 'COMM_NUM', 'FEMALE_COMM_NUM')
+	df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
+	
+	df[, COUPLE3:= as.integer(COUPLE2=='couple')]
+	df[, SAMEHH3:= as.integer(SAMEHH=='same hh')]	
+	df[, COMM_FISH:= as.integer(PAIR_COMM_TYPE=='fisherfolk')]
+	df[, COMM_AGR:= as.integer(PAIR_COMM_TYPE=='agrarian')]
+	df[, COMM_TRAD:= as.integer(PAIR_COMM_TYPE=='trading')]
+	df[, COMM_MXD:= as.integer(PAIR_COMM_TYPE=='mixed')]
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]
+	df[, FE_NOEDU_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	df[, MA_NOEDU_MISS:= as.integer(MALE_EDUCAT=='Unknown')]	
+	df[, MA_CIRCUM:= as.integer(MALE_CIRCUM=='Y')]
+	df[, MA_CIRCUM_MISS:= as.integer(FEMALE_EDUCAT=='Unknown')]
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	df[, MA_OC_AGRO:= as.integer(MALE_OCAT=='Agro/House')]	
+	df[, MA_OC_FISH:= as.integer(MALE_OCAT=='Fishing')]
+	df[, MA_OC_TRAD:= as.integer(MALE_OCAT=='Trading/Shop keeper')]
+	df[, MA_OC_OTH:= as.integer(MALE_OCAT%in%c('zother','Bar/waitress','Student','Boda/Trucking'))]	
+	df[, FE_OC_AGRO:= as.integer(FEMALE_OCAT=='Agro/House')]
+	df[, FE_OC_BAR:= as.integer(FEMALE_OCAT=='Bar/waitress')]			
+	df[, FE_OC_TRAD:= as.integer(FEMALE_OCAT=='Trading/Shop keeper')]
+	df[, FE_OC_OTH:= as.integer(FEMALE_OCAT%in%c('zother','Student'))]		
+	df[, PF2:= PF-mean(PF)]
+	df[, PM2:= PM-mean(PM)]
+	df[, RFM2:= RFM-mean(RFM)]
+	df[, RFM_ABOVE_MEAN:=  as.integer( RFM>=subset(dgg, variable=='RFM')[, mean(M)] ) ]
+	#
+	#	STAN
+	#
+	mm.2 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + couple_b*COUPLE3 + samehh_b*SAMEHH3 +
+							# comm_fish*COMM_FISH +	this is base 
+							comm_agr*COMM_AGR + comm_trad*COMM_TRAD + comm_mxd*COMM_MXD +
+							noedu_f*FE_NOEDU + noedu_m*MA_NOEDU +
+							sexp_f*FE_SEXP1YR_G1 + sexp_m*MA_SEXP1YR_G1 +
+							circum_m*MA_CIRCUM +
+							prevratio_fm * RFM_ABOVE_MEAN +
+							# other occupation is baseline
+							mocc_agro*MA_OC_AGRO + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD +										
+							focc_agro*FE_OC_AGRO + focc_bar*FE_OC_BAR +  focc_trad*FE_OC_TRAD,
+					base ~ dnorm(0,100),
+					c(couple_b, samehh_b) ~ dnorm(0,10),
+					c(comm_agr, comm_trad, comm_mxd) ~ dnorm(0,10),
+					c(noedu_f, noedu_m) ~ dnorm(0,10),								
+					c(sexp_f, sexp_m, circum_m) ~ dnorm(0,10),
+					c(prevratio_fm) ~ dnorm(0,10),
+					c(mocc_agro, mocc_fish, mocc_trad) ~ dnorm(0,10),
+					c(focc_agro, focc_bar, focc_trad) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, couple_b=0, samehh_b=0, comm_agr=0, comm_trad=0, comm_mxd=0, noedu_f=0, noedu_m=0, sexp_f=0, sexp_m=0, circum_m=0,
+					prevratio_fm=0,
+					focc_agro=0, focc_bar=0, focc_trad=0,
+					mocc_agro=0, mocc_fish=0, mocc_trad=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+		)
+	
+	#plot(precis(mm.2, prob=0.95))
+	#pairs(mm.2)
+	post	<- extract.samples(mm.2)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_COMM_FISH=logistic( post$base ),				
+			PI_COMM_AGRO=logistic( post$base+post$comm_agr ), 											
+			PI_COMM_TRAD=logistic( post$base+post$comm_trad ),							
+			PI_COMM_MXD=logistic( post$base+post$comm_mxd ),
+			PI_COUPLE_YES=logistic( post$base+post$couple_b ),
+			PI_SAMEHH_YES=logistic( post$base+post$samehh_b ),
+			PI_FEDU_NONE=logistic( post$base+post$noedu_f ),
+			PI_MEDU_NONE=logistic( post$base+post$noedu_m ),							
+			PI_FESEXP1YR_G1=logistic( post$base+post$sexp_f ),
+			PI_MASEXP1YR_G1=logistic( post$base+post$sexp_m ),							
+			PI_CIRC_YES=logistic( post$base+post$circum_m ),							
+			PI_MOCC_AGRO=logistic( post$base+post$mocc_agro ),
+			PI_MOCC_FISH=logistic( post$base+post$mocc_fish ),
+			PI_MOCC_TRAD=logistic( post$base+post$mocc_trad ),
+			PI_FOCC_AGRO=logistic( post$base+post$focc_agro ),
+			PI_FOCC_BAR=logistic( post$base+post$focc_bar ),
+			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),
+			PI_PREVFMRATIO_ABOVE=logistic( post$base+post$prevratio_fm ),
+			PI_PREVFMRATIO_BELOW=logistic( post$base ),
+			OR_COMM_FISH=exp( post$base ),				
+			OR_COMM_AGRO=exp( post$base+post$comm_agr ), 											
+			OR_COMM_TRAD=exp( post$base+post$comm_trad ),							
+			OR_COMM_MXD=exp( post$base+post$comm_mxd ),
+			OR_COUPLE_YES=exp( post$base+post$couple_b ),
+			OR_SAMEHH_YES=exp( post$base+post$samehh_b ),
+			OR_FEDU_NONE=exp( post$base+post$noedu_f ),
+			OR_MEDU_NONE=exp( post$base+post$noedu_m ),							
+			OR_FESEXP1YR_G1=exp( post$base+post$sexp_f ),
+			OR_MASEXP1YR_G1=exp( post$base+post$sexp_m ),
+			OR_CIRC_YES=exp( post$base+post$circum_m ),							
+			OR_MOCC_AGRO=exp( post$base+post$mocc_agro ),
+			OR_MOCC_FISH=exp( post$base+post$mocc_fish ),
+			OR_MOCC_TRAD=exp( post$base+post$mocc_trad ),
+			OR_FOCC_AGRO=exp( post$base+post$focc_agro ),
+			OR_FOCC_BAR=exp( post$base+post$focc_bar ),
+			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),
+			OR_PREVFMRATIO_ABOVE=exp( post$base+post$prevratio_fm ),
+			OR_PREVFMRATIO_BELOW=exp( post$base ),
+			ORX_COMM_AGRO=exp( post$comm_agr ), 											
+			ORX_COMM_TRAD=exp( post$comm_trad ),							
+			ORX_COMM_MXD=exp( post$comm_mxd ),
+			ORX_COUPLE_YES=exp( post$couple_b ),
+			ORX_SAMEHH_YES=exp( post$samehh_b ),
+			ORX_FEDU_NONE=exp( post$noedu_f ),
+			ORX_MEDU_NONE=exp( post$noedu_m ),
+			ORX_FESEXP1YR_G1=exp( post$sexp_f ),
+			ORX_MASEXP1YR_G1=exp( post$sexp_m ),							
+			ORX_CIRC_YES=exp( post$circum_m ),							
+			ORX_MOCC_AGRO=exp( post$mocc_agro ),
+			ORX_MOCC_FISH=exp( post$mocc_fish ),
+			ORX_MOCC_TRAD=exp( post$mocc_trad ),
+			ORX_FOCC_AGRO=exp( post$focc_agro ),
+			ORX_FOCC_BAR=exp( post$focc_bar ),
+			ORX_FOCC_TRAD=exp( post$focc_trad ),
+			ORX_PREVFMRATIO_ABOVE=exp( post$prevratio_fm )
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.2	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.2	<- dcast.data.table(ds.2, variable~STAT, value.var='V')
+	ds.2[, MODEL:= 'multivariate mm2']	
+	#
+	#	univariate couples
+	#
+	mu.1 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + couple_b*COUPLE3,
+					base ~ dnorm(0,100),
+					couple_b ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, couple_b=0),			
+			warmup=500, iter=2e3, chains=1, cores=4
+	)				
+	post	<- extract.samples(mu.1)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_COUPLE_NO=logistic( post$base ),
+			PI_COUPLE_YES=logistic( post$base+post$couple_b ),
+			OR_COUPLE_NO=exp( post$base ),
+			OR_COUPLE_YES=exp( post$base+post$couple_b ),
+			ORX_COUPLE_YES=exp( post$couple_b )							
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.1	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.1	<- dcast.data.table(ds.1, variable~STAT, value.var='V')
+	ds.1[, MODEL:= 'univariate couples']	
+	#
+	#	univariate household
+	#
+	mu.3 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + samehh_b*SAMEHH3,
+					base ~ dnorm(0,100),
+					samehh_b ~ dnorm(0,10)					
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, samehh_b=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.3)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_SAMEHH_NO=logistic( post$base ),
+			PI_SAMEHH_YES=logistic( post$base+post$samehh_b ),
+			OR_SAMEHH_NO=exp( post$base ),
+			OR_SAMEHH_YES=exp( post$base+post$samehh_b ),
+			ORX_SAMEHH_YES=exp( post$samehh_b )														
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.3	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.3	<- dcast.data.table(ds.3, variable~STAT, value.var='V')
+	ds.3[, MODEL:= 'univariate same household']	
+	#
+	#	univariate community type
+	#
+	mu.4 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + comm_agr*COMM_AGR + comm_trad*COMM_TRAD + comm_mxd*COMM_MXD,
+					base ~ dnorm(0,100),							
+					c(comm_agr, comm_trad, comm_mxd) ~ dnorm(0,10)							
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, comm_agr=0, comm_trad=0, comm_mxd=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.4)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_COMM_FISH=logistic( post$base ),				
+			PI_COMM_AGRO=logistic( post$base+post$comm_agr ), 											
+			PI_COMM_TRAD=logistic( post$base+post$comm_trad ),							
+			PI_COMM_MXD=logistic( post$base+post$comm_mxd ),
+			OR_COMM_FISH=exp( post$base ),				
+			OR_COMM_AGRO=exp( post$base+post$comm_agr ), 											
+			OR_COMM_TRAD=exp( post$base+post$comm_trad ),							
+			OR_COMM_MXD=exp( post$base+post$comm_mxd ),				
+			ORX_COMM_AGRO=exp( post$comm_agr ), 											
+			ORX_COMM_TRAD=exp( post$comm_trad ),							
+			ORX_COMM_MXD=exp( post$comm_mxd )							
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.4	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.4	<- dcast.data.table(ds.4, variable~STAT, value.var='V')
+	ds.4[, MODEL:= 'univariate commtype']	
+	#
+	#	univariate female education
+	#
+	mu.5 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + noedu_f*FE_NOEDU,
+					base ~ dnorm(0,100),
+					noedu_f ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, noedu_f=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.5)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_FEDU_YES=logistic( post$base ),
+			PI_FEDU_NONE=logistic( post$base+post$noedu_f ),
+			OR_FEDU_YES=exp( post$base ),
+			OR_FEDU_NONE=exp( post$base+post$noedu_f ),
+			ORX_FEDU_NONE=exp( post$noedu_f)	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.5	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.5	<- dcast.data.table(ds.5, variable~STAT, value.var='V')
+	ds.5[, MODEL:= 'univariate female education']	
+	#
+	#	univariate male education
+	#
+	mu.6 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + noedu_m*MA_NOEDU,
+					base ~ dnorm(0,100),
+					noedu_m ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, noedu_m=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.6)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_MEDU_YES=logistic( post$base ),
+			PI_MEDU_NONE=logistic( post$base+post$noedu_m ),
+			OR_MEDU_YES=exp( post$base ),
+			OR_MEDU_NONE=exp( post$base+post$noedu_m ),
+			ORX_MEDU_NONE=exp( post$noedu_m)	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.6	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.6	<- dcast.data.table(ds.6, variable~STAT, value.var='V')
+	ds.6[, MODEL:= 'univariate male education']	
+	#
+	#	univariate female sex partners
+	#
+	mu.7 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + sexp_f*FE_SEXP1YR_G1 ,
+					base ~ dnorm(0,100),
+					sexp_f ~ dnorm(0,10)					
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, sexp_f=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.7)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_FESEXP1YR_ONE=logistic( post$base ),
+			PI_FESEXP1YR_G1=logistic( post$base+post$sexp_f ),
+			OR_FESEXP1YR_ONE=exp( post$base ),
+			OR_FESEXP1YR_G1=exp( post$base+post$sexp_f ),
+			ORX_FESEXP1YR_G1=exp( post$sexp_f )	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.7	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.7	<- dcast.data.table(ds.7, variable~STAT, value.var='V')
+	ds.7[, MODEL:= 'univariate female sex partners']	
+	#
+	#	univariate male sex partners
+	#
+	mu.8 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + sexp_m*MA_SEXP1YR_G1 ,
+					base ~ dnorm(0,100),
+					sexp_m ~ dnorm(0,10)					
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, sexp_m=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.8)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_MASEXP1YR_ONE=logistic( post$base ),
+			PI_MASEXP1YR_G1=logistic( post$base+post$sexp_m ),
+			OR_MASEXP1YR_ONE=exp( post$base ),
+			OR_MASEXP1YR_G1=exp( post$base+post$sexp_m ),
+			ORX_MASEXP1YR_G1=exp( post$sexp_m )	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.8	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.8	<- dcast.data.table(ds.8, variable~STAT, value.var='V')
+	ds.8[, MODEL:= 'univariate male sex partners']	
+	#
+	#	univariate circumcision
+	#
+	mu.9 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + circum_m*MA_CIRCUM,
+					base ~ dnorm(0,100),
+					circum_m ~ dnorm(0,10)					
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, circum_m=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.9)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_CIRC_NO=logistic( post$base ),
+			PI_CIRC_YES=logistic( post$base+post$circum_m ),							
+			OR_CIRC_NO=exp( post$base ),
+			OR_CIRC_YES=exp( post$base+post$circum_m ),							
+			ORX_CIRC_YES=exp( post$circum_m )
+	)
+	dp		<- melt(dp, id.vars='MC')	
+	ds.9	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.9	<- dcast.data.table(ds.9, variable~STAT, value.var='V')
+	ds.9[, MODEL:= 'univariate circumcision']	
+	#
+	#	univariate male occupation
+	#
+	mu.10 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + mocc_agro*MA_OC_AGRO + mocc_fish*MA_OC_FISH + mocc_trad*MA_OC_TRAD,
+					base ~ dnorm(0,100),
+					c(mocc_agro, mocc_fish, mocc_trad) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, mocc_agro=0, mocc_fish=0, mocc_trad=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mu.10)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_MOCC_OTH=logistic( post$base ),
+			PI_MOCC_AGRO=logistic( post$base+post$mocc_agro ),
+			PI_MOCC_FISH=logistic( post$base+post$mocc_fish ),
+			PI_MOCC_TRAD=logistic( post$base+post$mocc_trad ),
+			OR_MOCC_OTH=exp( post$base ),
+			OR_MOCC_AGRO=exp( post$base+post$mocc_agro ),
+			OR_MOCC_FISH=exp( post$base+post$mocc_fish ),
+			OR_MOCC_TRAD=exp( post$base+post$mocc_trad ),
+			ORX_MOCC_AGRO=exp( post$mocc_agro ),
+			ORX_MOCC_FISH=exp( post$mocc_fish ),
+			ORX_MOCC_TRAD=exp( post$mocc_trad )	)									
+	dp		<- melt(dp, id.vars='MC')	
+	ds.10	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.10	<- dcast.data.table(ds.10, variable~STAT, value.var='V')
+	ds.10[, MODEL:= 'univariate male occup']	
+	#
+	#	univariate female occupation
+	#
+	mu.11 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + focc_agro*FE_OC_AGRO + focc_bar*FE_OC_BAR + focc_trad*FE_OC_TRAD,
+					base ~ dnorm(0,100),
+					c(focc_agro, focc_bar, focc_trad) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, focc_agro=0, focc_bar=0, focc_trad=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+		)	
+	post	<- extract.samples(mu.11)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_FOCC_OTH=logistic( post$base ),
+			PI_FOCC_AGRO=logistic( post$base+post$focc_agro ),
+			PI_FOCC_BAR=logistic( post$base+post$focc_bar ),
+			PI_FOCC_TRAD=logistic( post$base+post$focc_trad ),
+			OR_FOCC_OTH=exp( post$base ),
+			OR_FOCC_AGRO=exp( post$base+post$focc_agro ),
+			OR_FOCC_BAR=exp( post$base+post$focc_bar ),
+			OR_FOCC_TRAD=exp( post$base+post$focc_trad ),
+			ORX_FOCC_AGRO=exp( post$focc_agro ),
+			ORX_FOCC_BAR=exp( post$focc_bar ),
+			ORX_FOCC_TRAD=exp( post$focc_trad )	)									
+	dp		<- melt(dp, id.vars='MC')	
+	ds.11	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.11	<- dcast.data.table(ds.11, variable~STAT, value.var='V')
+	ds.11[, MODEL:= 'univariate female occup']	
+	#
+	#	univariate female to male ratio
+	#
+	mu.12 <- map2stan(
+			alist(
+					LINK_MF ~ dbinom(1, pmf),
+					logit(pmf) <- base + prevratio_fm * RFM_ABOVE_MEAN, 
+					base ~ dnorm(0,100),
+					c(prevratio_fm) ~ dnorm(0,10)
+			),
+			data=as.data.frame(df), 
+			start=list(	base=0, prevratio_fm=0),			
+			warmup=1e3, iter=5e3, chains=1, cores=4
+		)
+	post	<- extract.samples(mu.12)
+	dp		<- data.table(	MC= seq_along(post$base),
+			PI_PREVFMRATIO_ABOVE=logistic( post$base+post$prevratio_fm ),
+			PI_PREVFMRATIO_BELOW=logistic( post$base ),
+			OR_PREVFMRATIO_ABOVE=exp( post$base+post$prevratio_fm ),
+			OR_PREVFMRATIO_BELOW=exp( post$base ),
+			ORX_PREVFMRATIO_ABOVE=exp( post$prevratio_fm )
+			)									
+	dp		<- melt(dp, id.vars='MC')	
+	ds.12	<- dp[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), by='variable']
+	ds.12	<- dcast.data.table(ds.12, variable~STAT, value.var='V')
+	ds.12[, MODEL:= 'univariate fm prev ratio']	
+	
+	#	
+	#	collect results
+	ds		<- rbind(ds.1,ds.2,ds.3,ds.4,ds.5,ds.6,ds.7,ds.8,ds.9,ds.10,ds.11,ds.12)
+	ds[, LABEL:= paste0(round(MED, d=2), ' [', round(CL, d=2),'-', round( CU, d=2),']')]
+	ds[, STAT:= factor(gsub('^([^_]+)_.*','\\1',variable), levels=c('PI','OR','ORX'), labels=c('proportion MF','odds MF','odds ratio'))]
+	ds[, FACTOR:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\3',variable)]
+	ds[, MOFA:=gsub('^([^_]+)_([^_]+)_([^_]+)','\\2-\\3',variable)]
+	ds[, MODELTYPE:= factor(grepl('univariate',MODEL), levels=c(TRUE,FALSE),labels=c('univariate','multivariate'))]
+	#
+	save(ds, file=paste0(outfile.base,'_propmf_factors_univariate.rda'))	
+	# 
+	ds		<- dcast.data.table(ds, FACTOR+MOFA~MODELTYPE+STAT, value.var='LABEL')	
+	set(ds, NULL, 'MOFA', ds[, factor(MOFA, levels=c(
+									"PREVFMRATIO-BELOW","PREVFMRATIO-ABOVE",
+									"COMM-FISH","COMM-AGRO","COMM-TRAD","COMM-MXD",
+									"COUPLE-NO","COUPLE-YES",
+									"SAMEHH-NO","SAMEHH-YES",
+									"FEDU-YES","FEDU-NONE",
+									"MEDU-YES","MEDU-NONE",      
+									"FESEXP1YR-ONE","FESEXP1YR-G1",  
+									"MASEXP1YR-ONE","MASEXP1YR-G1", 
+									"CIRC-NO","CIRC-YES",                   
+									"FOCC-OTH","FOCC-AGRO","FOCC-BAR","FOCC-TRAD",
+									"MOCC-OTH","MOCC-AGRO","MOCC-FISH","MOCC-TRAD"   
+							))])
+	setkey(ds, MOFA)	
+	for(x in c('univariate_odds ratio','multivariate_proportion MF','multivariate_odds MF','multivariate_odds ratio'))
+		set(ds, which(is.na(ds[[x]])), x, '-')
+	write.csv(ds, row.names=FALSE, file=paste0(outfile.base,'_propmf_factors_univariate_withprevration.csv'))
+}
+
+RakaiFull.gender.171122.couples.multivariateadditivemodels.nocouplesinmodel.stan.with.threshold<- function()
 {
 	require(data.table)
 	require(scales)
@@ -986,7 +2046,7 @@ RakaiFull.gender.171122.couplesmultivariateadditivemodels.stan.with.threshold<- 
 	write.csv(ds, row.names=FALSE, file=paste0(outfile.base,'_propmf_factors_univariate.csv'))
 }
 
-RakaiFull.gender.171122.couplesinteractionmodels.stan.with.threshold<- function()
+RakaiFull.gender.171122.couples.interactionmodels.stan.with.threshold<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2191,6 +3251,9 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 	tmp[, list(sum(TRM)), by='CO_RFM_GR']
 	dgg	<- merge(dgg, subset(tmp, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR)), by='COMM_NUM')
 	
+	#	save
+	save(dgg, file=paste0(outfile.base,'trmMF_estimated_prevalenceratio.rda'))
+	
 	#	calculate TRM by group
 	tmp2<- subset(tmp, select=c(COMM_NUM, CO_PF_GR, CO_PM_GR, CO_RFM_GR))
 	rtpdm[, COMM_NUM:=FEMALE_COMM_NUM]
@@ -2296,20 +3359,24 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 	#negative,  but not significant
 	post	<- extract.samples(mpr.2)
 	dummy	<- function(z) quantile(logistic(with(post, atm+btm*z)), prob=c(0.5, 0.025, 0.975))
-	tmp		<- data.table(FM_PREV_RATIO=seq(1.01,2.5,0.01))
+	tmp		<- data.table(FM_PREV_RATIO=seq(0.5,3.5,0.01))
 	tmp		<- tmp[, {
 				z<- dummy(log(FM_PREV_RATIO))
 				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
-			}, by='FM_PREV_RATIO']
+			}, by='FM_PREV_RATIO']	
+	tmp2	<- dg2[, list(MF_TRM_RAW=mean(MF_TRM/TRM), FM_PREV_RATIO_RAW=mean( (FEMALE_POS/FEMALE)/(MALE_POS/MALE) ) ), by='COMM_NUM']
+	
 	ggplot(subset(dh, variable=='CO_RFM_GR')) +
 			geom_ribbon(data=tmp, aes(x=FM_PREV_RATIO, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
 			geom_line(data=tmp, aes(x=FM_PREV_RATIO, y=EST_MF_TRM_M), colour='grey50', size=1) +			
 			geom_point(aes(x=M, y=MF_MED, colour=value), size=2) +
-			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=value), width=0.03, size=0.9) +
-			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=value), height=0.05, size=0.9) +
-			scale_colour_brewer(palette='Set2') +			
+			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=value), width=0.1, size=0.9) +
+			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=value), height=0.03, size=0.9) +
+			geom_point(data=tmp2, aes(x=FM_PREV_RATIO_RAW, y=MF_TRM_RAW), colour='black', size=2, pch=17, alpha=1) +
+			scale_colour_hue(h = c(-120, 60)) +
+			coord_cartesian( xlim=c(0.95,3.3), ylim=c(-0.01,1.01) ) +
 			theme_bw() +
-			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1)) +
+			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1), expand=c(0,0)) +
 			labs(	x='\nfemale-to-male prevalence ratio', 
 					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
 					colour='community group')
@@ -2531,28 +3598,33 @@ RakaiFull.gender.171122.propfemalepos.communities.merged.into.groups.noexports<-
 
 	post	<- extract.samples(mfp.2)
 	dummy	<- function(z) quantile(logistic(with(post, atm+btm*z)), prob=c(0.5, 0.025, 0.975))
-	tmp		<- data.table(FEMALE_PROP=seq(0.5,0.85,0.005))
+	tmp		<- data.table(FEMALE_PROP=seq(0.4,0.9,0.005))
 	tmp		<- tmp[, {
 				z<- dummy(logit(FEMALE_PROP))
 				list('EST_MF_TRM_M'=z[1], 'EST_MF_TRM_CL'=z[2], 'EST_MF_TRM_CU'=z[3])
 			}, by='FEMALE_PROP']
+	tmp2	<- dg[, list(MF_TRM_RAW=mean(MF_TRM/TRM), F_PROP_RAW=mean( FEMALE_POS/POS ) ), by='COMM_NUM']
 	ggplot(dh) +
 			geom_ribbon(data=tmp, aes(x=FEMALE_PROP, ymin=EST_MF_TRM_CL, ymax=EST_MF_TRM_CU), fill='black', alpha=0.25) +
 			geom_line(data=tmp, aes(x=FEMALE_PROP, y=EST_MF_TRM_M), colour='grey50', size=1) +			
 			geom_point(aes(x=M, y=MF_MED, colour=FEMALE_POS_C), size=2) +
 			geom_errorbar(aes(x=M, ymin=MF_CL, ymax=MF_CU, colour=FEMALE_POS_C), width=0.03, size=0.9) +
 			geom_errorbarh(aes(x=M, y=MF_MED, xmin=CL, xmax=CU, colour=FEMALE_POS_C), height=0.05, size=0.9) +
-			scale_colour_brewer(palette='Set2') +			
+			geom_point(data=tmp2, aes(x=F_PROP_RAW, y=MF_TRM_RAW), colour='black', size=2, pch=17, alpha=1) +
+			#scale_colour_brewer(palette='Set2') +
+			scale_colour_hue(h = c(-120, 60)) +
+			coord_cartesian( xlim=c(0.48,0.85), ylim=c(0.3,1.01) ) +
 			theme_bw() +
 			scale_y_continuous(labels=scales:::percent, breaks=seq(0,1,0.1)) +
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0,1,0.1), expand=c(0,0)) +
 			labs(	x='\nproportion of females among seropositives', 
 					y='probability that male is transmitter\namong phylogenetically inferred transmission events\n',
 					colour='community group')
-	ggsave(file=paste0(outfile.base,'_trmMF_vs_diagFM_by_commgroup2.pdf'), w=6, h=4.5)		
+	ggsave(file=paste0(outfile.base,'_trmMF_vs_diagFM_by_commgroup2.pdf'), w=6, h=4.5)	
 }
 
 
-RakaiFull.gender.171122.couplesbasicmodel.stan.without.threshold<- function()
+RakaiFull.gender.171122.couples.basicmodel.stan.without.threshold<- function()
 {
 	require(data.table)
 	require(scales)
