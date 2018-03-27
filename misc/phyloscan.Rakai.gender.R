@@ -3179,7 +3179,7 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 				by='COMM_NUM2']
 	tmp		<- melt(tmp, id.vars=c('COMM_NUM2','STAT'))	
 	tmp		<- dcast.data.table(tmp, variable+COMM_NUM2~STAT, value.var='value')
-	dgg		<- merge(dgg, tmp, by='COMM_NUM2')
+	dgg		<- merge(dgg, tmp, by='COMM_NUM2')	
 	ggplot(subset(dgg, variable!='RFM'), aes(x=COMM_NUM)) +
 			geom_boxplot(aes(middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=variable), stat='identity') +
 			theme_bw() + 
@@ -3208,21 +3208,34 @@ RakaiFull.gender.171122.prevalanceratio.communities.merged.into.groups<- functio
 			scale_y_continuous(labels=scales:::percent) +
 			labs(x='\ncommunity', y='HIV prevalence\nvisits 15, 15.1, 16\n', fill='gender')
 	ggsave(file=paste0(outfile.base,'_trmMF_estimatedprevalence_orderedbyFMratio.pdf'), w=12, h=6)
-	
+	save(dgg, file=paste0(outfile.base,'_trmMF_estimatedFMprevalence.rda'))
 	#
-	#	plot FM ratio on map
+	#	plot on map
 	#	
 	require(ggmap)
-	zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")	
-	#
+	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
+	style	<- "feature:road|color:0x17202A&style=feature:water|color:0x677996&style=feature:landscape.natural|color:0xedecda&style=feature:administrative|visibility=off"
+	zm		<- get_googlemap(c(lon=31.65, lat=-0.66), scale=2, size=c(550,550), zoom=10, maptype="road", style=style)
 	#	plot number of observed recipients and observed transmitters
 	ggmap(zm) +
 			geom_point(data=subset(dgg, variable=='RFM'), aes(x=longitude, y=latitude, pch=COMM_TYPE, colour=M), size=7) +
 			geom_text(data=subset(dgg, variable=='RFM'), aes(x=longitude, y=latitude, label=COMM_NUM), nudge_x=0, nudge_y=0, size=3, colour='black') + 
 			scale_colour_gradient2(trans='log', breaks=c(1,1.25,1.5,2,2.5,3), low="deepskyblue", mid="orange", high='red', midpoint=log(2.2)) +
 			labs(x='\nlongitude',y='latitude\n',colour='female to male\nprevalence ratio', pch='community\ntype')
-	ggsave(file=paste0(outfile.base,'trmMF_prevalenceratio_on_map.pdf'), w=7, h=7)
-		
+	ggsave(file=paste0(outfile.base,'trmMF_prevalenceratio_on_map.pdf'), w=7, h=7)	
+	ggmap(zm) +
+			geom_point(data=subset(dgg, variable=='PF'), aes(x=longitude, y=latitude, pch=factor(COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE),labels=c('fishing\nsite','inland\ncommunity')), colour=M), size=9) +
+			scale_colour_gradient2(breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6), lim=c(0.04,0.56), labels=scales:::percent, low="cyan", mid='darkorchid2', high='firebrick1', midpoint=0.35) +
+			scale_shape_manual(values=c('fishing\nsite'=17,'inland\ncommunity'=19)) +
+			labs(x='\nlongitude',y='latitude\n',colour='female\nHIV-1 prevalence', pch='')
+	ggsave(file=paste0(outfile.base,'trmMF_prevalenceF_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+	ggmap(zm) +
+			geom_point(data=subset(dgg, variable=='PM'), aes(x=longitude, y=latitude, pch=factor(COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE),labels=c('fishing\nsite','inland\ncommunity')), colour=M), size=9) +			 
+			scale_colour_gradient2(breaks=c(0,0.1,0.2,0.3,0.4,0.5,0.6), lim=c(0.04,0.56), labels=scales:::percent, low="cyan", mid='darkorchid2', high='firebrick1', midpoint=0.35) +
+			scale_shape_manual(values=c('fishing\nsite'=17,'inland\ncommunity'=19)) +
+			labs(x='\nlongitude',y='latitude\n',colour='male\nHIV-1 prevalence', pch='')
+	ggsave(file=paste0(outfile.base,'trmMF_prevalenceM_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+	
 	#
 	#	order communities by ratio, male prev, female prev, and and make groups
 	#

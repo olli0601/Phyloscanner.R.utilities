@@ -1069,8 +1069,9 @@ RakaiFull.preprocess.trmpairs.community.sampling.170421<- function()
 {
 	require(data.table)
 	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed'
+	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/community_sampling_170522.rda'
-	
+	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/community_sampling_180322.rda'
 	#
 	#	load couples to search for in phyloscanner output
 	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
@@ -1134,22 +1135,28 @@ RakaiFull.preprocess.trmpairs.community.sampling.170421<- function()
 	#	from every phyloscanner run, select all individuals that had minimum data 
 	#	(we need this for sequence sampling bias)
 	#rsmpl<- copy(rpng.ok)
-	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
-	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
-	setkey(infiles, PTY_RUN)
-	rsmpl <- infiles[, {
+	#infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	#infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	#setkey(infiles, PTY_RUN)
+	#rsmpl <- infiles[, {
 				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr197_pairwise_relationships.rda'
-				load(F)
-				list(ID=rplkl[, unique(c(ID1,ID2))])							
-			}, by=c('PTY_RUN')]		
-	rsmpl	<- unique(subset(rsmpl, select='ID'))
-	rsmpl[, MIN_PNG_OUTPUT:=1L]
-	setnames(rsmpl, 'ID', 'RID')
+	#			load(F)
+	#			list(ID=rplkl[, unique(c(ID1,ID2))])							
+	#		}, by=c('PTY_RUN')]		
+	#rsmpl	<- unique(subset(rsmpl, select='ID'))
+	#rsmpl[, MIN_PNG_OUTPUT:=1L]
+	#setnames(rsmpl, 'ID', 'RID')
+	
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda"
+	load(infile)
+	rn	<- subset(rn, NEFF>3)	
+	rn	<- data.table(RID=rn[, unique(c(ID1, ID2))],MIN_PNG_OUTPUT=1)	
+	
 	#	add to rsmpl individuals with any sequence data
 	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
 	tmp		<- unique(subset(dc, !is.na(SID), select=RID))
 	tmp[, BAM_OUTPUT:=1L]
-	rsmpl	<- merge(tmp, rsmpl, all=1, by='RID')
+	rsmpl	<- merge(tmp, rn, all=1, by='RID')
 	set(rsmpl, rsmpl[, which(is.na(MIN_PNG_OUTPUT))],'MIN_PNG_OUTPUT',0L)
 	#
 	#rsmpl<- unique(subset(rsmpl, HIV==1, c(RID, BAM_OUTPUT, MIN_PNG_OUTPUT)))
@@ -12183,17 +12190,22 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	
 	#	now load second stage output
 	load(infile)
-	setnames(dfa, c('FEMALE_RID','FEMALE_ARID'), c('ID','AID'))
+	dfa		<- unique(subset(rd, select=c(RID,SEX)))
+	setkey(dfa, RID)	
+	dfa[, AID:= paste0('RkA',sprintf("%05d", seq_len(nrow(dfa))),SEX)]
+	setnames(dfa, 'RID', 'ID')
+	idclus	<- sort(unique(rtn$IDCLU))
+	#setnames(dfa, c('FEMALE_RID','FEMALE_ARID'), c('ID','AID'))
 	
 	#
 	#	plot probability network
 	#
-	idclus	<- sort(unique(rtn$IDCLU))	
 	pns		<- lapply(seq_along(idclus), function(i)
 			{
 				idclu	<- idclus[i]
 				di		<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
-				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
+				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]
+				di[, LOC:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
 				setnames(di, 'RID', 'ID')	
 				di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 				df		<- subset(rtn, IDCLU==idclu)
@@ -12206,10 +12218,14 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 						curv.shift=0.08, 
 						label.size=3, 
 						node.label='AID', 
-						node.shape='IN_COUPLE', 
-						node.fill='SEX', 
-						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
-						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						node.fill='LOC',
+						node.shape='SEX',
+						node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
+						node.shape.values=c('F'=17, 'M'=19),						
+						#node.shape='IN_COUPLE', 
+						#node.fill='SEX', 
+						#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						#node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
 						threshold.linked=0.6)
 				p	
 			})
@@ -12227,9 +12243,10 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 				layout	<- pns[[i]]$layout 
 				#setnames(layout, c('ID','X','Y'), c('label','x','y'))
 				di	<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
-				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]				
+				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]
+				di[, LOC:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
 				setnames(di, 'RID', 'ID')
-				di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')
+				di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 				df	<- subset(rtnn, IDCLU==idclu)				
 				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
 						edge.gap=0.04, 
@@ -12239,10 +12256,14 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 						curv.shift=0.08, 
 						label.size=3, 
 						node.label='AID', 
-						node.shape='IN_COUPLE', 
-						node.fill='SEX', 
-						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
-						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						#node.shape='IN_COUPLE', 
+						#node.fill='SEX', 
+						#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						#node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						node.fill='LOC',
+						node.shape='SEX',
+						node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
+						node.shape.values=c('F'=17, 'M'=19),												
 						threshold.linked=0.6,
 						layout=layout)
 				p	
@@ -12250,6 +12271,39 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	pdf(file=paste0(outfile.base,'maxprobabilitynetworks.pdf'), w=8, h=8)	
 	for(i in seq_along(qns))	
 		print(qns[[i]])
+	dev.off()
+	
+	#
+	#	network 9 for illustration
+	#
+	i<- 9
+	idclu	<- sapply(c(9,185:200), function(i) idclus[i])
+	di		<- merge(rd[, list(VISIT=VISIT[which.max(VISIT)]), by='RID'], rd, by=c('RID','VISIT'))
+	di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]
+	di[, LOC:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	setnames(di, 'RID', 'ID')	
+	di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
+	df		<- subset(rtn, IDCLU%in%idclu)
+	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
+	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+			edge.gap=0.01, 
+			edge.size=0.4, 
+			curvature= -0.2, 
+			arrow=arrow(length=unit(0.01, "npc"), type="open"), 
+			curv.shift=0.02, 
+			label.size=3, 
+			node.label=NA_character_, 
+			node.fill='LOC',
+			node.shape='SEX',
+			node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
+			node.shape.values=c('F'=17, 'M'=19),
+			#node.shape='LOC', 
+			#node.fill='SEX',			
+			#node.shape.values=c('fishing site'=19,'inland community'=17), 
+			#node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+			threshold.linked=0.6)
+	pdf(file=paste0(outfile.base,'probabilitynetworks_9p15.pdf'), w=35, h=35)		
+	print(p)
 	dev.off()
 	
 	#
