@@ -13973,6 +13973,38 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 	ggsave(file=paste0(outfile.base,'chains_number.pdf'), w=5, h=3)
 	
 	
+	#tmp		<- subset(rtnn, SXO=='MF')
+	cats		<- c('pot linked','linkage','linkage and direction')
+	cols		<- c('grey60', 'DarkOrange', 'DarkRed')
+	names(cols)	<- cats
+	tmp		<- copy(rtnn)	
+	tmp[, SELECT2:=cats[1]]
+	set(tmp, tmp[, which(grepl('direction not resolved',SELECT) & SXO=='MF' )], 'SELECT2', cats[2])
+	set(tmp, tmp[, which(grepl('resolved to',SELECT) & SXO=='MF')], 'SELECT2', cats[3])
+	tmp		<- rbind( 	tmp[, list(SELECT2=SELECT2[1], N_PAIRS=length(ID1), N_IND=length(unique(c(ID1,ID2))))],
+						subset(tmp, grepl('linkage',SELECT2))[, list(SELECT2=cats[2], N_PAIRS=length(ID1), N_IND=length(unique(c(ID1,ID2))))],
+						subset(tmp, SELECT2==cats[3])[, list(SELECT2=SELECT2[1], N_PAIRS=length(ID1), N_IND=length(unique(c(ID1,ID2))))]
+						)	
+	set(tmp, NULL, 'SELECT2', tmp[, factor(SELECT2, levels=cats)])	
+	ggplot(tmp, aes(x=SELECT2, y=N_IND, fill=SELECT2)) + 
+			geom_bar(stat='identity') +
+			annotate("text", x=tmp$SELECT2, y=tmp$N_IND, label=tmp$N_IND, vjust=-0.5, size=3.5, colour='DarkRed') +			 
+			theme_bw() +
+			theme(panel.grid.major.x= element_blank(), panel.grid.minor.x = element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank() ) +
+			scale_fill_manual(values=cols) +
+			scale_y_continuous(expand=c(0,0), limit=c(0,1500)) +			
+			labs(x='', y='individuals\n', fill='')
+	ggsave(file=paste0(outfile.base,'_chains_individuals.pdf'), w=3.5, h=3)
+	ggplot(tmp, aes(x=SELECT2, y=N_PAIRS, fill=SELECT2)) + 
+			geom_bar(stat='identity') +
+			annotate("text", x=tmp$SELECT2, y=tmp$N_PAIRS, label=tmp$N_PAIRS, vjust=-0.5, size=3.5, colour='DarkRed') +			 
+			theme_bw() +
+			theme(panel.grid.major.x= element_blank(), panel.grid.minor.x = element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank() ) +
+			scale_fill_manual(values=cols) +
+			scale_y_continuous(expand=c(0,0), limit=c(0,1000)) +			
+			labs(x='', y='pairs\n', fill='')
+	ggsave(file=paste0(outfile.base,'_chains_pairs.pdf'), w=3.5, h=3)
+	
 	tmp		<- subset(rtnn, SXO=='MF')	
 	tmp		<- merge(subset(rtnn, SXO=='MF'), subset(rti, select=c(IDCLU, CLU_SIZE)), by='IDCLU')
 	tmp		<- merge(tmp, tmp[, list(N=length(ID1)), by='CLU_SIZE'], by='CLU_SIZE')

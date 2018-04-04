@@ -1070,7 +1070,7 @@ RakaiCirc.epi.get.info.170208<- function()
 	list(rd=rd, rh=rh, ra=ra, rn=rn)
 }
 
-RakaiFull.phylogeography.171122.participation.bias<- function()
+RakaiFull.phylogeography.180322.get.data.eligibility.participation.sequenced<- function()
 {
 	require(data.table)
 	require(scales)
@@ -1093,7 +1093,8 @@ RakaiFull.phylogeography.171122.participation.bias<- function()
 	de	<- subset(de, select=c(PERM_ID, CURR_ID, visit, RESIDENT, MOBILITY, REGION, COMM_NUM, HH_NUM, SEX, STUDY_ID, status, date, AGEYRS, inmigrant))
 	setnames(de, colnames(de), toupper(colnames(de)))
 	#	define PARTICIPATED as "participated, missing data ok"
-	de[, PARTICIPATED:= as.integer(STATUS%in%c('_Participated','Missing data'))]
+	#	TODO take out missing data
+	de[, PARTICIPATED:= as.integer(STATUS%in%c('_Participated'))]
 	
 	#	merge communities that are very close / identical
 	setnames(de, 'COMM_NUM', 'COMM_NUM_RAW')
@@ -1185,20 +1186,23 @@ RakaiFull.phylogeography.171122.participation.bias<- function()
 	tmp		<- subset(rd, MIN_PNG_OUTPUT==1)[, list(DEEP_SEQ=length(RID)), by=c('COMM_NUM')]	
 	tmp		<- subset(tmp, DEEP_SEQ>0)
 	tmp[, DEEP_SEQ:=NULL]	
-	tmp[, DUMMY:= 1]
+	tmp[, COMM_ANY_MIN_PNG_OUTPUT:= 1]
 	de		<- merge(de, tmp, by='COMM_NUM', all.x=1)
 	rd		<- merge(rd, tmp, by='COMM_NUM', all.x=1)
-		
-	#	subset to only those communities with seq data
-	#	4 fishing, 34 inland
-	def		<- copy(de)
-	de		<- subset(de, !is.na(DUMMY))
-	de[, DUMMY:=NULL]
-	rd		<- subset(rd, !is.na(DUMMY))
-	rd[, DUMMY:=NULL]	
+	set(de, de[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
+	set(rd, rd[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
 	tmp		<- unique(subset(rd, select=c(COMM_NUM,COMM_NUM_A)))
 	de		<- merge(de, tmp, by='COMM_NUM')
 	
+	#	subset to only those communities with seq data
+	#	4 fishing, 34 inland
+	#def		<- copy(de)
+	#de		<- subset(de, !is.na(DUMMY))
+	#de[, DUMMY:=NULL]
+	#rd		<- subset(rd, !is.na(DUMMY))
+	#rd[, DUMMY:=NULL]	
+	#
+
 	#	add age category at midpoint of observation period, 2013.25
 	set(de, de[, which(is.na(DATE))], 'DATE', as.Date("2011-09-02"))	
 	de[, AGE_AT_MID:= 2013.25 - (hivc.db.Date2numeric(DATE)-AGEYRS)]
@@ -1206,69 +1210,82 @@ RakaiFull.phylogeography.171122.participation.bias<- function()
 	stopifnot( nrow(subset(de, is.na(AGE_AT_MID_C)))==0 )
 	
 	#	now calculate participation by community and gender
-	des		<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','PARTICIPATED_ANY_VISIT')]
+	des		<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','PARTICIPATED_ANY_VISIT')]
 	set(des, NULL, 'PARTICIPATED_ANY_VISIT', des[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
-	des		<- dcast.data.table(des, COMM_NUM+COMM_NUM_A+SEX~PARTICIPATED_ANY_VISIT, value.var='N')
+	des		<- dcast.data.table(des, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX~PARTICIPATED_ANY_VISIT, value.var='N')
 	
 	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
 	#	among those that participated in rounds 15 - 16
 	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
-	tmp		<- tmp[, list(HIV_1516_YES=length(which(HIV==1)), HIV_1516_NO=length(which(HIV==0)), DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]
-	tmp		<- subset(tmp, DEEP_SEQ_1516>0)	
+	tmp		<- tmp[, list(HIV_1516_YES=length(which(HIV==1)), HIV_1516_NO=length(which(HIV==0)), DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
 	des		<- merge(des, tmp, by=c('COMM_NUM','SEX'), all=TRUE)
 	
 	#	add community type
 	des[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]	
 	
 	#	now do the same by community and gender and age category
-	desa	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','PARTICIPATED_ANY_VISIT')]
+	desa	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','AGE_AT_MID_C','PARTICIPATED_ANY_VISIT')]
 	set(desa, NULL, 'PARTICIPATED_ANY_VISIT', desa[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
-	desa	<- dcast.data.table(desa, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C~PARTICIPATED_ANY_VISIT, value.var='N')
+	desa	<- dcast.data.table(desa, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX+AGE_AT_MID_C~PARTICIPATED_ANY_VISIT, value.var='N')
 	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
-	tmp		<- tmp[, list(HIV_1516_YES=length(which(HIV==1)), HIV_1516_NO=length(which(HIV==0)), DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','AGE_AT_MID_C')]
-	tmp		<- subset(tmp, DEEP_SEQ_1516>0)	
+	tmp		<- tmp[, list(HIV_1516_YES=length(which(HIV==1)), HIV_1516_NO=length(which(HIV==0)), DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','AGE_AT_MID_C')]	
 	desa	<- merge(desa, tmp, by=c('COMM_NUM','SEX','AGE_AT_MID_C'), all=TRUE)
 	desa[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]
+	#	check for missing and replace by 0		
+	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','DEEP_SEQ_1516'))
+		set(desa, which(is.na(desa[[x]])), x, 0)
 	
 	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
 	#	among those that ever participated
 	#	excluding those that died before 2010, or that reached age 60 before 2010
 	tmp		<- subset(rd, is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & EST_DATEDIED>=2010))	
 	tmp		<- subset(tmp, (2010-BIRTHYR)<60)
-	rds		<- tmp[, list(HIV_EVER_YES=length(which(HIV==1)), DEEP_SEQ_EVER=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]
-	rds		<- subset(rds, DEEP_SEQ_EVER>0)
+	rds		<- tmp[, list(HIV_EVER_YES=length(which(HIV==1)), DEEP_SEQ_EVER=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
 	rds[, sum(DEEP_SEQ_EVER)]	# 2665 (among those in rd who are not too old and did not die before 2010)
-	
 		
+	save(des, desa, rds, de, def, rd, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda')
+}
+
+RakaiFull.phylogeography.180322.table1<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	load(infile)
+	
 	#	there s just 1 person ever sequenced in comms 401 and 55, ignore
 	#	this means we are just working with des, not rds
 	des		<- merge(des, rds, by=c('COMM_NUM','SEX'), all.x=TRUE)
-	des		<- subset(des, !COMM_NUM%in%c('55','401'))
-	desa	<- subset(desa, !COMM_NUM%in%c('55','401'))
-	#	check for missing and replace by 0		
-	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','DEEP_SEQ_1516'))
-		set(desa, which(is.na(desa[[x]])), x, 0)
+	subset(des[, list(DEEP_SEQ_1516=sum(DEEP_SEQ_1516)), by='COMM_NUM'], DEEP_SEQ_1516==0)
+	#	36, 55, 401
+	#des		<- subset(des, !COMM_NUM%in%c('36','55','401'))
+	#desa	<- subset(desa, !COMM_NUM%in%c('36','55','401'))
 	
 	length( setdiff( subset(tmp, !is.na(RID) & HIV==1 & MIN_PNG_OUTPUT==1)[, RID], subset(de, !is.na(RID) & HIV==1 & MIN_PNG_OUTPUT==1)[, RID] ) )
 	#	57 individuals that have a sequence who are not in de but in rd
-	
-	save(des, desa, rds, de, rd, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender.rda')
-	
+			
 	#	overall sequence coverage 
 	des[, sum(DEEP_SEQ_1516)]	#2652
 	des[, sum(HIV_1516_YES)]	#4454
 	des[, sum(HIV_EVER_YES)]	#5397
-	des[, sum(DEEP_SEQ_1516)/sum(HIV_EVER_YES)]		# 0.4913841
-	des[, sum(DEEP_SEQ_1516)/sum(HIV_1516_YES)]		# 0.5954198
-	des[, sum(DEEP_SEQ_1516)/( sum(HIV_EVER_YES * (PART_EVER+PART_NEVER)/PART_EVER) )]	#0.3435715
-	des[, sum(DEEP_SEQ_1516)/( sum(HIV_1516_YES * (PART_EVER+PART_NEVER)/PART_EVER) )]	#0.4195271
+	des[, sum(DEEP_SEQ_1516)/sum(HIV_EVER_YES)]		# 0.4761135
+	des[, sum(DEEP_SEQ_1516)/sum(HIV_1516_YES)]		# 0.5850806
+	des[, sum(DEEP_SEQ_1516)/( sum(HIV_EVER_YES * (PART_EVER+PART_NEVER)/PART_EVER) )]	# 0.3324367
+	des[, sum(DEEP_SEQ_1516)/( sum(HIV_1516_YES * (PART_EVER+PART_NEVER)/PART_EVER) )]	# 0.4116885
 	
 	#	make supplementary plots of participation and sequencing by gender
 	des[, P_PART_RAW:= PART_EVER/(PART_EVER+PART_NEVER)]
 	des[, P_SEQ_RAW_EVER:= DEEP_SEQ_1516/(HIV_EVER_YES)]
 	des[, P_SEQ_RAW_1516:= DEEP_SEQ_1516/(HIV_1516_YES)]
-	
-	
+		
 	tmp		<- melt(des, id.vars=c('COMM_TYPE','COMM_NUM_A','SEX'), measure.vars=c('P_PART_RAW','P_SEQ_RAW_EVER','P_SEQ_RAW_1516'))	
 	set(tmp, NULL, 'COMM_TYPE', tmp[, factor(COMM_TYPE, levels=c('fisherfolk','inland'), labels=c('fishing site','inland community'))])
 	set(tmp, NULL, 'SEX', tmp[, factor(SEX, levels=c('M','F'), labels=c('male','female'))])
@@ -1286,22 +1303,59 @@ RakaiFull.phylogeography.171122.participation.bias<- function()
 	des[, length(unique(COMM_NUM))]
 	#	36
 
+
 	#	make table 1 for paper
-	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
-	outfile.base			<- gsub('_withmetadata.rda','',infile)
-	load(infile)
-	rtp[, SELECT2:= 1L]
-	set(rtp, rtp[, which(grepl('most likely a pair',SELECT))], 'SELECT2', 2L)
-	set(rtp, rtp[, which(grepl('mf|fm',SELECT))], 'SELECT2', 3L)
+	#	get all transmission events part of transmission chains regardless of gender combinations
+	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
+	confidence.cut		<- 0.6
+	load(infile)		
+	rtnn[, SXO:= paste0(ID1_SEX,ID2_SEX)]
+	rtnn[, SELECT:= NA_character_]
+	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
+	rtnn	<- subset(rtnn, select=c(ID1, ID2, ID1_SEX, ID2_SEX, LINK_12, LINK_21, SXO, SELECT))
+	#	determine first concordant pos visit; add metadata at first concordant pos visit
+	tmp		<- unique(subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)))
+	setnames(tmp, colnames(tmp), gsub('ID1_RID','ID1',paste0('ID1_',colnames(tmp))))
+	rtnn	<- merge(rtnn, tmp, by='ID1')	
+	setnames(tmp, colnames(tmp), gsub('ID1','ID2',colnames(tmp)))
+	rtnn	<- merge(rtnn, tmp, by='ID2')			
+	rtnn[, VISIT_FIRSTCONCPOS:= rtnn[, pmax(ID1_FIRSTPOSVIS,ID2_FIRSTPOSVIS)]]
+	set(rtnn, NULL, c('ID1_FIRSTPOSVIS','ID1_FIRSTPOSDATE','ID2_FIRSTPOSVIS','ID2_FIRSTPOSDATE'), NULL)
+	#	add in date of birth, comm type from nearest visit we have data on
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'ID1')
+	tmp		<- unique(merge(rtnn, tmp, by='ID1')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('ID1','VISIT_FIRSTCONCPOS')])
+	setnames(tmp, 'ID1', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "COMM_NUM", "COMM_NUM_A","BIRTHDATE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), gsub('ID1_VISIT_FIRSTCONCPOS','VISIT_FIRSTCONCPOS',gsub('ID1_RID','ID1',paste0('ID1_',colnames(tmp)))))
+	set(tmp, NULL, 'ID1_VISIT', NULL)	
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','VISIT_FIRSTCONCPOS'), all.x=1)	
+	tmp		<- unique(subset(rd, select=c(RID, VISIT)))
+	setnames(tmp, 'RID', 'ID2')
+	tmp		<- unique(merge(rtnn, tmp, by='ID2')[, list(VISIT= VISIT[which.min(abs(VISIT-VISIT_FIRSTCONCPOS))]), by=c('ID2','VISIT_FIRSTCONCPOS')])
+	setnames(tmp, 'ID2', 'RID')
+	tmp2	<- unique(subset(rd, select=c('RID','VISIT', "COMM_NUM", "COMM_NUM_A","BIRTHDATE")), by=c('RID','VISIT'))
+	tmp		<- merge(tmp, tmp2, by=c('RID','VISIT'))
+	setnames(tmp, colnames(tmp), gsub('ID2_VISIT_FIRSTCONCPOS','VISIT_FIRSTCONCPOS',gsub('ID2_RID','ID2',paste0('ID2_',colnames(tmp)))))
+	set(tmp, NULL, 'ID2_VISIT', NULL)	
+	rtnn	<- merge(rtnn, tmp, by=c('ID2','VISIT_FIRSTCONCPOS'), all.x=1)
+	#	get list of unique individuals in these events with metadata
+	rtnn[, SELECT2:= 1L]
+	set(rtnn, rtnn[, which(grepl('most likely a pair',SELECT))], 'SELECT2', 2L)
+	set(rtnn, rtnn[, which(grepl('mf|fm',SELECT))], 'SELECT2', 3L)
 	
-	tmp	<- subset(rtp, LINK_MF==1 | LINK_FM==1, select=c(MALE_RID, MALE_COMM_TYPE, MALE_BIRTHDATE, SELECT2))
-	setnames(tmp, c('MALE_RID','MALE_COMM_TYPE','MALE_BIRTHDATE'), c('RID','COMM_TYPE','BIRTHDATE'))
-	tmp[, SEX:='M']
-	tmp2<- subset(rtp, select=c(FEMALE_RID, FEMALE_COMM_TYPE, FEMALE_BIRTHDATE, SELECT2))
-	setnames(tmp2, c('FEMALE_RID','FEMALE_COMM_TYPE','FEMALE_BIRTHDATE'), c('RID','COMM_TYPE','BIRTHDATE'))
-	tmp2[, SEX:='F']
+	tmp	<- subset(rtnn, LINK_12==1 | LINK_21==1, select=c(ID1, ID1_SEX, ID1_COMM_NUM_A, ID1_BIRTHDATE, SELECT2))
+	setnames(tmp, c('ID1','ID1_SEX','ID1_COMM_NUM_A','ID1_BIRTHDATE'), c('RID','SEX','COMM_NUM_A','BIRTHDATE'))	
+	tmp2<- subset(rtnn, LINK_12==1 | LINK_21==1, select=c(ID2, ID2_SEX, ID2_COMM_NUM_A, ID2_BIRTHDATE, SELECT2))
+	setnames(tmp2, c('ID2','ID2_SEX','ID2_COMM_NUM_A','ID2_BIRTHDATE'), c('RID','SEX','COMM_NUM_A','BIRTHDATE'))	
 	tmp	<- rbind(tmp, tmp2)
-	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	set(tmp, NULL, 'COMM_TYPE', tmp[, as.character(factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing','inland')))])
 	set(tmp, tmp[, which(is.na(BIRTHDATE))],'BIRTHDATE',tmp[, mean(BIRTHDATE, na.rm=TRUE)])
 	dr	<- tmp[, 	{
 						z<- which.max(SELECT2)
@@ -1338,9 +1392,34 @@ RakaiFull.phylogeography.171122.participation.bias<- function()
 	tmp2	<- ansa[, list(COMM_TYPE='Any',SEX='Any', AGE_AT_MID_C='Any', value=sum(value), LEGEND=as.character(sum(value))), by=c('variable')]
 	ansa	<- rbind(ansa,tmp,tmp2, fill=TRUE)
 	ansa[, LABEL:= paste(COMM_TYPE, SEX, AGE_AT_MID_C, sep='-')]
-	ansa	<- dcast.data.table(ansa, LABEL+COMM_TYPE+SEX+AGE_AT_MID_C~variable, value.var='LEGEND')
-	
+	ansa	<- dcast.data.table(ansa, LABEL+COMM_TYPE+SEX+AGE_AT_MID_C~variable, value.var='LEGEND')	
 	write.csv(ansa, row.names=FALSE, file=paste0(outfile.base, '_table1.csv'))	
+	
+	#
+	#	make overall table with no fishing community
+	
+	ansa	<- dr[, list(IN_TRM_CHAIN= length(RID[SELECT2>=1])), by=c('SEX','AGE_AT_MID_C')]
+	ansa	<- merge(ansa, dr[, list(LINKED= length(RID[SELECT2>=2])), by=c('SEX','AGE_AT_MID_C')], by=c('SEX','AGE_AT_MID_C'))
+	ansa	<- merge(ansa, dr[, list(LINKED_DIR= length(RID[SELECT2>=3])), by=c('SEX','AGE_AT_MID_C')], by=c('SEX','AGE_AT_MID_C'))		
+	tmp		<- desa[, list(	ELIGIBLE_1516= sum(PART_EVER+PART_NEVER), 
+							PART_1516= sum(PART_EVER),
+							HIV_1516= sum(HIV_1516_YES),
+							DEEP_SEQ_1516= sum(DEEP_SEQ_1516)
+					), by=c('SEX','AGE_AT_MID_C')]
+	ansa	<- merge(tmp, ansa, by=c('SEX','AGE_AT_MID_C'))
+	# add proportions to ansa
+	ansa	<- melt(ansa, id.vars=c('SEX','AGE_AT_MID_C'))
+	tmp		<- ansa[, list(SEX=SEX, AGE_AT_MID_C=AGE_AT_MID_C, prop=value/sum(value), LEGEND=paste(value,' (',100*round(value/sum(value),d=2),'%)',sep='')), by=c('variable')]
+	ansa	<- merge(ansa, tmp, by=c('variable','SEX','AGE_AT_MID_C'))
+	# add total to ansa
+	tmp		<- ansa[, list(SEX='Any', AGE_AT_MID_C='Any', value=sum(value), LEGEND=as.character(sum(value))), by=c('variable')]
+	tmp2	<- ansa[, list(AGE_AT_MID_C='Any', value=sum(value), LEGEND=as.character(sum(value))), by=c('variable','SEX')]
+	ansa	<- rbind(ansa,tmp,tmp2, fill=TRUE)
+	ansa[, LABEL:= paste(SEX, AGE_AT_MID_C, sep='-')]
+	ansa	<- dcast.data.table(ansa, LABEL+SEX+AGE_AT_MID_C~variable, value.var='LEGEND')
+	set(ansa, NULL, 'LABEL', ansa[, factor(LABEL, levels=c("Any-Any","F-Any","F-15-24","F-25-34","F-35+","M-Any","M-15-24","M-25-34","M-35+"))])
+	setkey(ansa, LABEL)
+	write.csv(ansa, row.names=FALSE, file=paste0(outfile.base, '_table1_nocommtype.csv'))	
 }
 
 
@@ -1692,6 +1771,329 @@ RakaiFull.phylogeography.171122.core.inference<- function()
 	save(zm, zc, rtpdm, rfm, rmf, rtr2, ds, dc, dcb, file=paste0(outfile.base,'_inference.rda'))	
 }
 
+RakaiFull.phylogeography.180322.core.inference.stan.first.vanilla.models<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender.rda'
+	load(infile)
+	#	determine posterior parameters for Binomial models of sampling and participiation 
+	ds		<- subset(des, DEEP_SEQ_EVER>0)
+	set(ds, NULL, c('HIV_1516_NO','HIV_EVER_YES','DEEP_SEQ_EVER'), NULL)
+	ds[, P_PART_EMP:= PART_EVER/(PART_EVER+PART_NEVER)]
+	ds[, P_PART_ALPHA:= PART_EVER+1]
+	ds[, P_PART_BETA:= PART_NEVER+1]
+	ds[, P_SEQ_EMP:= DEEP_SEQ_1516/HIV_1516_YES]
+	ds[, P_SEQ_ALPHA:= DEEP_SEQ_1516+1]
+	ds[, P_SEQ_BETA:= HIV_1516_YES+1]
+	#	add long lat
+	zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	tmp		<- unique(subset(zc, select=c(COMM_NUM, longitude, latitude)), by='COMM_NUM')
+	setnames(tmp, c('longitude','latitude'),c('LONG','LAT'))
+	ds		<- merge(ds, tmp, by='COMM_NUM')
+	set(ds, NULL, 'COMM_NUM_A', ds[, as.character(COMM_NUM_A)])
+	set(ds, NULL, 'COMM_TYPE', ds[, as.character(COMM_TYPE)])
+	
+	
+	#	load transmission events
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
+	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	load(infile)
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
+	nrow(rtpdm)
+	#	293
+	
+	#	add new variables
+	rtpdm[, AGEDIFF:= rtpdm[, FEMALE_BIRTHDATE-MALE_BIRTHDATE]]	
+	set(rtpdm, NULL, 'MALE_SEX', 'M')
+	set(rtpdm, NULL, 'FEMALE_SEX', 'F')			
+	rtpdm[, MALE_FISHCOMM:= rtpdm[, as.character(factor(MALE_COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE), labels=c('Fishing','Inland')))]]
+	rtpdm[, FEMALE_FISHCOMM:= rtpdm[, as.character(factor(FEMALE_COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE), labels=c('Fishing','Inland')))]]
+	
+	#	cast MALE FEMALE to TRM REC
+	rmf		<- subset(rtpdm, grepl('mf',SELECT) )
+	rfm		<- subset(rtpdm, grepl('fm',SELECT) )
+	rtr2	<- copy(rmf)
+	setnames(rtr2,colnames(rtr2),gsub('FEMALE','REC',colnames(rtr2)))
+	setnames(rtr2,colnames(rtr2),gsub('MALE','TR',colnames(rtr2)))
+	tmp		<- copy(rfm)
+	setnames(tmp,colnames(tmp),gsub('FEMALE','TR',colnames(tmp)))
+	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
+	rtr2	<- rbind(rtr2,tmp)
+	
+	#	sum transmission events by community and gender
+	dc1	<- rtr2[, list(TR_OBS=length(PAIRID)), by=c('TR_FISHCOMM','REC_FISHCOMM')]
+	dc1[, FROM_TO_ID:= seq_len(nrow(dc1))]
+	
+	#	write stan model 1 between community types
+	m1		<- list()
+	m1$code	<- "data {
+	  int<lower=0> K; 	// number of community combinations 
+	  int TR_OBS[K]; 	// transmission counts	   
+	}
+	transformed data {
+	  vector<lower=0>[K] dirprior_comm_flow= rep_vector(1, K); // community flows, positive
+	}
+	parameters {
+	  simplex[K] prop_comm_flow;	//prior on community flows, sum to 1  	  
+	}
+	model {
+	  //dirprior_comm_flow ~ lognormal(0, 5);
+	  prop_comm_flow ~ dirichlet(dirprior_comm_flow);	  
+	  TR_OBS ~ multinomial(prop_comm_flow);	  
+	}"
+	m1$code		<- gsub('\t','',m1$code)
+	m1$codefile	<- paste0(outfile.base,'_stanm1.stan')
+	#write(m1$code, file=m1$codefile)	
+	m1$data			<- as.list(dc1)
+	m1$data[['K']] 	<- nrow(dc1)	
+	m1$fit			<- stan(model_code=m1$code, data=m1$data, warmup=5e2, iter=1e4, chains=1)
+	#m1.fit			<- stan(file=m1$codefile, data=m1$data, iter = 1000, chains = 4)
+	print(m1.fit)
+	plot(m1.fit)	
+	traceplot(m1$fit)
+	pairs(m1$fit)
+	
+	#	write stan model 2 between communities with distance based prior
+	dc5	<- rtr2[, list(TR_OBS=length(PAIRID)), by=c('TR_FISHCOMM','REC_FISHCOMM','TR_COMM_NUM_A','REC_COMM_NUM_A')]
+	tmp	<- unique(subset(ds, select=c(COMM_NUM_A, LONG, LAT)))
+	tmp	<- merge(tmp, data.table(COMM_NUM_A= sort(unique(tmp$COMM_NUM_A)), COMM_NUM2= seq_along(unique(tmp$COMM_NUM_A))), by='COMM_NUM_A')
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc5	<- merge(dc5, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc5	<- merge(dc5, tmp, by='REC_COMM_NUM_A')
+	dc5[, EUCLIDEAN_DIST:= sqrt( (TR_LONG-REC_LONG)^2+(TR_LAT-REC_LAT)^2 )]
+	dc5[, FROM_TO_ID:= seq_len(nrow(dc5))]
+	
+	#m3 has convergence issues: sig_random_pair_effect. coeff_space and base_flow are also extremely highly correlated.
+	m2		<- list()
+	m2$code	<- "data {
+	  int<lower=1> N; 						// number of observations
+	  int<lower=1> N_PAIRS;					// number of **observed** community pairs 
+	  int TR_OBS[N]; 						// transmission counts
+	  vector<lower=0>[N] EUCLIDEAN_DIST; 	// distances for fixed spatial effect
+	  int<lower=1> FROM_TO_ID[N]; 			// community pair for ith observation	  
+	}
+	parameters {
+	  simplex[N_PAIRS] prop_comm_flow;  	// community flows, sum to 1
+	  vector[N_PAIRS] random_pair_effect;	// random effect on flows between two communities 	  
+	  real base_flow;						// overall grand mean
+	  real coeff_space;						// strength of spatial effect
+	  real<lower=0> rhosq;	 				// rate of decline of spatical effect
+	  real<lower=0> sig_random_pair_effect; // hyperprior for random pair effect 	  
+	}
+	model {	  	  
+	  vector[N] fixed_spatial_effect;	// fixed spatial effect
+	  vector[N] log_lambda;				// linear predictor
+	  base_flow ~ normal(0, 100);		// prior on log mean flow between all communities
+	  coeff_space ~ normal(0, 10 );		// prior on strength of spatial effect
+	  rhosq ~ exponential( 1 );			// prior on rate of decline of spatical effect
+	  random_pair_effect ~ normal(0, sig_random_pair_effect);
+	  sig_random_pair_effect ~ exponential( 1 );
+	  // build linear predictor
+	  for(i in 1:N)	    
+	  {
+	     fixed_spatial_effect[i]= coeff_space*exp(-rhosq*pow(EUCLIDEAN_DIST[i],2));
+	     log_lambda[i]= base_flow + random_pair_effect[FROM_TO_ID[i]] + fixed_spatial_effect[i];	      
+	  }	  
+	  prop_comm_flow ~ dirichlet_log(log_lambda);	//dirichlet prior to satisfy sum-to-1 constraint
+	  TR_OBS ~ multinomial(prop_comm_flow);	  
+	}"
+	m2$code		<- gsub('\t','',m2$code)
+	m2$codefile	<- paste0(outfile.base,'_stanm2.stan')
+	#write(m1$code, file=m1$codefile)	
+	m2$data					<- as.list(dc5)
+	m2$data[['N']] 			<- nrow(dc5)
+	m2$data[['N_PAIRS']] 	<- max(dc5$FROM_TO_ID)
+	m2$fit		<- stan(model_code=m2$code, 
+						data=m2$data, 
+						warmup=5e2, iter=1e3, chains=1,
+						init=list(list(base_flow=exp(1), coeff_space=0, rhosq=1, sig_random_pair_effect=1, random_pair_effect=rep(0,m2$data[['N_PAIRS']]))))				
+	precis(m2$fit, depth=2, prob=0.95)
+	post <- as.data.frame(m2$fit)
+	pdf(file=paste0(outfile.base,'_stanm2_traces.pdf'), w=15, h=100)
+	traceplot(m2$fit, pars=colnames(post), ncol=2)
+	dev.off()
+	pairs(m2$fit, pars=c('base_flow','coeff_space','rhosq'))
+	
+	#m3 has convergence issues: sig_random_pair_effect
+	m3		<- list()
+	m3$code	<- "data {
+	  int<lower=1> N; 					// number of observations
+	  int<lower=1> N_PAIRS;				// number of **observed** community pairs 
+	  int TR_OBS[N]; 					// transmission counts
+	  int<lower=1> FROM_TO_ID[N]; 		// community pair for ith observation	  
+	}
+	parameters {
+	  simplex[N_PAIRS] prop_comm_flow;  	// community flows, sum to 1
+	  vector[N_PAIRS] random_pair_effect;	// random effect on flows between two communities 	  
+	  real base_flow;						// overall grand mean	  
+	  real<lower=0> sig_random_pair_effect; // hyperprior for random pair effect	   	  
+	}
+	model {	  	  
+	  vector[N] log_lambda;				// linear predictor
+	  base_flow ~ normal(0, 100);		// prior on log mean flow between all communities
+	  random_pair_effect ~ normal(0, sig_random_pair_effect);
+	  sig_random_pair_effect ~ exponential( 1 );
+	  // build linear predictor
+	  for(i in 1:N)	    
+	  {	  
+	  	log_lambda[i]= base_flow + random_pair_effect[FROM_TO_ID[i]];	      
+	  }	  
+	  prop_comm_flow ~ dirichlet_log(log_lambda);	//dirichlet prior to satisfy sum-to-1 constraint
+	  TR_OBS ~ multinomial(prop_comm_flow);	  
+	}"
+	m3$code		<- gsub('\t','',m3$code)
+	m3$codefile	<- paste0(outfile.base,'_stanm3.stan')
+	#write(m3$code, file=m1$codefile)	
+	m3$data					<- as.list(dc5)
+	m3$data[['N']] 			<- nrow(dc5)
+	m3$data[['N_PAIRS']] 	<- max(dc5$FROM_TO_ID)
+	m3$fit		<- stan(model_code=m3$code, 
+			data=m2$data, 
+			warmup=5e2, iter=1e3, chains=1,
+			init=list(list(base_flow=exp(1), sig_random_pair_effect=1, random_pair_effect=rep(0,m2$data[['N_PAIRS']]))))				
+	precis(m3$fit, depth=2, prob=0.95)
+	post <- as.data.frame(m3$fit)
+	pdf(file=paste0(outfile.base,'_stanm3_traces.pdf'), w=7, h=150)
+	traceplot(m3$fit, pars=colnames(post), ncol=1)
+	dev.off()
+	
+	#	this works!
+	m4		<- list()
+	m4$code	<- "data {
+	  int<lower=1> N; 						// number of observations
+	  int<lower=1> N_PAIRS;					// number of **observed** community pairs 
+	  int TR_OBS[N]; 						// transmission counts	  	  
+	}
+	transformed data {
+	  vector<lower=0>[N_PAIRS] dirprior_comm_flow= rep_vector(1, N_PAIRS); // community flows, positive
+	}	
+	parameters {
+	  simplex[N_PAIRS] prop_comm_flow;  	// community flows, sum to 1	   	  
+	}
+	model {	  	  
+	  prop_comm_flow ~ dirichlet_log(dirprior_comm_flow);	//dirichlet prior to satisfy sum-to-1 constraint
+	  TR_OBS ~ multinomial(prop_comm_flow);	  
+	}"			
+	m4$code		<- gsub('\t','',m4$code)
+	m4$codefile	<- paste0(outfile.base,'_stanm4.stan')
+	#write(m1$code, file=m1$codefile)	
+	m4$data					<- as.list(dc5)
+	m4$data[['N']] 			<- nrow(dc5)
+	m4$data[['N_PAIRS']] 	<- max(dc5$FROM_TO_ID)
+	m4$fit		<- stan(model_code=m4$code, 
+			data=m4$data, 
+			warmup=5e2, iter=1e4, chains=1,
+			init=list(list(base_flow=exp(1), coeff_space=0, rhosq=1, sig_random_pair_effect=1, random_pair_effect=rep(0,m4$data[['N_PAIRS']]))))				
+	precis(m4$fit, depth=2, prob=0.95)
+	post <- as.data.frame(m4$fit)
+	pdf(file=paste0(outfile.base,'_stanm4_traces.pdf'), w=10, h=100)
+	traceplot(m4$fit, pars=colnames(post), ncol=1)
+	dev.off()
+	
+	
+	#	this works!
+	m5		<- list()
+	m5$code	<- "data {
+	  int<lower=1> N; 						// number of observations
+	  int<lower=1> N_PAIRS;					// number of **observed** community pairs 
+	  int TR_OBS[N]; 						// transmission counts	  	  
+	}
+	transformed data {
+	  real<lower=0> objective_prior_weight;
+	  vector<lower=0>[N_PAIRS] dirprior_comm_flow;
+	  objective_prior_weight= N_PAIRS;
+	  objective_prior_weight= 0.8/objective_prior_weight; //this is the Berger objective prior with minimal loss compared to marginal Beta reference prior	  
+	  dirprior_comm_flow= rep_vector(objective_prior_weight, N_PAIRS); // community flows, positive
+	}	
+	parameters {
+	  simplex[N_PAIRS] prop_comm_flow;  	// community flows, sum to 1	   	  
+	}
+	model {	  	  
+	  prop_comm_flow ~ dirichlet_log(dirprior_comm_flow);	//dirichlet prior to satisfy sum-to-1 constraint
+	  TR_OBS ~ multinomial(prop_comm_flow);	  
+	}"			
+	m5$code		<- gsub('\t','',m5$code)
+	m5$codefile	<- paste0(outfile.base,'_stanm5.stan')
+	#write(m1$code, file=m1$codefile)	
+	m5$data					<- as.list(dc5)
+	m5$data[['N']] 			<- nrow(dc5)
+	m5$data[['N_PAIRS']] 	<- max(dc5$FROM_TO_ID)
+	m5$fit		<- stan(model_code=m5$code, 
+			data=m5$data, 
+			warmup=5e2, iter=1e4, chains=1,
+			init=list(list(base_flow=exp(1), coeff_space=0, rhosq=1, sig_random_pair_effect=1, random_pair_effect=rep(0,m5$data[['N_PAIRS']]))))				
+	precis(m5$fit, depth=2, prob=0.95)
+	post <- as.data.frame(m5$fit)
+	pdf(file=paste0(outfile.base,'_stanm5_traces.pdf'), w=10, h=100)
+	traceplot(m5$fit, pars=colnames(post), ncol=1)
+	dev.off()
+	
+	#	save model fits
+	save(dc1, dc5, m1, m4, m5, file=paste0(outfile.base,'_stanm1m4m5.rda'))
+
+	#	question: how different are estimates from m2 m4 m5?
+	post	<- extract.samples(m1$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc1$FROM_TO_ID))
+	df1		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
+	df1		<- merge(dc1, df1, by='FROM_TO_ID')	
+	df1[, MODEL:='area-based']
+		
+	post	<- extract.samples(m4$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
+	df4		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
+	df4		<- merge(dc5, df4, by='FROM_TO_ID')
+	df4		<- df4[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
+	df4[, MODEL:='community-based prior Dir(1)']
+	
+	post	<- extract.samples(m5$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
+	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
+	df5		<- merge(dc5, df5, by='FROM_TO_ID')
+	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
+	df5[, MODEL:='community-based prior Dir(0.8/NPAIR)']
+		
+	tmp		<- rbind(df1, df4, df5, fill=TRUE)
+	ggplot(tmp, aes(x=paste0(TR_FISHCOMM,'-',REC_FISHCOMM), y=PI, fill=MODEL)) +
+			geom_boxplot() +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'_stan_compare_m1_m4_m5.pdf'), w=7, h=7)
+	
+	#
+	#	GP model
+	#
+	data(islandsDistMatrix)
+	data(Kline2)
+	d<- Kline2
+	d$society<- 1:10
+	m13.7 <- map2stan(
+			alist(
+					total_tools ~ dpois(lambda),
+					log(lambda) <- a + g[society] + bp*logpop,
+					g[society] ~ GPL2( Dmat, etasq, rhosq, 0.01),
+					a ~ dnorm(0,10),
+					bp ~ dnorm(0,1),
+					etasq ~ dcauchy(0,1),
+					rhosq ~ dcauchy(0,1)
+					),
+			data=list(total_tools=d$total_tools, logpop=d$logpop, society=d$society, Dmat=islandsDistMatrix),
+			warmup=2e3, iter=3e3, chains=1
+			)		
+}
+	
 RakaiFull.phylogeography.180322.core.inference.gender<- function()
 {
 	require(data.table)
@@ -1867,6 +2269,106 @@ RakaiFull.phylogeography.180322.core.inference.gender<- function()
 	#	this is the end of the source attribution inference on the WAIFM matrix
 	#
 	save(zc, rtpdm, rfm, rmf, rtr2, ds, dc, dcb, file=paste0(outfile.base,'_phylogeography_core_inference.rda'))	
+}
+
+RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT','PARTICIPATED_ANY_VISIT')]
+	set(df, NULL, 'PART', df[, factor(PARTICIPATED_ANY_VISIT, levels=c(0,1), labels=c('PART_NEVER','PART_EVER'))])
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ PART, value.var='N')
+	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
+	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
+	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=AGE_AT_MID_C, shape=INMIGRANT)) +
+					geom_point(position=position_dodge(width=0.9)) +
+					geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
+					facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
+					theme_bw()
+			
+	
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','INMIGRANT','PARTICIPATED_ANY_VISIT')]
+	set(df, NULL, 'PART', df[, factor(PARTICIPATED_ANY_VISIT, levels=c(0,1), labels=c('PART_NEVER','PART_EVER'))])
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+INMIGRANT ~ PART, value.var='N')
+	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
+	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','SEX','INMIGRANT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+INMIGRANT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
+	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=INMIGRANT)) +
+			geom_point(position=position_dodge(width=0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
+			facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322.pdf'), w=12, h=10)
+	#	inmigrants did not systematically participate less frequently
+
+	#	quick logistic regression on participation
+	dg		<- subset(de, select=c(PARTICIPATED_ANY_VISIT, PERM_ID, COMM_NUM_A, AGE_AT_MID_C, INMIGRANT, SEX))
+	#	binarize age, sex
+	dg[, AGE_YOUNG:= as.integer(AGE_AT_MID_C=='15-24')]
+	dg[, AGE_MID:= as.integer(AGE_AT_MID_C=='25-34')]
+	dg[, MALE:= as.integer(SEX=='M')]
+	#	binarize community type
+	dg[, COMM_TYPE_F:= as.integer(substr(COMM_NUM_A,1,1)=='f')]
+	dg[, COMM_TYPE_T:= as.integer(substr(COMM_NUM_A,1,1)=='t')]
+	#	vanilla community IDs
+	tmp		<- data.table(COMM_NUM_A= sort(unique(dg$COMM_NUM_A)), COMM_NUM_B= seq_along(unique(dg$COMM_NUM_A)))
+	dg		<- merge(dg, tmp, by='COMM_NUM_A')
+	#	aggregate
+	dg		<- dg[, list(ELIGIBLE=length(PERM_ID), PART=length(which(PARTICIPATED_ANY_VISIT==1))), by=c('AGE_AT_MID_C','INMIGRANT','SEX','AGE_YOUNG','AGE_MID','MALE','COMM_TYPE_F','COMM_TYPE_T','COMM_NUM_A','COMM_NUM_B')]
+	mp1 	<- map2stan(
+			alist(
+					PART ~ dbinom(ELIGIBLE, p_part),
+					logit(p_part) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+										inmigrant*INMIGRANT + male*MALE + young*AGE_YOUNG + midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					c(trading, fishing, inmigrant, male, young, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,38), sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	plot(mp1)
+	plot( precis(mp1, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(mp1, n=1e3)
+	y.median<- apply(sims, 2, median)
+	y.PI1 	<- apply(sims, 2, PI, prob=0.95)
+	y.PI1	<- rbind(y.median, y.PI1)
+	rownames(y.PI1)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	y.PI1	<- as.data.table(t(y.PI1))
+	y.PI1	<- cbind(dg, y.PI1)	
+	ggplot(y.PI1, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=PART), colour='red') +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp1_pp.pdf'), w=16, h=32)
+	#	I think this is pretty good!	
+	save(dg, mp1, file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp1.rda'))
 }
 
 RakaiFull.phylogeography.180322.core.inference.age<- function()

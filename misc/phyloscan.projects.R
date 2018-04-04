@@ -28,9 +28,10 @@ project.dual<- function()
 	#pty.pipeline.examl()	
 	#pty.pipeline.coinfection.statistics()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
-	pty.pipeline.phyloscanner.180302.beehive67.process()
+	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
+	#pty.pipeline.phyloscanner.180302.beehive67.process()
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=20, hpc.q="pqeelab", hpc.mem="11gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -55,7 +56,8 @@ pty.various	<- function()
 	#RakaiFull.divergent.clades.calculate.170811()
 	#project.readlength.count.bam.171208()
 	#project.readlength.calculate.coverage.171208()
-	project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing()
+	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing()
+	project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 }
 
 project.dual.alignments.missing<- function()
@@ -1114,6 +1116,69 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing	<- function()
 	save(rtp, rn, dmin, file=outfile)	
 }
 
+project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2	<- function()
+{
+	require(data.table)
+	#
+	#	from every phyloscanner run, select pairs that are closely related 
+	#		
+	indir	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed_save'
+	outfile	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/close_pairs_170704_cl35_withtopology.rda'
+		
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	setkey(infiles, PTY_RUN)
+	
+	#	find runs in which ID1 and ID2 have highest N
+	min.read	<- 30
+	neff.cut	<- 3
+	rtp		<- infiles[, 	{
+								load(F)
+								ans	<- dwin[, list(N=length(which(ID1_R>=min.read & ID2_R>=min.read))), by=c('ID1','ID2')]
+								ans				
+							}, by=c('PTY_RUN')]	
+	rtp		<- rtp[, list(PTY_RUN= PTY_RUN[which.max(N)], N=max(N)), by=c('ID1','ID2')]
+	rtp		<- subset(rtp, N>=neff.cut)
+	#	for each pair, now calculate the number of ancestral, intermingled etc topologies,
+	#	and the median distance
+	tmp		<- unique(rtp$PTY_RUN)
+	infiles	<- subset(infiles, PTY_RUN%in%tmp)
+	ans		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s25_allbatch_sk20_tb_blnormed/ptyr667_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				pty.run <- PTY_RUN
+				tmp		<- subset(rtp, PTY_RUN==pty.run)
+				df		<- merge(dwin, tmp, by=c('ID1','ID2'))
+				#	define topology types
+				df[, TYPE_BASIC:=NA_character_]
+				tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & ADJACENT)]				
+				set(df, tmp, 'TYPE_BASIC', 'chain_12')
+				tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & ADJACENT)]				
+				set(df, tmp, 'TYPE_BASIC', 'chain_21')	
+				tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & ADJACENT)]				
+				set(df, tmp, 'TYPE_BASIC', 'intermingled')
+				tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & ADJACENT)]
+				set(df, tmp, 'TYPE_BASIC', 'sibling')
+				tmp		<- df[, which(PATHS_12==0 & PATHS_21==0 & !ADJACENT )]				
+				set(df, tmp, 'TYPE_BASIC', 'other')
+				tmp		<- df[, which(PATHS_12>0 & PATHS_21==0 & !ADJACENT )]				
+				set(df, tmp, 'TYPE_BASIC', 'other')	
+				tmp		<- df[, which(PATHS_12==0 & PATHS_21>0 & !ADJACENT )]				
+				set(df, tmp, 'TYPE_BASIC', 'other')	
+				tmp		<- df[, which(PATHS_12>0 & PATHS_21>0 & !ADJACENT )]				
+				set(df, tmp, 'TYPE_BASIC', 'other')	
+				stopifnot( !any(is.na(df$TYPE_BASIC)) )
+				#	compute median distance
+				tmp		<- df[, list(N=length(W_FROM), PATRISTIC_DISTANCE_MEDIAN=median(PATRISTIC_DISTANCE)), by=c('ID1','ID2')]
+				#	count each type
+				df		<- df[, list(K=length(W_FROM)), by=c('ID1','ID2','TYPE_BASIC')]
+				df		<- merge(df, tmp, by=c('ID1','ID2'))
+				list(ID1= df$ID1, ID2=df$ID2, TYPE_BASIC=df$TYPE_BASIC, K=df$K, N=df$N, PATRISTIC_DISTANCE_MEDIAN=df$PATRISTIC_DISTANCE_MEDIAN)				
+			}, by=c('PTY_RUN')]				
+	save(ans, file=outfile)	
+}
+
 project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
 {
 	require(igraph)
@@ -1259,6 +1324,46 @@ project.RakaiAll.setup.phyloscanner.170301.stagetwo	<- function()
 	pty.runs<- merge(pty.runs, pty.runs[, list(SID=SID, RENAME_SID=paste0(RID,'_fq',seq_along(SID))), by=c('PTY_RUN','RID')], by=c('PTY_RUN','RID','SID'))
 	
 	save(pty.runs, file= '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_stagetwo.rda')
+}
+
+project.RakaiAll.setup.phyloscanner.170704.stagethree.andtwo	<- function()
+{
+	require(igraph)
+	#
+	#	revisit the huge cluster 1 because we cannot process it
+	#	the main point is that all pairs with NEFF<3 are deemed as having insufficient data
+	#	this introduces additional sparseness
+	#
+	infile	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170704_stagetwo.rda'
+	load(infile)	
+	run1	<- subset(pty.runs, PTY_RUN==1)
+	
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170421.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170428_cl3.rda'
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35.rda'
+	load(infile)	
+	
+	rtp			<- subset(rtp, GROUP=='TYPE_PAIR_DI2' & POSTERIOR_SCORE>=0.6)
+	tmp			<- unique(run1$RID)
+	tmp2		<- subset(rtp, !(ID1%in%tmp | ID2%in%tmp))
+	rtp			<- subset(rtp, (ID1%in%tmp | ID2%in%tmp) & NEFF>=3)
+	rtp			<- rbind(rtp, tmp2)
+	#	how many pairs remaining
+	tmp			<- unique(subset(rtp, select=c(ID1, ID2)))
+	stopifnot(nrow(subset(tmp, ID1>ID2))==0)
+	
+	#	get transmission chains with igraph
+	tmp			<- subset(rtp, select=c(ID1, ID2))			
+	tmp			<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc			<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2		<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc			<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)	
+	rtc[, max(IDCLU)]	#482
+	
 }
 
 project.RakaiAll.setup.phyloscanner.170704.stagethree	<- function()
