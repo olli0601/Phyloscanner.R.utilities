@@ -1833,6 +1833,7 @@ RakaiFull.phylogeography.180322.core.inference.stan.first.vanilla.models<- funct
 	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
 	rtr2	<- rbind(rtr2,tmp)
 	
+	#	rtr2 is a line list of transmitters -> recipients ( no time )
 	#	sum transmission events by community and gender
 	dc1	<- rtr2[, list(TR_OBS=length(PAIRID)), by=c('TR_FISHCOMM','REC_FISHCOMM')]
 	dc1[, FROM_TO_ID:= seq_len(nrow(dc1))]

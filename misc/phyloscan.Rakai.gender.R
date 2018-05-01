@@ -958,13 +958,13 @@ RakaiFull.gender.171122.hh.multivariatemodels.stan.with.threshold.v2<- function(
 	ggsave(file=paste0(outfile.base,'_interaction_runs_odds_noage_mf.pdf'), w=5, h=5)	
 }
 
+
 RakaiFull.transmitter.171122.get.data.set<- function()
 {
 	require(data.table)
 	
 	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
-	outfile.base			<- gsub('_withmetadata.rda','',infile)
-	
+	outfile.base			<- gsub('_withmetadata.rda','',infile)	
 	#zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
 	#zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
 	load(infile)	
@@ -972,11 +972,13 @@ RakaiFull.transmitter.171122.get.data.set<- function()
 	rtp[, PAIRID:= seq_len(nrow(rtp))]
 	rtpdm	<- subset(rtp, grepl('mf|fm',SELECT))
 	rtpdm[, PAIR_COMM_TYPE:= FEMALE_COMM_TYPE]
+	set(rtpdm, rtpdm[, which(PAIR_COMM_TYPE!='fisherfolk')], 'PAIR_COMM_TYPE', 'non-fishing')
 	set(rtpdm, rtpdm[, which(FEMALE_COMM_TYPE!=MALE_COMM_TYPE)], 'PAIR_COMM_TYPE', 'mixed')
 	set(rtpdm, rtpdm[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
 	set(rtpdm, rtpdm[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')	
-	rtpdm[, COUPLE2:= factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('no couple','couple'))]
-	rtpdm[, SAMEHH:= factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('same hh','different hh'))]	
+	rtpdm[, COUPLE:= as.integer(as.character(factor(COUPLE=='no couple', levels=c(TRUE,FALSE), labels=c('0','1'))))]
+	rtpdm[, SAME_HH:= as.integer(as.character(factor(FEMALE_HH_NUM==MALE_HH_NUM, levels=c(TRUE,FALSE), labels=c('1','0'))))]
+	rtpdm[, SAME_COMM:= as.integer(as.character(factor(FEMALE_COMM_NUM==MALE_COMM_NUM, levels=c(TRUE,FALSE), labels=c('1','0'))))]
 	rtpdm[, PAIR_COMM:= MALE_COMM_NUM_A]
 	set(rtpdm, rtpdm[, which(FEMALE_COMM_NUM_A!=MALE_COMM_NUM_A)], 'PAIR_COMM', 'mixed')
 	rtpdm[, MALE_SEXP1OUT2:= factor(MALE_SEXP1OUT=='0', levels=c(TRUE,FALSE),labels=c('none','1+'))]
@@ -985,54 +987,153 @@ RakaiFull.transmitter.171122.get.data.set<- function()
 	set(rtpdm, rtpdm[, which(FEMALE_SEXP1OUT=='Unknown')], 'FEMALE_SEXP1OUT2', 'Unknown')
 	rtpdm[, MALE_SEX:='M']
 	rtpdm[, FEMALE_SEX:='F']
-	#	add immigrant
-	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda")
-	tmp		<- subset(de, !is.na(RID), select=c(RID, INMIGRANT))
-	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
-	load(infile)
-	tmp2	<- subset(as.data.table(inmigrant), select=c(RCCS_studyid,inmigrant))
-	setnames(tmp2, 'RCCS_studyid', 'RID')
-	tmp2	<- tmp2[, list(inmigrant=as.integer(any(inmigrant==1))), by='RID']
-	tmp		<- merge(tmp, tmp2, all=TRUE, by='RID')
-	#INMIGRANT and inmigrant do not agree.. 
-	#subset(tmp, !is.na(inmigrant) & !is.na(INMIGRANT))[, table(inmigrant, INMIGRANT)]
-	#...just set those with missing INMIGRANT to inmigrant
-	set(tmp, NULL, 'INMIGRANT', tmp[, as.integer(INMIGRANT)])
-	tmp2	<- tmp[, which(!is.na(inmigrant) & is.na(INMIGRANT))]
-	set(tmp, tmp2, 'INMIGRANT', tmp[tmp2, inmigrant])	
-	tmp		<- subset(tmp, select=c(RID, INMIGRANT))	
-	setnames(tmp, colnames(tmp), paste0('MALE_',colnames(tmp)))
-	rtpdm	<- merge(rtpdm, tmp, by='MALE_RID', all.x=TRUE)
-	setnames(tmp, colnames(tmp), gsub('MALE_','FEMALE_',colnames(tmp)))
-	rtpdm	<- merge(rtpdm, tmp, by='FEMALE_RID', all.x=TRUE)
-	set(rtpdm, rtpdm[, which(is.na(MALE_INMIGRANT))], 'MALE_INMIGRANT', 0L)
-	set(rtpdm, rtpdm[, which(is.na(FEMALE_INMIGRANT))], 'FEMALE_INMIGRANT', 0L)
-	setkey(rtpdm, MALE_RID,FEMALE_RID)
 	rtpdm[, PAIRID:= seq_len(nrow(rtpdm))]
+	set(rtpdm, NULL, 'MALE_CIRCUM', rtpdm[, as.integer(as.character(factor(MALE_CIRCUM, levels=c('Y','N'), labels=c('1','0'))))])
 	
-	df		<- subset(rtpdm, select=c(	MALE_RID, FEMALE_RID, PAIRID, PTY_RUN, LINK_MF, COUPLE2, SAMEHH, PAIR_COMM_TYPE, 					
-					MALE_SEX, MALE_BIRTHDATE, MALE_COMM_TYPE, MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCCUP_OLLI, MALE_OCAT, MALE_EDUCAT, FEMALE_INMIGRANT, MALE_CIRCUM,
-					FEMALE_SEX, FEMALE_BIRTHDATE, FEMALE_COMM_TYPE, FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCCUP_OLLI, FEMALE_OCAT, FEMALE_EDUCAT, MALE_INMIGRANT 
-					))
+	#	add immigrant:
+	#	was inmigrant within 1 year of first conc pos; within 2 years of first conc pos	
+	tmp			<- subset(rtpdm, select=c(PAIRID, MALE_RID, FEMALE_RID, VISIT_FIRSTCONCPOS))
+	tmp2		<- unique(subset(rd, select=c(RID, VISIT, DATE)))
+	setnames(tmp2, colnames(tmp2), gsub('MALE_VISIT','VISIT_FIRSTCONCPOS',paste0('MALE_',colnames(tmp2))))
+	tmp			<- merge(tmp, tmp2, by=c('MALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	setnames(tmp2, colnames(tmp2), gsub('MALE_','FEMALE_', colnames(tmp2)))
+	tmp			<- merge(tmp, tmp2, by=c('FEMALE_RID','VISIT_FIRSTCONCPOS'), all.x=1)
+	set(tmp, tmp[, which(is.na(MALE_DATE))], 'MALE_DATE', -1)
+	set(tmp, tmp[, which(is.na(FEMALE_DATE))], 'FEMALE_DATE', -1)
+	#	argh there are entries where both have missing date in rd ..
+	tmp2		<- subset(tmp, MALE_DATE==-1 & FEMALE_DATE==-1, select=c(MALE_RID, FEMALE_RID, VISIT_FIRSTCONCPOS, PAIRID))
+	tmp2		<- merge(tmp2, subset(rtpdm, select=c(MALE_RID, FEMALE_RID, VISIT_FIRSTCONCPOS, PAIRID, MALE_DATE, FEMALE_DATE)), by=c('MALE_RID','FEMALE_RID','VISIT_FIRSTCONCPOS','PAIRID'))
+	tmp			<- rbind(subset(tmp, !(MALE_DATE==-1 & FEMALE_DATE==-1)), tmp2)	
+	set(tmp, NULL, 'DATE_FIRSTCONCPOS', tmp[, pmax(MALE_DATE, FEMALE_DATE)])
+	stopifnot( nrow(subset(tmp, DATE_FIRSTCONCPOS==-1))==0 )
+	set(tmp, NULL, c('VISIT_FIRSTCONCPOS','MALE_DATE','FEMALE_DATE'), NULL)
+	
+	#
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData_v2.rda"
+	load(infile)
+	inmigrant	<- subset(as.data.table(inmigrant), select=c(RCCS_studyid, date))	
+	inmigrant[, date:= hivc.db.Date2numeric(date)]		
+	setnames(inmigrant, c('RCCS_studyid','date'), c('MALE_RID','MALE_INMIGRATE_DATE'))
+	tmp			<- merge(tmp, inmigrant, by='MALE_RID', all.x=1)
+	setnames(inmigrant, colnames(inmigrant), gsub('MALE_','FEMALE_', colnames(inmigrant)))
+	tmp			<- merge(tmp, inmigrant, by='FEMALE_RID', all.x=1)
+	set(tmp, tmp[, which(is.na(MALE_INMIGRATE_DATE))], 'MALE_INMIGRATE_DATE', -1)
+	set(tmp, tmp[, which(is.na(FEMALE_INMIGRATE_DATE))], 'FEMALE_INMIGRATE_DATE', -1)
+	
+	tmp			<- tmp[, list( MALE_INMIGRATE_1YR= as.numeric(any(DATE_FIRSTCONCPOS>=MALE_INMIGRATE_DATE & DATE_FIRSTCONCPOS-MALE_INMIGRATE_DATE<1)),
+								MALE_INMIGRATE_2YR= as.numeric(any(DATE_FIRSTCONCPOS>=MALE_INMIGRATE_DATE & DATE_FIRSTCONCPOS-MALE_INMIGRATE_DATE<2)),
+								FEMALE_INMIGRATE_1YR= as.numeric(any(DATE_FIRSTCONCPOS>=FEMALE_INMIGRATE_DATE & DATE_FIRSTCONCPOS-FEMALE_INMIGRATE_DATE<1)),
+								FEMALE_INMIGRATE_2YR= as.numeric(any(DATE_FIRSTCONCPOS>=FEMALE_INMIGRATE_DATE & DATE_FIRSTCONCPOS-FEMALE_INMIGRATE_DATE<2))), by=c('FEMALE_RID','MALE_RID','PAIRID','DATE_FIRSTCONCPOS')]
+	#	58 males ; 6 more males inmigrant within 2 years				
+	#	76 females; 11 more females inmigrant within 2 years
+	rtpdm		<- merge(rtpdm, tmp, by=c('FEMALE_RID','MALE_RID','PAIRID'))
+	
+	
+	#	most recent vl within one year first conc pos
+	vld			<- subset(as.data.table(vlData), select=c(RCCS_studyid, date, copies, newcopies))	
+	set(vld, vld[, which(copies!=newcopies)], 'copies', vld[copies!=newcopies,newcopies])
+	vld[, date:= hivc.db.Date2numeric(date)]
+	set(vld, NULL, 'newcopies', NULL)
+	vld			<- subset(vld, !is.na(copies))
+	tmp			<- subset(rtpdm, select=c(PAIRID, MALE_RID, FEMALE_RID, DATE_FIRSTCONCPOS))
+	setnames(vld, c('RCCS_studyid','date','copies'), c('MALE_RID','MALE_VL_DATE','MALE_VL'))
+	tmp			<- merge(tmp, vld, by=c('MALE_RID'), all.x=1)
+	setnames(vld, colnames(vld), gsub('MALE_','FEMALE_',colnames(vld)))
+	tmp			<- merge(tmp, vld, by=c('FEMALE_RID'), all.x=1)
+	tmp			<- tmp[, list( 	MALE_CLOSEST_VL_DATE= MALE_VL_DATE[which.min(abs(DATE_FIRSTCONCPOS-MALE_VL_DATE))],
+								MALE_CLOSEST_VL= MALE_VL[which.min(abs(DATE_FIRSTCONCPOS-MALE_VL_DATE))],
+								FEMALE_CLOSEST_VL_DATE= FEMALE_VL_DATE[which.min(abs(DATE_FIRSTCONCPOS-FEMALE_VL_DATE))],
+								FEMALE_CLOSEST_VL= FEMALE_VL[which.min(abs(DATE_FIRSTCONCPOS-FEMALE_VL_DATE))]
+								), by=c('FEMALE_RID','MALE_RID','PAIRID','DATE_FIRSTCONCPOS')]	
+	set(tmp, tmp[, which(abs(DATE_FIRSTCONCPOS-MALE_CLOSEST_VL_DATE)<1)], 'MALE_CLOSEST_VL_1YR', tmp[abs(DATE_FIRSTCONCPOS-MALE_CLOSEST_VL_DATE)<1, MALE_CLOSEST_VL])
+	set(tmp, tmp[, which(abs(DATE_FIRSTCONCPOS-MALE_CLOSEST_VL_DATE)<2)], 'MALE_CLOSEST_VL_2YR', tmp[abs(DATE_FIRSTCONCPOS-MALE_CLOSEST_VL_DATE)<2, MALE_CLOSEST_VL])
+	set(tmp, tmp[, which(abs(DATE_FIRSTCONCPOS-FEMALE_CLOSEST_VL_DATE)<1)], 'FEMALE_CLOSEST_VL_1YR', tmp[abs(DATE_FIRSTCONCPOS-FEMALE_CLOSEST_VL_DATE)<1, FEMALE_CLOSEST_VL])
+	set(tmp, tmp[, which(abs(DATE_FIRSTCONCPOS-FEMALE_CLOSEST_VL_DATE)<2)], 'FEMALE_CLOSEST_VL_2YR', tmp[abs(DATE_FIRSTCONCPOS-FEMALE_CLOSEST_VL_DATE)<2, FEMALE_CLOSEST_VL])
+	tmp			<- subset(tmp, select=c(PAIRID, FEMALE_CLOSEST_VL_1YR, FEMALE_CLOSEST_VL_2YR, MALE_CLOSEST_VL_1YR, MALE_CLOSEST_VL_2YR))
+	rtpdm		<- merge(rtpdm, tmp, by='PAIRID', all.x=1)
+	
+	#	age at midpoint
+	set(rtpdm, rtpdm[, which(is.na(MALE_BIRTHDATE))], 'MALE_BIRTHDATE', rtpdm[, mean(MALE_BIRTHDATE, na.rm=TRUE)])
+	set(rtpdm, rtpdm[, which(is.na(FEMALE_BIRTHDATE))], 'FEMALE_BIRTHDATE', rtpdm[, mean(FEMALE_BIRTHDATE, na.rm=TRUE)])
+	rtpdm[, MALE_AGE_AT_MID:= 2013.25-MALE_BIRTHDATE]
+	rtpdm[, FEMALE_AGE_AT_MID:= 2013.25-FEMALE_BIRTHDATE]
+	rtpdm[, MALE_AGE_AT_MID_C:= rtpdm[,as.character(cut(MALE_AGE_AT_MID, breaks=c(15,20,25,30,35,40,45,52), right=FALSE, levels=c('15-19','20-24','25-29','30-34','35-39','40-44','45-50')))]]
+	rtpdm[, FEMALE_AGE_AT_MID_C:= rtpdm[,as.character(cut(FEMALE_AGE_AT_MID, breaks=c(15,20,25,30,35,40,45,52), right=FALSE, levels=c('15-19','20-24','25-29','30-34','35-39','40-44','45-50')))]]
+
+	#
+	#	add extra variables
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/additionalVariables_rtp_23Apr2018.rda"
+	load(infile)
+	rtpde	<- subset(as.data.table(rtp), grepl('mf|fm',SELECT), select=c(MALE_RID, FEMALE_RID, FEMALE_GUD, MALE_GUD, male.sum.stable, male.sum.unstable, male.condom.no.stable, male.condom.no.unstable,
+					male.condom.yes.stable, male.condom.yes.unstable, male.alc.no.stable, male.alc.no.unstable, male.alc.yes.stable, male.alc.yes.unstable, female.sum.stable, female.sum.unstable,
+					female.condom.no.stable, female.condom.no.unstable, female.condom.yes.stable, female.condom.yes.unstable, female.alc.no.stable, female.alc.no.unstable, female.alc.yes.stable,
+					female.alc.yes.unstable, pregnant))
+	setnames(rtpde, colnames(rtpde), gsub('\\.','_',toupper(colnames(rtpde))))
+	setnames(rtpde, 'PREGNANT', 'FEMALE_PREGNANT')
+	set(rtpde, rtpde[, which(FEMALE_PREGNANT=='unknown')], 'FEMALE_PREGNANT', NA_character_)
+	set(rtpde, NULL, 'FEMALE_PREGNANT', rtpde[, as.integer(FEMALE_PREGNANT=='yes')])
+	set(rtpde, NULL, 'FEMALE_GUD', rtpde[, as.integer(FEMALE_GUD==1)])
+	set(rtpde, NULL, 'MALE_GUD', rtpde[, as.integer(MALE_GUD==1)])	
+	#	alcohol use: ever in last year
+	set(rtpde, rtpde[, which(MALE_SUM_UNSTABLE==0 & is.na(MALE_ALC_YES_UNSTABLE))], 'MALE_ALC_YES_UNSTABLE', 0L)
+	set(rtpde, rtpde[, which(MALE_SUM_STABLE==0 & is.na(MALE_ALC_YES_STABLE))], 'MALE_ALC_YES_STABLE', 0L)
+	set(rtpde, rtpde[, which(FEMALE_SUM_UNSTABLE==0 & is.na(FEMALE_ALC_YES_UNSTABLE))], 'FEMALE_ALC_YES_UNSTABLE', 0L)
+	set(rtpde, rtpde[, which(FEMALE_SUM_STABLE==0 & is.na(FEMALE_ALC_YES_STABLE))], 'FEMALE_ALC_YES_STABLE', 0L)
+	rtpde[, MALE_ALCEVER_LASTYEAR:= as.integer((MALE_ALC_YES_UNSTABLE+MALE_ALC_YES_STABLE)>0)]
+	rtpde[, FEMALE_ALCEVER_LASTYEAR:= as.integer((FEMALE_ALC_YES_UNSTABLE+FEMALE_ALC_YES_STABLE)>0)]	
+	#	condom use: never in last year
+	set(rtpde, rtpde[, which(MALE_SUM_UNSTABLE==0 & is.na(MALE_CONDOM_YES_UNSTABLE))], 'MALE_CONDOM_YES_UNSTABLE', 0L)
+	set(rtpde, rtpde[, which(MALE_SUM_STABLE==0 & is.na(MALE_CONDOM_YES_STABLE))], 'MALE_CONDOM_YES_STABLE', 0L)
+	set(rtpde, rtpde[, which(FEMALE_SUM_UNSTABLE==0 & is.na(FEMALE_CONDOM_YES_UNSTABLE))], 'FEMALE_CONDOM_YES_UNSTABLE', 0L)
+	set(rtpde, rtpde[, which(FEMALE_SUM_STABLE==0 & is.na(FEMALE_CONDOM_YES_STABLE))], 'FEMALE_CONDOM_YES_STABLE', 0L)
+	rtpde[, MALE_CONDOM_NEVER:= as.integer((MALE_CONDOM_YES_UNSTABLE+MALE_CONDOM_YES_STABLE)==0)]
+	rtpde[, FEMALE_CONDOM_NEVER:= as.integer((FEMALE_CONDOM_YES_UNSTABLE+FEMALE_CONDOM_YES_STABLE)==0)]
+	#	check against reporting
+	set(rtpde, rtpde[, which((MALE_SUM_UNSTABLE+MALE_SUM_STABLE)==0)], c('MALE_ALCEVER_LASTYEAR','MALE_CONDOM_NEVER'), NA_integer_)
+	set(rtpde, rtpde[, which((FEMALE_SUM_UNSTABLE+FEMALE_SUM_STABLE)==0)], c('FEMALE_ALCEVER_LASTYEAR','FEMALE_CONDOM_NEVER'), NA_integer_)
+	
+	rtpde	<- subset(rtpde, select=c(MALE_RID, FEMALE_RID, FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))
+	rtpdm	<- merge(rtpdm, rtpde, by=c('MALE_RID','FEMALE_RID'))
+	
+	#	select
+	setkey(rtpdm, MALE_RID,FEMALE_RID)
+	df		<- subset(rtpdm, select=c(	MALE_RID, FEMALE_RID, PAIRID, PTY_RUN, LINK_MF, COUPLE, SAME_HH, SAME_COMM, PAIR_COMM_TYPE, DATE_FIRSTCONCPOS,					
+										MALE_SEX, MALE_RECENTVL, MALE_SEXP1YR, MALE_SEXP1OUT2, MALE_OCAT, MALE_EDUCAT, MALE_CIRCUM,
+										MALE_INMIGRATE_1YR, MALE_INMIGRATE_2YR, MALE_CLOSEST_VL_1YR, MALE_CLOSEST_VL_2YR, MALE_AGE_AT_MID, MALE_AGE_AT_MID_C,
+										FEMALE_SEX, FEMALE_RECENTVL, FEMALE_SEXP1YR, FEMALE_SEXP1OUT2, FEMALE_OCAT, FEMALE_EDUCAT, 
+										FEMALE_INMIGRATE_1YR, FEMALE_INMIGRATE_2YR, FEMALE_CLOSEST_VL_1YR, FEMALE_CLOSEST_VL_2YR, FEMALE_AGE_AT_MID, FEMALE_AGE_AT_MID_C,
+										FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER
+										))
+	
 	#	missing data: fill in
-	set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)
-	set(df, df[, which(is.na(FEMALE_RECENTVL))], 'FEMALE_RECENTVL', -1)
-	set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
-	set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
-	set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
-	set(df, df[, which(is.na(MALE_BIRTHDATE))], 'MALE_BIRTHDATE', df[, mean(MALE_BIRTHDATE, na.rm=TRUE)])
-	set(df, df[, which(is.na(FEMALE_BIRTHDATE))], 'FEMALE_BIRTHDATE', df[, mean(FEMALE_BIRTHDATE, na.rm=TRUE)])	
-	df[, MALE_AGE_AT_MID:= 2013.25-MALE_BIRTHDATE]
-	df[, FEMALE_AGE_AT_MID:= 2013.25-FEMALE_BIRTHDATE]
-	#for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
-	#	add estimated HIV prevalences (medians)
-	#infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
-	#load(infile)
-	#tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
-	#setnames(tmp, 'COMM_NUM', 'FEMALE_COMM_NUM')
-	#df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
+	if(0)
+	{
+		set(df, df[, which(is.na(MALE_RECENTVL))], 'MALE_RECENTVL', -1)
+		set(df, df[, which(is.na(FEMALE_RECENTVL))], 'FEMALE_RECENTVL', -1)
+		set(df, df[, which(is.na(MALE_CIRCUM))], 'MALE_CIRCUM', 'Unknown')
+		set(df, df[, which(is.na(FEMALE_EDUCAT))], 'FEMALE_EDUCAT', 'Unknown')
+		set(df, df[, which(is.na(MALE_EDUCAT))], 'MALE_EDUCAT', 'Unknown')
+		set(df, df[, which(is.na(MALE_BIRTHDATE))], 'MALE_BIRTHDATE', df[, mean(MALE_BIRTHDATE, na.rm=TRUE)])
+		set(df, df[, which(is.na(FEMALE_BIRTHDATE))], 'FEMALE_BIRTHDATE', df[, mean(FEMALE_BIRTHDATE, na.rm=TRUE)])
+		for(x in colnames(df)) print( c(x, any(is.na(df[[x]]))) )
+	}
 	
+	#	add estimated HIV prevalences (medians)
+	if(0)
+	{
+		infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30trmMF_estimated_prevalenceratio.rda"	
+		load(infile)
+		tmp		<- dcast.data.table(dgg, COMM_NUM~variable, value.var='M')
+		tmp[, RFM:=NULL]
+		setnames(tmp, c('COMM_NUM','PF','PM'), c('FEMALE_COMM_NUM','FEMALE_HIVPREVF','FEMALE_HIVPREVM'))	
+		df		<- merge(df, tmp, by='FEMALE_COMM_NUM')
+		setnames(tmp, c('FEMALE_COMM_NUM','FEMALE_HIVPREVF','FEMALE_HIVPREVM'), c('MALE_COMM_NUM','MALE_HIVPREVF','MALE_HIVPREVM'))
+		df		<- merge(df, tmp, by='MALE_COMM_NUM')		
+	}
+	
+	#
 	#	cast to TRM==1 and REC==0
+	#
 	dg		<- subset(df, LINK_MF==1)
 	set(dg, NULL, colnames(dg)[grepl('FEMALE',colnames(dg))], NULL)
 	setnames(dg, colnames(dg), gsub('^MALE_','',colnames(dg)))
@@ -1051,10 +1152,21 @@ RakaiFull.transmitter.171122.get.data.set<- function()
 	tmp[, LINK_MF:=1L]
 	dg		<- rbind(dg, tmp, fill=TRUE)
 	setnames(dg, 'LINK_MF','TRANSMITTER')
-	dg[, AGE_AT_MID_C:= dg[,as.character(cut(AGE_AT_MID, breaks=c(15,20,25,30,35,40,45,52), right=FALSE, levels=c('15-19','20-24','25-29','30-34','35-39','40-44','45-50')))]]	
-	df		<- copy(dg)
 	
-	save(df, file= paste0(outfile.base, '_transmitterrecipientdata.rda'))
+	#
+	#	get into format transmitter TR and recipient REC
+	#
+	rmf		<- subset(df, LINK_MF==1 )
+	rfm		<- subset(df, LINK_MF==0 )
+	rtr		<- copy(rmf)
+	setnames(rtr,colnames(rtr),gsub('FEMALE','REC',colnames(rtr)))
+	setnames(rtr,colnames(rtr),gsub('MALE','TR',colnames(rtr)))
+	tmp		<- copy(rfm)
+	setnames(tmp,colnames(tmp),gsub('FEMALE','TR',colnames(tmp)))
+	setnames(tmp,colnames(tmp),gsub('MALE','REC',colnames(tmp)))
+	rtr		<- rbind(rtr,tmp,fill=TRUE)	
+	
+	save(df, dg, rtr, file= paste0(outfile.base, '_transmitterrecipientdata.rda'))
 }
 
 RakaiFull.transmitter.171122.gender.explore<- function()
@@ -1872,6 +1984,1220 @@ RakaiFull.transmitter.171122.gender.multivariatemodels.stan.with.threshold<- fun
 			guides(fill=FALSE) +
 			labs(x='Individual characteristics\n', y='\nOdds ratio for being a transmitter vs. recipient\nin phylogenetically reconstructed transmission pairs')
 	ggsave(file=paste0(outfile.base,'_odds_diffhh_noage.pdf'), w=6, h=5)
+}
+
+RakaiFull.transmitter.180423.build1<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_transmitterrecipientdata.rda"
+	outfile.base	<- gsub('data.rda','',infile)
+	load(infile)
+	setnames(df, 'LINK_MF', 'MALE_IS_TR')
+	
+	#	build model with closest viral load greater 10e3 and 100e3
+	df[, MALE_CLOSEST_VL_1YR_G10E3:= as.integer(MALE_CLOSEST_VL_1YR>10e3)]
+	df[, FEMALE_CLOSEST_VL_1YR_G10E3:= as.integer(FEMALE_CLOSEST_VL_1YR>10e3)]
+	#	add sex partners and education
+	set(df, df[, which(FEMALE_EDUCAT=='Unknown')], 'FEMALE_EDUCAT', NA_character_)
+	set(df, df[, which(MALE_EDUCAT=='Unknown')], 'MALE_EDUCAT', NA_character_)	
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]	
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	set(df, df[, which(FEMALE_SEXP1YR=='Unknown')], 'FEMALE_SEXP1YR', NA_character_)
+	set(df, df[, which(MALE_SEXP1YR=='Unknown')], 'MALE_SEXP1YR', NA_character_)	
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	#	add fishing, same household, same community, inmigrant
+	set(df, NULL, 'FISH', df[, as.integer(PAIR_COMM_TYPE=='fisherfolk')])
+	#	add age as random effect 
+	#	because I don t think it s a linearly increasing relationship
+	df[, MALE_AGE_AT_MID_C:= df[,as.character(cut(MALE_AGE_AT_MID, breaks=c(15,25,30,35,52), right=FALSE, labels=c('15-24','25-29','30-34','35-50')))]]
+	df[, MALE_AGE_AT_MID_C2:= as.integer(as.factor(MALE_AGE_AT_MID_C))]
+	df[, FEMALE_AGE_AT_MID_C:= df[,as.character(cut(FEMALE_AGE_AT_MID, breaks=c(15,20,25,30,35,52), right=FALSE, labels=c('15-19','20-24','25-29','30-34','35-50')))]]
+	df[, FEMALE_AGE_AT_MID_C2:= as.integer(as.factor(FEMALE_AGE_AT_MID_C))]
+	df[, MALE_AGE_24:= as.integer(MALE_AGE_AT_MID_C=='15-24')]
+	df[, MALE_AGE_29:= as.integer(MALE_AGE_AT_MID_C=='25-29')]
+	df[, MALE_AGE_34:= as.integer(MALE_AGE_AT_MID_C=='30-34')]
+	df[, FEMALE_AGE_19:= as.integer(FEMALE_AGE_AT_MID_C=='15-19')]
+	df[, FEMALE_AGE_24:= as.integer(FEMALE_AGE_AT_MID_C=='20-24')]
+	df[, FEMALE_AGE_29:= as.integer(FEMALE_AGE_AT_MID_C=='25-29')]
+	df[, FEMALE_AGE_34:= as.integer(FEMALE_AGE_AT_MID_C=='30-34')]	
+	
+	
+	dh		<- subset(df, select=c(PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3))
+	
+	mt.1 <- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3 * MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3 * FEMALE_CLOSEST_VL_1YR_G10E3,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					base ~ dnorm(0,100),
+					vl_mean ~ dnorm(0.5, 1),
+					vl_sigma ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(dh), 
+			start=list(base=0, male_vl_above10e3=0, female_vl_above10e3=0, vl_mean=0.5, vl_sigma=1),			
+			warmup=5e2, iter=2e3, chains=1, cores=4, verbose=TRUE, debug=TRUE)
+	precis(mt.1, prob=0.95)
+	#	base                 0.66   0.29       0.10       1.26  1002 1.00
+	#	male_vl_above10e3    0.80   0.37       0.08       1.53   859 1.00
+	#	female_vl_above10e3 -1.38   0.35      -2.03      -0.67  1176 1.00
+	#	looks good, from base Male is significant
+			
+	dh		<- subset(df, select=c(PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU))
+	mt.2 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+									female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+						vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1),			
+			warmup=5e2, iter=4e3, chains=1, cores=4)
+	plot(mt.2)
+	precis(mt.2, prob=0.95)
+	#	                      Mean StdDev lower 0.95 upper 0.95 n_eff Rhat
+	#base                  0.62   0.37      -0.11       1.35  1688    1
+	#male_vl_above10e3     0.78   0.39       0.01       1.52  1525    1
+	#female_vl_above10e3  -1.51   0.38      -2.24      -0.77  2003    1
+	#female_edu_none       0.63   0.48      -0.30       1.57  3500    1
+	#male_edu_none         0.11   0.48      -0.83       1.04  3500    1
+	#female_sexp1yr_gr1   -0.19   0.31      -0.75       0.45  3500    1
+	#male_sexp1yr_gr1      0.18   0.29      -0.37       0.73  3500    1
+	#vl_mean               0.54   0.03       0.48       0.60  1893    1
+	#edu_mean              0.10   0.01       0.08       0.13  3500    1
+	#sexp_mean             0.44   0.02       0.40       0.48  3500    1
+	#vl_sigma              0.50   0.02       0.46       0.54  1701    1
+	#edu_sigma             0.30   0.01       0.28       0.32  3500    1
+	#sexp_sigma            0.50   0.01       0.47       0.53  3500    1
+	#	looks good, from base Male is not significant
+	
+	dh		<- subset(df, select=c(PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, 
+					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM))	
+	mt.3 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							pair_commtype_notfish*(1-FISH) + pair_withincomm_yes*SAME_COMM + pair_withinhh_yes*SAME_HH,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,10),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_commtype_notfish, pair_withincomm_yes, pair_withinhh_yes) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+						male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,
+						vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1),			
+			warmup=5e2, iter=10e3, chains=1, cores=4)
+	plot(mt.3)
+	precis(mt.3, prob=0.95)
+	plot(precis(mt.3, prob=0.95))
+	#base                      -0.48   0.60      -1.65       0.69  9500    1
+	#male_vl_above10e3          0.97   0.41       0.18       1.79  7780    1
+	#female_vl_above10e3       -1.74   0.41      -2.55      -0.96  8393    1
+	#female_edu_none            0.94   0.51      -0.04       1.95  9500    1
+	#male_edu_none              0.05   0.51      -0.91       1.05  9500    1
+	#female_sexp1yr_gr1         0.02   0.34      -0.67       0.68  9500    1
+	#male_sexp1yr_gr1           0.46   0.31      -0.13       1.06  9500    1
+	#male_inmigrate_lastyear   -0.13   0.40      -0.94       0.64  9500    1
+	#female_inmigrate_lastyear  0.69   0.35       0.00       1.39  9500    1
+	#pair_commtype_notfish      0.76   0.34       0.08       1.42  9500    1
+	#pair_withincomm_yes        0.14   0.44      -0.67       1.03  9500    1
+	#pair_withinhh_yes          0.76   0.34       0.09       1.41  9500    1
+	#	looks good: once withinhh included, base no longer significant 
+	
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, 
+									FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,
+									MALE_AGE_AT_MID_C2, FEMALE_AGE_AT_MID_C2,
+									MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))		
+	mt.4 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+									female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+									male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+									male_age[MALE_AGE_AT_MID_C2] + female_age[FEMALE_AGE_AT_MID_C2] +
+									pair_commtype_notfish*(1-FISH) + pair_withincomm_yes*SAME_COMM + pair_withinhh_yes*SAME_HH,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,10),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_commtype_notfish, pair_withincomm_yes, pair_withinhh_yes) ~ dnorm(0,10),
+					male_age[MALE_AGE_AT_MID_C2] ~ dnorm(0,male_age_sig),
+					female_age[FEMALE_AGE_AT_MID_C2] ~ dnorm(0,female_age_sig),
+					c(male_age_sig,female_age_sig) ~ dcauchy(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,
+					male_age= rep(0,4), female_age= rep(0,5),
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1),			
+			warmup=5e2, iter=10e3, chains=1, cores=4)
+	plot(mt.4)
+	precis(mt.4, prob=0.95)
+	precis(mt.4, prob=0.95, depth=2)
+	plot(precis(mt.4, prob=0.95))
+	#	this looks also good!
+	#base                                    -0.46   0.79      -1.98       1.12  2332    1
+	#male_vl_above10e3                        1.04   0.43       0.18       1.88  4701    1
+	#female_vl_above10e3                     -1.90   0.44      -2.79      -1.07  4960    1
+	#female_edu_none                          0.87   0.53      -0.14       1.90  9500    1
+	#male_edu_none                            0.19   0.53      -0.85       1.23  9500    1
+	#female_sexp1yr_gr1                      -0.03   0.36      -0.74       0.66  9500    1
+	#male_sexp1yr_gr1                         0.58   0.33      -0.05       1.23  9500    1
+	#male_inmigrate_lastyear                 -0.24   0.42      -1.05       0.58  9500    1
+	#female_inmigrate_lastyear                0.70   0.37      -0.04       1.41  9500    1
+	#pair_commtype_notfish                    0.81   0.35       0.15       1.51  6338    1
+	#pair_withincomm_yes                      0.13   0.45      -0.73       1.05  5574    1
+	#pair_withinhh_yes                        0.80   0.36       0.10       1.51  9500    1
+	#male_age[1]                             -0.24   0.47      -1.33       0.58  1511    1
+	#male_age[2]                             -0.21   0.43      -1.18       0.57  1227    1
+	#male_age[3]                              0.44   0.47      -0.34       1.42  1692    1
+	#male_age[4]                              0.00   0.43      -0.80       0.92  1455    1
+	#female_age[1]                            0.60   0.57      -0.24       1.78  3906    1
+	#female_age[2]                           -0.04   0.38      -0.82       0.76  3410    1
+	#female_age[3]                            0.07   0.37      -0.69       0.85  3082    1
+	#female_age[4]                           -0.16   0.40      -1.01       0.60  2996    1
+	#female_age[5]                           -0.48   0.46      -1.44       0.29  2634    1
+	
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, 
+					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,					
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))		
+	mt.5 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34 + 
+							pair_commtype_notfish*(1-FISH) + pair_withincomm_yes*SAME_COMM + pair_withinhh_yes*SAME_HH,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_commtype_notfish, pair_withincomm_yes, pair_withinhh_yes) ~ dnorm(0,1),
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1)					
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1),			
+			warmup=1e3, iter=10e3, chains=1, cores=4)
+	plot(mt.5)
+	precis(mt.5, prob=0.95)
+	precis(mt.5, prob=0.95, depth=2)
+	plot(precis(mt.5, prob=0.95))
+	plot(precis(mt.5, prob=0.8))
+	#I like this one a lot :-)
+	#base                      -1.28   0.76      -2.78       0.24  4387    1
+	#male_vl_above10e3          1.13   0.46       0.25       2.05  4138    1
+	#female_vl_above10e3       -2.20   0.46      -3.13      -1.34  4589    1
+	#female_edu_none            0.80   0.56      -0.29       1.92  9000    1
+	#male_edu_none              0.32   0.56      -0.81       1.40  9000    1
+	#female_sexp1yr_gr1        -0.05   0.38      -0.81       0.67  9000    1
+	#male_sexp1yr_gr1           0.74   0.34       0.09       1.40  9000    1
+	#male_inmigrate_lastyear   -0.29   0.46      -1.17       0.66  9000    1
+	#female_inmigrate_lastyear  0.73   0.40      -0.04       1.53  9000    1
+	#pair_commtype_notfish      0.89   0.38       0.16       1.64  6311    1
+	#pair_withincomm_yes        0.13   0.48      -0.80       1.08  6748    1
+	#pair_withinhh_yes          0.85   0.37       0.15       1.62  9000    1
+	#male_age_24               -0.81   0.60      -2.01       0.36  7255    1
+	#male_age_29               -0.53   0.43      -1.41       0.28  7297    1
+	#male_age_34                0.67   0.45      -0.19       1.56  9000    1
+	#female_age_19              2.54   0.79       0.97       4.05  5982    1
+	#female_age_24              0.97   0.53      -0.04       2.03  5158    1
+	#female_age_29              1.00   0.47       0.10       1.97  5325    1
+	#female_age_34              0.58   0.52      -0.45       1.59  6326    1
+
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, MALE_CIRCUM,
+				FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,					
+				MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34,
+				FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))		
+	mt.6 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34 +
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_alcever_lastyear*MALE_ALCEVER_LASTYEAR + female_alcever_lastyear*FEMALE_ALCEVER_LASTYEAR + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER +
+							female_pregnant*FEMALE_PREGNANT + male_circum*MALE_CIRCUM +
+							pair_commtype_notfish*(1-FISH) + pair_withincomm_yes*SAME_COMM + pair_withinhh_yes*SAME_HH,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					FEMALE_PREGNANT <- dnorm(miss_mean, miss_sigma),
+					MALE_CIRCUM <- dnorm(miss_mean, miss_sigma), 
+					MALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma), 
+					FEMALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma),
+					MALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					FEMALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean, miss_mean, alc_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma, miss_sigma, alc_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_commtype_notfish, pair_withincomm_yes, pair_withinhh_yes) ~ dnorm(0,1),
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1),
+					c(female_gud, male_gud, male_alcever_lastyear, female_alcever_lastyear, male_condom_never, female_condom_never, female_pregnant, male_circum) ~ dnorm(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,
+					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0,
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, miss_mean=0.5, alc_mean=0.5, cond_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1, miss_sigma=1, alc_sigma=1, cond_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=6)
+	plot(precis(mt.6, prob=0.8))
+
+	
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, MALE_CIRCUM,									
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34,
+					FEMALE_GUD, MALE_GUD, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))		
+	mt.7 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER + male_circum*MALE_CIRCUM +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					MALE_CIRCUM <- dnorm(miss_mean, miss_sigma), 
+					MALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					FEMALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, miss_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, miss_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3) ~ dnorm(0,1),					
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1),
+					c(female_gud, male_gud, male_condom_never, female_condom_never, male_circum) ~ dnorm(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, 					
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,
+					female_gud=0, male_gud=0, male_condom_never=0, female_condom_never=0, male_circum=0,
+					vl_mean=0.5, miss_mean=0.5, cond_mean=0.5, vl_sigma=1, miss_sigma=1, cond_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	plot(precis(mt.7, prob=0.8))
+	
+	#	adjusting only for VL and AGE, do we see transmission bias?
+	#	yes, 58%, though not sig
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, 									
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))		
+	mt.8 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +							
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					base ~ dnorm(0,100),
+					c(vl_mean, miss_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, miss_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3) ~ dnorm(0,1),					
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1)					
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, 					
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,					
+					vl_mean=0.5, vl_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	plot(precis(mt.8, prob=0.8))
+	
+	#	using only sig factors, do we get roughly 50-50 transmission?
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, MA_SEXP1YR_G1, FE_NOEDU, FEMALE_INMIGRATE_1YR, FISH, SAME_HH,					
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))		
+	mt.9 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_sexp1yr_gr1*MA_SEXP1YR_G1 + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34 +							 							
+							pair_commtype_notfish*(1-FISH) + pair_withinhh_yes*SAME_HH,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),				
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),					
+					base ~ dnorm(0,100),
+					c(vl_mean, edu_mean, sexp_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(female_inmigrate_lastyear, pair_commtype_notfish, pair_withinhh_yes) ~ dnorm(0,1),
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1)					
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_sexp1yr_gr1=0,
+					female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withinhh_yes=0,
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,					
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	precis(mt.9, prob=0.8)
+	
+	#	mt.4 with horseshoe selection prior and default tau~HCauchy(0,1)
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, 
+				FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,				
+				MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))
+	set(dh, 1L, 'MA_SEXP1YR_G1', NA_real_)
+	mt.4b		<- list()
+	mt.4b$code	<- "data{
+		int<lower=1> N;
+		int<lower=1> D;		//	number parameters
+		int MALE_IS_TR[N];
+		real MALE_CLOSEST_VL_1YR_G10E3[N];		
+		real FEMALE_CLOSEST_VL_1YR_G10E3[N];
+        real FE_SEXP1YR_G1[N];
+        real MA_SEXP1YR_G1[N];
+        real FE_NOEDU[N];
+        real MA_NOEDU[N];
+        real MALE_INMIGRATE_1YR[N]; 
+        real FEMALE_INMIGRATE_1YR[N];
+        real FISH[N]; 
+        real SAME_COMM[N]; 
+        real SAME_HH[N];	
+        real MALE_AGE_24[N]; 
+		real MALE_AGE_29[N]; 
+        real MALE_AGE_34[N];
+        real FEMALE_AGE_19[N]; 
+        real FEMALE_AGE_24[N]; 
+        real FEMALE_AGE_29[N]; 
+        real FEMALE_AGE_34[N];        
+		int<lower=1> N_MALE_CLOSEST_VL_1YR_G10E3_missing;
+		int<lower=1> N_FEMALE_CLOSEST_VL_1YR_G10E3_missing;
+        int<lower=1> N_FE_SEXP1YR_G1_missing;
+		int<lower=1> N_MA_SEXP1YR_G1_missing;		
+		int<lower=1> N_FE_NOEDU_missing;
+		int<lower=1> N_MA_NOEDU_missing;						
+		int MALE_CLOSEST_VL_1YR_G10E3_missingness[N_MALE_CLOSEST_VL_1YR_G10E3_missing];
+		int FEMALE_CLOSEST_VL_1YR_G10E3_missingness[N_FEMALE_CLOSEST_VL_1YR_G10E3_missing];
+        int FE_SEXP1YR_G1_missingness[N_FE_SEXP1YR_G1_missing];
+		int MA_SEXP1YR_G1_missingness[N_MA_SEXP1YR_G1_missing];
+		int FE_NOEDU_missingness[N_FE_NOEDU_missing];
+		int MA_NOEDU_missingness[N_MA_NOEDU_missing];							
+	}
+	parameters{
+		real base;
+		real<lower=0> tau;
+		vector[D] betas;
+		vector<lower=0>[D] lambdas;	
+		real vl_mean;
+		real<lower=0> vl_sigma;
+        real sexp_mean;
+		real<lower=0> sexp_sigma;
+        real edu_mean;
+		real<lower=0> edu_sigma;						
+		vector[N_FEMALE_CLOSEST_VL_1YR_G10E3_missing] FEMALE_CLOSEST_VL_1YR_G10E3_impute;
+		vector[N_MALE_CLOSEST_VL_1YR_G10E3_missing] MALE_CLOSEST_VL_1YR_G10E3_impute;	
+        vector[N_FE_SEXP1YR_G1_missing] FE_SEXP1YR_G1_impute;
+		vector[N_MA_SEXP1YR_G1_missing] MA_SEXP1YR_G1_impute;
+        vector[N_FE_NOEDU_missing] FE_NOEDU_impute;
+		vector[N_MA_NOEDU_missing] MA_NOEDU_impute;				
+	}
+    transformed parameters{
+        real FEMALE_CLOSEST_VL_1YR_G10E3_merge[N];
+		real MALE_CLOSEST_VL_1YR_G10E3_merge[N];
+        real FE_SEXP1YR_G1_merge[N];
+		real MA_SEXP1YR_G1_merge[N];
+		real FE_NOEDU_merge[N];
+		real MA_NOEDU_merge[N];
+		FEMALE_CLOSEST_VL_1YR_G10E3_merge = FEMALE_CLOSEST_VL_1YR_G10E3;
+		MALE_CLOSEST_VL_1YR_G10E3_merge = MALE_CLOSEST_VL_1YR_G10E3;
+        FE_SEXP1YR_G1_merge = FE_SEXP1YR_G1;
+		MA_SEXP1YR_G1_merge = MA_SEXP1YR_G1;
+        FE_NOEDU_merge = FE_NOEDU;
+		MA_NOEDU_merge = MA_NOEDU;
+		for ( u in 1:N_FEMALE_CLOSEST_VL_1YR_G10E3_missing ) FEMALE_CLOSEST_VL_1YR_G10E3_merge[FEMALE_CLOSEST_VL_1YR_G10E3_missingness[u]] = FEMALE_CLOSEST_VL_1YR_G10E3_impute[u];
+	    for ( u in 1:N_MALE_CLOSEST_VL_1YR_G10E3_missing ) MALE_CLOSEST_VL_1YR_G10E3_merge[MALE_CLOSEST_VL_1YR_G10E3_missingness[u]] = MALE_CLOSEST_VL_1YR_G10E3_impute[u];        
+        for ( u in 1:N_FE_SEXP1YR_G1_missing ) FE_SEXP1YR_G1_merge[FE_SEXP1YR_G1_missingness[u]] = FE_SEXP1YR_G1_impute[u];
+	    for ( u in 1:N_MA_SEXP1YR_G1_missing ) MA_SEXP1YR_G1_merge[MA_SEXP1YR_G1_missingness[u]] = MA_SEXP1YR_G1_impute[u];
+        for ( u in 1:N_FE_NOEDU_missing ) FE_NOEDU_merge[FE_NOEDU_missingness[u]] = FE_NOEDU_impute[u];
+	    for ( u in 1:N_MA_NOEDU_missing ) MA_NOEDU_merge[MA_NOEDU_missingness[u]] = MA_NOEDU_impute[u];
+    }
+	model{
+		vector[N] ptr;
+		tau ~ cauchy( 0 , 1 );
+		lambdas ~ cauchy( 0 , 1 );
+		betas ~ normal( 0, tau*lambdas );				
+		vl_mean ~ normal( 0.5 , 1 );				
+		vl_sigma ~ cauchy( 0 , 1 );
+        sexp_mean ~ normal( 0.5 , 1 );				
+		sexp_sigma ~ cauchy( 0 , 1 );
+		edu_mean ~ normal( 0.5 , 1 );				
+		edu_sigma ~ cauchy( 0 , 1 );		
+		FEMALE_CLOSEST_VL_1YR_G10E3_impute ~ normal( vl_mean , vl_sigma );
+		MALE_CLOSEST_VL_1YR_G10E3_impute ~ normal( vl_mean , vl_sigma );
+        FE_SEXP1YR_G1_impute ~ normal( sexp_mean , sexp_sigma );
+		MA_SEXP1YR_G1_impute ~ normal( sexp_mean , sexp_sigma );
+		FE_NOEDU_impute ~ normal( edu_mean , edu_sigma );
+		MA_NOEDU_impute ~ normal( edu_mean , edu_sigma );		
+		base ~ normal( 0 , 100 );
+		for ( i in 1:N ) {
+			ptr[i] = base + betas[1]*MALE_CLOSEST_VL_1YR_G10E3_merge[i] + betas[2]*FEMALE_CLOSEST_VL_1YR_G10E3_merge[i] +
+					 betas[3]*MA_NOEDU_merge[i] + betas[4]*FE_NOEDU_merge[i] + 
+                     betas[5]*MA_SEXP1YR_G1_merge[i] + betas[6]*FE_SEXP1YR_G1_merge[i] + 
+					 betas[7]*MALE_INMIGRATE_1YR[i] + betas[8]*FEMALE_INMIGRATE_1YR[i] +
+                     betas[9]*(1-FISH[i]) + betas[10]*SAME_COMM[i] + betas[11]*SAME_HH[i] +
+                     betas[12]*MALE_AGE_24[i] + betas[13]*MALE_AGE_29[i] + betas[14]*MALE_AGE_34[i] +
+					 betas[15]*FEMALE_AGE_19[i] + betas[16]*FEMALE_AGE_24[i] + betas[17]*FEMALE_AGE_29[i] + betas[18]*FEMALE_AGE_34[i]; 									
+		}
+		MALE_IS_TR ~ binomial_logit( 1 , ptr );
+	}
+	generated quantities{
+		vector[N] ptr;
+		real dev;
+		real male_vl_above10e3;
+		real female_vl_above10e3;
+        real male_edu_none;
+        real female_edu_none;
+        real male_sexp1yr_gr1;
+        real female_sexp1yr_gr1;
+        real male_inmigrate_lastyear;
+        real female_inmigrate_lastyear;
+        real pair_commtype_notfish;
+        real pair_withincomm_yes;
+        real pair_withinhh_yes;
+		real male_age_24;
+		real male_age_29;
+		real male_age_34;
+		real female_age_19;
+		real female_age_24;
+		real female_age_29;
+		real female_age_34;
+		male_vl_above10e3= betas[1];
+		female_vl_above10e3= betas[2];
+        male_edu_none= betas[3];
+        female_edu_none= betas[4];
+        male_sexp1yr_gr1= betas[5];
+        female_sexp1yr_gr1= betas[6];
+        male_inmigrate_lastyear= betas[7];
+        female_inmigrate_lastyear= betas[8];
+        pair_commtype_notfish= betas[9];
+        pair_withincomm_yes= betas[10];
+        pair_withinhh_yes= betas[11];
+		male_age_24= betas[12];
+		male_age_29= betas[13];
+		male_age_34= betas[14];
+		female_age_19= betas[15];
+		female_age_24= betas[16];
+		female_age_29= betas[17];
+		female_age_34= betas[18];
+		dev = 0;
+		for ( i in 1:N ) {
+			ptr[i] = base + betas[1]*MALE_CLOSEST_VL_1YR_G10E3_merge[i] + betas[2]*FEMALE_CLOSEST_VL_1YR_G10E3_merge[i] +
+					 betas[3]*MA_NOEDU_merge[i] + betas[4]*FE_NOEDU_merge[i] + 
+                     betas[5]*MA_SEXP1YR_G1_merge[i] + betas[6]*FE_SEXP1YR_G1_merge[i] + 
+					 betas[7]*MALE_INMIGRATE_1YR[i] + betas[8]*FEMALE_INMIGRATE_1YR[i] +
+                     betas[9]*(1-FISH[i]) + betas[10]*SAME_COMM[i] + betas[11]*SAME_HH[i] +
+                     betas[12]*MALE_AGE_24[i] + betas[13]*MALE_AGE_29[i] + betas[14]*MALE_AGE_34[i] +
+					 betas[15]*FEMALE_AGE_19[i] + betas[16]*FEMALE_AGE_24[i] + betas[17]*FEMALE_AGE_29[i] + betas[18]*FEMALE_AGE_34[i];
+		}
+	    dev = dev + (-2)*binomial_logit_lpmf( MALE_IS_TR | 1 , ptr );
+	}"
+	mt.4b$code		<- gsub('\t','',mt.4b$code)
+	#m1$codefile	<- paste0(outfile.base,'_stanm1.stan')
+	#write(m1$code, file=m1$codefile)	
+	mt.4b$data		<- as.list(dh)
+	mt.4b$data[['N']] 	<- nrow(dh)	
+	mt.4b$data[['D']] 	<- 18L		
+	mt.4b$data[['N_MALE_CLOSEST_VL_1YR_G10E3_missing']]			<- dh[, length(which(is.na(MALE_CLOSEST_VL_1YR_G10E3)))]
+	mt.4b$data[['N_FEMALE_CLOSEST_VL_1YR_G10E3_missing']]		<- dh[, length(which(is.na(FEMALE_CLOSEST_VL_1YR_G10E3)))]				
+	mt.4b$data[['MALE_CLOSEST_VL_1YR_G10E3_missingness']]		<- dh[, as.numeric(which(is.na(MALE_CLOSEST_VL_1YR_G10E3)))]
+	mt.4b$data[['FEMALE_CLOSEST_VL_1YR_G10E3_missingness']]		<- dh[, as.numeric(which(is.na(FEMALE_CLOSEST_VL_1YR_G10E3)))]	
+	mt.4b$data[['N_MA_SEXP1YR_G1_missing']]						<- dh[, length(which(is.na(MA_SEXP1YR_G1)))]
+	mt.4b$data[['N_FE_SEXP1YR_G1_missing']]						<- dh[, length(which(is.na(FE_SEXP1YR_G1)))]				
+	mt.4b$data[['MA_SEXP1YR_G1_missingness']]					<- dh[, as.numeric(which(is.na(MA_SEXP1YR_G1)))]
+	mt.4b$data[['FE_SEXP1YR_G1_missingness']]					<- dh[, as.numeric(which(is.na(FE_SEXP1YR_G1)))]	
+	mt.4b$data[['N_FE_NOEDU_missing']]							<- dh[, length(which(is.na(FE_NOEDU)))]
+	mt.4b$data[['N_MA_NOEDU_missing']]							<- dh[, length(which(is.na(MA_NOEDU)))]				
+	mt.4b$data[['FE_NOEDU_missingness']]						<- dh[, as.numeric(which(is.na(FE_NOEDU)))]
+	mt.4b$data[['MA_NOEDU_missingness']]						<- dh[, as.numeric(which(is.na(MA_NOEDU)))]
+	for(x in c('MALE_CLOSEST_VL_1YR_G10E3','FEMALE_CLOSEST_VL_1YR_G10E3','MA_SEXP1YR_G1','FE_SEXP1YR_G1','FE_NOEDU','MA_NOEDU'))
+		mt.4b$data[[x]][is.na(mt.4b$data[[x]])]	<- -1		 
+	mt.4b$fit		<- stan(model_code=mt.4b$code, data=mt.4b$data, warmup=1e3, iter=1e4, chains=1)
+	traceplot(mt.4b$fit, pars=c('base','male_vl_above10e3','female_vl_above10e3',
+							'male_edu_none','female_edu_none','male_sexp1yr_gr1','female_sexp1yr_gr1',
+							'male_inmigrate_lastyear','female_inmigrate_lastyear',
+							'pair_commtype_notfish','pair_withincomm_yes','pair_withinhh_yes',
+							'male_age_24','male_age_29','male_age_34',
+							'female_age_19','female_age_24','female_age_29','female_age_34'))
+	summary(mt.4b$fit, pars=c('base','male_vl_above10e3','female_vl_above10e3',
+					'male_edu_none','female_edu_none','male_sexp1yr_gr1','female_sexp1yr_gr1',
+					'male_inmigrate_lastyear','female_inmigrate_lastyear',
+					'pair_commtype_notfish','pair_withincomm_yes','pair_withinhh_yes',
+					'male_age_24','male_age_29','male_age_34',
+					'female_age_19','female_age_24','female_age_29','female_age_34',
+					'tau','lambdas'), prob=c(0.025,0.5,0.975))$summary
+	plot(mt.4b$fit, pars=c('base','male_vl_above10e3','female_vl_above10e3',
+					'male_edu_none','female_edu_none','male_sexp1yr_gr1','female_sexp1yr_gr1',
+					'male_inmigrate_lastyear','female_inmigrate_lastyear',
+					'pair_commtype_notfish','pair_withincomm_yes','pair_withinhh_yes',
+					'male_age_24','male_age_29','male_age_34',
+					'female_age_19','female_age_24','female_age_29','female_age_34',
+					'tau'))
+	
+	save(df, mt.1, mt.2, mt.3, mt.4, mt.4b, mt.5, mt.6, mt.7, mt.8, mt.9, file=paste0(outfile.base,'_stanmodels.rda'))
+	
+	#	mt.4 with horseshoe selection prior and scaled tau~HCauchy(0,tau0^2)
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, 
+					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,				
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34))
+	set(dh, 1L, 'MA_SEXP1YR_G1', NA_integer_)
+	mt.4c		<- list()
+	mt.4c$code	<- "data{
+        int<lower=1> N;
+        int<lower=1> D;		//	number parameters
+        int TAU0;
+        int MALE_IS_TR[N];
+        real MALE_CLOSEST_VL_1YR_G10E3[N];		
+        real FEMALE_CLOSEST_VL_1YR_G10E3[N];
+        real FE_SEXP1YR_G1[N];
+        real MA_SEXP1YR_G1[N];
+        real FE_NOEDU[N];
+        real MA_NOEDU[N];
+        real MALE_INMIGRATE_1YR[N]; 
+        real FEMALE_INMIGRATE_1YR[N];
+        real FISH[N]; 
+        real SAME_COMM[N]; 
+        real SAME_HH[N];	
+        real MALE_AGE_24[N]; 
+        real MALE_AGE_29[N]; 
+        real MALE_AGE_34[N];
+        real FEMALE_AGE_19[N]; 
+        real FEMALE_AGE_24[N]; 
+        real FEMALE_AGE_29[N]; 
+        real FEMALE_AGE_34[N];        
+        int<lower=1> N_MALE_CLOSEST_VL_1YR_G10E3_missing;
+        int<lower=1> N_FEMALE_CLOSEST_VL_1YR_G10E3_missing;
+        int<lower=1> N_FE_SEXP1YR_G1_missing;
+        int<lower=1> N_MA_SEXP1YR_G1_missing;		
+        int<lower=1> N_FE_NOEDU_missing;
+        int<lower=1> N_MA_NOEDU_missing;						
+        int MALE_CLOSEST_VL_1YR_G10E3_missingness[N_MALE_CLOSEST_VL_1YR_G10E3_missing];
+        int FEMALE_CLOSEST_VL_1YR_G10E3_missingness[N_FEMALE_CLOSEST_VL_1YR_G10E3_missing];
+        int FE_SEXP1YR_G1_missingness[N_FE_SEXP1YR_G1_missing];
+        int MA_SEXP1YR_G1_missingness[N_MA_SEXP1YR_G1_missing];
+        int FE_NOEDU_missingness[N_FE_NOEDU_missing];
+        int MA_NOEDU_missingness[N_MA_NOEDU_missing];							
+    }
+    parameters{
+        real base;
+        real<lower=0> tau;
+        vector[D] betas;
+        vector<lower=0>[D] lambdas;	
+        real vl_mean;
+        real<lower=0> vl_sigma;
+        real sexp_mean;
+        real<lower=0> sexp_sigma;
+        real edu_mean;
+        real<lower=0> edu_sigma;						
+        vector[N_FEMALE_CLOSEST_VL_1YR_G10E3_missing] FEMALE_CLOSEST_VL_1YR_G10E3_impute;
+        vector[N_MALE_CLOSEST_VL_1YR_G10E3_missing] MALE_CLOSEST_VL_1YR_G10E3_impute;	
+        vector[N_FE_SEXP1YR_G1_missing] FE_SEXP1YR_G1_impute;
+        vector[N_MA_SEXP1YR_G1_missing] MA_SEXP1YR_G1_impute;
+        vector[N_FE_NOEDU_missing] FE_NOEDU_impute;
+        vector[N_MA_NOEDU_missing] MA_NOEDU_impute;				
+    }
+    transformed parameters{
+        real FEMALE_CLOSEST_VL_1YR_G10E3_merge[N];
+        real MALE_CLOSEST_VL_1YR_G10E3_merge[N];
+        real FE_SEXP1YR_G1_merge[N];
+        real MA_SEXP1YR_G1_merge[N];
+        real FE_NOEDU_merge[N];
+        real MA_NOEDU_merge[N];
+        FEMALE_CLOSEST_VL_1YR_G10E3_merge = FEMALE_CLOSEST_VL_1YR_G10E3;
+        MALE_CLOSEST_VL_1YR_G10E3_merge = MALE_CLOSEST_VL_1YR_G10E3;
+        FE_SEXP1YR_G1_merge = FE_SEXP1YR_G1;
+        MA_SEXP1YR_G1_merge = MA_SEXP1YR_G1;
+        FE_NOEDU_merge = FE_NOEDU;
+        MA_NOEDU_merge = MA_NOEDU;
+        for ( u in 1:N_FEMALE_CLOSEST_VL_1YR_G10E3_missing ) FEMALE_CLOSEST_VL_1YR_G10E3_merge[FEMALE_CLOSEST_VL_1YR_G10E3_missingness[u]] = FEMALE_CLOSEST_VL_1YR_G10E3_impute[u];
+        for ( u in 1:N_MALE_CLOSEST_VL_1YR_G10E3_missing ) MALE_CLOSEST_VL_1YR_G10E3_merge[MALE_CLOSEST_VL_1YR_G10E3_missingness[u]] = MALE_CLOSEST_VL_1YR_G10E3_impute[u];        
+        for ( u in 1:N_FE_SEXP1YR_G1_missing ) FE_SEXP1YR_G1_merge[FE_SEXP1YR_G1_missingness[u]] = FE_SEXP1YR_G1_impute[u];
+        for ( u in 1:N_MA_SEXP1YR_G1_missing ) MA_SEXP1YR_G1_merge[MA_SEXP1YR_G1_missingness[u]] = MA_SEXP1YR_G1_impute[u];
+        for ( u in 1:N_FE_NOEDU_missing ) FE_NOEDU_merge[FE_NOEDU_missingness[u]] = FE_NOEDU_impute[u];
+        for ( u in 1:N_MA_NOEDU_missing ) MA_NOEDU_merge[MA_NOEDU_missingness[u]] = MA_NOEDU_impute[u];
+    }
+    model{
+        vector[N] ptr;
+        tau ~ cauchy( 0 , TAU0*TAU0 );
+        lambdas ~ cauchy( 0 , 1 );
+        betas ~ normal( 0, tau*lambdas );				
+        vl_mean ~ normal( 0.5 , 1 );				
+        vl_sigma ~ cauchy( 0 , 1 );
+        sexp_mean ~ normal( 0.5 , 1 );				
+        sexp_sigma ~ cauchy( 0 , 1 );
+        edu_mean ~ normal( 0.5 , 1 );				
+        edu_sigma ~ cauchy( 0 , 1 );		
+        FEMALE_CLOSEST_VL_1YR_G10E3_impute ~ normal( vl_mean , vl_sigma );
+        MALE_CLOSEST_VL_1YR_G10E3_impute ~ normal( vl_mean , vl_sigma );
+        FE_SEXP1YR_G1_impute ~ normal( sexp_mean , sexp_sigma );
+        MA_SEXP1YR_G1_impute ~ normal( sexp_mean , sexp_sigma );
+        FE_NOEDU_impute ~ normal( edu_mean , edu_sigma );
+        MA_NOEDU_impute ~ normal( edu_mean , edu_sigma );		
+        base ~ normal( 0 , 100 );
+        for ( i in 1:N ) {
+			ptr[i] = base + betas[1]*MALE_CLOSEST_VL_1YR_G10E3_merge[i] + betas[2]*FEMALE_CLOSEST_VL_1YR_G10E3_merge[i] +
+                betas[3]*MA_NOEDU_merge[i] + betas[4]*FE_NOEDU_merge[i] + 
+                betas[5]*MA_SEXP1YR_G1_merge[i] + betas[6]*FE_SEXP1YR_G1_merge[i] + 
+                betas[7]*MALE_INMIGRATE_1YR[i] + betas[8]*FEMALE_INMIGRATE_1YR[i] +
+                betas[9]*(1-FISH[i]) + betas[10]*SAME_COMM[i] + betas[11]*SAME_HH[i] +
+                betas[12]*MALE_AGE_24[i] + betas[13]*MALE_AGE_29[i] + betas[14]*MALE_AGE_34[i] +
+                betas[15]*FEMALE_AGE_19[i] + betas[16]*FEMALE_AGE_24[i] + betas[17]*FEMALE_AGE_29[i] + betas[18]*FEMALE_AGE_34[i]; 									
+        }
+        MALE_IS_TR ~ binomial_logit( 1 , ptr );
+    }
+    generated quantities{
+        vector[N] ptr;
+        real dev;
+        real male_vl_above10e3;
+        real female_vl_above10e3;
+        real male_edu_none;
+        real female_edu_none;
+        real male_sexp1yr_gr1;
+        real female_sexp1yr_gr1;
+        real male_inmigrate_lastyear;
+        real female_inmigrate_lastyear;
+        real pair_commtype_notfish;
+        real pair_withincomm_yes;
+        real pair_withinhh_yes;
+        real male_age_24;
+        real male_age_29;
+        real male_age_34;
+        real female_age_19;
+        real female_age_24;
+        real female_age_29;
+        real female_age_34;
+        male_vl_above10e3= betas[1];
+        female_vl_above10e3= betas[2];
+        male_edu_none= betas[3];
+        female_edu_none= betas[4];
+        male_sexp1yr_gr1= betas[5];
+        female_sexp1yr_gr1= betas[6];
+        male_inmigrate_lastyear= betas[7];
+        female_inmigrate_lastyear= betas[8];
+        pair_commtype_notfish= betas[9];
+        pair_withincomm_yes= betas[10];
+        pair_withinhh_yes= betas[11];
+        male_age_24= betas[12];
+        male_age_29= betas[13];
+        male_age_34= betas[14];
+        female_age_19= betas[15];
+        female_age_24= betas[16];
+        female_age_29= betas[17];
+        female_age_34= betas[18];
+        dev = 0;
+        for ( i in 1:N ) {
+			ptr[i] = base + betas[1]*MALE_CLOSEST_VL_1YR_G10E3_merge[i] + betas[2]*FEMALE_CLOSEST_VL_1YR_G10E3_merge[i] +
+			betas[3]*MA_NOEDU_merge[i] + betas[4]*FE_NOEDU_merge[i] + 
+			betas[5]*MA_SEXP1YR_G1_merge[i] + betas[6]*FE_SEXP1YR_G1_merge[i] + 
+			betas[7]*MALE_INMIGRATE_1YR[i] + betas[8]*FEMALE_INMIGRATE_1YR[i] +
+			betas[9]*(1-FISH[i]) + betas[10]*SAME_COMM[i] + betas[11]*SAME_HH[i] +
+			betas[12]*MALE_AGE_24[i] + betas[13]*MALE_AGE_29[i] + betas[14]*MALE_AGE_34[i] +
+			betas[15]*FEMALE_AGE_19[i] + betas[16]*FEMALE_AGE_24[i] + betas[17]*FEMALE_AGE_29[i] + betas[18]*FEMALE_AGE_34[i];
+        }
+        dev = dev + (-2)*binomial_logit_lpmf( MALE_IS_TR | 1 , ptr );
+    }"
+	mt.4c$code		<- gsub('\t','',mt.4c$code)
+	#m1$codefile	<- paste0(outfile.base,'_stanm1.stan')
+	#write(m1$code, file=m1$codefile)	
+	mt.4c$data		<- as.list(dh)
+	mt.4c$data[['N']] 	<- nrow(dh)	
+	mt.4c$data[['D']] 	<- 18L	
+	mt.4c$data[['TAU0']]<- 2/sqrt(nrow(dh)) * 9/(18-9)
+	mt.4c$data[['N_MALE_CLOSEST_VL_1YR_G10E3_missing']]			<- dh[, length(which(is.na(MALE_CLOSEST_VL_1YR_G10E3)))]
+	mt.4c$data[['N_FEMALE_CLOSEST_VL_1YR_G10E3_missing']]		<- dh[, length(which(is.na(FEMALE_CLOSEST_VL_1YR_G10E3)))]				
+	mt.4c$data[['MALE_CLOSEST_VL_1YR_G10E3_missingness']]		<- dh[, as.numeric(which(is.na(MALE_CLOSEST_VL_1YR_G10E3)))]
+	mt.4c$data[['FEMALE_CLOSEST_VL_1YR_G10E3_missingness']]		<- dh[, as.numeric(which(is.na(FEMALE_CLOSEST_VL_1YR_G10E3)))]	
+	mt.4c$data[['N_MA_SEXP1YR_G1_missing']]						<- dh[, length(which(is.na(MA_SEXP1YR_G1)))]
+	mt.4c$data[['N_FE_SEXP1YR_G1_missing']]						<- dh[, length(which(is.na(FE_SEXP1YR_G1)))]				
+	mt.4c$data[['MA_SEXP1YR_G1_missingness']]					<- dh[, as.numeric(which(is.na(MA_SEXP1YR_G1)))]
+	mt.4c$data[['FE_SEXP1YR_G1_missingness']]					<- dh[, as.numeric(which(is.na(FE_SEXP1YR_G1)))]	
+	mt.4c$data[['N_FE_NOEDU_missing']]							<- dh[, length(which(is.na(FE_NOEDU)))]
+	mt.4c$data[['N_MA_NOEDU_missing']]							<- dh[, length(which(is.na(MA_NOEDU)))]				
+	mt.4c$data[['FE_NOEDU_missingness']]						<- dh[, as.numeric(which(is.na(FE_NOEDU)))]
+	mt.4c$data[['MA_NOEDU_missingness']]						<- dh[, as.numeric(which(is.na(MA_NOEDU)))]
+	for(x in c('MALE_CLOSEST_VL_1YR_G10E3','FEMALE_CLOSEST_VL_1YR_G10E3','MA_SEXP1YR_G1','FE_SEXP1YR_G1','FE_NOEDU','MA_NOEDU'))
+		mt.4c$data[[x]][is.na(mt.4c$data[[x]])]	<- -1		 
+	mt.4c$fit		<- stan(model_code=mt.4c$code, data=mt.4c$data, warmup=1e3, iter=1e4, chains=1)
+	summary(mt.4c$fit, pars=c('base','male_vl_above10e3','female_vl_above10e3',
+					'male_edu_none','female_edu_none','male_sexp1yr_gr1','female_sexp1yr_gr1',
+					'male_inmigrate_lastyear','female_inmigrate_lastyear',
+					'pair_commtype_notfish','pair_withincomm_yes','pair_withinhh_yes',
+					'male_age_24','male_age_29','male_age_34',
+					'female_age_19','female_age_24','female_age_29','female_age_34',
+					'tau','lambdas'), prob=c(0.025,0.5,0.975))$summary
+	
+	
+	#	extract number of individuals (n) and proportion (freq)
+	ds	<- subset(melt(dh, id.vars=c('PAIRID','MALE_IS_TR')), !is.na(value))
+	tmp	<- ds[, list(FREQ_MALE_TR= mean(MALE_IS_TR)), by=c('variable','value')]
+	ds	<- ds[, list(yes= length(which(value==1)), no= length(which(value==0)) ), by='variable']
+	ds	<- melt(ds, id.vars=c('variable'), variable.name='GROUP', value.name='N')	
+	set(tmp, NULL, 'value', tmp[, as.character(factor(value, levels=c(0,1), labels=c('no','yes')))])
+	setnames(tmp, 'value','GROUP')
+	ds	<- merge(ds, tmp, by=c('variable','GROUP'))	
+	set(ds, NULL, 'variable', ds[, gsub('FEMALE_CLOSEST_VL_1YR_G10E3','FEMALE_VL_ABOVE10E3',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MALE_CLOSEST_VL_1YR_G10E3','MALE_VL_ABOVE10E3',variable)])	
+	set(ds, NULL, 'variable', ds[, gsub('FE_NOEDU','FEMALE_EDU_NONE',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MA_NOEDU','MALE_EDU_NONE',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('FE_SEXP1YR_G1','FEMALE_SEXP1YR_GR1',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MA_SEXP1YR_G1','MALE_SEXP1YR_GR1',variable)])	
+	set(ds, NULL, 'variable', ds[, gsub('FEMALE_INMIGRATE_1YR','FEMALE_INMIGRATE_LASTYEAR',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MALE_INMIGRATE_1YR','MALE_INMIGRATE_LASTYEAR',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('SAME_HH','PAIR_WITHINHH_YES',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('SAME_COMM','PAIR_WITHINCOMM_YES',variable)])	
+	tmp	<- ds[, which(variable=='FISH')]
+	set(ds, tmp, 'GROUP', ds[tmp, gsub('xx','yes',gsub('yes','no',gsub('no','xx',GROUP)))])	
+	set(ds, NULL, 'variable', ds[, gsub('FISH','PAIR_COMMTYPE_NOTFISH',variable)])	
+	
+	#	extract odds ratio and prob odds ratio > 1
+	post	<- as.data.table(extract.samples(mt.6))
+	post[, MC:= seq_len(nrow(post))]	
+	set(post, NULL, colnames(post)[grepl('impute|_mean|_sigma|base', colnames(post))], NULL)
+	setnames(post, colnames(post), toupper(colnames(post)))
+	post	<- melt(post, id.vars='MC', value.name='COEFF')	
+	set(post, NULL, 'OR_MF', post[, exp(COEFF)])
+	set(post, NULL, 'OR_FM', post[, exp(-COEFF)])
+	tmp		<- post[, list( 	GROUP='yes',
+								STAT=c('OR_MF_MED','OR_MF_CL','OR_MF_IL','OR_MF_IU','OR_MF_CU'), 
+								V= quantile(OR_MF, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+								by=c('variable')]						
+	tmp		<- dcast.data.table(tmp, variable+GROUP~STAT, value.var='V')
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	tmp		<- post[, list( 	GROUP='yes',
+								STAT=c('OR_FM_MED','OR_FM_CL','OR_FM_IL','OR_FM_IU','OR_FM_CU'), 
+								V= quantile(OR_FM, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+								by=c('variable')]						
+	tmp		<- dcast.data.table(tmp, variable+GROUP~STAT, value.var='V')
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	tmp		<- post[, list(GROUP='yes', PROB_OR_TAIL=max(mean(OR_MF>1), mean(OR_MF<1))), by='variable']
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	#ds[, unique(variable)]
+	set(ds, NULL, 'variable', ds[, factor(variable, levels=c('MALE_IS_TR',
+		'MALE_VL_ABOVE10E3','MALE_SEXP1YR_GR1','MALE_EDU_NONE','MALE_INMIGRATE_LASTYEAR','MALE_GUD','MALE_CONDOM_NEVER','MALE_ALCEVER_LASTYEAR','MALE_CIRCUM',
+		'MALE_AGE_24','MALE_AGE_29','MALE_AGE_34',
+		'FEMALE_VL_ABOVE10E3','FEMALE_SEXP1YR_GR1','FEMALE_EDU_NONE','FEMALE_INMIGRATE_LASTYEAR','FEMALE_GUD','FEMALE_CONDOM_NEVER','FEMALE_ALCEVER_LASTYEAR','FEMALE_PREGNANT',
+		'FEMALE_AGE_19','FEMALE_AGE_24','FEMALE_AGE_29','FEMALE_AGE_34',	
+		'PAIR_COMMTYPE_NOTFISH','PAIR_WITHINCOMM_YES','PAIR_WITHINHH_YES'))])	
+	setkey(ds, variable, GROUP)
+	
+	ds[, PRETTY_FREQ:= paste0(round(FREQ_MALE_TR*100, d=1), '%')]
+	ds[, PRETTY_OR_MF:= paste0(round(OR_MF_MED, d=2),' [',round(OR_MF_IL, d=2),'-',round(OR_MF_IU, d=2),']')]
+	ds[, PRETTY_OR_FM:= paste0(round(OR_FM_MED, d=2),' [',round(OR_FM_IL, d=2),'-',round(OR_FM_IU, d=2),']')]
+	set(ds, ds[, which(is.na(OR_MF_MED))], c('PRETTY_OR','PRETTY_OR_MF','PRETTY_OR_FM'), '-')
+	ans	<- subset(ds, select=c(variable, GROUP, N, PRETTY_FREQ, PRETTY_OR_MF, PRETTY_OR_FM))
+	
+	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mt6.csv'))
+}
+	
+
+RakaiFull.transmitter.180423.build2<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_transmitterrecipientdata.rda"
+	outfile.base	<- gsub('data.rda','',infile)
+	load(infile)
+	
+	setnames(df, 'LINK_MF', 'MALE_IS_TR')	
+	#	build model with closest viral load greater 10e3 and 100e3
+	df[, MALE_CLOSEST_VL_1YR_G10E3:= as.integer(MALE_CLOSEST_VL_1YR>10e3)]
+	df[, FEMALE_CLOSEST_VL_1YR_G10E3:= as.integer(FEMALE_CLOSEST_VL_1YR>10e3)]
+	#	add sex partners and education
+	set(df, df[, which(FEMALE_EDUCAT=='Unknown')], 'FEMALE_EDUCAT', NA_character_)
+	set(df, df[, which(MALE_EDUCAT=='Unknown')], 'MALE_EDUCAT', NA_character_)	
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]	
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	set(df, df[, which(FEMALE_SEXP1YR=='Unknown')], 'FEMALE_SEXP1YR', NA_character_)
+	set(df, df[, which(MALE_SEXP1YR=='Unknown')], 'MALE_SEXP1YR', NA_character_)	
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	#	add fishing, same household, same community, inmigrant
+	set(df, NULL, 'FISH', df[, as.integer(PAIR_COMM_TYPE=='fisherfolk')])
+	#	add age as random effect 
+	#	because I don t think it s a linearly increasing relationship
+	df[, MALE_AGE_AT_MID_C:= df[,as.character(cut(MALE_AGE_AT_MID, breaks=c(15,25,30,35,52), right=FALSE, labels=c('15-24','25-29','30-34','35-50')))]]
+	df[, MALE_AGE_AT_MID_C2:= as.integer(as.factor(MALE_AGE_AT_MID_C))]
+	df[, FEMALE_AGE_AT_MID_C:= df[,as.character(cut(FEMALE_AGE_AT_MID, breaks=c(15,20,25,30,35,52), right=FALSE, labels=c('15-19','20-24','25-29','30-34','35-50')))]]
+	df[, FEMALE_AGE_AT_MID_C2:= as.integer(as.factor(FEMALE_AGE_AT_MID_C))]
+	df[, MALE_AGE_24:= as.integer(MALE_AGE_AT_MID_C=='15-24')]
+	df[, MALE_AGE_29:= as.integer(MALE_AGE_AT_MID_C=='25-29')]
+	df[, MALE_AGE_34:= as.integer(MALE_AGE_AT_MID_C=='30-34')]
+	df[, FEMALE_AGE_19:= as.integer(FEMALE_AGE_AT_MID_C=='15-19')]
+	df[, FEMALE_AGE_24:= as.integer(FEMALE_AGE_AT_MID_C=='20-24')]
+	df[, FEMALE_AGE_29:= as.integer(FEMALE_AGE_AT_MID_C=='25-29')]
+	df[, FEMALE_AGE_34:= as.integer(FEMALE_AGE_AT_MID_C=='30-34')]	
+	
+	dh		<- subset(df, select=c(PAIRID, MALE_IS_TR, SAME_HH, FISH))
+	mi.1 <- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- same_hh_fish*SAME_HH*FISH + same_hh_nofish*SAME_HH*(1-FISH) + extra_hh_fish*(1-SAME_HH)*FISH + extra_hh_nofish*(1-SAME_HH)*(1-FISH),																											
+					c(same_hh_fish, same_hh_nofish, extra_hh_fish, extra_hh_nofish) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(dh), 
+			start=list(same_hh_fish=0, same_hh_nofish=0, extra_hh_fish=0, extra_hh_nofish=0),			
+			warmup=5e2, iter=4e3, chains=1, cores=4)
+	precis(mi.1, prob=0.95)
+	
+	
+	mi.2 <- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- same_hh_fish*SAME_HH*FISH + same_hh_nofish*SAME_HH*(1-FISH) + extra_hh*(1-SAME_HH),																											
+					c(same_hh_fish, same_hh_nofish, extra_hh) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(dh), 
+			start=list(same_hh_fish=0, same_hh_nofish=0, extra_hh=0),			
+			warmup=5e2, iter=4e3, chains=1, cores=4)
+	precis(mi.2, prob=0.95)
+	
+	mi.3 <- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- same_hh*SAME_HH + base + fish*FISH,																											
+					c(base, same_hh, fish) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(dh), 
+			start=list(fish=0, same_hh=0, base=0),			
+			warmup=5e2, iter=4e3, chains=1, cores=4)
+	precis(mi.3, prob=0.95)
+	
+	
+	compare(mi.1,mi.2,mi.3)
+	#	      WAIC pWAIC dWAIC weight   SE  dSE
+	#mi.2 393.5   3.1   0.0   0.50 8.64   NA
+	#mi.3 394.7   3.0   1.1   0.28 8.26 3.30
+	#mi.1 395.2   4.1   1.7   0.21 8.68 1.04
+
+
+	#	plot mi.2
+	post	<- as.data.table(extract.samples(mi.2))
+	setnames(post, colnames(post), paste0('male_',colnames(post)))
+	post[, female_same_hh_fish:= -male_same_hh_fish] 
+	post[, female_same_hh_nofish:= -male_same_hh_nofish] 
+	post[, female_extra_hh:= -male_extra_hh]	
+	post[, MC:= seq_len(nrow(post))]
+	post	<- melt(post, id.vars='MC', value.name='COEFF')
+	set(post, NULL, 'OR', post[, exp(COEFF)])
+	set(post, NULL, 'PROB', post[, logistic(COEFF)])
+	post	<- melt(post, id.vars=c('MC','variable'), variable.name='TRANSFORM')
+	tmp		<- post[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), 
+			by=c('variable','TRANSFORM')]
+	post	<- dcast.data.table(tmp, variable+TRANSFORM~STAT, value.var='V')
+	#	prepare plot
+	tmp		<- subset(post, TRANSFORM=='PROB')	
+	tmp[, GENDER:= as.character(factor(grepl('female', variable), levels=c(TRUE,FALSE), labels=c('female','male')))]
+	tmp[, HH:= as.character(factor(grepl('same_hh', variable), levels=c(TRUE,FALSE), labels=c('transmission\nwithin households','transmission\noutside households')))]
+	tmp[, FISH:= as.character(factor(grepl('_fish', variable), levels=c(TRUE,FALSE), labels=c('in\nfishing sites','in\ninland communities')))]
+	set(tmp, tmp[, which(grepl('extra_hh',variable))], 'FISH', '')
+	# 	plot	
+	ggplot(tmp, aes(x=GENDER, middle=MED, ymin=CL, ymax=CU, lower=IL, upper=IU, fill=GENDER)) +
+			geom_boxplot(stat='identity') +
+			theme_bw() +
+			labs(x='', y='source of infection', fill='') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.1), labels=scales:::percent) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='deepskyblue2')) +
+			facet_grid(FISH+HH~.) + 
+			coord_flip() +
+			theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), legend.position='left', strip.text.y=element_text(angle=0))
+	ggsave(file=paste0(outfile.base,'_genderbyHHandFish_bestmodel.pdf'), w=8, h=2.5)
+	
+	#	multivariable model
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, MALE_CIRCUM,
+					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,					
+					MALE_AGE_24, MALE_AGE_29, MALE_AGE_34, FEMALE_AGE_19, FEMALE_AGE_24, FEMALE_AGE_29, FEMALE_AGE_34,
+					FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))		
+	mi.4 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- same_hh_fish*SAME_HH*FISH + same_hh_nofish*SAME_HH*(1-FISH) + extra_hh*(1-SAME_HH) +
+							male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34 +
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_alcever_lastyear*MALE_ALCEVER_LASTYEAR + female_alcever_lastyear*FEMALE_ALCEVER_LASTYEAR + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER +
+							female_pregnant*FEMALE_PREGNANT + male_circum*MALE_CIRCUM +
+							pair_withincomm_yes*SAME_COMM,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					FEMALE_PREGNANT <- dnorm(miss_mean, miss_sigma),
+					MALE_CIRCUM <- dnorm(miss_mean, miss_sigma), 
+					MALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma), 
+					FEMALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma),
+					MALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					FEMALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					c(same_hh_fish, same_hh_nofish, extra_hh) ~ dnorm(0,1),
+					c(vl_mean, edu_mean, sexp_mean, miss_mean, alc_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma, miss_sigma, alc_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_withincomm_yes) ~ dnorm(0,1),
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1),
+					c(female_gud, male_gud, male_alcever_lastyear, female_alcever_lastyear, male_condom_never, female_condom_never, female_pregnant, male_circum) ~ dnorm(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	same_hh_fish=0, same_hh_nofish=0, extra_hh=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_withincomm_yes=0,
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,
+					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0,
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, miss_mean=0.5, alc_mean=0.5, cond_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1, miss_sigma=1, alc_sigma=1, cond_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	plot(precis(mi.4, prob=0.8))
+	
+	mi.4b 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbetabinom(1, ptr, dispersion),
+					logit(ptr) <- same_hh_fish*SAME_HH*FISH + same_hh_nofish*SAME_HH*(1-FISH) + extra_hh*(1-SAME_HH) +
+							male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +
+							male_age_24*MALE_AGE_24 + male_age_29*MALE_AGE_29 + male_age_34*MALE_AGE_34 + female_age_19*FEMALE_AGE_19 + female_age_24*FEMALE_AGE_24 + female_age_29*FEMALE_AGE_29 + female_age_34*FEMALE_AGE_34 +
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_alcever_lastyear*MALE_ALCEVER_LASTYEAR + female_alcever_lastyear*FEMALE_ALCEVER_LASTYEAR + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER +
+							female_pregnant*FEMALE_PREGNANT + male_circum*MALE_CIRCUM +
+							pair_withincomm_yes*SAME_COMM,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					FEMALE_PREGNANT <- dnorm(miss_mean, miss_sigma),
+					MALE_CIRCUM <- dnorm(miss_mean, miss_sigma), 
+					MALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma), 
+					FEMALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma),
+					MALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					FEMALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					c(same_hh_fish, same_hh_nofish, extra_hh) ~ dnorm(0,10),
+					c(vl_mean, edu_mean, sexp_mean, miss_mean, alc_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma, miss_sigma, alc_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_withincomm_yes) ~ dnorm(0,1),
+					c(male_age_24, male_age_29, male_age_34, female_age_19, female_age_24, female_age_29, female_age_34) ~ dnorm(0,1),
+					c(female_gud, male_gud, male_alcever_lastyear, female_alcever_lastyear, male_condom_never, female_condom_never, female_pregnant, male_circum) ~ dnorm(0,1),
+					dispersion ~ dexp(1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	dispersion=1, same_hh_fish=0, same_hh_nofish=0, extra_hh=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_withincomm_yes=0,
+					male_age_24=0, male_age_29=0, male_age_34=0, female_age_19=0, female_age_24=0, female_age_29=0, female_age_34=0,
+					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0,
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, miss_mean=0.5, alc_mean=0.5, cond_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1, miss_sigma=1, alc_sigma=1, cond_sigma=1),
+			constraints=list(dispersion='lower=0'),
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	plot(precis(mi.4b, prob=0.8))
+	
+	#	no age
+	mi.4c 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- same_hh_fish*SAME_HH*FISH + same_hh_nofish*SAME_HH*(1-FISH) + extra_hh*(1-SAME_HH) +
+							male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +							
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_alcever_lastyear*MALE_ALCEVER_LASTYEAR + female_alcever_lastyear*FEMALE_ALCEVER_LASTYEAR + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER +
+							female_pregnant*FEMALE_PREGNANT + male_circum*MALE_CIRCUM +
+							pair_withincomm_yes*SAME_COMM,
+					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
+					FE_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					MA_SEXP1YR_G1 <- dnorm(sexp_mean, sexp_sigma),
+					FE_NOEDU <- dnorm(edu_mean, edu_sigma),
+					MA_NOEDU <- dnorm(edu_mean, edu_sigma),
+					FEMALE_PREGNANT <- dnorm(miss_mean, miss_sigma),
+					MALE_CIRCUM <- dnorm(miss_mean, miss_sigma), 
+					MALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma), 
+					FEMALE_ALCEVER_LASTYEAR <- dnorm(alc_mean, alc_sigma),
+					MALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					FEMALE_CONDOM_NEVER <- dnorm(cond_mean, cond_sigma),
+					c(same_hh_fish, same_hh_nofish, extra_hh) ~ dnorm(0,1),
+					c(vl_mean, edu_mean, sexp_mean, miss_mean, alc_mean, cond_mean) ~ dnorm(0.5, 1),
+					c(vl_sigma, edu_sigma, sexp_sigma, miss_sigma, alc_sigma, cond_sigma) ~ dcauchy(0,1),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_withincomm_yes) ~ dnorm(0,1),
+					c(female_gud, male_gud, male_alcever_lastyear, female_alcever_lastyear, male_condom_never, female_condom_never, female_pregnant, male_circum) ~ dnorm(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	same_hh_fish=0, same_hh_nofish=0, extra_hh=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_withincomm_yes=0,					
+					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0,
+					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, miss_mean=0.5, alc_mean=0.5, cond_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1, miss_sigma=1, alc_sigma=1, cond_sigma=1),			
+			warmup=2e3, iter=20e3, chains=1, cores=4)
+	plot(precis(mi.4, prob=0.8))
+	
+	compare(mi.1,mi.2,mi.3, mi.4, mi.4b)
+	#	mi.4 indeed best model
+
+	save(df, mi.1,mi.2,mi.3, mi.4, mi.4b, mi.4c, file=paste0(outfile.base,'_genderbyHHandFish_bestmodel.rda'))
+			
+	#	plot mi.4
+	post	<- as.data.table(extract.samples(mi.4c))
+	post	<- subset(post, select=c(same_hh_fish, same_hh_nofish, extra_hh))
+	#post	<- subset(post, select=c(same_hh_fish, same_hh_nofish, extra_hh, female_age_19, male_age_24, female_age_24, male_age_29, female_age_29, male_age_34, female_age_34))
+	#set(post, NULL, 'same_hh_fish', post[, same_hh_fish+female_age_19+male_age_24+female_age_24+male_age_29+female_age_29+male_age_34+female_age_34])
+	#set(post, NULL, 'same_hh_nofish', post[, same_hh_nofish+female_age_19+male_age_24+female_age_24+male_age_29+female_age_29+male_age_34+female_age_34])
+	#set(post, NULL, 'extra_hh', post[, extra_hh+female_age_19+male_age_24+female_age_24+male_age_29+female_age_29+male_age_34+female_age_34])	
+	#set(post, NULL, 'same_hh_fish', post[, same_hh_fish+male_age_24+female_age_24+male_age_29])
+	#set(post, NULL, 'same_hh_nofish', post[, same_hh_nofish+male_age_24+female_age_24+male_age_29])
+	#set(post, NULL, 'extra_hh', post[, extra_hh+male_age_24+female_age_24+male_age_29])	
+	#set(post, NULL, colnames(post)[grepl('age',colnames(post))], NULL)
+	post[, quantile(exp(same_hh_nofish-extra_hh), p=c(0.1,0.5,0.9))]
+	#	2.770811 5.056189 9.475725
+	post[, quantile(exp(same_hh_fish-extra_hh), p=c(0.1,0.5,0.9))]
+	#	0.9439607 1.5455063 2.5404385
+
+	setnames(post, colnames(post), paste0('male_',colnames(post)))
+	post[, female_same_hh_fish:= -male_same_hh_fish] 
+	post[, female_same_hh_nofish:= -male_same_hh_nofish] 
+	post[, female_extra_hh:= -male_extra_hh]	
+	post[, MC:= seq_len(nrow(post))]
+	post	<- melt(post, id.vars='MC', value.name='COEFF')
+	set(post, NULL, 'OR', post[, exp(COEFF)])
+	set(post, NULL, 'PROB', post[, logistic(COEFF)])
+	post	<- melt(post, id.vars=c('MC','variable'), variable.name='TRANSFORM')
+	tmp		<- post[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), 
+			by=c('variable','TRANSFORM')]
+	post	<- dcast.data.table(tmp, variable+TRANSFORM~STAT, value.var='V')
+	#	prepare plot
+	tmp		<- subset(post, TRANSFORM=='PROB')	
+	tmp[, GENDER:= as.character(factor(grepl('female', variable), levels=c(TRUE,FALSE), labels=c('female','male')))]
+	tmp[, HH:= as.character(factor(grepl('same_hh', variable), levels=c(TRUE,FALSE), labels=c('transmission\nwithin households','transmission\noutside households')))]
+	tmp[, FISH:= as.character(factor(grepl('_fish', variable), levels=c(TRUE,FALSE), labels=c('in\nfishing sites','in\ninland communities')))]
+	set(tmp, tmp[, which(grepl('extra_hh',variable))], 'FISH', '')
+	# 	plot	
+	ggplot(tmp, aes(x=GENDER, middle=MED, ymin=CL, ymax=CU, lower=IL, upper=IU, fill=GENDER)) +
+			geom_boxplot(stat='identity') +
+			theme_bw() +
+			labs(x='', y='source of infection', fill='') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), breaks=seq(0,1,0.1), labels=scales:::percent) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='deepskyblue2')) +
+			facet_grid(FISH+HH~.) + 
+			coord_flip() +
+			theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), legend.position='left', strip.text.y=element_text(angle=0))
+	ggsave(file=paste0(outfile.base,'_genderbyHHandFish_bestmodel2.pdf'), w=8, h=2.5)
+
+	
+}
+
+RakaiFull.transmitter.171122.gender.vs.sexpartners<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_transmitterrecipientdata.rda"
+	outfile.base	<- gsub('data.rda','',infile)
+	load(infile)
+	rtr[, HH:= as.integer(SAMEHH=='same hh')]
+	rtr[, TR_MALE:= as.integer(TR_SEX=='M')]	
+	rtr[, TR_SEXP1YR_G1:= as.integer(TR_SEXP1YR!='1')]
+	rtr[, REC_SEXP1YR_G1:= as.integer(REC_SEXP1YR!='1')]
+	#
+	#	number sex partners of transmitter, recipient
+	#
+	mi.2a <- map2stan(
+			alist(
+					TR_MALE ~ dbinom(1, ptr),
+					logit(ptr) <- tr_sexp_g1*TR_SEXP1YR_G1 + tr_sexp_eq1*(1-TR_SEXP1YR_G1),																											
+					c(tr_sexp_g1, tr_sexp_eq1) ~ dnorm(0,10)													
+			),
+			data=as.data.frame(rtr), 
+			start=list(tr_sexp_g1=0, tr_sexp_eq1=0),			
+			warmup=5e2, iter=2e3, chains=1, cores=4)
+	
+	#	extract stuff from mi.1
+	post	<- as.data.table(extract.samples(mi.2a))
+	post[, tr_sexp_g1_vs_tr_sexp_eq1:= tr_sexp_g1-tr_sexp_eq1]
+	post[, MC:= seq_len(nrow(post))]
+	post	<- melt(post, id.vars='MC', value.name='COEFF')
+	set(post, NULL, 'OR', post[, exp(COEFF)])
+	set(post, NULL, 'PROB', post[, logistic(COEFF)])
+	post	<- melt(post, id.vars=c('MC','variable'), variable.name='TRANSFORM')
+	tmp		<- post[, list( 	STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.25,0.75,0.975))), 
+			by=c('variable','TRANSFORM')]
+	post	<- dcast.data.table(tmp, variable+TRANSFORM~STAT, value.var='V')
+	
+	#	make plot
+	tmp		<- subset(post, TRANSFORM=='PROB' & grepl('in_hh|extra_hh', variable))	
+	tmp[, GENDER:= as.character(factor(grepl('female', variable), levels=c(TRUE,FALSE), labels=c('female','male')))]
+	tmp[, HH:= as.character(factor(grepl('in_hh', variable), levels=c(TRUE,FALSE), labels=c('transmission\nwithin households','transmission\noutside households')))]
+	ggplot(tmp, aes(x=GENDER, middle=MED, ymin=CL, ymax=CU, lower=IL, upper=IU, fill=GENDER)) +
+			geom_boxplot(stat='identity') +
+			theme_bw() +
+			labs(x='', y='source of infection\n', fill='') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,1), labels=scales:::percent) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='deepskyblue2')) +
+			facet_grid(~HH) + 
+			theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+	ggsave(file=paste0(outfile.base,'_genderbyHH.pdf'), w=4.5, h=3.5)
+	save(post, mi.1, rtr, file=paste0(outfile.base,'_genderbyHH.rda'))
 }
 
 RakaiFull.transmitter.171122.hh.multivariatemodels.stan.with.threshold<- function()
