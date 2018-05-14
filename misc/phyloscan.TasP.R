@@ -1,3 +1,280 @@
+Tasp.180513.process.phyloscanneroutput<- function()
+{
+	require(data.table)	
+	require(igraph)
+	require(sna)
+	
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w150'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w160'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w170'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w180'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w190'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q20_results/output_q20w200'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w150'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w160'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w170'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w180'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w190'
+	indir	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Q23_results/output_q23w200'
+	outfile.base <- gsub('output','phcs_180513',indir)
+	outfile	<- paste0(outfile.base,'.rda')
+	
+	neff.cut	<- 3
+	conf.cut	<- 0.6 
+	if(0)
+	{
+		linked.group	<- 'TYPE_PAIR_TODI2'
+		linked.type.yes	<- 'linked'
+		linked.type.no	<- 'unlinked'
+		scores.group	<- 'TYPE_NETWORK_SCORES'
+		scores.type.no	<- c('ambiguous','not close/disconnected') 
+		dir.group		<- 'TYPE_DIR_TODI2'		
+	}
+	if(1)
+	{
+		close.group		<- 'TYPE_PAIR_DI2'
+		close.type.yes	<- 'close'
+		close.type.no	<- 'distant'
+		linked.group	<- 'TYPE_CHAIN_TODI'
+		linked.type.yes	<- 'chain'
+		linked.type.no	<- 'distant'	
+		scores.group	<- 'TYPE_ADJ_NETWORK_SCORES'
+		scores.type.no	<- c('ambiguous','not close/disconnected') 
+		dir.group		<- 'TYPE_ADJ_DIR_TODI2'
+	}
+	
+	
+	
+	#
+	#	from every phyloscanner run, select pairs that are most frequently linked 
+	#	by: distance, distance + topology
+	infiles	<- data.table(F=list.files(indir, pattern='pairwise_relationships.rda', full.names=TRUE))
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+	setkey(infiles, PTY_RUN)
+	rtp.todi2<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p10_d50_stagetwo_rerun23_min30_adj_chain_mean/ptyr40_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				#	all pairs that are not decisively unlinked based on "close.group"
+				rtp		<- subset(rplkl, 	GROUP==close.group & 
+								TYPE==close.type.no &
+								((POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE))<conf.cut,
+						c(ID1, ID2))
+				ans		<- merge(rtp, subset(rplkl, GROUP==close.group & TYPE==close.type.yes), by=c('ID1','ID2'), all.x=1)
+				#	all pairs that are not decisively unlinked based on ML likely transmission pairs by distance + topology
+				rtp		<- subset(rplkl, 	GROUP==linked.group & 
+								TYPE==linked.type.no &
+								((POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE))<conf.cut,
+						c(ID1, ID2))
+				rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes), by=c('ID1','ID2'), all.x=1)
+				ans		<- rbind(ans, rtp)				
+				ans[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]						
+				ans				
+			}, by=c('PTY_RUN')]		
+	rtp.todi2	<- subset(rtp.todi2, POSTERIOR_SCORE>0)
+	set(rtp.todi2, NULL, 'GROUP', rtp.todi2[, as.character(GROUP)])	
+	#
+	#	prepare all dwin and rplkl and save separately
+	rplkl	<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				rplkl			
+			}, by='PTY_RUN']
+	rpw		<- infiles[, {
+				#F<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s25_resume_sk20_cl3_blnormed/ptyr1_pairwise_relationships.rda'
+				#cat(PTY_RUN,'\n')
+				load(F)
+				dwin			
+			}, by='PTY_RUN']
+	#	melt rpw
+	rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=c("TYPE_RAW","TYPE_BASIC","TYPE_PAIR_DI2","TYPE_PAIR_TO","TYPE_PAIR_TODI2x2","TYPE_PAIR_TODI2","TYPE_DIR_TODI2","TYPE_NETWORK_SCORES","TYPE_CHAIN_TODI","TYPE_ADJ_DIR_TODI2","TYPE_ADJ_NETWORK_SCORES"))	
+	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
+	#	re-arrange so that ID1<ID2 
+	tmp			<- subset(rplkl, ID1>ID2)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+	set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+	rplkl		<- rbind(subset(rplkl, ID1<=ID2), tmp)
+	tmp			<- subset(rpw, ID1>ID2)
+	setnames(tmp, c('ID1','ID2','ID1_L','ID1_R','ID2_L','ID2_R','PATHS_12','PATHS_21'), c('ID2','ID1','ID2_L','ID2_R','ID1_L','ID1_R','PATHS_21','PATHS_12'))
+	set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+	rpw			<- rbind(subset(rpw, ID1<=ID2), tmp)
+	tmp			<- subset(rtp.todi2, ID1>ID2)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+	set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+	rtp.todi2	<- rbind(subset(rtp.todi2, ID1<=ID2), tmp)	
+	#
+	#	select runs with highest neff
+	setkey(rplkl, ID1, ID2, PTY_RUN, GROUP, TYPE)	# sort to make sure same run selected in case of tie
+	tmp			<- rplkl[ GROUP==linked.group & TYPE==linked.type.yes, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]
+	rplkl		<- merge(rplkl, tmp, by=c('ID1','ID2','PTY_RUN'))
+	rpw			<- merge(rpw, tmp, by=c('ID1','ID2','PTY_RUN'))
+	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
+	#	save
+	save(rtp.todi2, rplkl, rpw, file=gsub('\\.rda','_allwindows.rda',outfile))
+	
+	#
+	#	prepare just the dwin and rplkl that we need for further linkage analysis of the pairs 
+	#	this is all pairs for whom unlinked is not decisive
+	#
+	tmp			<- unique( subset(rtp.todi2, select=c(ID1, ID2, PTY_RUN)) )
+	rplkl		<- merge(rplkl, tmp, by=c('ID1','ID2','PTY_RUN'))
+	rpw			<- merge(rpw, tmp, by=c('ID1','ID2','PTY_RUN'))
+	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)
+	
+	
+	#
+	#	construct max prob network among all possible pairs regardless of gender
+	#	above NEFF cut
+	rtn		<- subset(rtp.todi2, GROUP==linked.group & TYPE==linked.type.yes & NEFF>neff.cut)
+	#	get transmission chains with igraph, to speed up calculations later
+	tmp		<- subset(rtn, select=c(ID1, ID2))			
+	tmp		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc		<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+	tmp2	<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+	setkey(tmp2, CLU_SIZE)
+	tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+	rtc			<- subset( merge(rtc, tmp2, by='CLU'))
+	rtc[, CLU:=NULL]
+	setkey(rtc, IDCLU)
+	#	add info on edges
+	setnames(rtc, c('ID'), c('ID1'))
+	rtn		<- merge(rtn, rtc, by='ID1')
+	rtc[, CLU_SIZE:=NULL]
+	setnames(rtc, c('ID1'), c('ID2'))
+	rtn		<- merge(rtn, rtc, by=c('ID2','IDCLU'))
+	tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE))
+	#	add posterior mean for network types	 
+	tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=c('ID1','ID2','PTY_RUN'))
+	tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
+	rtn		<- rbind(tmp, rtn)
+	#	generate maximum branch transmission network
+	rtn		<- subset(rtn, GROUP==scores.group)
+	rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)	
+	#	for TYPE=='ambiguous', this has the cols:
+	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
+	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
+	#	MX_PROB_21			total posterior prob supporting  2 to 1 including 50% ambiguous AFTER self-consistence
+	#	MX_KEFF_21 			total KEFF supporting  2 to 1 including 50% ambiguous before self-consistence 
+	#	MX_KEFF_12 			total KEFF supporting  1 to 2 including 50% ambiguous before self-consistence  
+	#	LINK_12 			if there is a directed edge from 1 to 2 in max edge credibility network
+	#	LINK_21				if there is a directed edge from 2 to 1 in max edge credibility network
+	#	where self-consistence means that 12 xor 21 are set to zero
+	rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, POSTERIOR_SCORE, MX_PROB_12, MX_PROB_21, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))
+	#
+	#	work out prob for linkage in max prob network, when 'inconsistent direction' is ignored
+	rtnn[, POSTERIOR_SCORE_LINKED_MECN:= pmax(MX_PROB_12,MX_PROB_21) + 0.5*POSTERIOR_SCORE]
+	set(rtnn, NULL, c('POSTERIOR_SCORE','MX_PROB_12','MX_PROB_21'), NULL)
+	#
+	#	merge POSTERIOR_SCORE_LINKED on max prob network
+	#	rationale: this describes prob of linkage. here, any 'inconsistent direction' is still considered as prob for linkage 	
+	tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
+	tmp[, POSTERIOR_SCORE_LINKED:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+	set(tmp, NULL, c('POSTERIOR_ALPHA','POSTERIOR_BETA','N_TYPE'), NULL)
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+	#	merge POSTERIOR_SCORE_12 POSTERIOR_SCORE_21 (direction) on max prob network
+	#	this is considering in denominator 12 + 21 before reducing probs to achieve self-consistency
+	#	rationale: decide on evidence for direction based on comparing only the flows in either direction, 12 vs 21
+	tmp		<- subset(rplkl, GROUP==dir.group, c(ID1,ID2,PTY_RUN,TYPE,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
+	tmp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+	set(tmp, NULL, c('POSTERIOR_ALPHA','POSTERIOR_BETA','N_TYPE'), NULL)
+	set(tmp, NULL, 'TYPE', tmp[, paste0('POSTERIOR_SCORE_',TYPE)])
+	tmp		<- dcast.data.table(tmp, ID1+ID2+PTY_RUN~TYPE, value.var='POSTERIOR_SCORE')
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+	#	merge NETWORK_SCORE_12 NETWORK_SCORE_21 on max prob network
+	#	this is considering in denominator 12 + 21 + unclear reducing probs to achieve self-consistency
+	#	same as MX_PROB_12, MX_PROB_21, after the final step below that sets one of the two probs to zero
+	tmp		<- subset(rplkl, GROUP==scores.group, c(ID1,ID2,PTY_RUN,TYPE,POSTERIOR_ALPHA))
+	tmp		<- tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1)), by=c('ID1','ID2','PTY_RUN')]
+	tmp		<- subset(tmp, !TYPE%in%scores.type.no)
+	set(tmp, NULL, 'TYPE', tmp[, paste0('NETWORK_SCORE_',TYPE)])	
+	tmp		<- dcast.data.table(tmp, ID1+ID2+PTY_RUN~TYPE, value.var='POSTERIOR_SCORE')
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+	#	ensure DIR scores and NETWORK_SCORE scores are compatible with self-consistency in maxprobnetwork
+	tmp		<- rtnn[, which(LINK_12==0 & LINK_21==1 & POSTERIOR_SCORE_12>POSTERIOR_SCORE_21)]
+	set(rtnn, tmp, c('POSTERIOR_SCORE_12','NETWORK_SCORE_12'), 0)
+	tmp		<- rtnn[, which(LINK_12==1 & LINK_21==0 & POSTERIOR_SCORE_21>POSTERIOR_SCORE_12)]
+	set(rtnn, tmp, c('POSTERIOR_SCORE_21','NETWORK_SCORE_21'), 0)	
+	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)		
+	#
+	
+	#
+	#	define the phylogenetic relationship between those pairs for whom linkage was not excluded 
+	#
+	rtp			<- unique(subset(rtn, select=c(ID1,ID2,PTY_RUN)))
+	#	merge linkage and direction probabilities
+	rtp			<- merge(rtp, rtnn, by=c('ID1','ID2','PTY_RUN')) #merge data on unlinked for everyone
+	tmp			<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.no)	
+	tmp[, POSTERIOR_SCORE_UNLINKED:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+	rtp			<- merge(rtp, subset(tmp, select=c(ID1, ID2, PTY_RUN, POSTERIOR_SCORE_UNLINKED)), all.x=1, by=c('ID1','ID2','PTY_RUN'))	
+	#	define SELECT
+	rtp[, SELECT:= NA_character_]
+	set(rtp, rtp[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED>conf.cut)], 'SELECT', 'couple most likely not a pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=conf.cut & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=conf.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED<=conf.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=conf.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>conf.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=conf.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_12>conf.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtp, rtp[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=conf.cut & !is.na(LINK_12) & !is.na(LINK_21) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_21>conf.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
+	setkey(rtp, ID1, ID2)
+	
+	save(rtp.todi2, rplkl, rpw, rtn, rtnn, rtp, file=gsub('\\.rda','_networksallpairs.rda',outfile))
+	
+	if(0)
+	{
+		#	plot transmission networks
+		df	<- copy(rtn)	
+		di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
+		set(di, NULL, 'variable', NULL)
+		di	<- unique(di)
+		p	<- phsc.plot.probability.network(df, di, point.size=10, 
+				edge.gap=0.015, 
+				edge.size=0.4, 
+				curvature= -0.2, 
+				arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+				curv.shift=0.02, 
+				label.size=3, 
+				threshold.linked=0.6)	
+		pdf(file=paste0(outfile.base,'transmissionnetwork.pdf'), w=16, h=16)		
+		print(p)
+		dev.off()
+	}
+	
+	if(0)
+	{
+		#
+		#	plot most likely transmission chain
+		df	<- copy(rtnn)	
+		di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
+		set(di, NULL, 'variable', NULL)
+		di	<- unique(di) 
+		q		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+				edge.gap=0.015, 
+				edge.size=0.4, 
+				curvature= -0.2, 
+				arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+				curv.shift=0.02, 
+				label.size=3, 
+				threshold.linked=0.6,
+				layout=p$layout)	
+		pdf(file=paste0(outfile.base,'mostlikelychain.pdf'), w=16, h=16)	
+		print(q)
+		dev.off()
+	}
+	
+	
+	#
+	#	window scan for all pairs in rtn
+	#
+	if(1)
+	{
+		plot.file	<- paste0(outfile.base,'scanplot.pdf')
+		rpw2		<- merge(rpw, subset(rtp, select=c(ID1, ID2, PTY_RUN)), by=c('ID1','ID2','PTY_RUN'))
+		phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=35, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)		
+	}	
+}
+
 TasP.calculate.bam.readlength.coverage<- function()
 {
 	require(ggplot2)

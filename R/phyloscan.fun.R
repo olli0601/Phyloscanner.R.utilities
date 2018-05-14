@@ -2221,7 +2221,7 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 		names(node.shape.values)<- z
 	}
 	setnames(di, c(node.label, node.shape, node.fill), c('NODE_LABEL','NODE_SHAPE','NODE_FILL'))
-	tmp	<- which(c(node.label, node.shape, node.fill)=='ID')
+	tmp	<- c('NODE_LABEL','NODE_SHAPE','NODE_FILL')[which(c(node.label, node.shape, node.fill)=='ID')]
 	if(length(tmp))
 		set(di, NULL, 'ID', di[[tmp]])
 	di	<- subset(di, select=c(ID, NODE_LABEL, NODE_SHAPE, NODE_FILL))
@@ -2292,7 +2292,8 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 phsc.plot.probability.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_)
 {	
 	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
-	#node.label='ID'; node.shape='IN_COUPLE'; node.fill='SEX'
+	#node.label='ID'; threshold.linked=0.6; node.shape=NA_character_; node.fill=NA_character_; node.shape.values=NA_integer_; node.fill.values=NA_character_
+	#node.shape='IN_COUPLE'; node.fill='SEX'
 	#node.fill.values=c('F'='hotpink2', 'M'='steelblue2')
 	#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16)
 	if(is.na(node.label))
@@ -2323,7 +2324,7 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 		names(node.shape.values)<- z
 	}
 	setnames(di, c(node.label, node.shape, node.fill), c('NODE_LABEL','NODE_SHAPE','NODE_FILL'))
-	tmp	<- which(c(node.label, node.shape, node.fill)=='ID')
+	tmp	<- c('NODE_LABEL','NODE_SHAPE','NODE_FILL')[which(c(node.label, node.shape, node.fill)=='ID')]
 	if(length(tmp))
 		set(di, NULL, 'ID', di[[tmp]])
 	di	<- subset(di, select=c(ID, NODE_LABEL, NODE_SHAPE, NODE_FILL))

@@ -3083,7 +3083,7 @@ RakaiFull.transmitter.180423.build2<- function()
 			warmup=2e3, iter=20e3, chains=1, cores=4)
 	plot(precis(mi.4, prob=0.8))
 	
-	compare(mi.1,mi.2,mi.3, mi.4, mi.4b)
+	compare(mi.1,mi.2,mi.3, mi.4, mi.4b, mi.4c)
 	#	mi.4 indeed best model
 
 	save(df, mi.1,mi.2,mi.3, mi.4, mi.4b, mi.4c, file=paste0(outfile.base,'_genderbyHHandFish_bestmodel.rda'))
