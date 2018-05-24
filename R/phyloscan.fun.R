@@ -3174,8 +3174,8 @@ phsc.get.pairwise.relationships.numbers<- function()
 					'TYPE_CHAIN_TODI_NOAMB','2',
 					'TYPE_CHAIN_TODI','3',
 					'TYPE_ADJ_DIR_TODI2','2',
-					'TYPE_NETWORK_SCORES','3',
-					'TYPE_ADJ_NETWORK_SCORES','3',
+					'TYPE_NETWORK_SCORES','4',
+					'TYPE_ADJ_NETWORK_SCORES','4',
 					'TYPE_BASIC','24'), ncol=2,byrow=TRUE)
 	colnames(tmp)	<- c('GROUP','N_TYPE')
 	tmp				<- as.data.table(tmp)
