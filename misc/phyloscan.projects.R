@@ -2,6 +2,7 @@ project.dual<- function()
 {	
 	CODE.HOME	<<- "/work/or105/libs/Phyloscanner.R.utilities"
 	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
+	HOME		<<- '/work/or105/MUNICH'
 	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
 	#project.readlength.count.bam.150218()
 	#project.readlength.count.bam.171208()
@@ -30,8 +31,9 @@ project.dual<- function()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#pty.pipeline.phyloscanner.180302.beehive67.process()
+	pty.pipeline.phyloscanner.180605.MunichCluster.process()
 	#	various   
-	if(1) 
+	if(0) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=20, hpc.q="pqeelab", hpc.mem="11gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
@@ -69,7 +71,9 @@ project.dual.alignments.missing<- function()
 
 project.dual.alignments.reference<- function()
 {
-	file			<- '~/Dropbox (SPH Imperial College)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
+	require(ape)
+	
+	file			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/HIV1_COM_2012_genome_DNA.fasta'
 	outfile			<- '~/git/Phyloscanner.R.utilities/inst/HIV1_compendium_C_B_CPX.fasta'
 	ref				<- read.dna(file, format='fasta')
 	df				<- data.table(TAXA=rownames(ref))
@@ -81,7 +85,7 @@ project.dual.alignments.reference<- function()
 	rownames(ref)	<- df[,TAXA_NEW]
 	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
 	
-	file			<- '~/Dropbox (SPH Imperial College)/pangea-beehive-shared/HIV1_COM_2012_genome_DNA.fasta'
+	file			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/HIV1_COM_2012_genome_DNA.fasta'
 	outfile			<- '~/git/Phyloscanner.R.utilities/inst/HIV1_compendium_AD_B_CPX.fasta'
 	ref				<- read.dna(file, format='fasta')
 	df				<- data.table(TAXA=rownames(ref))
@@ -89,6 +93,18 @@ project.dual.alignments.reference<- function()
 	df				<- subset(df, grepl('AF460972|GQ477441|JX140646|AF193276|AF193253',TAXA) | grepl('HXB2',TAXA) | grepl('^A1|^A2|^AD',SUBTYPE) | SUBTYPE=='D' )
 	df[,GENBANK:= regmatches(TAXA,regexpr('[^\\.]+$',TAXA))]
 	df[,TAXA_NEW:= df[,paste('REF_',SUBTYPE,'_',GENBANK,'_read_1_count_0',sep='')]]
+	ref				<- ref[ df[, TAXA], ]
+	rownames(ref)	<- df[,TAXA_NEW]
+	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
+	
+	file			<- '~/Dropbox (SPH Imperial College)/PANGEA_data/HIV1_COM_2012_genome_DNA.fasta'
+	outfile			<- '~/git/Phyloscanner.R.utilities/inst/HIV1_compendium_B.fasta'
+	ref				<- read.dna(file, format='fasta')
+	df				<- data.table(TAXA=rownames(ref))
+	df[,SUBTYPE:= toupper(gsub('^[0-9]+_','',regmatches(TAXA,regexpr('^[^\\.]+',TAXA))))]
+	df				<- subset(df, SUBTYPE=='B')
+	df[,GENBANK:= regmatches(TAXA,regexpr('[^\\.]+$',TAXA))]
+	df[,TAXA_NEW:= df[,paste('REF_',SUBTYPE,'_',GENBANK,sep='')]]
 	ref				<- ref[ df[, TAXA], ]
 	rownames(ref)	<- df[,TAXA_NEW]
 	write.dna(ref, file=outfile, format='fasta', colsep='', nbcol=-1)
@@ -5587,7 +5603,594 @@ pty.pipeline.phyloscanner.180302.beehive67.process<- function()
 		quit('no')		
 	}
 }
+
+
+pty.pipeline.phyloscanner.180605.MunichCluster.readlengths<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	infile.base	<- '~/Box Sync/OR_Work/2018/2018_MunichCluster/mergedfragmentlen__'
+	infile.bams	<- paste0(infile.base,c('cov175.rda','cov200.rda','cov225.rda','cov250.rda','cov275.rda','cov300.rda','cov325.rda','cov350.rda','cov375.rda','lendist.rda'))		
+	outfile.base<- '~/Box Sync/OR_Work/2018/2018_MunichCluster/MunichCluster_bamstats_'						
+		
+	for(i in seq_along(infile.bams))		
+		load(infile.bams[i])	
+	setnames(bam.cov175, 'FILE_ID', 'SID')
+	bam.cov175	<- subset(bam.cov175, !is.na(COV))
+	setnames(bam.cov200, 'FILE_ID', 'SID')
+	bam.cov200	<- subset(bam.cov200, !is.na(COV))
+	setnames(bam.cov225, 'FILE_ID', 'SID')
+	bam.cov225	<- subset(bam.cov225, !is.na(COV))	
+	setnames(bam.cov250, 'FILE_ID', 'SID')
+	bam.cov250	<- subset(bam.cov250, !is.na(COV))
+	setnames(bam.cov275, 'FILE_ID', 'SID')
+	bam.cov275	<- subset(bam.cov275, !is.na(COV))
+	setnames(bam.cov300, 'FILE_ID', 'SID')
+	bam.cov300	<- subset(bam.cov300, !is.na(COV))
+	setnames(bam.cov325, 'FILE_ID', 'SID')
+	bam.cov325	<- subset(bam.cov325, !is.na(COV))	
+	setnames(bam.cov350, 'FILE_ID', 'SID')
+	bam.cov350	<- subset(bam.cov350, !is.na(COV))
+	setnames(bam.cov375, 'FILE_ID', 'SID')
+	bam.cov375	<- subset(bam.cov375, !is.na(COV))	
+	setnames(bam.len, 'FILE_ID', 'SID')
+	bam.len[, LONGER:= factor(CDF>1-1e-4, levels=c(TRUE,FALSE), labels=c('no','yes'))]
 	
+	
+	ggplot(subset(bam.len,QU>=40 & QU<320), aes(y=1-CDF, x=factor(QU))) + 
+			geom_boxplot() +
+			scale_y_continuous(lab=scales:::percent, expand=c(0,0)) +
+			theme_bw() + labs(y='proportion of reads longer than x in one individual\n(boxplot over all individuals)', x='\nx=length of quality-trimmed short reads\n(nt)', fill='sequence run') +
+			theme(legend.position='bottom')
+	ggsave(file=paste0(outfile.base,'bamlen_longer_than_xnt.pdf'), w=6, h=6)
+	#	comparing to beehive, perhaps a good threshold is 250	
+	
+		
+	#
+	df			<- copy(bam.cov175)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=175L]
+	ans			<- copy(tmp)		
+	#
+	df			<- copy(bam.cov200)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=200L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov225)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=225L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov250)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=250L]
+	ans			<- rbind(ans, tmp)		
+	#
+	df			<- copy(bam.cov275)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=275L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov300)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=300L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov325)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=325L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov350)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=350L]
+	ans			<- rbind(ans, tmp)	
+	#
+	df			<- copy(bam.cov375)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{						
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	bam.covm	<- subset(bam.covm, HCOV>700/9719)
+	tmp			<- bam.covm[, list(	N=length(SID), 
+					XCOV_MEAN=mean(XCOV), XCOV_MIN= min(XCOV), XCOV_QL= quantile(XCOV, p=0.025), XCOV_QU= quantile(XCOV, p=0.975), XCOV_MAX= max(XCOV),
+					HCOV_MEAN=mean(HCOV), HCOV_MIN= min(HCOV), HCOV_QL= quantile(HCOV, p=0.025), HCOV_QU= quantile(HCOV, p=0.975), HCOV_MAX= max(HCOV)
+			), by='COV_MIN']
+	tmp[, READL:=375L]
+	ans			<- rbind(ans, tmp)	
+	#	make table
+	ans[, XCOV_LABEL:= paste0(round(XCOV_MEAN,d=0),'x ( ', round(XCOV_QL, d=1),'x - ',round(XCOV_QU, d=0),'x )')]
+	ans[, HCOV_LABEL:= paste0(round(100*HCOV_MEAN,d=1),'% (', round(100*HCOV_QL, d=1),'% - ',round(100*HCOV_QU, d=1),'%)')]
+	ans[, P:= paste0( round(100*N / ans[COV_MIN==1 & READL==1, N], d=1), '%')]
+	set(ans, NULL, 'COV_MIN', ans[, factor(COV_MIN, levels=c(1,10,20,30,50,100), labels=c('1X','10X','20X','30X','50X','100X'))])
+	ans			<- subset(ans, select=c(COV_MIN, READL, N, P, HCOV_LABEL, HCOV_MEAN))
+	setkey(ans, COV_MIN, READL)
+	write.csv(ans, row.names=FALSE, file=paste0(outfile.base,'NGSoutput_info.csv'))
+	
+	ggplot(subset(ans, READL>1), aes(x=READL, y=N/max(N), group=COV_MIN, pch=COV_MIN)) + 
+			geom_line(colour='grey50') +
+			geom_point() + 			 
+			scale_y_continuous(label=scales:::percent) +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(x='\nmin read length', y='subjects retained\n',pch='min sequencing\ndepth')
+	ggsave(file=paste0(outfile.base,'subjectsretained_by_minreads.pdf'), w=3.5, h=6)
+	ggplot(subset(ans, READL>1), aes(x=READL, y=HCOV_MEAN*9719, group=COV_MIN, pch=COV_MIN)) + 
+			geom_line(colour='grey50') +
+			geom_point() + 			 
+			scale_y_continuous() +
+			theme_bw() + theme(legend.position='bottom') +
+			labs(x='\nmin read length', y='average coverage of HIV-1 genome\n(nt)',pch='min sequencing\ndepth')
+	ggsave(file=paste0(outfile.base,'coverage_by_minreads.pdf'), w=3.5, h=6)
+	
+	
+	#	roughly where are these 250 bp reads?
+	bam.cov250.30	<- subset(bam.cov250, COV>=30)
+	bam.cov250.30[, RID:= SID]	
+	tmp				<- bam.cov250.30[, list(SUM_REP=sum(REP)), by=c('SID','RID')]
+	tmp				<- subset(tmp, SUM_REP>700)
+	tmp				<- tmp[, list(SID=SID[which.max(SUM_REP)]), by='RID']
+	bam.cov250.30	<- merge(tmp, bam.cov250.30, by=c('RID','SID'))
+	setkey(bam.cov250.30, RID, POS)
+	tmp				<- bam.cov250.30[, 	{
+				z	<- rep(COV,REP)
+				list(COV=z, POS2=POS+seq_along(z)-1L)
+			}, by=c('SID','RID','POS')]
+	tmp			<- tmp[, list(N=length(RID)), by='POS2']
+	ggplot(tmp, aes(x=POS2, y=N)) + geom_area() +
+			theme_bw() +
+			scale_x_continuous(expand=c(0,0)) +
+			scale_y_continuous(expand=c(0,0)) +
+			#coord_cartesian(ylim=c(0,NA)) +
+			labs(x='\nposition on HIV-1 genome', y='individuals\nwith NGS reads at position\n') +
+			theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
+	ggsave(file=paste0(outfile.base,'horizontal_coverage_histogram_minNGSoutput_reads250.pdf'), w=8, h=2)
+	
+	#	who are we losing due to some drop off in quality?
+	#
+	df			<- copy(bam.cov350)
+	bam.covm	<- do.call('rbind',lapply(c(1,10,20,30,50,100), function(x)
+					{
+						bam.covm	<- subset(df, COV>=x)
+						bam.covm	<- bam.covm[, list(HCOV=sum(REP)/9719, XCOV= sum(COV*REP)/9719), by='SID']						
+						bam.covm[, COV_MIN:=x]
+						bam.covm
+					}))
+	dcast.data.table(bam.covm, SID~COV_MIN, value.var='HCOV')
+}
+
+pty.pipeline.phyloscanner.180605.MunichCluster.process<- function() 
+{
+	require(big.phylo)
+	require(Phyloscanner.R.utilities)
+	
+	# set up pty.runs file
+	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	if(0)	
+	{
+		pty.runs		<- data.table(SAMPLE_ID=list.files('~/duke/2018_MunichCluster/Data', pattern='bam$'))
+		set(pty.runs, NULL, 'SAMPLE_ID', pty.runs[, gsub('\\.bam','',SAMPLE_ID)])
+		pty.runs[, RENAME_ID:= paste0('MC-',SAMPLE_ID)]
+		pty.runs[, UNIT_ID:= paste0('MC-',SAMPLE_ID)]
+		pty.runs[, PTY_RUN:=1]		
+		outfile	<- '~/duke/2018_MunichCluster/Data/MunichCluster_180605.rda'
+		save(pty.runs, file=outfile)
+	}
+	#
+	#	INPUT ARGS
+	if(1)
+	{	
+		#HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+		HOME				<<- '/work/or105/MUNICH'
+		in.dir				<- file.path(HOME,"MunichCluster_180605_in")
+		work.dir			<- file.path(HOME,"MunichCluster_180605_work")
+		out.dir				<- file.path(HOME,"MunichCluster_180605_out")		
+		load( file.path(in.dir, 'MunichCluster_180605.rda') )
+		print(pty.runs)
+		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+		hpc.nproc			<- 1
+		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
+		#pty.data.dir		<- '~/duke/2018_MunichCluster/Data'
+		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
+		pty.data.dir		<- '/work/or105/MUNICH/data'
+		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
+		pty.select			<- 1		
+	}	
+	
+	#
+	# generate read alignments
+	if(1)
+	{		
+		ptyi		<- seq(800,9150,25)
+		ptyi		<- seq(800,850,25)
+		pty.c		<- lapply(seq_along(ptyi), function(i)
+				{
+					pty.args			<- list(	prog.pty=prog.pty, 
+							prog.mafft='mafft', 
+							prog.raxml=prog.raxml, 
+							data.dir=pty.data.dir, 
+							work.dir=work.dir, 
+							out.dir=out.dir, 
+							alignments.file=system.file(package="phyloscan", "HIV1_compendium_B.fasta"),
+							alignments.root='REF_B_K03455', 
+							alignments.pairwise.to='REF_B_K03455',
+							window.automatic= '', 
+							merge.threshold=0, 
+							min.read.count=1, 
+							quality.trim.ends=23, 
+							min.internal.quality=23, 
+							merge.paired.reads=TRUE, 
+							no.trees=TRUE, 
+							dont.check.duplicates=FALSE,
+							dont.check.recombination=TRUE,
+							num.bootstraps=1,
+							all.bootstrap.trees=TRUE,
+							strip.max.len=350, 
+							min.ureads.individual=NA, 
+							win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+							keep.overhangs=FALSE,
+							mem.save=0,
+							verbose=TRUE,					
+							select=pty.select	#of 240
+					)											
+					pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args,regex.ref='\\.fasta$', postfix.sample.id='\\.bam|\\.fasta')
+					#cat(pty.c$CMD)
+					#stop()
+					pty.c[, W_FROM:= ptyi[i]]
+					pty.c
+				})
+		pty.c	<- do.call('rbind', pty.c)	
+		tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
+		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
+		pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		pty.c	<- subset(pty.c, is.na(FO))
+		
+		#	make array job
+		pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+		tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+		tmp		<- tmp[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=18, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load, hpc.array=pty.c[, max(CASE_ID)])
+		cmd		<- paste(cmd,tmp,sep='\n')
+		outfile	<- paste("mc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		cmd.hpccaller(work.dir, outfile, cmd)
+		
+		#print(pty.c)
+		#stop()		 
+		#invisible(pty.c[,	{
+		#					cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=18, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="1850mb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="63800mb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+		#					cmd		<- paste(cmd,CMD,sep='\n')
+		#					cat(cmd)					
+		#					outfile	<- paste("mc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		#					cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+		#				}, by=c('PTY_RUN','W_FROM')])
+		quit('no')
+	}
+	#
+	# generate trees
+	if(0)
+	{
+		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
+		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+		#hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 167; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		hpc.select	<- 1; hpc.nproc<- 16; 	hpc.walltime<- 23; hpc.mem<-"124gb"; hpc.q<- NA
+		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+		in.dir		<- file.path(HOME,"BEEHIVE_67_180302_out")
+		out.dir		<- in.dir
+		work.dir	<- file.path(HOME,"BEEHIVE_67_180302_work")
+		
+		infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+		infiles[, FO:= gsub('fasta$','tree',FI)]
+		infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+		infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
+		tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+		infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		infiles	<- subset(infiles, is.na(FT))	
+		setkey(infiles, PTY_RUN, W_FROM)			
+		#infiles	<- subset(infiles, PTY_RUN>=240 & PTY_RUN<300)
+		#infiles	<- subset(infiles, PTY_RUN>=186 & PTY_RUN<239)
+		#print(infiles)	 		
+		
+		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+		df[, ID:=ceiling(seq_len(nrow(df))/1)]
+		#df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+		
+		#df[1, cat(CMD)]
+		#stop()
+		invisible(df[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)							
+							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(work.dir, outfile, cmd)
+							#stop()
+						}, by=c('ID')])
+	}
+	#
+	#	combine all the data	
+	if(0)
+	{
+		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
+		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
+		#
+		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		#allwin	<- data.table(W_FROM=seq(800,9050,125))
+		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
+		for(i in seq_along(indirs))
+		{
+			indir	<- indirs[i]
+			pty.run	<- as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(indir)))
+			#	check if we have all fasta and tree files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
+			missfs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(missfs))
+				cat('\nIn',indir,'Found missing fasta files for',paste(missfs,collapse=', '))
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(misstrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
+			zipit	<- 0
+			if(!length(missfs) & !length(misstrs))
+			{
+				cat('\nIn',indir,'Found all fasta and tree files')
+				zipit	<- 1
+			}				
+			if(!length(setdiff(misstrs,missfs)))
+			{ 
+				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+				zipit	<- 1
+			}	
+			#
+			if(zipit)
+			{			
+				cat('\nProcess',indir)
+				#	first combine all zip files into ptyrXXX_otherstuff.zip
+				infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+				cat('\nZip to file', tmp,'...\n')
+				suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+				invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip fasta files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip tree files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	remove tmp dir
+				invisible( file.remove( file.path(indir,'tmp42') ) )
+				#	move one level down
+				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				cat('\nDone',indir)
+			}
+			#if(!length(misstrs))
+			if(zipit)
+				invisible(unlink(indir, recursive=TRUE))
+			#	expand again if asked to
+			#if(length(misstrs))
+			if(0)
+			{
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
+		}					
+	}
+	#
+	#	Input args 2
+	if(0)	
+	{	
+		in.dir				<- file.path(HOME,"BEEHIVE_67_180302_out")
+		out.dir				<- in.dir
+		work.dir			<- file.path(HOME,"BEEHIVE_67_180302_work")						
+		dir.create(out.dir, showWarnings=FALSE)
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft=NA, 
+				prog.raxml=NA, 
+				data.dir=NA, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="phyloscan", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+				alignments.root='REF_CPX_AF460972', 
+				alignments.pairwise.to='REF_B_K03455',
+				bl.normalising.reference.file=system.file(package="phyloscan", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=0, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(800,9400,25,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
+				tip.regex='^(.*)-[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				dwns.maxReadsPerPatient=50,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,
+				pw.trmw.min.reads=30,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.025,
+				pw.trmw.distant.brl=0.05,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
+				pw.prior.calibrated.prob=0.6,
+				mem.save=0,
+				verbose=TRUE,				
+				select=NA 
+		)	
+		save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
+		
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]				
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+		setkey(pty.c, PTY_RUN)		
+		pty.c	<- pty.c[, { 
+					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#FILE_BAM<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
+					#cat('\n',FILE_BAM)
+					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
+					print(prefix.infiles)
+					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
+					list(CMD=cmd) 
+				}, by='PTY_RUN']		
+		pty.c[1,cat(CMD)]		
+		#stop()		
+		invisible(pty.c[,	{					
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=168, hpc.q="pqeelab", hpc.mem="48gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
+							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=1, hpc.load=hpc.load)
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+						}, by='PTY_RUN'])		
+		quit('no')		
+	}
+}
+
 pty.pipeline.phyloscanner.170301.secondstage<- function() 
 {
 	require(big.phylo)
@@ -6873,8 +7476,11 @@ project.readlength.calculate.coverage.171208<- function()
 	require(Rsamtools)		
 	#indir			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_bamdistr'		
 	#outfile.base	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/bam_stats_171208'	
-	indir			<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE'
-	outfile.base	<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE_'
+	#indir			<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE'
+	#outfile.base	<- '/work/or105/PANGEA_mapout/mergedfragmentlen_BEE_'
+	indir			<- '~/Box Sync/OR_Work/2018/2018_MunichCluster/mergedfragmentlen'
+	outfile.base	<- '~/Box Sync/OR_Work/2018/2018_MunichCluster/mergedfragmentlen_'
+	
 	
 	bfiles			<- data.table(FILE=list.files(indir, pattern='_mergedfragmentlen.rda$', full.names=TRUE))		
 	bfiles[, FILE_ID:=gsub('_mergedfragmentlen.rda','',basename(FILE))]	
@@ -6999,7 +7605,9 @@ project.readlength.count.bam.171208<- function()
 	#pty.data.dir	<- '/Users/Oliver/duke/2016_PANGEAphylotypes/data'	
 	pty.data.dir	<- '/work/or105/PANGEA_mapout/data'
 	out.dir			<- '/work/or105/PANGEA_mapout/mergedfragmentlen'
-	outfile			<- file.path(pty.data.dir,'bam_len_171208.rda')			
+	pty.data.dir	<- '~/duke/2018_MunichCluster/Data'
+	out.dir			<- '~/Box Sync/OR_Work/2018/2018_MunichCluster/mergedfragmentlen'
+				
 		
 	bfiles			<- data.table(FILE=list.files(pty.data.dir, pattern='bam$'))	
 	bfiles			<- subset(bfiles, !grepl('Contam',FILE))
@@ -7014,8 +7622,8 @@ project.readlength.count.bam.171208<- function()
 	
 	invisible(bfiles[,{
 				cat('\nreading',FILE)
-				#FILE<- '13548_1_27.bam'
-				dlen	<- phsc.bam.get.length.and.pos.of.mergedreads( file.path(pty.data.dir,FILE) )
+				#FILE<- '15-01402.bam'
+				dlen	<- phsc.bam.get.length.and.pos.of.mergedreads( file.path(pty.data.dir,FILE), error.strict=FALSE )
 				dlen[, QNAME:=NULL]				
 				save(dlen, file=file.path(out.dir,paste0(gsub('\\.bam','_mergedfragmentlen.rda',FILE))))
 				NULL

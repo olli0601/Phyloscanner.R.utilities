@@ -829,14 +829,21 @@ phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args)
 #' @description This function calculates the position and length of the two sequenced segments from a single RNA template, potentially after merging when both segments overlap.    
 #' @param bam.file.name full path name to bam file.
 #' @return data.table with columns QNAME (template query ID), POS (leftmost position of read), LEN (length of read)
-phsc.bam.get.length.and.pos.of.mergedreads<- function(bam.file.name)
+phsc.bam.get.length.and.pos.of.mergedreads<- function(bam.file.name, error.strict=TRUE)
 {
 	dlen	<- scanBam(bam.file.name, param=ScanBamParam(what=c('qname','qwidth','pos','rname','isize','strand')))[[1]]
 	dlen	<- as.data.table(dlen)
 	setnames(dlen, colnames(dlen), toupper(colnames(dlen)))
 	#	check we have at most two segments per template
 	tmp		<- dlen[, list(N_SEGMENTS=length(STRAND)), by='QNAME']
-	stopifnot( tmp[, all(N_SEGMENTS<3)] )
+	if(error.strict)
+		stopifnot( tmp[, all(N_SEGMENTS<3)] )
+	if(!error.strict)
+	{
+		warning('ignoring QNAMES with more than 2 segments, n=',subset(tmp, N_SEGMENTS>2)[, length(QNAME)])
+		tmp		<- subset(tmp, N_SEGMENTS<3)
+		dlen 	<- merge(dlen, tmp, by='QNAME')
+	}
 	dlen[, END:= POS+QWIDTH-1L]
 	#	determine if segments overlap
 	tmp		<- dlen[, list(OVERLAP= as.numeric(max(POS)<=min(END)), LEN= max(END)-min(POS)+1L ), by='QNAME']

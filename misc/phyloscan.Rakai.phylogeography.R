@@ -3109,6 +3109,127 @@ RakaiFull.phylogeography.180521.flows.fishinlandmigrant<- function()
 	
 
 	#
+	#	WAIFM matrix (complex model)
+	#
+	groups	<- data.table(TR_COMM_TYPE=c('inland','inland','fisherfolk','fisherfolk','external'), TR_INMIGRATE=c('resident','outmigrant','resident','outmigrant','inmigrant_from_external'))
+	z		<- lapply(1:nrow(groups), function(ii)
+			{				
+				tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+				#set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')	
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+				setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				#	reset to complex migrant
+				set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+				tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+				set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+				tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+				tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+				set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+				set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+				#
+				z		<- subset(z, TR_COMM_TYPE==groups$TR_COMM_TYPE[ii] & TR_INMIGRATE==groups$TR_INMIGRATE[ii])				
+				z		<- z[, list(PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('REC_COMM_TYPE','MONTE_CARLO_IT')]				
+				#	draw random variables
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+							colnames(tmp)	<- REC_COMM_TYPE
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				#	get quantiles
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT'), variable.name='REC_COMM_TYPE')								
+				z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by='REC_COMM_TYPE']
+				z[, TR_COMM_TYPE:= groups$TR_COMM_TYPE[ii] ]
+				z[, TR_INMIGRATE:= groups$TR_INMIGRATE[ii] ] 
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE+TR_INMIGRATE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE, TR_INMIGRATE)
+	z[, STAT:='waifm']	
+	z[, DUMMY:= nrow(ans)+seq_len(nrow(z))]
+	ans		<- rbind(ans, z)	
+	#	plot
+	tmp		<- copy(z)	
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[, gsub('external','External',gsub('inland','Inland',gsub('fisherfolk','Fishing',TR_COMM_TYPE)))])
+	set(tmp, NULL, 'REC_COMM_TYPE', tmp[, gsub('inland','Inland',gsub('fisherfolk','Fishing',REC_COMM_TYPE))])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('_',' ',TR_INMIGRATE)])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('inmigrant from external','',TR_INMIGRATE)])
+	tmp[, MODEL:= 'MonteCarloAdjustSampling']	
+	tmp[, X:= paste0(TR_COMM_TYPE,'->',REC_COMM_TYPE, ' (', TR_INMIGRATE, ')')]
+	ggplot(tmp, aes(x=X, fill=MODEL)) +
+			geom_boxplot(aes(ymin=CL, lower=IL, upper=IU, ymax=CU, middle=M), stat='identity') +
+			theme_bw() + 
+			coord_flip() +
+			scale_y_continuous(label=scales:::percent) +
+			labs(x='Transmissions from -> to\n', y='\nProportion of transmissions by source population')
+	ggsave(file=paste0(outfile.base,'_waifm_fishinlandmigration.pdf'), w=8, h=5)
+	
+	#
+	#	sources (complex model)
+	#
+	groups	<- data.table(REC_COMM_TYPE=c('inland','fisherfolk'))
+	z		<- lapply(1:nrow(groups), function(ii)
+			{				
+				tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+				#set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')	
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+				setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				#	reset to complex
+				set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+				tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+				set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+				tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+				tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+				set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+				set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+				set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+				set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+				#
+				z		<- subset(z, REC_COMM_TYPE==groups$REC_COMM_TYPE[ii])				
+				z		<- z[, list(PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('TR_COMM_TYPE','TR_INMIGRATE','MONTE_CARLO_IT')]
+				z[, FLOW:= paste0(TR_COMM_TYPE, ' ',TR_INMIGRATE)]
+				#	draw random variables
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+							colnames(tmp)	<- FLOW
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				#	get quantiles
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT'))								
+				z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by='variable']
+				z[, TR_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\1',variable)]
+				z[, TR_INMIGRATE:= gsub('([^ ]+) ([^ ]+)','\\2',variable)]				
+				z[, REC_COMM_TYPE:= groups$REC_COMM_TYPE[ii] ]				 
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE+TR_INMIGRATE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_COMM_TYPE, TR_COMM_TYPE, TR_INMIGRATE)
+	z[, STAT:='sources']	
+	z[, DUMMY:= nrow(ans)+seq_len(nrow(z))]
+	ans		<- rbind(ans, z)	
+	
+	
+	
+	#
 	#	geography who infects whom matrix  between fisherfolk and others account for migration (simple)
 	#	adjusted P
 	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
@@ -3311,7 +3432,6 @@ RakaiFull.phylogeography.180521.flows.fishinlandmigrant<- function()
 	save(ans, file=paste0(outfile.base,'_flows_fishinlandmigration.rda'))
 
 	#	make alluvial sources plot
-
 	require(ggalluvial)
 	df	<- subset(ans, STAT=='joint2', select=c(TR_COMM_TYPE, REC_COMM_TYPE, TR_INMIGRATE, STAT, M))
 	tmp	<- subset(ans, STAT=='sources2', select=c(TR_COMM_TYPE, REC_COMM_TYPE, TR_INMIGRATE, STAT, M, LABEL2))
@@ -3331,6 +3451,51 @@ RakaiFull.phylogeography.180521.flows.fishinlandmigrant<- function()
 	#ggplot(data=d, aes(x = timeperiod, stratum = discretechoice, alluvium = individual, weight = continuouschoice)) +
 	#			geom_stratum(aes(fill = discretechoice)) +
 	#			geom_flow()
+	
+	#	make boxplot
+	tmp	<- subset(ans, STAT=='joint2' | STAT=='waifm2', select=c(TR_COMM_TYPE, REC_COMM_TYPE, TR_INMIGRATE, STAT, M, CL, CU, IL, IU))
+	set(tmp, NULL, 'STAT', tmp[, gsub('joint2','Transmission flow\noverall',gsub('waifm2','Transmission flow\nby source',STAT))])
+	set(tmp, NULL, 'STAT', tmp[, factor(STAT, levels=c('Transmission flow\noverall','Transmission flow\nby source'))])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[, gsub('external','From\nExternal',gsub('inland','From\nInland',gsub('fisherfolk','From\nFishing',TR_COMM_TYPE)))])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[, factor(TR_COMM_TYPE, levels=c('From\nInland','From\nFishing','From\nExternal'))])
+	set(tmp, NULL, 'REC_COMM_TYPE', tmp[, gsub('inland','To Inland',gsub('fisherfolk','To Fishing',REC_COMM_TYPE))])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('_',' ',TR_INMIGRATE)])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('inmigrant from external','',TR_INMIGRATE)])
+	#tmp[, X:= paste0(TR_COMM_TYPE,'->',REC_COMM_TYPE, ' (', TR_INMIGRATE, ')')]
+	tmp[, X:= REC_COMM_TYPE]
+	ggplot(tmp, aes(x=X)) +
+			geom_boxplot(aes(ymin=CL, lower=IL, upper=IU, ymax=CU, middle=M, fill=TR_COMM_TYPE), stat='identity') +
+			theme_bw() + 			
+			scale_y_continuous(label=scales:::percent) +
+			scale_fill_manual(values=c('From\nExternal'='grey50', 'From\nInland'='DarkGreen', 'From\nFishing'='firebrick1')) +
+			coord_flip() +
+			labs(x='', y='\nHIV transmissions between RCCS communities and external locations') +
+			facet_grid(TR_COMM_TYPE~STAT, scales='free', switch='y') +
+			theme(strip.text.y = element_text(angle=180), strip.placement = "outside") +
+			guides(fill='none')
+	ggsave(file=paste0(outfile.base,'_alluvial_fishinlandmigration_jointwaifm.pdf'), w=8, h=5)
+	
+	#	make barplot
+	tmp	<- subset(ans, STAT=='joint2' | STAT=='waifm2', select=c(TR_COMM_TYPE, REC_COMM_TYPE, TR_INMIGRATE, STAT, M, CL, CU, IL, IU))
+	set(tmp, NULL, 'STAT', tmp[, gsub('joint2','Transmission flow\noverall',gsub('waifm2','Transmission flow\nby source',STAT))])
+	set(tmp, NULL, 'STAT', tmp[, factor(STAT, levels=c('Transmission flow\noverall','Transmission flow\nby source'))])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[, gsub('external','From\nExternal',gsub('inland','From\nInland',gsub('fisherfolk','From\nFishing',TR_COMM_TYPE)))])
+	set(tmp, NULL, 'TR_COMM_TYPE', tmp[, factor(TR_COMM_TYPE, levels=c('From\nInland','From\nFishing','From\nExternal'))])
+	set(tmp, NULL, 'REC_COMM_TYPE', tmp[, gsub('inland','To\nInland',gsub('fisherfolk','To\nFishing',REC_COMM_TYPE))])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('_',' ',TR_INMIGRATE)])
+	set(tmp, NULL, 'TR_INMIGRATE', tmp[, gsub('inmigrant from external','',TR_INMIGRATE)])
+	#tmp[, X:= paste0(TR_COMM_TYPE,'->',REC_COMM_TYPE, ' (', TR_INMIGRATE, ')')]
+	tmp[, X:= REC_COMM_TYPE]
+	ggplot(tmp, aes(x=X)) +
+			geom_bar(aes(y=M, fill=TR_COMM_TYPE), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), width=0.5) +
+			theme_bw() + 			
+			scale_y_continuous(label=scales:::percent) +
+			scale_fill_manual(values=c('From\nExternal'='grey50', 'From\nInland'='DarkGreen', 'From\nFishing'='firebrick1')) +			
+			labs(x='', y='HIV transmissions\nbetween RCCS communities and external locations\n') +
+			facet_grid(STAT~TR_COMM_TYPE, scales='free') +			
+			guides(fill='none')
+	ggsave(file=paste0(outfile.base,'_alluvial_fishinlandmigration_jointwaifm_bar.pdf'), w=5, h=8)
 	
 }	
 	
