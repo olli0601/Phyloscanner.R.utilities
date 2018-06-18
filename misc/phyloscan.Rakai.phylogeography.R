@@ -839,7 +839,7 @@ RakaiCirc.epi.get.info.170208<- function()
 			set(ra, NULL, x, hivc.db.Date2numeric(ra[[x]]))
 	#	
 	wdir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision"	
-	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData.rda"
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData_v2.rda"
 	load(infile)
 	#	a bit of clean up 
 	rd		<- as.data.table(rccsData)
@@ -1310,9 +1310,28 @@ RakaiFull.phylogeography.180322.get.data.eligibility.participation.sequenced<- f
 	tmp		<- RakaiCirc.epi.get.info.170208()
 	rd		<- tmp$rd
 	rneuro	<- tmp$rn
-	ra		<- tmp$ra	
-	#	select meta-data closest to first pos date
-	rd		<- unique(subset(rd, !is.na(FIRSTPOSDATE), select=c(RID, SEX, VISIT, DATE, FIRSTPOSDATE, PANGEA, COMM_NUM, COMM_NUM_A, BIRTHYR, EST_DATEDIED)))
+	ra		<- tmp$ra
+	#	prepare self report ART
+	#	first find those who were on ART before Aug 2011	
+	rd		<- unique(subset(rd, !is.na(FIRSTPOSDATE), select=c(RID, SEX, VISIT, DATE, FIRSTPOSDATE, PANGEA, COMM_NUM, COMM_NUM_A, BIRTHYR, EST_DATEDIED, SELFREPORTART, EVERSELFREPORTART, FIRSTSELFREPORTART)))	
+	tmp		<- subset(rd, FIRSTSELFREPORTART<2011+8/12)
+	tmp		<- merge(tmp, rd[SELFREPORTART==1, list(FIRSTSELFREPORTART2= min(DATE)), by='RID'], by='RID', all.x=TRUE)
+	tmp2	<- tmp[, which(!is.na(FIRSTSELFREPORTART2) & FIRSTSELFREPORTART2<FIRSTSELFREPORTART)]
+	set(tmp, tmp2, 'FIRSTSELFREPORTART', tmp[tmp2, FIRSTSELFREPORTART2])
+	set(tmp, NULL, 'FIRSTSELFREPORTART2', NULL)	
+	#	second find those who report to be on ART at their first visit in 15-17
+	rart	<- merge(rd, rd[VISIT>=14 & VISIT<17, list(VISIT=min(VISIT)), by='RID'], by=c('RID','VISIT'))	
+	set(rart, NULL, c('FIRSTSELFREPORTART','EVERSELFREPORTART'), NULL)
+	tmp2	<- rart[, which(SELFREPORTART==1)]
+	set(rart, tmp2, 'FIRSTSELFREPORTART2', rart[tmp2, DATE])
+	rart	<- merge(rart, subset(tmp, select=c(RID, FIRSTSELFREPORTART)), by='RID', all=TRUE)
+	tmp2	<- rart[, which(is.na(FIRSTSELFREPORTART) & !is.na(FIRSTSELFREPORTART2))] 
+	set(rart, tmp2, 'FIRSTSELFREPORTART', rart[tmp2, FIRSTSELFREPORTART2])
+	set(rart, NULL, c('FIRSTSELFREPORTART2'), NULL)
+	set(rart, rart[, which(!is.na(FIRSTSELFREPORTART))], 'SELFREPORTART', 1L)
+	rart	<- subset(rart, select=c(RID, SELFREPORTART))
+	#set(rart, NULL,  'SELFREPORTART', rart[, factor(SELFREPORTART, levels=c(0,1,2), labels=c('no','yes','unknown'))])
+	#	select meta-data closest to first pos date	
 	tmp		<- rd[, list(VISIT=VISIT[which.min(abs(DATE-FIRSTPOSDATE))]), by='RID']
 	tmp2	<- rd[, list(PANGEA=as.integer(any(PANGEA==1))), by='RID']
 	rd		<- merge(rd, tmp, by=c('RID','VISIT'))
@@ -1331,6 +1350,9 @@ RakaiFull.phylogeography.180322.get.data.eligibility.participation.sequenced<- f
 	de		<- merge(de, tmp, by='RID', all.x=1)	
 	tmp		<- subset(ra, FIRSTPOSDATE<2015+2/12, select=c(RID, HIV_1517, FIRSTPOSDATE))
 	de		<- merge(de, tmp, by='RID', all.x=1)
+	
+	#	add ART status
+	de		<- merge(de, rart, by='RID', all.x=1)
 	
 	#	get individuals with at least 750nt overlap with another individual at 20X
 	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda"
@@ -1486,6 +1508,13 @@ RakaiFull.phylogeography.180322.get.data.eligibility.participation.sequenced<- f
 	#	some fixup
 	set(de, de[, which(PARTICIPATED_ANY_VISIT==0 & MIN_PNG_OUTPUT==1)], 'PARTICIPATED_ANY_VISIT', 1L)
 	
+	de[, table(HIV_1517, SELFREPORTART, useNA='if')]
+	#	        SELFREPORTART
+	#HIV_1517     0     1  <NA>
+    #	 0        0     0 20740
+    #	 1     3957   530   728
+    #	 <NA>     0     0 11763
+	#subset(de, (HIV_1517==1 & is.na(SELFREPORTART)))
 	
 	#	now calculate participation by community and gender
 	des		<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','PARTICIPATED_ANY_VISIT')]
@@ -4077,7 +4106,652 @@ RakaiFull.phylogeography.180521.gender.mobility.core.inference<- function()
 	save(zm, rtpdm, rtr2, ds, dc, dcb, file=paste0(outfile.base,'core_inference.rda'))	
 }
 
-RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
+RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet	
+	
+	opt.adjust.sequencing.bias		<- 1
+	opt.adjust.participation.bias	<- 0
+	
+	indir			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile			<- file.path(indir,"todi_pairs_180522_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	outfile.base	<- gsub('180522','180618',gsub('data_with_inmigrants.rda','',infile))
+	load(infile)
+	
+	#	select which inmigration data to work with
+	setnames(rtr2, c('TR_INMIGRATE_2YR','REC_INMIGRATE_2YR'), c('TR_INMIGRATE','REC_INMIGRATE'))
+	
+	#	select variables that we need, define missing ones
+	rtr2	<- subset(rtr2, select=c(PAIRID, TR_RID, REC_RID, TR_COMM_NUM_A, REC_COMM_NUM_A, TR_SEX, REC_SEX, TR_INMIGRATE, REC_INMIGRATE, TR_BIRTHDATE, REC_BIRTHDATE, TR_COMM_TYPE, REC_COMM_TYPE))
+	set(rtr2, NULL, 'TR_COMM_NUM_A', rtr2[, as.character(TR_COMM_NUM_A)])
+	set(rtr2, NULL, 'REC_COMM_NUM_A', rtr2[, as.character(REC_COMM_NUM_A)])		
+	#	impute missing birth dates	
+	set(rtr2, rtr2[, which(is.na(TR_BIRTHDATE))], 'TR_BIRTHDATE', rtr2[, mean(TR_BIRTHDATE, na.rm=TRUE)])
+	set(rtr2, rtr2[, which(is.na(REC_BIRTHDATE))], 'REC_BIRTHDATE', rtr2[, mean(REC_BIRTHDATE, na.rm=TRUE)])
+	#	set age at midpoint of study period
+	rtr2[, TR_AGE_AT_MID:= 2013.25 - TR_BIRTHDATE]
+	rtr2[, REC_AGE_AT_MID:= 2013.25 - REC_BIRTHDATE]
+	#	stratify age
+	rtr2[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	rtr2[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	stopifnot( nrow(subset(rtr2, is.na(TR_AGE_AT_MID_C)))==0 )
+	stopifnot( nrow(subset(rtr2, is.na(REC_AGE_AT_MID_C)))==0 )
+	#	delete what we don t need
+	set(rtr2, NULL, c('TR_BIRTHDATE','REC_BIRTHDATE','TR_AGE_AT_MID','REC_AGE_AT_MID'), NULL)
+	
+	#	sum transmission events by community, gender, age, inmigration status
+	dc	<- rtr2[, list(TR_OBS=length(PAIRID)), by=c('TR_COMM_NUM_A','REC_COMM_NUM_A','TR_SEX','REC_SEX','TR_INMIGRATE','REC_INMIGRATE','TR_AGE_AT_MID_C','REC_AGE_AT_MID_C')]
+	setkey(dc, TR_COMM_NUM_A, REC_COMM_NUM_A, TR_SEX, TR_INMIGRATE, REC_INMIGRATE, TR_AGE_AT_MID_C, REC_AGE_AT_MID_C )
+	# 	use the Berger objective prior with minimal loss compared to marginal Beta reference prior
+	#	(https://projecteuclid.org/euclid.ba/1422556416)
+	dc[, TR_PRIOR:= 0.8/nrow(dc)]
+	
+	#
+	#	Bayesian model sampling prior: 
+	#	define prior for sampling probabilities from previously fitted participation and sequencing models	
+	#	sampling probs differ by: age community and sex
+	#
+	infile.participation	<- file.path(indir,"participation_differences_180322_logisticmodels.rda")
+	infile.sequencing		<- file.path(indir,"sequencing_differences_180322_logisticmodels.rda")
+	load(infile.participation)
+	#	binarize covariates
+	dc[, TR_AGE_YOUNG:= as.integer(TR_AGE_AT_MID_C=='15-24')]
+	dc[, TR_AGE_MID:= as.integer(TR_AGE_AT_MID_C=='25-34')]
+	dc[, TR_MALE:= as.integer(TR_SEX=='M')]
+	dc[, TR_COMM_TYPE_F:= as.integer(substr(TR_COMM_NUM_A,1,1)=='f')]
+	dc[, TR_COMM_TYPE_T:= as.integer(substr(TR_COMM_NUM_A,1,1)=='t')]
+	dc[, TR_INMIGRANT:= as.integer(grepl('inmigrant',TR_INMIGRATE))]	
+	dc[, REC_AGE_YOUNG:= as.integer(REC_AGE_AT_MID_C=='15-24')]
+	dc[, REC_AGE_MID:= as.integer(REC_AGE_AT_MID_C=='25-34')]
+	dc[, REC_MALE:= as.integer(REC_SEX=='M')]
+	dc[, REC_COMM_TYPE_F:= as.integer(substr(REC_COMM_NUM_A,1,1)=='f')]
+	dc[, REC_COMM_TYPE_T:= as.integer(substr(REC_COMM_NUM_A,1,1)=='t')]
+	dc[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+	#	define community number to match STAN output for participation model
+	tmp		<- unique(subset(dg, select=c(COMM_NUM_A,COMM_NUM_B)))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')
+	#	define community number to match STAN output for sequencing model
+	load(infile.sequencing)
+	tmp		<- unique(subset(dg, select=c(COMM_NUM_A,COMM_NUM_B)))
+	setnames(tmp, 'COMM_NUM_B', 'COMM_NUM_B2')
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')
+	#	extract Monte Carlo samples from best WAIC participation and best WAIC sequencing models	
+	mps			<- extract.samples(mp3)
+	mss			<- extract.samples(ms1)
+	mc.it		<- 5e4
+	#mc.it		<- 1e2
+	dcb		<- dc[, {
+				#	get Monte Carlo samples from posterior distribution of logit(participation probs)
+				p.tr.part	<- with(mps, a + comm[TR_COMM_NUM_B] + trading*TR_COMM_TYPE_T + fishing*TR_COMM_TYPE_F + 
+											inmigrant*TR_INMIGRANT + inmigrant_young*TR_INMIGRANT*TR_AGE_YOUNG + 
+											male*TR_MALE + 
+											young_male*TR_AGE_YOUNG*TR_MALE + young_female*TR_AGE_YOUNG*(1-TR_MALE) +
+											midage*TR_AGE_MID)
+				p.rec.part	<- with(mps, a + comm[REC_COMM_NUM_B] + trading*REC_COMM_TYPE_T + fishing*REC_COMM_TYPE_F + 
+											inmigrant*REC_INMIGRANT + inmigrant_young*REC_INMIGRANT*REC_AGE_YOUNG + 
+											male*REC_MALE + 
+											young_male*REC_AGE_YOUNG*REC_MALE + young_female*REC_AGE_YOUNG*(1-REC_MALE) +
+											midage*REC_AGE_MID)
+				#	get Monte Carlo samples from posterior distribution of logit(sequencing probs)			
+				p.tr.seq	<- with(mss, a + comm[TR_COMM_NUM_B2] + trading*TR_COMM_TYPE_T + fishing*TR_COMM_TYPE_F + 
+											inmigrant*TR_INMIGRANT + male*TR_MALE + young*TR_AGE_YOUNG + midage*TR_AGE_MID)
+				p.rec.seq	<- with(mss, a + comm[REC_COMM_NUM_B2] + trading*REC_COMM_TYPE_T + fishing*REC_COMM_TYPE_F + 
+											inmigrant*REC_INMIGRANT + male*REC_MALE + young*REC_AGE_YOUNG + midage*REC_AGE_MID)
+				#	sensitivity analyses			
+				if(!opt.adjust.participation.bias)
+				{
+					p.tr.part <- p.rec.part <- rep(1, length(p.tr.part))
+				}					
+				if(!opt.adjust.sequencing.bias)
+				{
+					p.tr.seq <- p.rec.seq <- rep(1, length(p.tr.seq))
+				}				
+				#	sample mc.it many, and calculate product of sequencing and participation probs
+				mc.idx		<- sample.int(length(p.tr.part), mc.it, replace=TRUE)				
+				tmp			<- log1p(exp(-p.tr.part[mc.idx])) + log1p(exp(-p.rec.part[mc.idx]))
+				mc.idx		<- sample.int(length(p.tr.seq), mc.it, replace=TRUE)
+				tmp			<- tmp + log1p(exp(-p.tr.seq[mc.idx])) + log1p(exp(-p.rec.seq[mc.idx]))
+				tmp			<- exp(-tmp)				
+				#print(TR_COMM_NUM_B)
+				#str(p.tr.seq)
+				#str(p.rec.seq)
+				#print(tmp)
+				#print(mean(tmp))				
+				tmp			<- rnbinom(mc.it, TR_OBS, tmp)
+				#print(tmp)
+				#print(mean(tmp))
+				#stop()
+				list(	MONTE_CARLO_IT=seq_len(mc.it), 
+						TR_PRIOR=TR_PRIOR, 
+						TR_OBS=TR_OBS, 
+						TR_MISS=tmp)
+			}, by=c('TR_COMM_NUM_A','REC_COMM_NUM_A','TR_SEX','REC_SEX','TR_INMIGRATE','REC_INMIGRATE','TR_AGE_AT_MID_C','REC_AGE_AT_MID_C')]				
+	#
+	#	Bayesian model augmented posterior: 
+	#	the augmented likelihood is multinomial, so the augmented posterior is 
+	#	analytically tractable, and a Dirichlet posterior
+	#
+	tmp		<- dcb[, list( TR_COMM_NUM_A= TR_COMM_NUM_A,	
+							REC_COMM_NUM_A= REC_COMM_NUM_A, 
+							TR_SEX=TR_SEX, 
+							REC_SEX=REC_SEX,							
+							TR_INMIGRATE=TR_INMIGRATE,
+							REC_INMIGRATE=REC_INMIGRATE,
+							TR_AGE_AT_MID_C=TR_AGE_AT_MID_C,
+							REC_AGE_AT_MID_C=REC_AGE_AT_MID_C,							
+							PI_IJ_ALPHA= TR_OBS+TR_MISS+TR_PRIOR				
+							), by='MONTE_CARLO_IT']
+	dcb		<- merge(dcb, tmp, by=c('MONTE_CARLO_IT','TR_COMM_NUM_A','REC_COMM_NUM_A','TR_SEX','REC_SEX','TR_INMIGRATE','REC_INMIGRATE','TR_AGE_AT_MID_C','REC_AGE_AT_MID_C'))
+	#
+	#	this is the end of the source attribution inference on the WAIFM matrix
+	#
+	tmp		<- paste0(outfile.base,'core_inference.rda')
+	if(!opt.adjust.sequencing.bias)
+		tmp	<- paste0(outfile.base,'core_inference_noadjseqbias.rda')
+	if(!opt.adjust.participation.bias)
+		tmp	<- paste0(outfile.base,'core_inference_noadjpartbias.rda')
+	save(zm, rtpdm, rtr2, ds, dc, dcb, mps, mss, file=tmp)	
+}
+
+RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet	
+	
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')
+	mc.it	<- 1e2
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	process central results
+	#
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180618_cl25_d50_prior23_min30_phylogeography_core_inference.rda"
+	outfile.base		<- gsub('_inference.rda','',infile.inference)
+	load(infile.inference)
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]	
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, TR_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\1',variable)]	
+	z[, REC_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\2',variable)]		
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE )	
+	z[, STAT:='adjusted for variation in participation and sequencing rates']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- copy(z)
+	#	estimate sink
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))		
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z[ , inlanddivfisherfolk:= z[['inland fisherfolk']] / z[['fisherfolk inland']] ]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT', measure.vars=c('inlanddivfisherfolk'))
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, SINK_TYPE:= gsub('([^_]+)_([^_]+)','\\1',variable)]
+	z[, SINK_SEX:= 'Any']						
+	z		<- dcast.data.table(z, SINK_TYPE+SINK_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M, d=2), '\n[',round(CL,d=2),' - ',round(CU,d=2),']')]
+	z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
+	setkey(z, SINK_TYPE, SINK_SEX )
+	z[, STAT:='adjusted for variation in participation and sequencing rates']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans2	<- copy(z)	
+	
+	
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	process sensitivity results adjust only for variation in participation
+	#
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180618_cl25_d50_prior23_min30_phylogeography_core_inference_noadjseqbias.rda"	
+	load(infile.inference)
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]	
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, TR_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\1',variable)]	
+	z[, REC_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\2',variable)]		
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE )
+	z[, STAT:='adjusted for variation in participation rates']
+	z[, DUMMY:= nrow(ans)+seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	#	estimate sink
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))		
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z[ , inlanddivfisherfolk:= z[['inland fisherfolk']] / z[['fisherfolk inland']] ]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT', measure.vars=c('inlanddivfisherfolk'))
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, SINK_TYPE:= gsub('([^_]+)_([^_]+)','\\1',variable)]
+	z[, SINK_SEX:= 'Any']						
+	z		<- dcast.data.table(z, SINK_TYPE+SINK_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M, d=2), '\n[',round(CL,d=2),' - ',round(CU,d=2),']')]
+	z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
+	setkey(z, SINK_TYPE, SINK_SEX )
+	z[, STAT:='adjusted for variation in participation rates']
+	z[, DUMMY:= nrow(ans2)+seq_len(nrow(z))]
+	ans2	<- rbind(ans2,z)	
+	
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	process sensitivity results adjust only for variation in sequencing
+	#
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180618_cl25_d50_prior23_min30_phylogeography_core_inference_noadjpartbias.rda"	
+	load(infile.inference)
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]	
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, TR_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\1',variable)]	
+	z[, REC_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\2',variable)]		
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE )
+	z[, STAT:='adjusted for variation in sequencing rates']
+	z[, DUMMY:= nrow(ans)+seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	#	estimate sink
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))		
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z[ , inlanddivfisherfolk:= z[['inland fisherfolk']] / z[['fisherfolk inland']] ]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT', measure.vars=c('inlanddivfisherfolk'))
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, SINK_TYPE:= gsub('([^_]+)_([^_]+)','\\1',variable)]
+	z[, SINK_SEX:= 'Any']						
+	z		<- dcast.data.table(z, SINK_TYPE+SINK_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M, d=2), '\n[',round(CL,d=2),' - ',round(CU,d=2),']')]
+	z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
+	setkey(z, SINK_TYPE, SINK_SEX )
+	z[, STAT:='adjusted for variation in sequencing rates']
+	z[, DUMMY:= nrow(ans2)+seq_len(nrow(z))]
+	ans2	<- rbind(ans2,z)	
+	
+	
+	#
+	#	load results when neither sequencing/participation rates were adjusted
+	#
+	
+	require(rstan)
+	require(rethinking)
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_stanm1m4m5.rda")
+	#	question: how different are estimates from m2 m4 m5?
+	#post	<- extract.samples(m1$fit)
+	#tmp		<- data.table(FROM_TO_ID=1:max(dc1$FROM_TO_ID))
+	#df1		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
+	#df1		<- df1[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='FROM_TO_ID']
+	#df1		<- merge(dc1, df1, by='FROM_TO_ID')	
+	#df1[, STAT:='area-based']
+	#df1 	<- dcast.data.table(df1, STAT+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
+	
+	post	<- extract.samples(m5$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
+	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']	
+	df5		<- merge(dc5, df5, by='FROM_TO_ID')
+	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
+	df5		<- df5[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('TR_FISHCOMM','REC_FISHCOMM')]
+	df5[, STAT:='no adjustments to variation in participation and sequencing rates']
+	df5 	<- dcast.data.table(df5, STAT+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
+	
+	tmp		<- copy(ans)
+	setnames(tmp, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR_FISHCOMM','REC_FISHCOMM'))
+	set(tmp, NULL, 'TR_FISHCOMM', tmp[, gsub('from_inland','Inland',gsub('from_fisherfolk','Fishing',TR_FISHCOMM))])
+	set(tmp, NULL, 'REC_FISHCOMM', tmp[, gsub('to_inland','Inland',gsub('to_fisherfolk','Fishing',REC_FISHCOMM))])	
+	tmp		<- rbind(tmp, df5, fill=TRUE)
+	tmp[, X:=paste0(TR_FISHCOMM,'->',REC_FISHCOMM)]
+	set(tmp, NULL, 'STAT', tmp[, factor(STAT, levels=c('no adjustments to variation in participation and sequencing rates','adjusted for variation in participation rates','adjusted for variation in sequencing rates','adjusted for variation in participation and sequencing rates'))])
+	set(tmp, NULL, 'X', tmp[, factor(X, levels=c('Inland->Inland','Inland->Fishing','Fishing->Inland','Fishing->Fishing'))])
+	
+	ggplot(tmp, aes(x=X, fill=STAT)) +
+			geom_bar(aes(y=M), position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +			
+			theme_bw() + 			
+			#theme(legend.position='bottom') + guides( fill=guide_legend(ncol=2)) +
+			scale_fill_brewer(palette='Spectral') +
+			scale_y_continuous(label=scales:::percent, expand=c(0,0), lim=c(0,0.7)) +
+			labs(x='', y='Estimated\nTransmission flows\n', fill='') 
+	ggsave(file=paste0(outfile.base,'_compare_m5_sampling.pdf'), w=10, h=4)
+	
+	#
+	#	SINK
+	#
+
+	post	<- extract.samples(m5$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
+	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']	
+	df5		<- merge(dc5, df5, by='FROM_TO_ID')
+	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
+	df5[, FLOW:=paste0(TR_FISHCOMM,' ',REC_FISHCOMM)]
+	df5		<- dcast.data.table(df5, MCIT~FLOW, value.var='PI')
+	df5[, inlanddivfisherfolk:= df5[['Inland Fishing']] / df5[['Fishing Inland']] ]
+	df5		<- melt(df5, id.vars='MCIT', measure.vars='inlanddivfisherfolk', variable.name='SINK_TYPE')
+	df5		<- df5[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('SINK_TYPE')]
+	df5[, STAT:='no adjustments to variation in participation and sequencing rates']
+	df5 	<- dcast.data.table(df5, STAT+SINK_TYPE~P, value.var='Q')
+	df5[, DUMMY:= nrow(ans2)+seq_len(nrow(df5))]
+	ans2	<- rbind(ans2,df5,fill=TRUE)	
+	
+}
+
+RakaiFull.phylogeography.180618.flows.fishinland<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet	
+	
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180618_cl25_d50_prior23_min30_phylogeography_core_inference.rda"
+	outfile.base		<- gsub('_inference.rda','',infile.inference)
+	load(infile.inference)
+	
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	adjusted P
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+							TR_MISS=sum(TR_MISS), 
+							PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+				by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0('from_',TR_COMM_TYPE,' to_',REC_COMM_TYPE)]
+	mc.it	<- 1e2
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, TR_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\1',variable)]
+	z[, REC_COMM_TYPE:= gsub('(from_[a-z]+) (to_[a-z]+)','\\2',variable)]		
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+	z[, STAT:='joint']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- copy(z)	
+	
+	require(rstan)
+	require(rethinking)
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_stanm1m4m5.rda")
+	#	question: how different are estimates from m2 m4 m5?
+	post	<- extract.samples(m1$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc1$FROM_TO_ID))
+	df1		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
+	df1		<- df1[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='FROM_TO_ID']
+	df1		<- merge(dc1, df1, by='FROM_TO_ID')	
+	df1[, MODEL:='area-based']
+	df1 	<- dcast.data.table(df1, MODEL+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
+	
+	post	<- extract.samples(m5$fit)
+	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
+	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']	
+	df5		<- merge(dc5, df5, by='FROM_TO_ID')
+	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
+	df5		<- df5[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('TR_FISHCOMM','REC_FISHCOMM')]
+	df5[, MODEL:='community-based prior Dir(0.8/NPAIR)']
+	df5 	<- dcast.data.table(df5, MODEL+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
+	
+	tmp		<- copy(z)
+	setnames(tmp, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR_FISHCOMM','REC_FISHCOMM'))
+	set(tmp, NULL, 'TR_FISHCOMM', tmp[, gsub('from_inland','Inland',gsub('from_fisherfolk','Fishing',TR_FISHCOMM))])
+	set(tmp, NULL, 'REC_FISHCOMM', tmp[, gsub('to_inland','Inland',gsub('to_fisherfolk','Fishing',REC_FISHCOMM))])
+	tmp[, MODEL:= 'MonteCarloAdjustSampling']
+	tmp		<- rbind(tmp, df1, df5, fill=TRUE)
+	
+	ggplot(tmp, aes(x=paste0(TR_FISHCOMM,'->',REC_FISHCOMM), fill=MODEL)) +
+			geom_boxplot(aes(ymin=CL, lower=IL, upper=IU, ymax=CU, middle=M), stat='identity') +
+			theme_bw() + 
+			coord_flip() +
+			scale_y_continuous(label=scales:::percent) +
+			labs(x='Transmissions from -> to\n', y='\nProportion of transmissions')
+	ggsave(file=paste0(outfile.base,'_compare_m1_m5_sampling.pdf'), w=8, h=5)
+	
+	
+	#
+	#	WAIFM
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))				
+				set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')	
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+				setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				z		<- subset(z, TR_COMM_TYPE==group)				
+				z		<- z[, list(PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('REC_COMM_TYPE','MONTE_CARLO_IT')]				
+				#	draw random variables
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+							colnames(tmp)	<- REC_COMM_TYPE
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				#	get quantiles
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT'), variable.name='REC_COMM_TYPE')								
+				z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by='REC_COMM_TYPE']
+				z[, TR_COMM_TYPE:= group]
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE)
+	z[, STAT:='waifm']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	
+	
+	
+	#
+	#	sources
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))				
+				set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')	
+				setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+				z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+				setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+				z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+				z		<- subset(z, REC_COMM_TYPE==group)				
+				z		<- z[, list(PI_ST_ALPHA=sum(PI_IJ_ALPHA)), by=c('TR_COMM_TYPE','MONTE_CARLO_IT')]				
+				#	draw random variables
+				mc.it	<- 1e2
+				z		<- z[, {												
+							tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+							colnames(tmp)	<- TR_COMM_TYPE
+							tmp		<- as.data.table(tmp)								
+						}, by=c('MONTE_CARLO_IT')]
+				#	get quantiles
+				z		<- melt(z, id.vars=c('MONTE_CARLO_IT'), variable.name='TR_COMM_TYPE')								
+				z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by='TR_COMM_TYPE']
+				z[, REC_COMM_TYPE:= group]
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+	z[, STAT:='sources']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	
+	save(ans, file=paste0(outfile.base,'_fishing_inland_results.rda'))
+}
+
+RakaiFull.phylogeography.180322.participitation.bias.figure<- function()
 {
 	require(data.table)
 	require(scales)
@@ -4090,13 +4764,16 @@ RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
 	require(gtools)	#rdirichlet
 	
 	#	load des which contains participation and seq counts by comm and gender
-	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender.rda'
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	
+	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	outfile.base		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
 	load(infile)
 	
 	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)
-	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT','PARTICIPATED_ANY_VISIT')]
-	set(df, NULL, 'PART', df[, factor(PARTICIPATED_ANY_VISIT, levels=c(0,1), labels=c('PART_NEVER','PART_EVER'))])
+	de[, PART:= de[, factor(PARTICIPATED_ANY_VISIT, levels=c(0,1), labels=c('PART_NEVER','PART_EVER'))]]	
+	
+	#	full interaction plot
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT','PART')]	
 	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ PART, value.var='N')
 	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
 	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
@@ -4105,29 +4782,563 @@ RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
 	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
 	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
 	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=AGE_AT_MID_C, shape=INMIGRANT)) +
-					geom_point(position=position_dodge(width=0.9)) +
-					geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
-					facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
-					theme_bw()
-			
-	
-	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','INMIGRANT','PARTICIPATED_ANY_VISIT')]
-	set(df, NULL, 'PART', df[, factor(PARTICIPATED_ANY_VISIT, levels=c(0,1), labels=c('PART_NEVER','PART_EVER'))])
-	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+INMIGRANT ~ PART, value.var='N')
-	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
-	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
-	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','SEX','INMIGRANT')]
-	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+INMIGRANT ~ STAT, value.var='V')
-	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
-	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
-	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=INMIGRANT)) +
 			geom_point(position=position_dodge(width=0.9)) +
 			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
 			facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
 			theme_bw()
-	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322.pdf'), w=12, h=10)
-	#	inmigrants did not systematically participate less frequently
+	
+	
+	#	gender plot
+	de[, STRAT:= SEX]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','PART')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ PART, value.var='N')
+	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
+	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='participation rate\n', fill='gender') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'participation_differences_gender_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_male, y=M_female, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_female, ymax=CU_female), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_male, xmax=CU_male), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nparticipation rate among men', 
+					y='participation rate among women\n',
+					colour='')
+	ggsave(paste0(outfile.base,'participation_differences_gender_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	age plot
+	de[, STRAT:= AGE_AT_MID_C]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','PART')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ PART, value.var='N')
+	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
+	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	#set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('15-24'='#00D2FF', '25-34'='#0096C2','35+'='#007099')) +			
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='participation rate\n', fill='age group') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'participation_differences_age_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	set(df, NULL, 'STRAT', df[, gsub('\\+|-','',as.character(STRAT))])
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_1524, y=M_2534, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_2534, ymax=CU_2534), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nparticipation rate among individuals aged 15-24', 
+					y='participation rate among individuals aged 25-34\n',
+					colour='')
+	ggsave(paste0(outfile.base,'participation_differences_age_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_1524, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nparticipation rate among individuals aged 15-24', 
+					y='participation rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'participation_differences_age_pointplot2_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_2534, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_2534, xmax=CU_2534), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nparticipation rate among individuals aged 25-34', 
+					y='participation rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'participation_differences_age_pointplot3_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	inmigration plot
+	de[, STRAT:= INMIGRANT]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','PART')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ PART, value.var='N')
+	set(df, df[, which(is.na(PART_NEVER))], 'PART_NEVER', 0L)
+	set(df, df[, which(is.na(PART_EVER))], 'PART_EVER', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(PART_EVER, PART_EVER+PART_NEVER))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT2', df[, factor(STRAT, levels=c(0,1), labels=c('resident','immigrated\nin two years\nbefore visit'))])
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT2, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			#scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='participation rate\n', fill='migration status') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'participation_differences_inmigrants_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_0, y=M_1, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_1, ymax=CU_1), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_0, xmax=CU_0), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nparticipation rate among\nresident individuals', 
+					y='participation rate among\nindividuals who inmigrated in two years before visit\n',
+					colour='')
+	ggsave(paste0(outfile.base,'participation_differences_inmigrants_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+}
 
+RakaiFull.phylogeography.180322.sequencing.bias.figure<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'	
+	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)
+	de	<- subset(de, HIV_1517==1)
+	set(de, NULL, 'MIN_PNG_OUTPUT', de[, factor(MIN_PNG_OUTPUT, levels=c(0,1), labels=c('SEQ_NO','SEQ_YES'))])
+	
+	#	gender plot
+	de[, STRAT:= SEX]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='gender') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencing_differences_gender_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_male, y=M_female, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_female, ymax=CU_female), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_male, xmax=CU_male), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among men', 
+					y='sequencing rate among women\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencing_differences_gender_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	age plot
+	de[, STRAT:= AGE_AT_MID_C]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	#set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('15-24'='#00D2FF', '25-34'='#0096C2','35+'='#007099')) +			
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='age group') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencing_differences_age_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	set(df, NULL, 'STRAT', df[, gsub('\\+|-','',as.character(STRAT))])
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_1524, y=M_2534, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_2534, ymax=CU_2534), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 15-24', 
+					y='sequencing rate among individuals aged 25-34\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencing_differences_age_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_1524, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 15-24', 
+					y='sequencing rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencing_differences_age_pointplot2_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_2534, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_2534, xmax=CU_2534), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 25-34', 
+					y='sequencing rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencing_differences_age_pointplot3_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	inmigration plot
+	de[, STRAT:= INMIGRANT]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT2', df[, factor(STRAT, levels=c(0,1), labels=c('resident','immigrated\nin two years\nbefore visit'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT2, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			#scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='migration status') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencing_differences_inmigrants_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_0, y=M_1, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_1, ymax=CU_1), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_0, xmax=CU_0), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among\nresident individuals', 
+					y='sequencing rate among\nindividuals who inmigrated in two years before visit\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencing_differences_inmigrants_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	full interaction plot
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT','MIN_PNG_OUTPUT')]	
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=AGE_AT_MID_C, shape=INMIGRANT)) +
+			geom_point(position=position_dodge(width=0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
+			facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencing_differences_interactions_barplot_180614.pdf'), w=14, h=7, useDingbats=FALSE)
+}
+
+
+RakaiFull.phylogeography.180322.sequencing.bias.exclART.figure<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'	
+	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)
+	de	<- subset(de, HIV_1517==1)
+	
+	
+	
+	
+	df	<- de[, list( ART_YES= length(which(SELFREPORTART==1)), ART_NO=length(which(SELFREPORTART==0))  ), by='COMM_NUM_A']
+	df	<- merge(df, de, by='COMM_NUM_A')
+	df	<- df[, list( TYPE='not on ART (self-reported)', STAT=c('M','CL','CU'), V=as.numeric(binconf(sum(MIN_PNG_OUTPUT), round( ART_NO[1]/(ART_NO[1]+ART_YES[1]) * sum(HIV_1517))))  ), by='COMM_NUM_A']
+	tmp	<- de[, list( TYPE='all infected', STAT=c('M','CL','CU'), V=as.numeric(binconf(sum(MIN_PNG_OUTPUT), sum(HIV_1517)))  ), by='COMM_NUM_A']
+	df	<- rbind(df, tmp)
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	df	<- dcast.data.table(df, COMM_TYPE+COMM_NUM_A+TYPE~STAT, value.var='V')
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	ggplot(df, aes(x=COMM_NUM_A, colour=TYPE, y=M, ymin=CL, ymax=CU)) +			
+			geom_errorbar(position=position_dodge(0.9), width=0.4) +
+			geom_point(position=position_dodge(0.9)) +
+			scale_colour_brewer(palette='Paired') +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', colour='denominator') +
+			theme_bw() +
+			theme(legend.position = c(0.88, 0.88)) 
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_community_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	
+	
+	de	<- subset(de, is.na(SELFREPORTART) | SELFREPORTART==0)
+	set(de, NULL, 'MIN_PNG_OUTPUT', de[, factor(MIN_PNG_OUTPUT, levels=c(0,1), labels=c('SEQ_NO','SEQ_YES'))])
+	
+	#	gender plot
+	de[, STRAT:= SEX]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='gender') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_gender_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_male, y=M_female, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_female, ymax=CU_female), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_male, xmax=CU_male), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among men', 
+					y='sequencing rate among women\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_gender_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	age plot
+	de[, STRAT:= AGE_AT_MID_C]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	#set(df, NULL, 'STRAT', df[, factor(STRAT, levels=c('M','F'), labels=c('male','female'))])
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			scale_fill_manual(values=c('15-24'='#00D2FF', '25-34'='#0096C2','35+'='#007099')) +			
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='age group') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_age_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	set(df, NULL, 'STRAT', df[, gsub('\\+|-','',as.character(STRAT))])
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_1524, y=M_2534, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_2534, ymax=CU_2534), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 15-24', 
+					y='sequencing rate among individuals aged 25-34\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_age_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_1524, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_1524, xmax=CU_1524), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 15-24', 
+					y='sequencing rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_age_pointplot2_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	ggplot(df, aes(x=M_2534, y=M_35, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_35, ymax=CU_35), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_2534, xmax=CU_2534), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among individuals aged 25-34', 
+					y='sequencing rate among individuals aged 35+\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_age_pointplot3_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	inmigration plot
+	de[, STRAT:= INMIGRANT]
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','STRAT','MIN_PNG_OUTPUT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','STRAT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+STRAT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'STRAT2', df[, factor(STRAT, levels=c(0,1), labels=c('resident','immigrated\nin two years\nbefore visit'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	ggplot(df, aes(x=COMM_NUM_A, fill=STRAT2, y=M)) +
+			geom_bar(position=position_dodge(0.9), stat='identity') +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +
+			#scale_fill_manual(values=c('female'='hotpink2', 'male'='steelblue2')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			facet_grid(~COMM_TYPE, space='free', scales='free') +
+			labs(x='\ncommunity', y='sequencing rate\n', fill='migration status') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_inmigrants_barplot_180614.pdf'), w=10, h=5, useDingbats=FALSE)
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+COMM_TYPE~STRAT, value.var=c('CL','CU','M'))
+	ggplot(df, aes(x=M_0, y=M_1, colour=COMM_TYPE)) + 
+			geom_abline(intercept=0, slope=1, lty=2) +
+			geom_errorbar(aes(ymin=CL_1, ymax=CU_1), alpha=0.25) +
+			geom_errorbarh(aes(xmin=CL_0, xmax=CU_0), alpha=0.25) +
+			geom_point() +			
+			scale_x_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,1)) +
+			scale_colour_manual(values=c('fishing site'='#F8766D', 'inland community'='#00BFC4')) +
+			theme_bw() +
+			theme(legend.position = c(0.2, 0.85)) +
+			labs(x='\nsequencing rate among\nresident individuals', 
+					y='sequencing rate among\nindividuals who inmigrated in two years before visit\n',
+					colour='')
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_inmigrants_pointplot_180614.pdf'), w=5, h=5, useDingbats=FALSE)
+	
+	
+	#	full interaction plot
+	df	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT','MIN_PNG_OUTPUT')]	
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ MIN_PNG_OUTPUT, value.var='N')
+	set(df, df[, which(is.na(SEQ_NO))], 'SEQ_NO', 0L)
+	set(df, df[, which(is.na(SEQ_YES))], 'SEQ_YES', 0L)
+	df	<- df[, list(STAT=c('M','CL','CU'), V=as.numeric(binconf(SEQ_YES, SEQ_YES+SEQ_NO))), by=c('COMM_NUM','COMM_NUM_A','SEX','AGE_AT_MID_C','INMIGRANT')]
+	df	<- dcast.data.table(df, COMM_NUM+COMM_NUM_A+SEX+AGE_AT_MID_C+INMIGRANT ~ STAT, value.var='V')
+	df[, COMM_TYPE:= factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing site','inland community'))]
+	set(df, NULL, 'INMIGRANT', df[, factor(INMIGRANT, levels=c(0,1), labels=c('resident','immigrated'))])
+	tmp	<- df[, which(M==0)]
+	set(df, tmp, c('CL','CU'), 0)	
+	ggplot(df, aes(x=COMM_NUM_A, y=M, colour=AGE_AT_MID_C, shape=INMIGRANT)) +
+			geom_point(position=position_dodge(width=0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(width=0.9)) +
+			facet_grid(SEX~COMM_TYPE, scales='free', space='free') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'sequencingExclART_differences_interactions_barplot_180614.pdf'), w=14, h=7, useDingbats=FALSE)
+}
+
+
+RakaiFull.phylogeography.180322.participitation.bias.logisticmodel<- function()
+{
+	require(data.table)
+	require(rethinking)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)	
+	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)
+	de		<- subset(de, !is.na(AGE_AT_MID_C))
+		
 	#	quick logistic regression on participation
 	dg		<- subset(de, select=c(PARTICIPATED_ANY_VISIT, PERM_ID, COMM_NUM_A, AGE_AT_MID_C, INMIGRANT, SEX))
 	#	binarize age, sex
@@ -4141,7 +5352,7 @@ RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
 	tmp		<- data.table(COMM_NUM_A= sort(unique(dg$COMM_NUM_A)), COMM_NUM_B= seq_along(unique(dg$COMM_NUM_A)))
 	dg		<- merge(dg, tmp, by='COMM_NUM_A')
 	#	aggregate
-	dg		<- dg[, list(ELIGIBLE=length(PERM_ID), PART=length(which(PARTICIPATED_ANY_VISIT==1))), by=c('AGE_AT_MID_C','INMIGRANT','SEX','AGE_YOUNG','AGE_MID','MALE','COMM_TYPE_F','COMM_TYPE_T','COMM_NUM_A','COMM_NUM_B')]
+	dg		<- dg[, list(ELIGIBLE=length(PERM_ID), PART=length(which(PARTICIPATED_ANY_VISIT==1))), by=c('AGE_AT_MID_C','INMIGRANT','SEX','AGE_YOUNG','AGE_MID','MALE','COMM_TYPE_F','COMM_TYPE_T','COMM_NUM_A','COMM_NUM_B')]	
 	mp1 	<- map2stan(
 			alist(
 					PART ~ dbinom(ELIGIBLE, p_part),
@@ -4153,28 +5364,405 @@ RakaiFull.phylogeography.180322.participitation.bias.inmigrants<- function()
 					c(trading, fishing, inmigrant, male, young, midage) ~ dnorm(0,10)
 			),
 			data=as.data.frame(dg), 
-			start=list(	a=0, comm=rep(0,38), sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
+			start=list(	a=0, comm=rep(0,39), sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
 			warmup=5e2, iter=5e3, chains=1, cores=4
 		)		
 	plot(mp1)
 	plot( precis(mp1, depth=2, prob=0.95) )
 	#	posterior check to see if this makes sense
 	sims 	<- sim(mp1, n=1e3)
-	y.median<- apply(sims, 2, median)
-	y.PI1 	<- apply(sims, 2, PI, prob=0.95)
-	y.PI1	<- rbind(y.median, y.PI1)
-	rownames(y.PI1)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
-	y.PI1	<- as.data.table(t(y.PI1))
-	y.PI1	<- cbind(dg, y.PI1)	
-	ggplot(y.PI1, aes(x=COMM_NUM_A)) +
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)	
+	
+	dpp[, mean(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	#	0.168 -- that s quite high
+	dpp[, OFF:= as.integer(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	dpp[, list(OFF_P= mean(OFF)), by=c('AGE_AT_MID_C','INMIGRANT')]
+	#	2:        15-24         0 0.2763158 --> young residents are most frequently off
+	dpp[, list(OFF_P= mean(OFF), OFF_N=sum(OFF)), by=c('AGE_AT_MID_C','SEX','INMIGRANT')]
+	#	 3:        15-24   F    0 0.44736842 --> especially young female residents are off
+	#	           25-34   F    0 0.28947368 --> next one up is midaged female residents
+
+	subset(dpp, PART<predicted_obs_l95 | PART>predicted_obs_u95)
+	
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
 			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
 			geom_point(aes(y=predicted_obs_median), colour='grey50') +
 			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
 			geom_point(aes(y=PART), colour='red') +
 			theme_bw()
 	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp1_pp.pdf'), w=16, h=32)
-	#	I think this is pretty good!	
-	save(dg, mp1, file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp1.rda'))
+	#	
+
+	
+	mp2 	<- map2stan(
+			alist(
+					PART ~ dbinom(ELIGIBLE, p_part),
+					logit(p_part) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + inmigrant_young*INMIGRANT*AGE_YOUNG + 
+							male*MALE + 
+							young_male*AGE_YOUNG*MALE + young_female*AGE_YOUNG*(1-MALE) +
+							midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					c(trading, fishing, inmigrant, inmigrant_young, male, young_male, young_female, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,39), sig_comm=1, trading=0, fishing=0, inmigrant=0, inmigrant_young=0, male=0, young_male=0, young_female=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)
+	plot( precis(mp2, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(mp2, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, mean(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	#	0.1074561 -- better
+
+	dpp[, OFF:= as.integer(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	dpp[, list(OFF_P= mean(OFF), OFF_N=sum(OFF)), by=c('AGE_AT_MID_C','SEX','INMIGRANT')]
+	
+	set(dpp, NULL, 'AGE_YOUNG', dpp[,paste0('young_',AGE_YOUNG)])
+	set(dpp, NULL, 'AGE_MID', dpp[,paste0('mid_',AGE_MID)])
+	set(dpp, NULL, 'INMIGRANT', dpp[,paste0('inm_',INMIGRANT)])
+	set(dpp, NULL, 'COMM_TYPE_F', dpp[,paste0('fish_',COMM_TYPE_F)])
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=PART, colour=factor(OFF))) +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp2_pp.pdf'), w=16, h=16)
+	
+	
+	mp3 	<- map2stan(
+			alist(
+					PART ~ dbetabinom(ELIGIBLE, p_part, dispersion),
+					logit(p_part) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + inmigrant_young*INMIGRANT*AGE_YOUNG + 
+							male*MALE + 
+							young_male*AGE_YOUNG*MALE + young_female*AGE_YOUNG*(1-MALE) +
+							midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					dispersion ~ dexp(1),
+					c(trading, fishing, inmigrant, inmigrant_young, male, young_male, young_female, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, dispersion=1, comm=rep(0,39), sig_comm=1, trading=0, fishing=0, inmigrant=0, inmigrant_young=0, male=0, young_male=0, young_female=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+	)
+	plot( precis(mp3, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(mp3, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, mean(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	#	0.01754386
+	dpp[, sum(PART<predicted_obs_l95 | PART>predicted_obs_u95)]	
+	#	9 / 456
+
+	dpp[, OFF:= as.integer(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	set(dpp, NULL, 'AGE_YOUNG', dpp[,paste0('young_',AGE_YOUNG)])
+	set(dpp, NULL, 'AGE_MID', dpp[,paste0('mid_',AGE_MID)])
+	set(dpp, NULL, 'INMIGRANT', dpp[,paste0('inm_',INMIGRANT)])
+	set(dpp, NULL, 'COMM_TYPE_F', dpp[,paste0('fish_',COMM_TYPE_F)])
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=PART, colour=factor(OFF))) +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp3_pp.pdf'), w=16, h=16)
+
+	
+	
+	
+	
+	mp4 	<- map2stan(
+			alist(
+					PART ~ dbetabinom(ELIGIBLE, p_part, dispersion),
+					logit(p_part) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + male*MALE + young*AGE_YOUNG + midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					dispersion ~ dexp(1),
+					c(trading, fishing, inmigrant, male, young, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,39), dispersion=10, sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	plot( precis(mp4, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(mp4, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, mean(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	#	0.01096491
+	
+	dpp[, OFF:= as.integer(PART<predicted_obs_l95 | PART>predicted_obs_u95)]
+	set(dpp, NULL, 'AGE_YOUNG', dpp[,paste0('young_',AGE_YOUNG)])
+	set(dpp, NULL, 'AGE_MID', dpp[,paste0('mid_',AGE_MID)])
+	set(dpp, NULL, 'INMIGRANT', dpp[,paste0('inm_',INMIGRANT)])
+	set(dpp, NULL, 'COMM_TYPE_F', dpp[,paste0('fish_',COMM_TYPE_F)])
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=PART, colour=factor(OFF))) +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp4_pp.pdf'), w=16, h=16)
+	
+	compare(mp1, mp2, mp3, mp4, func=DIC)
+	#	mp3 best
+
+	tmp	<-  precis(mp3, depth=2, prob=0.95)@output
+	do	<-	as.data.table(tmp)
+	do[, VAR:=rownames(tmp)]
+	setnames(do, colnames(do), toupper(gsub(' |\\.','_',colnames(do))))
+	do[, COMM_NUM_B:= as.integer(gsub('.*\\[([0-9]+)\\].*','\\1',VAR))]
+	tmp	<- unique(subset(dg, select=c(COMM_NUM_A, COMM_NUM_B)))
+	do	<- merge(do, tmp, by='COMM_NUM_B', all.x=TRUE)
+	tmp	<- do[, which(VAR=='dispersion')]
+	set(do, tmp, 'MEAN', do[tmp,MEAN/20])
+	set(do, tmp, 'LOWER_0_95', do[tmp,LOWER_0_95/20])
+	set(do, tmp, 'UPPER_0_95', do[tmp,UPPER_0_95/20])
+	tmp	<- do[, which(!is.na(COMM_NUM_A))]
+	set(do, tmp, 'VAR', do[tmp,paste0('comm_',COMM_NUM_A)])	
+	tmp	<- c("a", "dispersion", "male", "fishing", "trading", "inmigrant", "inmigrant_young", 
+			"young_male", "young_female", "midage", "comm_aam", "comm_abj", "comm_abm", 
+			"comm_abo", "comm_adi", "comm_aev", "comm_afr", "comm_agf", "comm_agv", "comm_agw", 
+			"comm_ait", "comm_akh", "comm_ald", "comm_alr", "comm_amf", "comm_aop", "comm_aqi", 
+			"comm_aqj", "comm_aro", "comm_asm", "comm_ati", "comm_aur", "comm_ave", "comm_avl", 
+			"comm_avo", "comm_awa", "comm_awr", "comm_aws", "comm_axn", "comm_fno", "comm_fpt", 
+			"comm_fus", "comm_fwd", "comm_thd", "comm_tpq", "comm_ttp", "comm_tvm", "comm_twr", "sig_comm")
+	set(do, NULL, 'VAR', do[,factor(VAR, levels=tmp)])
+	setkey(do, VAR)	
+	ggplot(do, aes(x=VAR, y=MEAN)) +
+			geom_abline(intercept=0, slope=0, lty=2, colour='grey50') +
+			geom_point() +
+			geom_errorbar(aes(ymin=LOWER_0_95, ymax=UPPER_0_95), width=NA) +
+			theme_bw() +
+			theme(axis.text.x=element_text(angle = 90, hjust=1, vjust=0.5)) +
+			labs(y='estimate\n(posterior mean, 95% credibility interval)\n', x='')
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_mp3_fit.pdf'), w=12, h=5, useDingbats=FALSE)
+	
+	save(dg, mp1, mp2, mp3, mp4, file=paste0(outfile.base,'participation_differences_180322_logisticmodels.rda'))
+}
+
+
+RakaiFull.phylogeography.180322.sequencing.bias.logisticmodel<- function()
+{
+	require(data.table)
+	require(rethinking)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	#	load des which contains participation and seq counts by comm and gender
+	infile					<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)	
+	set(de, de[, which(is.na(INMIGRANT))], 'INMIGRANT', 0L)	
+	de	<- subset(de, HIV_1517==1)
+	tmp	<- de[, list(COMM_ANY_MIN_PNG_OUTPUT=sum(MIN_PNG_OUTPUT, na.rm=TRUE)), by='COMM_NUM_A']
+	de	<- merge(de, subset(tmp, COMM_ANY_MIN_PNG_OUTPUT>0, COMM_NUM_A), by='COMM_NUM_A')
+	
+	#	quick logistic regression on participation
+	dg		<- subset(de, select=c(MIN_PNG_OUTPUT, PERM_ID, COMM_NUM_A, AGE_AT_MID_C, INMIGRANT, SEX))
+	#	binarize age, sex
+	dg[, AGE_YOUNG:= as.integer(AGE_AT_MID_C=='15-24')]
+	dg[, AGE_MID:= as.integer(AGE_AT_MID_C=='25-34')]
+	dg[, MALE:= as.integer(SEX=='M')]
+	#	binarize community type
+	dg[, COMM_TYPE_F:= as.integer(substr(COMM_NUM_A,1,1)=='f')]
+	dg[, COMM_TYPE_T:= as.integer(substr(COMM_NUM_A,1,1)=='t')]
+	#	vanilla community IDs
+	tmp		<- data.table(COMM_NUM_A= sort(unique(dg$COMM_NUM_A)), COMM_NUM_B= seq_along(unique(dg$COMM_NUM_A)))
+	dg		<- merge(dg, tmp, by='COMM_NUM_A')
+	#	aggregate
+	dg		<- dg[, list(HIV=length(PERM_ID), SEQ=length(which(MIN_PNG_OUTPUT==1))), by=c('AGE_AT_MID_C','INMIGRANT','SEX','AGE_YOUNG','AGE_MID','MALE','COMM_TYPE_F','COMM_TYPE_T','COMM_NUM_A','COMM_NUM_B')]	
+	ms1 	<- map2stan(
+			alist(
+					SEQ ~ dbinom(HIV, p_seq),
+					logit(p_seq) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + male*MALE + young*AGE_YOUNG + midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					c(trading, fishing, inmigrant, male, young, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,39), sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	plot(ms1)
+	plot( precis(ms1, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(ms1, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, c(mean(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95), sum(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95))]
+	#	0.01028278, 4 -- that s already super as expected
+
+	
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=SEQ), colour='red') +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_ms1_pp.pdf'), w=16, h=32)
+	#	
+	
+	
+	ms4 	<- map2stan(
+			alist(
+					SEQ ~ dbetabinom(HIV, p_seq, dispersion),
+					logit(p_seq) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + male*MALE + young*AGE_YOUNG + midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					dispersion ~ dexp(1),
+					c(trading, fishing, inmigrant, male, young, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,39), dispersion=10, sig_comm=1, trading=0, fishing=0, inmigrant=0, male=0, young=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)		
+	plot( precis(ms4, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(ms4, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, c(mean(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95), sum(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95))]
+	#	0 0	
+	dpp[, OFF:= as.integer(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95)]
+	set(dpp, NULL, 'AGE_YOUNG', dpp[,paste0('young_',AGE_YOUNG)])
+	set(dpp, NULL, 'AGE_MID', dpp[,paste0('mid_',AGE_MID)])
+	set(dpp, NULL, 'INMIGRANT', dpp[,paste0('inm_',INMIGRANT)])
+	set(dpp, NULL, 'COMM_TYPE_F', dpp[,paste0('fish_',COMM_TYPE_F)])
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=SEQ, colour=factor(OFF))) +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_ms4_pp.pdf'), w=16, h=16)
+	
+
+
+
+	ms2 	<- map2stan(
+			alist(
+					SEQ ~ dbinom(HIV, p_seq),
+					logit(p_seq) <- a + comm[COMM_NUM_B] + trading*COMM_TYPE_T + fishing*COMM_TYPE_F + 
+							inmigrant*INMIGRANT + inmigrant_young*INMIGRANT*AGE_YOUNG + 
+							male*MALE + 
+							young_male*AGE_YOUNG*MALE + young_female*AGE_YOUNG*(1-MALE) +
+							midage*AGE_MID,
+					a ~ dnorm(0, 100),
+					comm ~ dnorm(0, sig_comm),
+					sig_comm ~ dcauchy(0,1),
+					c(trading, fishing, inmigrant, inmigrant_young, male, young_male, young_female, midage) ~ dnorm(0,10)
+			),
+			data=as.data.frame(dg), 
+			start=list(	a=0, comm=rep(0,39), sig_comm=1, trading=0, fishing=0, inmigrant=0, inmigrant_young=0, male=0, young_male=0, young_female=0, midage=0),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+		)
+	plot( precis(ms2, depth=2, prob=0.95) )
+	#	posterior check to see if this makes sense
+	sims 	<- sim(ms2, n=1e3)
+	tmp		<- apply(sims, 2, median)
+	dpp 	<- apply(sims, 2, PI, prob=0.95)
+	dpp		<- rbind(tmp, dpp)
+	rownames(dpp)	<-  c('predicted_obs_median','predicted_obs_l95','predicted_obs_u95')
+	dpp		<- as.data.table(t(dpp))
+	dpp		<- cbind(dg, dpp)		
+	dpp[, c(mean(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95), sum(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95))]
+	#	0.007712082 3.000000000	
+	dpp[, OFF:= as.integer(SEQ<predicted_obs_l95 | SEQ>predicted_obs_u95)]
+	dpp[, list(OFF_P= mean(OFF), OFF_N=sum(OFF)), by=c('AGE_AT_MID_C','SEX','INMIGRANT')]	
+	set(dpp, NULL, 'AGE_YOUNG', dpp[,paste0('young_',AGE_YOUNG)])
+	set(dpp, NULL, 'AGE_MID', dpp[,paste0('mid_',AGE_MID)])
+	set(dpp, NULL, 'INMIGRANT', dpp[,paste0('inm_',INMIGRANT)])
+	set(dpp, NULL, 'COMM_TYPE_F', dpp[,paste0('fish_',COMM_TYPE_F)])
+	ggplot(dpp, aes(x=COMM_NUM_A)) +
+			facet_grid(SEX+AGE_YOUNG+AGE_MID+INMIGRANT~COMM_TYPE_F, scales='free', space='free') +			
+			geom_point(aes(y=predicted_obs_median), colour='grey50') +
+			geom_errorbar(aes(ymin=predicted_obs_l95, ymax=predicted_obs_u95), colour='grey50') + 
+			geom_point(aes(y=SEQ, colour=factor(OFF))) +
+			theme_bw()
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_ms2_pp.pdf'), w=16, h=16)
+	
+	
+	compare(ms1, ms2, ms4, func=DIC)
+	#	ms1 best
+	
+	
+	tmp	<-  precis(ms1, depth=2, prob=0.95)@output
+	do	<-	as.data.table(tmp)
+	do[, VAR:=rownames(tmp)]
+	setnames(do, colnames(do), toupper(gsub(' |\\.','_',colnames(do))))
+	do[, COMM_NUM_B:= as.integer(gsub('.*\\[([0-9]+)\\].*','\\1',VAR))]
+	tmp	<- unique(subset(dg, select=c(COMM_NUM_A, COMM_NUM_B)))
+	do	<- merge(do, tmp, by='COMM_NUM_B', all.x=TRUE)
+	tmp	<- do[, which(!is.na(COMM_NUM_A))]
+	set(do, tmp, 'VAR', do[tmp,paste0('comm_',COMM_NUM_A)])	
+	tmp	<- c("a", "male", "fishing", "trading", "inmigrant",  
+			"young", "midage", "comm_aam", "comm_abj", "comm_abm", 
+			"comm_abo", "comm_adi", "comm_aev", "comm_afr", "comm_agf", "comm_agv", "comm_agw", 
+			"comm_ait", "comm_akh", "comm_ald", "comm_alr", "comm_amf", "comm_aop", "comm_aqi", 
+			"comm_aqj", "comm_aro", "comm_asm", "comm_ati", "comm_aur", "comm_ave", "comm_avl", 
+			"comm_avo", "comm_awa", "comm_awr", "comm_aws", "comm_axn", "comm_fno", "comm_fpt", 
+			"comm_fus", "comm_fwd", "comm_thd", "comm_tpq", "comm_ttp", "comm_tvm", "comm_twr", "sig_comm")
+	set(do, NULL, 'VAR', do[,factor(VAR, levels=tmp)])
+	do	<- subset(do, !is.na(VAR))
+	setkey(do, VAR)	
+	ggplot(do, aes(x=VAR, y=MEAN)) +
+			geom_abline(intercept=0, slope=0, lty=2, colour='grey50') +
+			geom_point() +
+			geom_errorbar(aes(ymin=LOWER_0_95, ymax=UPPER_0_95), width=NA) +
+			theme_bw() +
+			theme(axis.text.x=element_text(angle = 90, hjust=1, vjust=0.5)) +
+			labs(y='estimate\n(posterior mean, 95% credibility interval)\n', x='')
+	ggsave(file=paste0(outfile.base,'sampling_differences_inmigrants_180322_ms3_fit.pdf'), w=12, h=5, useDingbats=FALSE)
+	
+	save(dg, ms1, ms2, ms4, file=paste0(outfile.base,'sequencing_differences_180322_logisticmodels.rda'))
 }
 
 RakaiFull.phylogeography.180322.core.inference.age<- function()

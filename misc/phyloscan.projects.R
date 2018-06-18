@@ -5884,6 +5884,18 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		outfile	<- '~/duke/2018_MunichCluster/Data/MunichCluster_180607.rda'
 		save(pty.runs, file=outfile)
 	}
+	# set up pty.runs file -- version 3
+	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	if(0)	
+	{
+		pty.runs		<- data.table(SAMPLE_ID=list.files('~/duke/2018_MunichCluster/Data_180618', pattern='bam$'))
+		set(pty.runs, NULL, 'SAMPLE_ID', pty.runs[, gsub('\\.bam','',SAMPLE_ID)])
+		pty.runs[, RENAME_ID:= paste0('MC-',SAMPLE_ID)]
+		pty.runs[, UNIT_ID:= paste0('MC-',gsub('_INT|_PRRT','',SAMPLE_ID))]		
+		pty.runs[, PTY_RUN:=1]		
+		outfile	<- '~/duke/2018_MunichCluster/Data_180618/MunichCluster_180618.rda'
+		save(pty.runs, file=outfile)
+	}
 	#
 	#	INPUT ARGS
 	if(1)
@@ -5893,7 +5905,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		in.dir				<- file.path(HOME,"MunichCluster_180605_in")
 		work.dir			<- file.path(HOME,"MunichCluster_180605_work")
 		out.dir				<- file.path(HOME,"MunichCluster_180605_out")		
-		load( file.path(in.dir, 'MunichCluster_180607.rda') )
+		load( file.path(in.dir, 'MunichCluster_180618.rda') )
 		print(pty.runs)
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
@@ -5912,7 +5924,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	if(1)
 	{		
 		#ptyi		<- seq(800,9150,25)
-		ptyi		<- seq(1200,3300,25)
+		ptyi		<- seq(1200,4500,25)
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
 					pty.args			<- list(	prog.pty=prog.pty, 
