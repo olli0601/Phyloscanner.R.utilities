@@ -4214,11 +4214,11 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 				#	sensitivity analyses			
 				if(!opt.adjust.participation.bias)
 				{
-					p.tr.part <- p.rec.part <- rep(1, length(p.tr.part))
+					p.tr.part <- p.rec.part <- rep(Inf, length(p.tr.part))
 				}					
 				if(!opt.adjust.sequencing.bias)
 				{
-					p.tr.seq <- p.rec.seq <- rep(1, length(p.tr.seq))
+					p.tr.seq <- p.rec.seq <- rep(Inf, length(p.tr.seq))
 				}				
 				#	sample mc.it many, and calculate product of sequencing and participation probs
 				mc.idx		<- sample.int(length(p.tr.part), mc.it, replace=TRUE)				
@@ -4230,7 +4230,7 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 				#str(p.tr.seq)
 				#str(p.rec.seq)
 				#print(tmp)
-				#print(mean(tmp))				
+				#print(summary(tmp))				
 				tmp			<- rnbinom(mc.it, TR_OBS, tmp)
 				#print(tmp)
 				#print(mean(tmp))
@@ -4261,9 +4261,9 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 	#
 	tmp		<- paste0(outfile.base,'core_inference.rda')
 	if(!opt.adjust.sequencing.bias)
-		tmp	<- paste0(outfile.base,'core_inference_noadjseqbias.rda')
+		tmp	<- gsub('core_inference','core_inference_noadjseqbias',tmp)		
 	if(!opt.adjust.participation.bias)
-		tmp	<- paste0(outfile.base,'core_inference_noadjpartbias.rda')
+		tmp	<- gsub('core_inference','core_inference_noadjpartbias',tmp)
 	save(zm, rtpdm, rtr2, ds, dc, dcb, mps, mss, file=tmp)	
 }
 
@@ -4338,6 +4338,20 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
 	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
 	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
 	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
 	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
 					TR_MISS=sum(TR_MISS), 
@@ -4418,6 +4432,20 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
 	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
 	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')	
 	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
 	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
 					TR_MISS=sum(TR_MISS), 
@@ -4497,6 +4525,20 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
 	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
 	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')	
 	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
 	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
 					TR_MISS=sum(TR_MISS), 

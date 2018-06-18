@@ -5924,7 +5924,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	if(1)
 	{		
 		#ptyi		<- seq(800,9150,25)
-		ptyi		<- seq(1200,4500,25)
+		ptyi		<- seq(2000,5500,25)
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
 					pty.args			<- list(	prog.pty=prog.pty, 
