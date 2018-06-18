@@ -5966,8 +5966,9 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
 		tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
 		pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+		print(pty.c, n=1e3)
 		pty.c	<- subset(pty.c, is.na(FO))
-		
+		stop()
 		#	make array job
 		pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
 		tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']

@@ -4117,9 +4117,10 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	require(gtools)	#rdirichlet	
+	require(rethinking)
 	
-	opt.adjust.sequencing.bias		<- 1
-	opt.adjust.participation.bias	<- 0
+	opt.adjust.sequencing.bias		<- 0
+	opt.adjust.participation.bias	<- 1
 	
 	indir			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	infile			<- file.path(indir,"todi_pairs_180522_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
@@ -4162,6 +4163,7 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 	infile.participation	<- file.path(indir,"participation_differences_180322_logisticmodels.rda")
 	infile.sequencing		<- file.path(indir,"sequencing_differences_180322_logisticmodels.rda")
 	load(infile.participation)
+	mp1 <- mp2 <- mp4 <- NULL
 	#	binarize covariates
 	dc[, TR_AGE_YOUNG:= as.integer(TR_AGE_AT_MID_C=='15-24')]
 	dc[, TR_AGE_MID:= as.integer(TR_AGE_AT_MID_C=='25-34')]
@@ -4183,6 +4185,7 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')
 	#	define community number to match STAN output for sequencing model
 	load(infile.sequencing)
+	ms2 <- ms3 <- ms4 <- NULL
 	tmp		<- unique(subset(dg, select=c(COMM_NUM_A,COMM_NUM_B)))
 	setnames(tmp, 'COMM_NUM_B', 'COMM_NUM_B2')
 	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
@@ -4193,6 +4196,7 @@ RakaiFull.phylogeography.180618.gender.mobility.core.inference<- function()
 	mps			<- extract.samples(mp3)
 	mss			<- extract.samples(ms1)
 	mc.it		<- 5e4
+	gc()
 	#mc.it		<- 1e2
 	dcb		<- dc[, {
 				#	get Monte Carlo samples from posterior distribution of logit(participation probs)
@@ -4374,8 +4378,9 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	setkey(z, SINK_TYPE, SINK_SEX )
 	z[, STAT:='adjusted for variation in participation and sequencing rates']
 	z[, DUMMY:= seq_len(nrow(z))]
-	ans2	<- copy(z)	
-	
+	ans2	<- copy(z)
+	z		<- dcb	<- dc <- NULL
+	gc()
 	
 	
 	#
@@ -4469,6 +4474,8 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	z[, STAT:='adjusted for variation in participation rates']
 	z[, DUMMY:= nrow(ans2)+seq_len(nrow(z))]
 	ans2	<- rbind(ans2,z)	
+	z		<- dcb	<- dc <- NULL
+	gc()
 	
 	
 	#
@@ -4562,71 +4569,139 @@ RakaiFull.phylogeography.180618.figure.impact.of.sampling.participation.bias<- f
 	z[, STAT:='adjusted for variation in sequencing rates']
 	z[, DUMMY:= nrow(ans2)+seq_len(nrow(z))]
 	ans2	<- rbind(ans2,z)	
+	z		<- dcb	<- dc <- NULL
+	gc()
 	
 	
 	#
-	#	load results when neither sequencing/participation rates were adjusted
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	process sensitivity results adjust only for variation in sequencing
 	#
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180618_cl25_d50_prior23_min30_phylogeography_core_inference_noadjpartbias_noadjseqbias.rda"	
+	load(infile.inference)
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]	
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT')	
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, TR_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\1',variable)]	
+	z[, REC_COMM_TYPE:= gsub('([^ ]+) ([^ ]+)','\\2',variable)]		
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE )
+	z[, STAT:='no adjustments to variation in participation and sequencing rates']
+	z[, DUMMY:= nrow(ans)+seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	#	estimate sink
+	tmp		<- unique(subset(ds, select=c(COMM_NUM_A, COMM_TYPE)))		
+	setnames(tmp, c('COMM_NUM_A','COMM_TYPE'), c('REC_COMM_NUM_A','REC_COMM_TYPE'))
+	z		<- merge(dcb, tmp, by='REC_COMM_NUM_A')
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('TR_COMM_NUM_A','TR_COMM_TYPE'))
+	z		<- merge(z, tmp, by='TR_COMM_NUM_A')
+	#	reset transmitter location by migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')	
+	#	use stick-breaking property: marginal of Dirichlet is again Dirichlet, self normalising
+	z		<- z[, list(	TR_OBS=sum(TR_OBS), 
+					TR_MISS=sum(TR_MISS), 
+					PI_ST_ALPHA=sum(PI_IJ_ALPHA)), 
+			by=c('REC_COMM_TYPE','TR_COMM_TYPE','MONTE_CARLO_IT')]
+	z[, FLOW:=paste0(TR_COMM_TYPE,' ',REC_COMM_TYPE)]
+	z		<- z[, {												
+				tmp		<- rdirichlet(mc.it, PI_ST_ALPHA)
+				colnames(tmp)	<- FLOW
+				tmp		<- as.data.table(tmp)								
+			}, by=c('MONTE_CARLO_IT')]
+	z[ , inlanddivfisherfolk:= z[['inland fisherfolk']] / z[['fisherfolk inland']] ]
+	z		<- melt(z, id.vars='MONTE_CARLO_IT', measure.vars=c('inlanddivfisherfolk'))
+	z		<- z[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('variable')]
+	z[, SINK_TYPE:= gsub('([^_]+)_([^_]+)','\\1',variable)]
+	z[, SINK_SEX:= 'Any']						
+	z		<- dcast.data.table(z, SINK_TYPE+SINK_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M, d=2), '\n[',round(CL,d=2),' - ',round(CU,d=2),']')]
+	z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
+	setkey(z, SINK_TYPE, SINK_SEX )
+	z[, STAT:='no adjustments to variation in participation and sequencing rates']
+	z[, DUMMY:= nrow(ans2)+seq_len(nrow(z))]
+	ans2	<- rbind(ans2,z)	
+	z		<- dcb	<- dc <- NULL
+	gc()
 	
-	require(rstan)
-	require(rethinking)
-	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_stanm1m4m5.rda")
-	#	question: how different are estimates from m2 m4 m5?
-	#post	<- extract.samples(m1$fit)
-	#tmp		<- data.table(FROM_TO_ID=1:max(dc1$FROM_TO_ID))
-	#df1		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']
-	#df1		<- df1[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='FROM_TO_ID']
-	#df1		<- merge(dc1, df1, by='FROM_TO_ID')	
-	#df1[, STAT:='area-based']
-	#df1 	<- dcast.data.table(df1, STAT+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
 	
-	post	<- extract.samples(m5$fit)
-	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
-	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']	
-	df5		<- merge(dc5, df5, by='FROM_TO_ID')
-	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
-	df5		<- df5[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('TR_FISHCOMM','REC_FISHCOMM')]
-	df5[, STAT:='no adjustments to variation in participation and sequencing rates']
-	df5 	<- dcast.data.table(df5, STAT+TR_FISHCOMM+REC_FISHCOMM~P, value.var='Q')
-	
+	#
+	#	make plots
+	#
+	#	FLOWS
 	tmp		<- copy(ans)
 	setnames(tmp, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR_FISHCOMM','REC_FISHCOMM'))
-	set(tmp, NULL, 'TR_FISHCOMM', tmp[, gsub('from_inland','Inland',gsub('from_fisherfolk','Fishing',TR_FISHCOMM))])
-	set(tmp, NULL, 'REC_FISHCOMM', tmp[, gsub('to_inland','Inland',gsub('to_fisherfolk','Fishing',REC_FISHCOMM))])	
-	tmp		<- rbind(tmp, df5, fill=TRUE)
+	set(tmp, NULL, 'TR_FISHCOMM', tmp[, gsub('external','External',gsub('inland','Inland',gsub('fisherfolk','Fishing',TR_FISHCOMM)))])
+	set(tmp, NULL, 'REC_FISHCOMM', tmp[, gsub('external','External',gsub('inland','Inland',gsub('fisherfolk','Fishing',REC_FISHCOMM)))])		
 	tmp[, X:=paste0(TR_FISHCOMM,'->',REC_FISHCOMM)]
 	set(tmp, NULL, 'STAT', tmp[, factor(STAT, levels=c('no adjustments to variation in participation and sequencing rates','adjusted for variation in participation rates','adjusted for variation in sequencing rates','adjusted for variation in participation and sequencing rates'))])
-	set(tmp, NULL, 'X', tmp[, factor(X, levels=c('Inland->Inland','Inland->Fishing','Fishing->Inland','Fishing->Fishing'))])
-	
+	set(tmp, NULL, 'X', tmp[, factor(X, levels=c('Inland->Inland','Inland->Fishing','Fishing->Inland','Fishing->Fishing','External->Inland','External->Fishing'))])	
 	ggplot(tmp, aes(x=X, fill=STAT)) +
 			geom_bar(aes(y=M), position=position_dodge(0.9), stat='identity') +
 			geom_errorbar(aes(ymin=CL, ymax=CU), position=position_dodge(0.9), width=0.4) +			
-			theme_bw() + 			
+			theme_bw() + 		
+			theme(axis.text.x = element_text(angle=45, hjust=1)) +
 			#theme(legend.position='bottom') + guides( fill=guide_legend(ncol=2)) +
 			scale_fill_brewer(palette='Spectral') +
-			scale_y_continuous(label=scales:::percent, expand=c(0,0), lim=c(0,0.7)) +
+			scale_y_continuous(label=scales:::percent, expand=c(0,0), lim=c(0,0.55)) +
 			labs(x='', y='Estimated\nTransmission flows\n', fill='') 
-	ggsave(file=paste0(outfile.base,'_compare_m5_sampling.pdf'), w=10, h=4)
-	
-	#
+	ggsave(file=paste0(outfile.base,'_compare_m5_sampling.pdf'), w=12, h=6)
 	#	SINK
-	#
-
-	post	<- extract.samples(m5$fit)
-	tmp		<- data.table(FROM_TO_ID=1:max(dc5$FROM_TO_ID))
-	df5		<- tmp[, list(MCIT=seq_len(nrow(post$prop_comm_flow)), PI=post$prop_comm_flow[,FROM_TO_ID]), by='FROM_TO_ID']	
-	df5		<- merge(dc5, df5, by='FROM_TO_ID')
-	df5		<- df5[, list(PI=sum(PI)), by=c('MCIT','TR_FISHCOMM','REC_FISHCOMM')]
-	df5[, FLOW:=paste0(TR_FISHCOMM,' ',REC_FISHCOMM)]
-	df5		<- dcast.data.table(df5, MCIT~FLOW, value.var='PI')
-	df5[, inlanddivfisherfolk:= df5[['Inland Fishing']] / df5[['Fishing Inland']] ]
-	df5		<- melt(df5, id.vars='MCIT', measure.vars='inlanddivfisherfolk', variable.name='SINK_TYPE')
-	df5		<- df5[, list(P=qsn, Q=unname(quantile(value, p=qs))), by=c('SINK_TYPE')]
-	df5[, STAT:='no adjustments to variation in participation and sequencing rates']
-	df5 	<- dcast.data.table(df5, STAT+SINK_TYPE~P, value.var='Q')
-	df5[, DUMMY:= nrow(ans2)+seq_len(nrow(df5))]
-	ans2	<- rbind(ans2,df5,fill=TRUE)	
-	
+	tmp		<- copy(ans2)
+	set(tmp, NULL, 'STAT', tmp[, factor(STAT, levels=c('no adjustments to variation in participation and sequencing rates','adjusted for variation in participation rates','adjusted for variation in sequencing rates','adjusted for variation in participation and sequencing rates'))])		
+	ggplot(tmp, aes(x=SINK_TYPE, fill=STAT)) +
+			geom_hline(yintercept=1, colour='grey50', size=1.5) +
+			geom_boxplot(aes(middle=M, ymin=CL, ymax=CU, lower=IL, upper=IU), position=position_dodge(0.9), stat='identity') +						
+			theme_bw() + 		
+			scale_fill_brewer(palette='Spectral') +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/5,1/4,1/3,1/2,2/3,1,2,3,4,5,10), labels=c('1/10','1/5','1/4','1/3','1/2','2/3','1','2','3','4','5','10')) +
+			coord_flip(ylim=c(1/13,13)) +						
+			labs(x='', y='\nInland->Fishing / Fishing->Inland', fill='') +
+			guides(fill='none')
+	ggsave(file=paste0(outfile.base,'_compare_m5_sampling_sink.pdf'), w=8, h=2)
 }
 
 RakaiFull.phylogeography.180618.flows.fishinland<- function()
