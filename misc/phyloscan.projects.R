@@ -6002,7 +6002,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		#hpc.select	<- 1; hpc.nproc<- 16; 	hpc.walltime<- 23; hpc.mem<-"124gb"; hpc.q<- NA
 		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
 		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
-		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
+		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
 		in.dir		<- file.path(HOME,"MunichCluster_180605_out")
 		out.dir		<- in.dir
 		work.dir	<- file.path(HOME,"MunichCluster_180605_work")
