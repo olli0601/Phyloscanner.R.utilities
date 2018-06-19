@@ -5921,7 +5921,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(1)
+	if(0)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
@@ -5994,18 +5994,18 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	# generate trees
-	if(0)
+	if(1)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
-		#hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 167; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
-		hpc.select	<- 1; hpc.nproc<- 16; 	hpc.walltime<- 23; hpc.mem<-"124gb"; hpc.q<- NA
-		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
-		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		#hpc.select	<- 1; hpc.nproc<- 16; 	hpc.walltime<- 23; hpc.mem<-"124gb"; hpc.q<- NA
+		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
+		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_CPX_AF460972', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_CPX_AF460972'))
-		in.dir		<- file.path(HOME,"BEEHIVE_67_180302_out")
+		in.dir		<- file.path(HOME,"MunichCluster_180605_out")
 		out.dir		<- in.dir
-		work.dir	<- file.path(HOME,"BEEHIVE_67_180302_work")
+		work.dir	<- file.path(HOME,"MunichCluster_180605_work")
 		
 		infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
 		infiles[, FO:= gsub('fasta$','tree',FI)]
@@ -6021,20 +6021,18 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		#infiles	<- subset(infiles, PTY_RUN>=186 & PTY_RUN<239)
 		#print(infiles)	 		
 		
-		df		<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
-		df[, ID:=ceiling(seq_len(nrow(df))/1)]
-		#df		<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+		#	make raxml run
+		pty.c	<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]		
+		print(pty.c, n=1e3)
 		
-		#df[1, cat(CMD)]
-		#stop()
-		invisible(df[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- paste(cmd,CMD,sep='\n')
-							cat(cmd)							
-							outfile		<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-							cmd.hpccaller(work.dir, outfile, cmd)
-							#stop()
-						}, by=c('ID')])
+		#	make array job
+		pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+		tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+		tmp		<- tmp[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load, hpc.array=pty.c[, max(CASE_ID)])
+		cmd		<- paste(cmd,tmp,sep='\n')
+		outfile	<- paste("mct",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		cmd.hpccaller(work.dir, outfile, cmd)				
 	}
 	#
 	#	combine all the data	
