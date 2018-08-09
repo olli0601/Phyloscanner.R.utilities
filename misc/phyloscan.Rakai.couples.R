@@ -2440,39 +2440,49 @@ RakaiFull.preprocess.phyloscanneroutput.180216<- function()
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30.rda'
 	indir	<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
 	outfile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30.rda'
+	if(0)
+	{
+		#list.files('/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA')
+		indirs	<- data.table(INDIR=	c(	"RakaiAll_output_170704_w250_s10_p25_d50_stagetwo_rerun23_min30_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p10_d50_stagetwo_rerun23_min30_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p15_d50_stagetwo_rerun23_min30_adj_chain_mean",           
+						"RakaiAll_output_170704_w250_s20_p20_d50_stagetwo_rerun23_min30_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min20_adj_chain_mean",            
+						#"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_amtrFALSE",  
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws100",    
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws10000",  
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws30",     
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_mft1e-3",    
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_mft1e-7",    
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_pblTRUE",    
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_prxt25",     
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rcmozbFALSE",
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rogthr20",   
+						"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min50_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p30_d50_stagetwo_rerun23_min30_adj_chain_mean",            
+						"RakaiAll_output_170704_w250_s20_p35_d50_stagetwo_rerun23_min30_adj_chain_mean",                                                 
+						"RakaiAll_output_170704_w250_s20_p40_d50_stagetwo_rerun23_min30_adj_chain_mean")) 
+		set(indirs, NULL, 'INDIR', indirs[,file.path('/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA',INDIR)])
+		set(indirs, NULL, 'CONF_CUT', 0.6)
+		set(indirs, NULL, 'OUTFILE', indirs[, file.path('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run',paste0(gsub('_adj_chain_mean','',basename(INDIR)),'.rda'))])		
+	}
+	if(1)
+	{
+		indirs	<- data.table(	INDIR='/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean',
+								CONF_CUT=c(0.5, 0.55, 0.6, 0.65, 0.7) )				
+		set(indirs, NULL, 'OUTFILE', indirs[, file.path('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run',paste0(gsub('_adj_chain_mean','',basename(INDIR)),'_conf',100*CONF_CUT,'.rda'))])
+	}
 	
-	#list.files('/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA')
-	indirs	<- data.table(INDIR=	c(	"RakaiAll_output_170704_w250_s10_p25_d50_stagetwo_rerun23_min30_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p10_d50_stagetwo_rerun23_min30_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p15_d50_stagetwo_rerun23_min30_adj_chain_mean",           
-										"RakaiAll_output_170704_w250_s20_p20_d50_stagetwo_rerun23_min30_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min20_adj_chain_mean",            
-										#"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_amtrFALSE",  
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws100",    
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws10000",  
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_dnws30",     
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_mft1e-3",    
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_mft1e-7",    
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_pblTRUE",    
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_prxt25",     
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rcmozbFALSE",
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_rogthr20",   
-										"RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min50_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p30_d50_stagetwo_rerun23_min30_adj_chain_mean",            
-										"RakaiAll_output_170704_w250_s20_p35_d50_stagetwo_rerun23_min30_adj_chain_mean",                                                 
-										"RakaiAll_output_170704_w250_s20_p40_d50_stagetwo_rerun23_min30_adj_chain_mean")) 
-	set(indirs, NULL, 'INDIR', indirs[,file.path('/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA',INDIR)])
-	set(indirs, NULL, 'OUTFILE', indirs[, file.path('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run',paste0(gsub('_adj_chain_mean','',basename(INDIR)),'.rda'))])
 	for(kk in seq_len(nrow(indirs)))
 	{
 	indir	<- indirs[kk,INDIR]
 	outfile	<- indirs[kk,OUTFILE]
-	
+	conf.cut	<- indirs[kk,CONF_CUT]
 	
 	neff.cut	<- 3
-	conf.cut	<- 0.6  #2/3
+	
 	if(0)
 	{
 		linked.group	<- 'TYPE_PAIR_TODI2'
@@ -6614,10 +6624,18 @@ RakaiFull.preprocess.phyloscanneroutput.trmpairs.180216<- function()
 			"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p30_d50_stagetwo_rerun23_min30_networksallpairs.rda",            
 			"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p35_d50_stagetwo_rerun23_min30_networksallpairs.rda",            
 			"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p40_d50_stagetwo_rerun23_min30_networksallpairs.rda")
+	infile.trmpairs.todis	<- c("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_networksallpairs.rda"
+			, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_networksallpairs.rda"
+			, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_networksallpairs.rda"
+			, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_networksallpairs.rda"
+			, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_networksallpairs.rda")
 	for(kk in seq_along(infile.trmpairs.todis))
 	{
 		infile.trmpairs.todi	<- infile.trmpairs.todis[kk]
 		outfile.base			<- gsub('networksallpairs.rda','',infile.trmpairs.todi)
+		
+		if(grepl('_conf[0-9]+',infile.trmpairs.todi))
+			confidence.cut		<- as.integer(gsub('^.*_conf([0-9]+).*$','\\1',infile.trmpairs.todi))/100
 		
 		#	now load second stage output
 		load(infile.trmpairs.todi)
@@ -12645,14 +12663,14 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 						curv.shift=0.08, 
 						label.size=3, 
 						node.label='AID', 
-						node.fill='LOC',
-						node.shape='SEX',
-						node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
-						node.shape.values=c('F'=17, 'M'=19),						
-						#node.shape='IN_COUPLE', 
-						#node.fill='SEX', 
-						#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
-						#node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						#node.fill='LOC',
+						#node.shape='SEX',
+						#node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
+						#node.shape.values=c('F'=17, 'M'=19),						
+						node.shape='IN_COUPLE', 
+						node.fill='SEX', 
+						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
 						threshold.linked=0.6)
 				p	
 			})
@@ -12683,14 +12701,14 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 						curv.shift=0.08, 
 						label.size=3, 
 						node.label='AID', 
-						#node.shape='IN_COUPLE', 
-						#node.fill='SEX', 
-						#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
-						#node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
-						node.fill='LOC',
-						node.shape='SEX',
-						node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
-						node.shape.values=c('F'=17, 'M'=19),												
+						node.shape='IN_COUPLE', 
+						node.fill='SEX', 
+						node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16), 
+						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						#node.fill='LOC',
+						#node.shape='SEX',
+						#node.fill.values=c('fishing site'='steelblue3','inland community'='palegreen4'), 
+						#node.shape.values=c('F'=17, 'M'=19),												
 						threshold.linked=0.6,
 						layout=layout)
 				p	
@@ -14568,6 +14586,17 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
 	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')	
 	
+	#	proportion of networks that are spouses
+	tmp	<- merge( data.table(ID= sort(unique(rtnn$ID1, rtnn$ID2))), data.table(ID= sort(unique(rp$FEMALE_RID, rp$MALE_RID)), SPOUSE=1L), by='ID', all.x=1)
+	set(tmp, tmp[, which(is.na(SPOUSE))], 'SPOUSE', 0L)
+	tmp[, mean(SPOUSE)]
+	#	0.07055631
+	tmp	<- subset(rtnn, !grepl('couple ambiguous', SELECT) & ID1_SEX!=ID2_SEX)
+	tmp	<- merge( data.table(ID= sort(unique(tmp$ID1, tmp$ID2))), data.table(ID= sort(unique(rp$FEMALE_RID, rp$MALE_RID)), SPOUSE=1L), by='ID', all.x=1)
+	set(tmp, tmp[, which(is.na(SPOUSE))], 'SPOUSE', 0L)
+	tmp[, mean(SPOUSE)]
+	#	0
+		
 	#
 	#	network info including links with low linkage prob
 	#	and all gender combinations	
@@ -17638,6 +17667,39 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 		# write to file
 		write.table(tmp, row.names=FALSE, col.names=FALSE, file=infiles[ii,FO] , quote=FALSE)														
 	}
+}
+
+RakaiFull.analyze.trmpairs.todi.171122.proportion.couples<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	if(0)
+	{
+		linked.group	<- 'TYPE_PAIR_TODI2'
+		linked.type.yes	<- 'linked'			
+		dir.group		<- 'TYPE_DIR_TODI2'		
+	}
+	if(1)
+	{
+		linked.group	<- 'TYPE_CHAIN_TODI'
+		linked.type.yes	<- 'chain'
+		linked.type.no	<- 'distant'
+		dir.group		<- 'TYPE_ADJ_DIR_TODI2'		
+	}
+	
+	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"							   
+	outfile.base			<- gsub('withmetadata.rda','',infile.trmpairs.todi)
+	load(infile.trmpairs.todi)
+	rca	<- subset(rtp, !grepl('couple ambiguous',SELECT))
+	rca[, mean(MALE_IN_COUPLE)]		# 0.6542553
+	rca[, mean(FEMALE_IN_COUPLE)]	# 0.6462766
+	rca[, table(COUPLE)]			# couples: 176, so 176/376 = 0.4680851
 }
 
 RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
