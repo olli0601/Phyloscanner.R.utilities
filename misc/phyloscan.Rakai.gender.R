@@ -1996,8 +1996,24 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 	require(gridExtra)
 	require(RColorBrewer)
 	require(Hmisc)
-	require(gtools)	#rdirichlet
+	require(gtools)		#rdirichlet
 	require(rethinking)	# STAN wrapper
+	
+	library(boot) 
+	library(reshape) 
+	ds <- data.frame(Person = c(rep("A", 20), rep("B", 10)), Success = 
+					c(rbinom(20, 1, 0.25), rbinom(10, 1, 0.75))) 
+	da <- cast(Person ~ ., data = ds, value = "Success", fun = 
+					list(mean, length)) 
+	
+	m0 <- glm(Success ~ 1, data = ds, family = binomial) 
+	m1 <- glm(mean ~ 1, data = da, family = binomial, weights=length) 
+	summary(m0)
+	summary(m1)
+	#	the coefficients and sd(coef) are the same in m0 and m1
+	inv.logit(coef(m0)) 
+	inv.logit(coef(m1)) 
+	
 	
 	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	#
@@ -2088,13 +2104,106 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 	df[, PAIR_SEQ:= exp(-(log1p(exp(-MALE_SEQ))+log1p(exp(-FEMALE_SEQ))))]
 	df[, INV_PAIR_SEQ:= round(1/PAIR_SEQ)]
 	df[, MALE_IS_TR_WEIGHTED:= as.integer(MALE_IS_TR*INV_PAIR_SEQ)]
+	df[, DUMMY:= seq_len(nrow(df))]
 	
-	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR_WEIGHTED, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, MALE_CIRCUM,
+	#
+	#	complete case analysis
+	#
+	dh	<- subset(df, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, MALE_CIRCUM,
+					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,										
+					FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))	
+	dh[, HAS_MISSING_COL:= apply(as.matrix(dh), 1, function(x) any(is.na(x)) )]
+	dh	<- subset(dh, !HAS_MISSING_COL)
+	#	103 data points
+	mt.6cc 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
+							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
+							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +							
+							female_gud*FEMALE_GUD + male_gud*MALE_GUD + male_alcever_lastyear*MALE_ALCEVER_LASTYEAR + female_alcever_lastyear*FEMALE_ALCEVER_LASTYEAR + male_condom_never*MALE_CONDOM_NEVER + female_condom_never*FEMALE_CONDOM_NEVER +
+							female_pregnant*FEMALE_PREGNANT + male_circum*MALE_CIRCUM +
+							pair_commtype_notfish*(1-FISH) + pair_withincomm_yes*SAME_COMM + pair_withinhh_yes*SAME_HH,
+					base ~ dnorm(0,100),
+					c(male_vl_above10e3, female_vl_above10e3, female_edu_none, male_edu_none, female_sexp1yr_gr1, male_sexp1yr_gr1) ~ dnorm(0,1),
+					c(male_inmigrate_lastyear, female_inmigrate_lastyear, pair_commtype_notfish, pair_withincomm_yes, pair_withinhh_yes) ~ dnorm(0,1),					
+					c(female_gud, male_gud, male_alcever_lastyear, female_alcever_lastyear, male_condom_never, female_condom_never, female_pregnant, male_circum) ~ dnorm(0,1)
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, male_vl_above10e3=0, female_vl_above10e3=0, female_edu_none=0, male_edu_none=0, female_sexp1yr_gr1=0, male_sexp1yr_gr1=0,
+					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,					
+					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0),			
+			warmup=2e3, iter=20e3, chains=1, cores=1)
+	precis(mt.6cc, prob=0.8)
+	#	extract number of individuals (n) and proportion (freq)
+	ds	<- subset(melt(dh, id.vars=c('PAIRID','MALE_IS_TR')), !is.na(value))
+	tmp	<- ds[, list(FREQ_MALE_TR= mean(MALE_IS_TR)), by=c('variable','value')]
+	ds	<- ds[, list(yes= length(which(value==1)), no= length(which(value==0)) ), by='variable']
+	ds	<- melt(ds, id.vars=c('variable'), variable.name='GROUP', value.name='N')	
+	set(tmp, NULL, 'value', tmp[, as.character(factor(value, levels=c(0,1), labels=c('no','yes')))])
+	setnames(tmp, 'value','GROUP')
+	ds	<- merge(ds, tmp, by=c('variable','GROUP'))	
+	set(ds, NULL, 'variable', ds[, gsub('FEMALE_CLOSEST_VL_1YR_G10E3','FEMALE_VL_ABOVE10E3',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MALE_CLOSEST_VL_1YR_G10E3','MALE_VL_ABOVE10E3',variable)])	
+	set(ds, NULL, 'variable', ds[, gsub('FE_NOEDU','FEMALE_EDU_NONE',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MA_NOEDU','MALE_EDU_NONE',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('FE_SEXP1YR_G1','FEMALE_SEXP1YR_GR1',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MA_SEXP1YR_G1','MALE_SEXP1YR_GR1',variable)])	
+	set(ds, NULL, 'variable', ds[, gsub('FEMALE_INMIGRATE_1YR','FEMALE_INMIGRATE_LASTYEAR',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('MALE_INMIGRATE_1YR','MALE_INMIGRATE_LASTYEAR',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('SAME_HH','PAIR_WITHINHH_YES',variable)])
+	set(ds, NULL, 'variable', ds[, gsub('SAME_COMM','PAIR_WITHINCOMM_YES',variable)])	
+	tmp	<- ds[, which(variable=='FISH')]
+	set(ds, tmp, 'GROUP', ds[tmp, gsub('xx','yes',gsub('yes','no',gsub('no','xx',GROUP)))])	
+	set(ds, NULL, 'variable', ds[, gsub('FISH','PAIR_COMMTYPE_NOTFISH',variable)])		
+	#	extract odds ratio and prob odds ratio > 1
+	post	<- as.data.table(extract.samples(mt.6cc))
+	post[, MC:= seq_len(nrow(post))]	
+	set(post, NULL, colnames(post)[grepl('impute|_mean|_sigma|base', colnames(post))], NULL)
+	setnames(post, colnames(post), toupper(colnames(post)))
+	post	<- melt(post, id.vars='MC', value.name='COEFF')	
+	set(post, NULL, 'OR_MF', post[, exp(COEFF)])
+	set(post, NULL, 'OR_FM', post[, exp(-COEFF)])
+	tmp		<- post[, list( 	GROUP='yes',
+					STAT=c('OR_MF_MED','OR_MF_CL','OR_MF_IL','OR_MF_IU','OR_MF_CU'), 
+					V= quantile(OR_MF, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+			by=c('variable')]						
+	tmp		<- dcast.data.table(tmp, variable+GROUP~STAT, value.var='V')
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	tmp		<- post[, list( 	GROUP='yes',
+					STAT=c('OR_FM_MED','OR_FM_CL','OR_FM_IL','OR_FM_IU','OR_FM_CU'), 
+					V= quantile(OR_FM, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+			by=c('variable')]						
+	tmp		<- dcast.data.table(tmp, variable+GROUP~STAT, value.var='V')
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	tmp		<- post[, list(GROUP='yes', PROB_OR_TAIL=max(mean(OR_MF>1), mean(OR_MF<1))), by='variable']
+	ds		<- merge(ds, tmp, by=c('variable','GROUP'), all.x=1)
+	#ds[, unique(variable)]
+	set(ds, NULL, 'variable', ds[, factor(variable, levels=c('MALE_IS_TR',
+									'MALE_VL_ABOVE10E3','MALE_SEXP1YR_GR1','MALE_EDU_NONE','MALE_INMIGRATE_LASTYEAR','MALE_GUD','MALE_CONDOM_NEVER','MALE_ALCEVER_LASTYEAR','MALE_CIRCUM',
+									# 'MALE_AGE_24','MALE_AGE_29','MALE_AGE_34',
+									'FEMALE_VL_ABOVE10E3','FEMALE_SEXP1YR_GR1','FEMALE_EDU_NONE','FEMALE_INMIGRATE_LASTYEAR','FEMALE_GUD','FEMALE_CONDOM_NEVER','FEMALE_ALCEVER_LASTYEAR','FEMALE_PREGNANT',
+									# 'FEMALE_AGE_19','FEMALE_AGE_24','FEMALE_AGE_29','FEMALE_AGE_34',	
+									'PAIR_COMMTYPE_NOTFISH','PAIR_WITHINCOMM_YES','PAIR_WITHINHH_YES'))])	
+	setkey(ds, variable, GROUP)	
+	ds[, PRETTY_FREQ:= paste0(round(FREQ_MALE_TR*100, d=1), '%')]
+	ds[, PRETTY_OR_MF:= paste0(round(OR_MF_MED, d=2),' [',round(OR_MF_IL, d=2),'-',round(OR_MF_IU, d=2),']')]
+	ds[, PRETTY_OR_FM:= paste0(round(OR_FM_MED, d=2),' [',round(OR_FM_IL, d=2),'-',round(OR_FM_IU, d=2),']')]
+	set(ds, ds[, which(is.na(OR_MF_MED))], c('PRETTY_OR','PRETTY_OR_MF','PRETTY_OR_FM'), '-')
+	ans	<- subset(ds, select=c(variable, GROUP, N, PRETTY_FREQ, PRETTY_OR_MF, PRETTY_OR_FM))	
+	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mt6cc.csv'))
+	
+	
+	#
+	#	inverse probability weighting
+	#
+	dh		<- df[, lapply(.SD, rep, times=INV_PAIR_SEQ), by='DUMMY']
+	dh		<- subset(dh, select=c(	PAIRID, MALE_IS_TR, MALE_CLOSEST_VL_1YR_G10E3, FEMALE_CLOSEST_VL_1YR_G10E3, FE_SEXP1YR_G1, MA_SEXP1YR_G1, FE_NOEDU, MA_NOEDU, MALE_CIRCUM,
 					FEMALE_INMIGRATE_1YR, MALE_INMIGRATE_1YR, FISH, SAME_HH, SAME_COMM,										
 					FEMALE_GUD, MALE_GUD, FEMALE_PREGNANT, MALE_ALCEVER_LASTYEAR, FEMALE_ALCEVER_LASTYEAR, MALE_CONDOM_NEVER, FEMALE_CONDOM_NEVER))		
-	mt.6w 	<- map2stan(
+	mt.6r 	<- map2stan(
 			alist(
-					MALE_IS_TR_WEIGHTED ~ dbinom(MALE_IS_TR_WEIGHTED, ptr),
+					MALE_IS_TR ~ dbinom(1, ptr),
 					logit(ptr) <- base + male_vl_above10e3*MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3*FEMALE_CLOSEST_VL_1YR_G10E3 +
 							female_edu_none*FE_NOEDU + male_edu_none*MA_NOEDU + female_sexp1yr_gr1*FE_SEXP1YR_G1 + male_sexp1yr_gr1*MA_SEXP1YR_G1 +
 							male_inmigrate_lastyear*MALE_INMIGRATE_1YR + female_inmigrate_lastyear*FEMALE_INMIGRATE_1YR +							
@@ -2125,8 +2234,8 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 					male_inmigrate_lastyear=0, female_inmigrate_lastyear=0, pair_commtype_notfish=0, pair_withincomm_yes=0, pair_withinhh_yes=0,					
 					female_gud=0, male_gud=0, male_alcever_lastyear=0, female_alcever_lastyear=0, male_condom_never=0, female_condom_never=0, female_pregnant=0, male_circum=0,
 					vl_mean=0.5, edu_mean=0.5, sexp_mean=0.5, miss_mean=0.5, alc_mean=0.5, cond_mean=0.5, vl_sigma=1, edu_sigma=1, sexp_sigma=1, miss_sigma=1, alc_sigma=1, cond_sigma=1),			
-			warmup=2e3, iter=20e3, chains=1, cores=6)
-	plot(precis(mt.6w, prob=0.8))
+			warmup=2e3, iter=20e3, chains=1, cores=1)
+	precis(mt.6r, prob=0.8)
 	
 	
 	#	extract number of individuals (n) and proportion (freq)
@@ -2152,7 +2261,7 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 	set(ds, NULL, 'variable', ds[, gsub('FISH','PAIR_COMMTYPE_NOTFISH',variable)])	
 	
 	#	extract odds ratio and prob odds ratio > 1
-	post	<- as.data.table(extract.samples(mt.6b))
+	post	<- as.data.table(extract.samples(mt.6r))
 	post[, MC:= seq_len(nrow(post))]	
 	set(post, NULL, colnames(post)[grepl('impute|_mean|_sigma|base', colnames(post))], NULL)
 	setnames(post, colnames(post), toupper(colnames(post)))
@@ -2185,26 +2294,15 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 	ds[, PRETTY_FREQ:= paste0(round(FREQ_MALE_TR*100, d=1), '%')]
 	ds[, PRETTY_OR_MF:= paste0(round(OR_MF_MED, d=2),' [',round(OR_MF_IL, d=2),'-',round(OR_MF_IU, d=2),']')]
 	ds[, PRETTY_OR_FM:= paste0(round(OR_FM_MED, d=2),' [',round(OR_FM_IL, d=2),'-',round(OR_FM_IU, d=2),']')]
-	set(ds, ds[, which(is.na(OR_MF_MED))], c('PRETTY_OR','PRETTY_OR_MF','PRETTY_OR_FM'), '-')
-	ans	<- subset(ds, select=c(variable, GROUP, N, PRETTY_FREQ, PRETTY_OR_MF, PRETTY_OR_FM))
+	ds[, PRETTY_OR_MF95:= paste0(round(OR_MF_MED, d=2),' [',round(OR_MF_CL, d=2),'-',round(OR_MF_CU, d=2),']')]
+	ds[, PRETTY_OR_FM95:= paste0(round(OR_FM_MED, d=2),' [',round(OR_FM_CL, d=2),'-',round(OR_FM_CU, d=2),']')]
 	
-	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mt6b.csv'))
+	set(ds, ds[, which(is.na(OR_MF_MED))], c('PRETTY_OR','PRETTY_OR_MF','PRETTY_OR_FM','PRETTY_OR_MF95','PRETTY_OR_FM95'), '-')
+	ans	<- subset(ds, select=c(variable, GROUP, N, PRETTY_FREQ, PRETTY_OR_MF, PRETTY_OR_FM, PRETTY_OR_MF95, PRETTY_OR_FM95))
 	
-	mt.1 <- map2stan(
-			alist(
-					MALE_IS_TR ~ dbinom(1, ptr),
-					logit(ptr) <- base + male_vl_above10e3 * MALE_CLOSEST_VL_1YR_G10E3 + female_vl_above10e3 * FEMALE_CLOSEST_VL_1YR_G10E3,
-					MALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
-					FEMALE_CLOSEST_VL_1YR_G10E3 <- dnorm(vl_mean, vl_sigma),
-					base ~ dnorm(0,100),
-					vl_mean ~ dnorm(0.5, 1),
-					vl_sigma ~ dcauchy(0,1),
-					c(male_vl_above10e3, female_vl_above10e3) ~ dnorm(0,10)													
-			),
-			data=as.data.frame(dh), 
-			start=list(base=0, male_vl_above10e3=0, female_vl_above10e3=0, vl_mean=0.5, vl_sigma=1),			
-			warmup=5e2, iter=2e3, chains=1, cores=4, verbose=TRUE, debug=TRUE)
-	precis(mt.1, prob=0.95)
+	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mt6r.csv'))
+	
+	save(df, mt.6r, mt.6cc, file=paste0(outfile.base,'_stanmodels_cc_ipw.rda'))
 }
 	
 RakaiFull.transmitter.180423.stan.oddsratio.other<- function()

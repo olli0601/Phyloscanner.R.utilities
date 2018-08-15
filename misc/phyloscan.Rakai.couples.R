@@ -13602,7 +13602,7 @@ RakaiFull.analyze.ffpairs.170811.intermingled<- function()
 	rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
 	#
 	#	likely transmission pairs, using topology and distance
-	#	select one patient pairing across runs: that with lowest evidence		
+	#	select one patient pairing across runs: that with highest evidence		
 	rtp		<- subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2')[, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]	
 	rtp		<- subset(rtp, ID1!=ID2)
 	rtp		<- merge(rtp, subset(rtp.todi2, GROUP=='TYPE_PAIR_TODI2'), by=c('ID1','ID2','PTY_RUN'))	
@@ -14253,6 +14253,8 @@ RakaiFull.analyze.ffpairs.171122.intermingled<- function()
 	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
 	load(infile)
 		
+	#	this analysis is based on the most likely transmission chains
+	
 	rtnn[, SELECT:= NA_character_]
 	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
 	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')	
@@ -14285,9 +14287,35 @@ RakaiFull.analyze.ffpairs.171122.intermingled<- function()
 	#	0.025
 	
 
+	#	how many clearly intermingled cases are there in the most likely transmission chains?
+	group		<- 'TYPE_BASIC'
+	rpw2		<- subset(rpw, GROUP==group)	
+	rpw2[, TYPE_TO:= 'disconnected']	
+	trmw.close.brl	<- 0.025
+	set(rpw2, rpw2[,which(PATHS_12>0 & PATHS_21==0 & ADJACENT & PATRISTIC_DISTANCE<trmw.close.brl)], 'TYPE_TO', 'close 1->2')
+	set(rpw2, rpw2[,which(PATHS_12==0 & PATHS_21>0 & ADJACENT & PATRISTIC_DISTANCE<trmw.close.brl)], 'TYPE_TO', 'close 2->1')
+	set(rpw2, rpw2[,which(PATHS_12>0 & PATHS_21>0 & ADJACENT & PATRISTIC_DISTANCE<trmw.close.brl)], 'TYPE_TO', 'close intermingled')
+	set(rpw2, rpw2[,which(PATHS_21==0 & PATHS_12==0 & ADJACENT & PATRISTIC_DISTANCE<trmw.close.brl)], 'TYPE_TO', 'close sibling')
+	rpw2		<- rpw2[, list(K=length(SUFFIX)), by=c('ID1','ID2','PTY_RUN','TYPE_TO')]
+	rpw2		<- merge(rpw2, rpw2[, list(N=sum(K), N_CLOSE=sum(K[grepl('close',TYPE_TO)])), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN'))
+	
+	#	consider links in transmission chain are most frequently intermingled 
+	rtnn2		<- merge(rtnn, rpw2, by=c('ID1','ID2','PTY_RUN'))	
+	tmp			<- rtnn2[, {
+				z<- which.max(K)
+				list(TYPE_TO=TYPE_TO[z], K=K[z], N=N[z], N_CLOSE=N_CLOSE[z], POSTERIOR_SCORE_LINKED=POSTERIOR_SCORE_LINKED[z], ID1_SEX=ID1_SEX[z], ID2_SEX=ID2_SEX[z])
+			}, by=c('ID1','ID2','PTY_RUN') ]
+	tmp			<- subset(tmp, TYPE_TO=='close intermingled')
+	tmp[, SXO:= paste0(ID1_SEX,ID2_SEX)]
+	tmp[, table(SXO)]
+	#	FF MF MM 
+ 	#	3 31  2 
+ 
+
+	ffd		<- subset(tmp, TYPE_TO=='close intermingled' & SXO=='MF')
 	#	plot windows
 	ffd[, DUMMY:=seq_len(nrow(ffd))]
-	ffd[, LABEL:=ffd[, factor(DUMMY, levels=DUMMY, labels=paste0('f ',ID1,' f ', ID2,'\n',NEFF,' ',PTY_RUN))]]
+	ffd[, LABEL:=ffd[, factor(DUMMY, levels=DUMMY, labels=paste0('f ',ID1,' f ', ID2,'\n',N,' ',PTY_RUN))]]
 	#	make manual plot to show intermingled
 	group		<- 'TYPE_BASIC'
 	rpw2		<- merge(subset(ffd, select=c(ID1,ID2,PTY_RUN)), subset(rpw, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
@@ -14299,9 +14327,39 @@ RakaiFull.analyze.ffpairs.171122.intermingled<- function()
 	set(rpw2, rpw2[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
 	set(rpw2, rpw2[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
 	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c('ancestral 1->2','ancestral 2->1','intermingled','sibling','disconnected'))])	
-	cols.typet			<- c("ancestral 1->2"=brewer.pal(11, 'PiYG')[1], "ancestral 2->1"=brewer.pal(11, 'PiYG')[2],"intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])	
-	#	brewer.pal(11, 'PuOr')[2]
+	cols.typet			<- c("ancestral 1->2"=brewer.pal(11, 'PiYG')[1], "ancestral 2->1"=brewer.pal(11, 'PiYG')[2],"intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])		
+	ggplot(rpw2, aes(x=W_FROM)) +
+			geom_hline(yintercept=0.025, colour='grey50') +
+			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
+			geom_point(aes(y=PATRISTIC_DISTANCE), size=1) +				
+			labs(x='\ngenomic position\n(relative to HXB2)', y='subtree distance\n(subst/site)\n',fill='topological relationship\nbetween subtrees') +
+			scale_x_continuous(breaks=seq(0,1e4,500), minor_breaks=seq(0,1e4,100), limits=c(rpw2[, min(W_FROM)], rpw2[, max(W_FROM)])) +
+			scale_y_log10(labels=percent, expand=c(0,0), breaks=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25)) +
+			coord_cartesian(ylim=c(1e-3,0.11)) +
+			scale_fill_manual(values=cols.typet) +
+			theme_bw() + 
+			theme(legend.position='bottom') +
+			facet_grid(ID1+ID2~.)
+	plot.file	<- paste0(outfile.base,'_FM_ambiguous_windows_summary_TYPETO.pdf')
+	ggsave(file=plot.file, w=10, h=25)
 	
+	
+	ffd		<- subset(tmp, TYPE_TO=='close intermingled' & SXO=='FF')
+	#	plot windows
+	ffd[, DUMMY:=seq_len(nrow(ffd))]
+	ffd[, LABEL:=ffd[, factor(DUMMY, levels=DUMMY, labels=paste0('f ',ID1,' f ', ID2,'\n',N,' ',PTY_RUN))]]
+	#	make manual plot to show intermingled
+	group		<- 'TYPE_BASIC'
+	rpw2		<- merge(subset(ffd, select=c(ID1,ID2,PTY_RUN)), subset(rpw, GROUP==group), by=c('ID1','ID2','PTY_RUN'))	
+	rpw2[, TYPE_TO:= 'disconnected']
+	rpw2[, Y:=1e-3]
+	set(rpw2, rpw2[, which(PATRISTIC_DISTANCE<1e-3)],'PATRISTIC_DISTANCE',1.1e-3)
+	set(rpw2, rpw2[,which(grepl('chain 12', TYPE))], 'TYPE_TO', 'ancestral 1->2')
+	set(rpw2, rpw2[,which(grepl('chain 21', TYPE))], 'TYPE_TO', 'ancestral 2->1')
+	set(rpw2, rpw2[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(rpw2, rpw2[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
+	set(rpw2, NULL, 'TYPE_TO', rpw2[, factor(TYPE_TO, levels=c('ancestral 1->2','ancestral 2->1','intermingled','sibling','disconnected'))])	
+	cols.typet			<- c("ancestral 1->2"=brewer.pal(11, 'PiYG')[1], "ancestral 2->1"=brewer.pal(11, 'PiYG')[2],"intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])		
 	ggplot(rpw2, aes(x=W_FROM)) +
 			geom_hline(yintercept=0.025, colour='grey50') +
 			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
@@ -14316,6 +14374,11 @@ RakaiFull.analyze.ffpairs.171122.intermingled<- function()
 			facet_grid(ID1+ID2~.)
 	plot.file	<- paste0(outfile.base,'_FF_ambiguous_windows_summary_TYPETO.pdf')
 	ggsave(file=plot.file, w=10, h=8)
+	#
+	#	2 clear FF cases
+	#
+	
+	
 	
 	# anonymize labels
 	dfa		<- unique(subset(rd, select=c(RID,SEX)))
@@ -14559,6 +14622,187 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats.sensitivity.table<- functi
 	
 }
 	
+RakaiFull.analyze.couples.todi.171122.networks.stats.sensitivity.table<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(igraph)
+	require(Phyloscanner.R.utilities)
+	
+	
+	indir				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'	
+	infiles				<- data.table(F=list.files(indir, pattern='.*_networksallpairs.rda'), CONF_CUT=0.6)
+	infiles				<- subset(infiles, !grepl('cl[0-9]+_prior',F))
+	tmp					<- infiles[, which(grepl('conf',F))] 
+	set(infiles, tmp, 'CONF_CUT', infiles[tmp, as.double(gsub('.*_conf([0-9]*)_.*','\\1',F))/100])		
+	infiles				<- rbind(infiles, data.table(F='todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda', CONF_CUT=c(0.5, 0.55, 0.65, 0.7, 0.75, 0.8)))
+	ans					<- infiles[, {
+				infile					<- file.path(indir,F)
+				infile.trmpairs.todi	<- gsub('networksallpairs.rda','withmetadata.rda', infile)
+				confidence.cut			<- CONF_CUT				
+				#	false discovery rate among couples: direction
+				cat('\nprocessing\n',infile.trmpairs.todi,'\n',confidence.cut) 										  
+				load(infile.trmpairs.todi)
+				rca	<- copy(rtp)				
+				#	reset classification			
+				rca[, SELECT:= NA_character_]
+				set(rca, rca[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED>confidence.cut)], 'SELECT', 'couple most likely not a pair')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & is.na(LINK_MF) & is.na(LINK_FM))], 'SELECT', 'couple ambiguous if pair or not pair')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_MF) & !is.na(LINK_FM) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_MF) & !is.na(LINK_FM) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_MF) & !is.na(LINK_FM) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_MF>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+				set(rca, rca[, which(!is.na(PTY_RUN) & POSTERIOR_SCORE_UNLINKED<=confidence.cut & !is.na(LINK_MF) & !is.na(LINK_FM) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_FM>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')				
+				#	select couples
+				rca	<- subset(rca, COUPLE!='no couple')				
+				#	prepare extending serodiscordant couples	
+				rca[, EXT_TYPE:=NA_character_]
+				set(rca, rca[, which(FEMALE_LASTNEGDATE>=MALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-mf')		
+				set(rca, rca[, which(MALE_LASTNEGDATE>=FEMALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-fm')	
+				#	add extra couples in who one has CD4<400 and the other has CD4>800
+				#	for male potential recipient - evaluate CD4 around time male first positive
+				tmp	<- rca[, which(is.na(EXT_TYPE) &
+										MALE_RECENTCD4>800 & abs(MALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2 &
+										FEMALE_RECENTCD4<400 & abs(FEMALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2)]
+				set(rca, tmp, 'EXT_TYPE', 'CD4disc-fm')
+				#	for female potential recipient - evaluate CD4 around time female first positive
+				tmp	<- rca[, which(is.na(EXT_TYPE) &
+										FEMALE_RECENTCD4>800 & abs(FEMALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2 &
+										MALE_RECENTCD4<400 & abs(MALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2)]
+				set(rca, tmp, 'EXT_TYPE', 'CD4disc-mf')
+				#	separate into EXT_TYPE and EXT_DIR
+				set(rca, NULL, 'EXT_DIR', rca[, gsub('^([a-zA-Z0-9]+)-([a-zA-Z]+)$','\\2',EXT_TYPE)])
+				set(rca, NULL, 'EXT_TYPE', rca[, gsub('^([a-zA-Z0-9]+)-([a-zA-Z]+)$','\\1',EXT_TYPE)])	
+				#	define PHSC_DIR
+				rca[, PHSC_DIR:= NA_character_]
+				set(rca, rca[, which(grepl('direction resolved',SELECT) & POSTERIOR_SCORE_MF>POSTERIOR_SCORE_FM)], 'PHSC_DIR', 'mf')
+				set(rca, rca[, which(grepl('direction resolved',SELECT) & POSTERIOR_SCORE_MF<POSTERIOR_SCORE_FM)], 'PHSC_DIR', 'fm')
+				#	subset to couples for who we have extended type
+				rca	<- subset(rca, !is.na(EXT_TYPE))
+				rca[, EXT_EVAL:= NA_character_]
+				tmp	<- rca[, which(!is.na(PHSC_DIR))]
+				set(rca, tmp, 'EXT_EVAL', rca[tmp, as.character(factor(PHSC_DIR==EXT_DIR, levels=c(TRUE,FALSE),labels=c('correct','incorrect')))])
+				tmp	<- rca[, which(is.na(EXT_EVAL))]
+				set(rca, tmp, 'EXT_EVAL', rca[tmp, SELECT])
+				rca	<- subset(rca, !grepl('ambiguous if pair|most likely not a pair',EXT_EVAL))
+				set(rca, NULL, 'EXT_EVAL', rca[, paste0('dir_',gsub('couple most likely a pair direction not resolved','unclear',EXT_EVAL))])
+				ans	<- dcast.data.table(rca[, list(DUMMY=1, N=length(MALE_RID)), by='EXT_EVAL'], DUMMY~EXT_EVAL, value.var='N')				
+				ans[, DUMMY:=NULL]
+				list(V=as.numeric(ans), STAT=colnames(ans))				
+			}, by=c('F','CONF_CUT')]
+	#	make pretty
+	df	<- dcast.data.table(ans, F+CONF_CUT~STAT, value.var='V')
+	for(x in c('dir_correct','dir_incorrect','dir_unclear'))
+		set(df, which(is.na(df[[x]])), x, 0)
+	#	remove double entries
+	df	<- subset(df, !grepl('RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf',F))
+	df[, MIN_READ:= 20]
+	set(df, df[, which(grepl('min',F))], 'MIN_READ', df[grepl('min',F),as.numeric(gsub('.*_min([0-9]+).*','\\1',F))])
+	df[, DIST_CLOSE:= NA_real_]
+	set(df, df[, which(grepl('_cl[0-9]+',F))], 'DIST_CLOSE', df[grepl('_cl[0-9]+',F),as.numeric(gsub('.*_cl([0-9]+).*','\\1',F))/1000])
+	set(df, df[, which(grepl('_p[0-9]+',F))], 'DIST_CLOSE', df[grepl('_p[0-9]+',F),as.numeric(gsub('.*_p([0-9]+).*','\\1',F))/1000])
+	df[, SANKHOFF_K:= 20]
+	set(df, df[, which(grepl('_s[0-9]+',F))], 'SANKHOFF_K', df[grepl('_s[0-9]+',F),as.numeric(gsub('.*_s([0-9]+).*','\\1',F))])
+	df[, DOWNSAMPLE:= 50]
+	set(df, df[, which(grepl('_dnws',F))], 'DOWNSAMPLE', df[grepl('_dnws',F),as.numeric(gsub('.*_dnws([0-9]+).*','\\1',F))])
+	df[, PRUNE_BL:=0L]
+	set(df, df[, which(grepl('pblTRUE',F))], 'PRUNE_BL', 1L)	
+	df[, MULTIFURC:= 10^(-5)]
+	set(df, df[, which(grepl('mft',F))], 'MULTIFURC', df[grepl('mft',F), as.numeric(gsub('.*_mft([^_]+)_.*','\\1',F))])	
+	df[, ROGUE_MIN:= 10]
+	set(df, df[, which(grepl('_rogthr',F))], 'ROGUE_MIN', df[grepl('_rogthr',F),as.numeric(gsub('.*_rogthr([0-9]+).*','\\1',F))])
+	df[, MULTI_TRANS:=1L]
+	set(df, df[, which(grepl('_amtrFALSE',F))], 'MULTI_TRANS', 0L)
+	df[, READC_MATTER_ZBL:=1L]
+	set(df, df[, which(grepl('rcmozbFALSE',F))], 'READC_MATTER_ZBL', 0L)
+	df[, PRUNE_BL:=0L]
+	set(df, df[, which(grepl('_pblTRUE',F))], 'PRUNE_BL', 1L)
+	df[, SANKHOFF_PRX:=0]
+	set(df, df[, which(grepl('_prxt25',F))], 'SANKHOFF_PRX', 0.025)
+	df[, CENTRAL:=0L]
+	set(df, df[, which(	DOWNSAMPLE==50 & SANKHOFF_K==20 & DIST_CLOSE==0.025 & MIN_READ==30 & CONF_CUT==0.6 & 
+									READC_MATTER_ZBL==1 & PRUNE_BL==0 & MULTI_TRANS==1 & ROGUE_MIN==10 & MULTIFURC==10^(-5) & SANKHOFF_PRX==0)], 'CENTRAL', 1L)	
+	#	save
+	outfile.base	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_sensitivity'
+	save(df, file=paste0(outfile.base, '_linkagedirection_couples.rda'))
+	#
+	#	make supp table
+	#
+	#	rogue
+	tmp	<- subset(df, 	ROGUE_MIN!=10 | CENTRAL==1)[order(ROGUE_MIN), ]
+	tmp[, ROW:= 0+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('rogue_min_',ROGUE_MIN)]
+	ans	<- copy(tmp)
+	#	minimum reads
+	tmp	<- subset(df, 	MIN_READ!=30 | CENTRAL==1)[order(MIN_READ), ]
+	tmp[, ROW:= 10+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('min_reads_',MIN_READ)]
+	ans	<- rbind(ans, tmp)	
+	#	collapse into multifurcations
+	tmp	<- subset(df, 	MULTIFURC!=10^(-5) | CENTRAL==1)[order(MULTIFURC), ]
+	tmp[, ROW:= 20+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('collapse_multifurc_',MULTIFURC)]
+	ans	<- rbind(ans, tmp)	
+	#	downsample
+	tmp	<- subset(df, 	DOWNSAMPLE!=50 | CENTRAL==1)[order(DOWNSAMPLE), ]
+	tmp[, ROW:= 30+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('downsample_',DOWNSAMPLE)]
+	ans	<- rbind(ans, tmp)
+	#	prune blacklists before anything else
+	tmp	<- subset(df, 	PRUNE_BL==1 | CENTRAL==1)[order(PRUNE_BL), ]
+	tmp[, ROW:= 40+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('prune_blacklist_before_anything_else_',PRUNE_BL)]
+	ans	<- rbind(ans, tmp)
+	#	Sankoff
+	tmp	<- subset(df, 	SANKHOFF_K!=20 | CENTRAL==1)[order(SANKHOFF_K), ]
+	tmp[, ROW:= 50+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('sankoff_k_',SANKHOFF_K)]
+	ans	<- rbind(ans, tmp)
+	#	Sankoff
+	tmp	<- subset(df, 	SANKHOFF_PRX!=0 | CENTRAL==1)[order(SANKHOFF_PRX), ]
+	tmp[, ROW:= 60+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('sankoff_prox_',SANKHOFF_PRX)]
+	ans	<- rbind(ans, tmp)
+	#	Sankoff allow multitrans
+	tmp	<- subset(df, 	MULTI_TRANS==0 | CENTRAL==1)[order(MULTI_TRANS), ]
+	tmp[, ROW:= 70+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('sankoff_allowmt_',MULTI_TRANS)]
+	ans	<- rbind(ans, tmp)
+	#	Sankoff read counts on zero branch length
+	tmp	<- subset(df, 	READC_MATTER_ZBL==0 | CENTRAL==1)[order(READC_MATTER_ZBL), ]
+	tmp[, ROW:= 80+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('sankoff_readcountsmatterzbl_',READC_MATTER_ZBL)]
+	ans	<- rbind(ans, tmp)
+	#	close
+	tmp	<- subset(df, 	DIST_CLOSE!=0.025 | CENTRAL==1)[order(DIST_CLOSE), ]
+	tmp[, ROW:= 90+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('select_close_',DIST_CLOSE)]
+	ans	<- rbind(ans, tmp)
+	#	confidence cut
+	tmp	<- subset(df, 	CONF_CUT!=0.6 | CENTRAL==1)[order(CONF_CUT), ]
+	tmp[, ROW:= 100+seq_len(nrow(tmp))]
+	tmp[, LABEL:=paste0('select_confcut_',CONF_CUT)]	
+	ans	<- rbind(ans, tmp)	
+	set(ans, NULL, c('MIN_READ','DIST_CLOSE','SANKHOFF_K','DOWNSAMPLE','PRUNE_BL','MULTIFURC','ROGUE_MIN','MULTI_TRANS','READC_MATTER_ZBL','SANKHOFF_PRX','CONF_CUT','F'), NULL)
+	ans[, dir_fpr:= paste0(round(100 * dir_incorrect/ (dir_correct + dir_incorrect), d=1),'%')]
+	
+	tmp	<- ans[, list(VAR=c('CL','CU'), V=round(100*as.numeric(binconf(dir_incorrect, dir_correct + dir_incorrect))[c(2,3)], d=1)), by='ROW']
+	tmp	<- dcast.data.table(tmp, ROW~VAR, value.var='V')
+	tmp[, dir_CI:=paste0('[',CL,'%-',CU,'%]')]
+	set(tmp, NULL, c('CL','CU'), NULL)
+	ans	<- merge(ans, tmp, by='ROW')
+	
+	ans	<- subset(ans, select=c(ROW, LABEL,CENTRAL, dir_correct, dir_unclear, dir_incorrect, dir_fpr, dir_CI))
+	write.csv(ans, file=paste0(outfile.base,'_linkagedirection_couples.csv'))
+	
+}
+
+
 RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 {	
 	require(data.table)
@@ -14618,9 +14862,12 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 					FEMALES_HSX_DIR_FM= length(unique(c(ID2[SXO=='MF' & grepl('direction resolved to 21',SELECT)])))
 			), by='IDCLU']
 	#	446 networks
-	rti[, list(		HSX_LINKED= sum(CLU_SIZE_HSX), 
-					FF_LINKED= sum(CLU_SIZE_FF), 
-					MM_LINKED= sum(CLU_SIZE_MM),
+	rti[, list(		HSX_LINKS= sum(TRMS_HSX),
+					MM_LINKS= sum(TRMS_MM),
+					FF_LINKS= sum(TRMS_FF),
+					HSX_LINKED_IND= sum(CLU_SIZE_HSX), 
+					FF_LINKED_IND= sum(CLU_SIZE_FF), 
+					MM_LINKED_IND= sum(CLU_SIZE_MM),
 					HSX_DIR= sum(CLU_SIZE_HSX_DIR),
 					M_TRANSMITTERS= sum(MALES_HSX_DIR_MF),
 					F_RECIPIENTS= sum(FEMALES_HSX_DIR_MF),
@@ -14630,7 +14877,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 					EVENTS_HSX_DIR= sum(TRMS_HSX_DIR)
 			)]
 	#	   HSX_LINKED FF_LINKED MM_LINKED HSX_DIR M_TRANSMITTERS F_RECIPIENTS F_TRANSMITTERS M_RECIPIENTS EVENTS_HSX_LINKED EVENTS_HSX_DIR
-	#	1:        945       290       280     555            158          173            113          120               582            293
+	#	1:        944       290       277     555            158          173            113          120               582            293
 	rti[, table(CLU_SIZE_HSX)]
 	rti[, table(CLU_SIZE)]		
 	
@@ -14726,7 +14973,10 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 							FEMALES_HSX_DIR_FM= length(unique(c(ID2[SXO=='MF' & grepl('direction resolved to 21',SELECT)])))
 					), by='IDCLU']
 	#	371 networks
-	rtj[, list(		HSX_LINKED= sum(CLU_SIZE_HSX), 
+	rtj[, list(		HSX_LINKS= sum(TRMS_HSX),
+					MM_LINKS= sum(TRMS_MM),
+					FF_LINKS= sum(TRMS_FF),					
+					HSX_LINKED= sum(CLU_SIZE_HSX), 
 							FF_LINKED= sum(CLU_SIZE_FF), 
 							MM_LINKED= sum(CLU_SIZE_MM),
 							HSX_DIR= sum(CLU_SIZE_HSX_DIR),
@@ -18792,6 +19042,8 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.couples<- function()
 					PHSC_PD_Q975=quantile(PATRISTIC_DISTANCE, p=0.975, na.rm=TRUE)	
 			), by=c('PTY_RUN','MALE_RID','FEMALE_RID')]
 	setnames(dfds, c('PHSC_PD_MEAN','PHSC_PD_Q5'), c('PHSC_PD_AVG','PHSC_PD_MEAN'))
+	
+	dfds[, table(cut(PHSC_PD_MEAN, breaks=c(-Inf, 0.025,0.05,Inf)))]
 	#	get proportion topological relationships
 	tmp				<- merge(subset(dfds, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), subset(rplkl, GROUP=='TYPE_BASIC'), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
 	tmp[, TYPE_TO:= 'disconnected']

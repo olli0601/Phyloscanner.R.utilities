@@ -1364,9 +1364,17 @@ project.RakaiAll.setup.phyloscanner.170704.stagethree.andtwo	<- function()
 	tmp2		<- subset(rtp, !(ID1%in%tmp | ID2%in%tmp))
 	rtp			<- subset(rtp, (ID1%in%tmp | ID2%in%tmp) & NEFF>=3)
 	rtp			<- rbind(rtp, tmp2)
+	
 	#	how many pairs remaining
 	tmp			<- unique(subset(rtp, select=c(ID1, ID2)))
 	stopifnot(nrow(subset(tmp, ID1>ID2))==0)
+	
+	#	get gender of these
+	infile.seqinfo	<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda'
+	load(infile.seqinfo)	
+	tmp				<- merge(tmp, unique(data.table(ID1=dc$RID, ID1_SEX=dc$SEX)), by='ID1', all.x=TRUE)
+	tmp				<- merge(tmp, unique(data.table(ID2=dc$RID, ID2_SEX=dc$SEX)), by='ID2', all.x=TRUE)
+	tmp[, SXO:= paste0(ID1_SEX,ID2_SEX)]
 	
 	#	get transmission chains with igraph
 	tmp			<- subset(rtp, select=c(ID1, ID2))			
@@ -5896,16 +5904,31 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		outfile	<- '~/duke/2018_MunichCluster/Data_180618/MunichCluster_180618.rda'
 		save(pty.runs, file=outfile)
 	}
+	# set up pty.runs file -- version 4
+	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	if(0)	
+	{
+		pty.runs		<- data.table(SAMPLE_ID=list.files('~/duke/2018_MunichCluster/Data_180815', pattern='bam$'))
+		set(pty.runs, NULL, 'SAMPLE_ID', pty.runs[, gsub('\\.bam','',SAMPLE_ID)])
+		tmp	<- pty.runs[, which(!grepl('Control',SAMPLE_ID))]
+		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,paste0('MC-',SAMPLE_ID)])
+		tmp	<- pty.runs[, which(grepl('Control',SAMPLE_ID))]
+		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,gsub('Control','CNTRL-',SAMPLE_ID)])
+		pty.runs[, UNIT_ID:= gsub('_INT|_PRRT','',RENAME_ID)]		
+		pty.runs[, PTY_RUN:=1]		
+		outfile	<- '~/duke/2018_MunichCluster/Data_180815/MunichCluster_180815.rda'
+		save(pty.runs, file=outfile)
+	}
 	#
 	#	INPUT ARGS
 	if(1)
 	{	
 		#HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
 		HOME				<<- '/work/or105/MUNICH'
-		in.dir				<- file.path(HOME,"MunichCluster_180605_in")
-		work.dir			<- file.path(HOME,"MunichCluster_180605_work")
-		out.dir				<- file.path(HOME,"MunichCluster_180605_out")		
-		load( file.path(in.dir, 'MunichCluster_180618.rda') )
+		in.dir				<- file.path(HOME,"MunichCluster_180815_in")
+		work.dir			<- file.path(HOME,"MunichCluster_180815_work")
+		out.dir				<- file.path(HOME,"MunichCluster_180815_out")		
+		load( file.path(in.dir, 'MunichCluster_180815.rda') )
 		print(pty.runs)
 		hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 		hpc.nproc			<- 1
@@ -5914,14 +5937,14 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		#pty.data.dir		<- '/work/or105/MUNICH/data'
-		pty.data.dir		<- '/work/or105/MUNICH/data_180607'
+		pty.data.dir		<- '/work/or105/MUNICH/data_180815'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		pty.select			<- 1		
 	}	
 	
 	#
 	# generate read alignments
-	if(0)
+	if(1)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
@@ -5994,7 +6017,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	# generate trees
-	if(1)
+	if(0)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
