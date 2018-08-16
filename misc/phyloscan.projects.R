@@ -5944,7 +5944,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(1)
+	if(0)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
@@ -6017,7 +6017,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	# generate trees
-	if(0)
+	if(1)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -6026,9 +6026,9 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	
 		#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')
 		raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
-		in.dir		<- file.path(HOME,"MunichCluster_180605_out")
+		in.dir		<- file.path(HOME,"MunichCluster_180815_out")
 		out.dir		<- in.dir
-		work.dir	<- file.path(HOME,"MunichCluster_180605_work")
+		work.dir	<- file.path(HOME,"MunichCluster_180815_work")
 		
 		infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
 		infiles[, FO:= gsub('fasta$','tree',FI)]
