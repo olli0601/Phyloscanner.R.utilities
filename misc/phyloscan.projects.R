@@ -5906,6 +5906,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	# set up pty.runs file -- version 4
 	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	# 39 individuals is too many
 	if(0)	
 	{
 		pty.runs		<- data.table(SAMPLE_ID=list.files('~/duke/2018_MunichCluster/Data_180815', pattern='bam$'))
@@ -5914,7 +5915,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,paste0('MC-',SAMPLE_ID)])
 		tmp	<- pty.runs[, which(grepl('Control',SAMPLE_ID))]
 		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,gsub('Control','CNTRL-',SAMPLE_ID)])
-		pty.runs[, UNIT_ID:= gsub('_INT|_PRRT','',RENAME_ID)]		
+		pty.runs[, UNIT_ID:= gsub('_INT|_PRRT','',RENAME_ID)]	
 		pty.runs[, PTY_RUN:=1]		
 		outfile	<- '~/duke/2018_MunichCluster/Data_180815/MunichCluster_180815.rda'
 		save(pty.runs, file=outfile)
@@ -5944,7 +5945,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(0)
+	if(1)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
@@ -5960,7 +5961,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 							alignments.root='REF_B_K03455', 
 							alignments.pairwise.to='REF_B_K03455',
 							window.automatic= '', 
-							merge.threshold=0, 
+							merge.threshold=1, 
 							min.read.count=1, 
 							quality.trim.ends=23, 
 							min.internal.quality=23, 
@@ -6059,7 +6060,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	#	combine all the data	
-	if(1)
+	if(0)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
