@@ -6017,7 +6017,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	# generate trees
-	if(1)
+	if(0)
 	{
 		#HOME		<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'	
 		hpc.load	<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
@@ -6059,13 +6059,15 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	#	combine all the data	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
+		indirs	<- '/work/or105/MUNICH/MunichCluster_180815_out'
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
-		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		allwin	<- data.table(W_FROM=seq(2050,5075,25))
+		#allwin	<- data.table(W_FROM=seq(800,9150,25))		
 		#allwin	<- data.table(W_FROM=seq(800,9050,125))
 		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
 		for(i in seq_along(indirs))
