@@ -5945,10 +5945,11 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(0)
+	if(1)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
+		ptyi		<- seq(2475,2525,25)
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
 					pty.args			<- list(	prog.pty=prog.pty, 
@@ -6060,7 +6061,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	#	combine all the data	
-	if(1)
+	if(0)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
