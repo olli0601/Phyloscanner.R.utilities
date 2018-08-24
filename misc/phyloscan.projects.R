@@ -5945,7 +5945,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(1)
+	if(0)
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
@@ -6061,7 +6061,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	#	combine all the data	
-	if(0)
+	if(1)
 	{
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
@@ -6100,6 +6100,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
 				zipit	<- 1
 			}	
+			zipit	<- 1
 			#
 			if(zipit)
 			{			
