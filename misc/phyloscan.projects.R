@@ -5950,7 +5950,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	{		
 		#ptyi		<- seq(800,9150,25)
 		ptyi		<- seq(2000,5500,25)
-		ptyi		<- seq(2475,2525,25)
+		#ptyi		<- seq(2475,2525,25)
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
 					pty.args			<- list(	prog.pty=prog.pty, 
