@@ -5936,8 +5936,8 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		#prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
 		#pty.data.dir		<- '~/duke/2018_MunichCluster/Data'
 		#prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-SSE3 -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-SSE3 -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
-		#prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
-		prog.pty			<- '/work/or105/libs/phyloscanner/phyloscanner_make_trees.py'
+		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
+		#prog.pty			<- '/work/or105/libs/phyloscanner/phyloscanner_make_trees.py'
 		#pty.data.dir		<- '/work/or105/MUNICH/data'
 		pty.data.dir		<- '/work/or105/MUNICH/data_180815'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
