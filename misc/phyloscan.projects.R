@@ -5924,7 +5924,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	#	INPUT ARGS
 	if(1)
 	{	
-		#HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
 		HOME				<<- '/work/or105/MUNICH'
 		in.dir				<- file.path(HOME,"MunichCluster_180815_in")
 		work.dir			<- file.path(HOME,"MunichCluster_180815_work")
@@ -5939,7 +5939,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		prog.pty			<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
 		#prog.pty			<- '/work/or105/libs/phyloscanner/phyloscanner_make_trees.py'
 		#pty.data.dir		<- '/work/or105/MUNICH/data'
-		pty.data.dir		<- '/work/or105/MUNICH/data_180815'
+		pty.data.dir		<- '/work/or105/MUNICH/Data_180815'
 		prog.raxml			<- ifelse(hpc.nproc==1, '"raxmlHPC-AVX -m GTRCAT --HKY85 -p 42"', paste('"raxmlHPC-PTHREADS-AVX -m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42"',sep=''))
 		pty.select			<- 1		
 	}	
@@ -6063,7 +6063,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	#
 	#	combine all the data	
 	if(0)
-	{
+	{		
 		indirs 	<- '/Users/Oliver/duke/tmp/ptyr143_trees'
 		indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/BEEHIVE_67_180302_out'
 		indirs	<- '/work/or105/MUNICH/MunichCluster_180815_out'
@@ -6153,9 +6153,11 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	if(1)	
 	{	
 		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
-		in.dir				<- '/work/or105/MUNICH/MunichCluster_180815_out'
+		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
+		HOME				<<- '/work/or105/MUNICH'
+		in.dir				<- file.path(HOME,"MunichCluster_180815_out")
 		out.dir				<- in.dir
-		work.dir			<- '/work/or105/MUNICH/MunichCluster_180815_work' 			
+		work.dir			<- file.path(HOME,"MunichCluster_180815_work") 			
 		dir.create(out.dir, showWarnings=FALSE)
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft=NA, 
@@ -6184,7 +6186,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 				win=c(2000,5750,25,250), 				
 				keep.overhangs=FALSE,
 				use.blacklisters=c('ParsimonyBasedBlacklister'),	#,'DownsampleReads'
-				tip.regex='^(.*)-[0-9]-[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				tip.regex='^(.*)_read_([0-9]+)_count_([0-9]+)$',
 				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
