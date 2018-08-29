@@ -5946,11 +5946,10 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	
 	#
 	# generate read alignments
-	if(1)
+	if(0)
 	{		
 		#ptyi		<- seq(800,9150,25)
-		#ptyi		<- seq(2000,5500,25)
-		ptyi		<- seq(3350,3400,25)
+		ptyi		<- seq(2000,5500,25)		
 		#ptyi		<- seq(2475,2525,25)
 		pty.c		<- lapply(seq_along(ptyi), function(i)
 				{
@@ -6151,11 +6150,12 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	}
 	#
 	#	Input args 2
-	if(0)	
+	if(1)	
 	{	
-		in.dir				<- file.path(HOME,"BEEHIVE_67_180302_out")
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		in.dir				<- '/work/or105/MUNICH/MunichCluster_180815_out'
 		out.dir				<- in.dir
-		work.dir			<- file.path(HOME,"BEEHIVE_67_180302_work")						
+		work.dir			<- '/work/or105/MUNICH/MunichCluster_180815_work' 			
 		dir.create(out.dir, showWarnings=FALSE)
 		pty.args			<- list(	prog.pty=prog.pty, 
 				prog.mafft=NA, 
@@ -6163,13 +6163,13 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 				data.dir=NA, 
 				work.dir=work.dir, 
 				out.dir=out.dir, 
-				alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_AD_B_CPX_v2.fasta"),
-				alignments.root='REF_CPX_AF460972', 
-				alignments.pairwise.to='REF_B_K03455',
+				alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_B.fasta"),
+				alignments.root='REF_B_K03455', 
+				alignments.pairwise.to='REF_B_K03455',				
 				bl.normalising.reference.file=system.file(package="Phyloscanner.R.utilities", "data", "hiv.hxb2.norm.constants.rda"),
 				bl.normalising.reference.var='MEDIAN_PWD',														
 				window.automatic= '', 
-				merge.threshold=0, 
+				merge.threshold=1, 
 				min.read.count=1, 
 				quality.trim.ends=23, 
 				min.internal.quality=23, 
@@ -6181,14 +6181,14 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 				all.bootstrap.trees=TRUE,
 				strip.max.len=350, 
 				min.ureads.individual=NA, 
-				win=c(800,9400,25,250), 				
+				win=c(2000,5750,25,250), 				
 				keep.overhangs=FALSE,
-				use.blacklisters=c('ParsimonyBasedBlacklister','DownsampleReads'),
-				tip.regex='^(.*)-[0-9]+_read_([0-9]+)_count_([0-9]+)$',
+				use.blacklisters=c('ParsimonyBasedBlacklister'),	#,'DownsampleReads'
+				tip.regex='^(.*)-[0-9]-[0-9]+_read_([0-9]+)_count_([0-9]+)$',
 				roguesubtree.kParam=20,
 				roguesubtree.prop.threshold=0,
 				roguesubtree.read.threshold=20,
-				dwns.maxReadsPerPatient=50,	
+				#dwns.maxReadsPerPatient=50,	
 				multifurcation.threshold=1e-5,
 				split.rule='s',
 				split.kParam=20,
@@ -6229,17 +6229,13 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 				}, by='PTY_RUN']		
 		pty.c[1,cat(CMD)]		
 		#stop()		
-		invisible(pty.c[,	{					
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=168, hpc.q="pqeelab", hpc.mem="48gb",  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-							#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeph", hpc.mem="3.6gb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="96gb",  hpc.nproc=1, hpc.load=hpc.load)
-							#cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=23, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=1, hpc.load=hpc.load)
+		invisible(pty.c[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
 							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
 							cmd			<- paste(cmd,CMD,sep='\n')
 							cat(cmd)					
-							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-							cmd.hpccaller(pty.args[['work.dir']], outfile, cmd)
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')														
+							cmd.hpccaller(work.dir, outfile, cmd)														
 						}, by='PTY_RUN'])		
 		quit('no')		
 	}
