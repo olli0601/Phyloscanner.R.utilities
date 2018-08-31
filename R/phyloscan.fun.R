@@ -1012,7 +1012,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 																verbose=verbose
 																)
 		cmd				<- paste(cmd, tmp, sep='\n')	
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
 	}		
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
