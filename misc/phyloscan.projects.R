@@ -6248,7 +6248,8 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 	#	process windows one by one
 	if(1)	
 	{	
-		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 471; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		#hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 471; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 171; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
 		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
 		HOME				<<- '/work/or105/MUNICH'
 		in.dir				<- file.path(HOME,"MunichCluster_180815_out")
