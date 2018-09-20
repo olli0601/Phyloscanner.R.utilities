@@ -6149,8 +6149,8 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		}					
 	}
 	#
-	#	Input args 2
-	if(1)	
+	#	process all trees in one go
+	if(0)	
 	{	
 		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 471; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
 		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
@@ -6224,12 +6224,118 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 					#FILE_BAM<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#FILE_BAM<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_160915_couples_w270/ptyr1_bam.txt'
 					#cat('\n',FILE_BAM)
+					pty.args$process.window<- 2500
 					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
 					print(prefix.infiles)
-					cmd				<- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
+					cmd				<- phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
+					cat(cmd)
+					stop()
 					list(CMD=cmd) 
 				}, by='PTY_RUN']		
 		pty.c[1,cat(CMD)]		
+		#stop()		
+		invisible(pty.c[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')														
+							cmd.hpccaller(work.dir, outfile, cmd)														
+						}, by='PTY_RUN'])		
+		quit('no')		
+	}
+	#
+	#	process windows one by one
+	if(1)	
+	{	
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 471; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
+		HOME				<<- '/work/or105/MUNICH'
+		in.dir				<- file.path(HOME,"MunichCluster_180815_out")
+		out.dir				<- in.dir
+		work.dir			<- file.path(HOME,"MunichCluster_180815_work") 			
+		dir.create(out.dir, showWarnings=FALSE)
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft=NA, 
+				prog.raxml=NA, 
+				data.dir=NA, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_B.fasta"),
+				alignments.root='REF_B_K03455', 
+				alignments.pairwise.to='REF_B_K03455',				
+				bl.normalising.reference.file=system.file(package="Phyloscanner.R.utilities", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=1, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(2000,5750,25,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister'), #,'DownsampleReads'),
+				tip.regex='^(.*)_[A-Z]+_read_([0-9]+)_count_([0-9]+)$',
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				#dwns.maxReadsPerPatient=1000,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,
+				pw.trmw.min.reads=30,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.025,
+				pw.trmw.distant.brl=0.05,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
+				pw.prior.calibrated.prob=0.6,
+				mem.save=0,
+				verbose=TRUE,				
+				select=NA 
+		)	
+		save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
+		
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]				
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+		setkey(pty.c, PTY_RUN)
+		pty.c[, DUMMY:=1]
+		tmp		<- data.table(DUMMY=1, W_FROM=seq(2050,5075,25))
+		pty.c	<- merge(pty.c, tmp, by='DUMMY')
+		pty.c	<- pty.c[, { 
+					pty.args$process.window	<- W_FROM
+					prefix.infiles			<- gsub('patients.txt','',FILE_BAM)					
+					cmd						<- phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
+					list(CMD=cmd) 
+				}, by=c('PTY_RUN','W_FROM')]		
+		pty.c[1,cat(CMD)]	
+		
+		#	make array job
+		pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+		tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+		tmp		<- tmp[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load, hpc.array=pty.c[, max(CASE_ID)])
+		cmd		<- paste(cmd,tmp,sep='\n')
+		outfile	<- paste("mct",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+		cmd.hpccaller(work.dir, outfile, cmd)
+		
 		#stop()		
 		invisible(pty.c[,	{
 							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
@@ -7313,6 +7419,93 @@ project.readlength.count.all<- function()
 				theme(legend.position='bottom') + facet_wrap(~RUN,ncol=3, scales='free')
 		ggsave(file=gsub('\\.rda','_byRun_TotalCounts\\.pdf',file), w=15,h=15)	
 	}
+}
+
+project.transphylo<- function()
+{
+	library(TransPhylo)
+	library(ape)
+	library(coda)
+	
+	set.seed(0)
+	wdir	<- '~/Box Sync/OR_Work/2018/2018_transphylo'
+	neg		<- 100/365
+	off.r	<- 5			#effective R
+	w.shape	<- 10			#generation time distribution parameters
+	w.scale	<- 0.1
+	pi		<- 0.25			#sampling
+	dateStartOutbreak	<- 2005
+	dateT	<- 2008
+	
+	simu 	<- simulateOutbreak(	neg=neg, pi=pi, off.r=off.r, w.shape=w.shape,
+									w.scale=w.scale, dateStartOutbreak=dateStartOutbreak, dateT=dateT)
+	plotCTree(simu)	
+	ttree	<- extractTTree(simu)
+	plotTTree(ttree,w.shape,w.scale)	
+	ptree	<- extractPTree(simu)
+	p		<- phyloFromPTree(ptree)
+	plot(p)
+	axisPhylo()	
+	write.tree(p, file.path(wdir,'tutorial_tree.nwk'), append = F)
+	
+	tmp		<- max(simu$ctree[,1])
+	ptree	<- ptreeFromPhylo(read.tree(file.path(wdir,'tutorial_tree.nwk')),dateLastSample=tmp)
+	mcmc.it	<- 1e3
+	mcmc.ti	<- system.time(
+		{
+			mcmc	<- inferTTree(ptree, mcmcIterations=mcmc.it, w.shape=w.shape, w.scale=w.scale, dateT=dateT)			
+		})
+	#	28 secs
+	
+	mcmc.th	<- sapply(mcmc, function(x) c('POSTERIOR'=x$pTTree+x$pPTree, 'SAMPLING_PROB'=x$pi, 'WH_COALRATE'=x$neg, 'R'=x$off.r)) 
+	mcmc.th	<- t(mcmc.th)
+	mcmc.th	<- mcmc(mcmc.th)
+	pdf(file.path(wdir,'tutorial_mcmcoutput_1e3.pdf'))
+	plot(mcmc.th)	
+	dev.off()
+	effectiveSize(mcmc.th)
+	#	POSTERIOR SAMPLING_PROB   WH_COALRATE             R 
+    #	29.400148      8.291133      5.489258     13.175391 
+	
+
+	set.seed(32)
+	neg		<- 100/365
+	off.r	<- 1.7			#effective R
+	w.shape	<- 10			#generation time distribution parameters
+	w.scale	<- 0.1
+	pi		<- 0.6			#sampling
+	dateStartOutbreak	<- 2005
+	dateT	<- 2010
+	
+	simu 	<- simulateOutbreak(	neg=neg, pi=pi, off.r=off.r, w.shape=w.shape,
+									w.scale=w.scale, dateStartOutbreak=dateStartOutbreak, dateT=dateT)
+	plotCTree(simu)
+	save(simu, file=file.path(wdir,'mock1_simu.rda'))
+	#	13 sampled individuals
+	
+	ptree	<- extractPTree(simu)
+	p		<- phyloFromPTree(ptree)
+	write.tree(p, file.path(wdir,'mock1_tree.nwk'), append = F)
+	tmp		<- max(simu$ctree[,1])
+	ptree	<- ptreeFromPhylo(read.tree(file.path(wdir,'mock1_tree.nwk')),dateLastSample=tmp)
+	
+	mcmc.it	<- 5e3
+	mcmc.ti	<- system.time(
+			{
+				mcmc	<- inferTTree(ptree, mcmcIterations=mcmc.it, w.shape=w.shape, w.scale=w.scale, dateT=dateT)			
+			})
+	save(mcmc, file=file.path(wdir,'mock1_mcmc.rda'))
+	# 361 sec
+	mcmc.th	<- sapply(mcmc, function(x) c('POSTERIOR'=x$pTTree+x$pPTree, 'SAMPLING_PROB'=x$pi, 'WH_COALRATE'=x$neg, 'R'=x$off.r)) 
+	mcmc.th	<- t(mcmc.th)
+	mcmc.th	<- mcmc(mcmc.th)
+	pdf(file.path(wdir,'mock1_mcmcoutput_5e3.pdf'))
+	plot(mcmc.th)	
+	dev.off()
+	effectiveSize(mcmc.th)
+	#	POSTERIOR SAMPLING_PROB   WH_COALRATE             R 
+	#	33.16859      40.02117      64.51638     150.14108 
+
 }
 
 project.TillHIV2.power<- function()

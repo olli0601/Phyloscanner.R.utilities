@@ -14802,7 +14802,53 @@ RakaiFull.analyze.couples.todi.171122.networks.stats.sensitivity.table<- functio
 	
 }
 
-
+RakaiFull.analyze.trmpairs.todi.171122.ff.distances<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(igraph)
+	require(Phyloscanner.R.utilities)
+	
+	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
+	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
+	
+	confidence.cut		<- 0.6
+	load(infile)
+	
+	rtnn[, SXO:= paste0(ID1_SEX,ID2_SEX)]
+	rtnn[, SELECT:= NA_character_]
+	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')
+	
+	dff	<- subset(rtnn, SXO=='FF' & grepl('likely a pair', SELECT), c(ID1, ID2, PTY_RUN, POSTERIOR_SCORE_LINKED))
+	ggplot(dff, aes(x=POSTERIOR_SCORE_LINKED)) + 
+			geom_histogram(binwidth=0.025) +
+			scale_x_continuous(lim=c(0.6,1))
+	ggsave(file='~/Box Sync/OR_Work/2018/2018_transphylo/ffpairs_linkage_scores.pdf', w=6, h=6)
+	dff	<- merge(dff, rpw, by=c('ID1','ID2','PTY_RUN'))
+	dff	<- subset(dff, GROUP=='TYPE_RAW')
+	ggplot(dff, aes(x=PATRISTIC_DISTANCE)) + 
+			geom_histogram(binwidth=0.005) +
+			scale_x_continuous(lim=c(0,0.1))
+	ggsave(file='~/Box Sync/OR_Work/2018/2018_transphylo/ffpairs_patristicdistances_inwindows.pdf', w=6, h=6)
+	
+	tmp	<- dff[, list(PATRISTIC_DISTANCE=mean(PATRISTIC_DISTANCE)), by=c('ID1','ID2','PTY_RUN')]
+	ggplot(tmp, aes(x=PATRISTIC_DISTANCE)) + 
+			geom_histogram(binwidth=0.005) +
+			scale_x_continuous(lim=c(0,0.1))
+	ggsave(file='~/Box Sync/OR_Work/2018/2018_transphylo/ffpairs_patristicdistances_meanacrosswindows.pdf', w=6, h=6)
+	
+}
+	
 RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 {	
 	require(data.table)
@@ -18716,6 +18762,7 @@ RakaiFull.analyze.couples.todi.170522.distance.histogram<- function()
 	
 }
 
+
 RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1<- function()
 {	
 	require(data.table)
@@ -18851,7 +18898,7 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1<- function()
 	tmp	<- tmp[, list(KEFF=sum(KEFF), NEFF=NEFF[1], PHSC_PD_MEAN=PHSC_PD_MEAN[1]), by=c('MALE_RID','FEMALE_RID','TYPE_TO')]	
 	tmp	<- merge(tmp, tmp[, list(TYPE_TO=TYPE_TO, PKEFF=KEFF/NEFF), by=c('MALE_RID','FEMALE_RID')], by=c('MALE_RID','FEMALE_RID','TYPE_TO'))
 	dfdp<- rbind(subset(dfdt, !is.na(TYPE_TO)), tmp)
-
+	
 	#
 	#	make density histogram		
 	#	
@@ -18901,7 +18948,7 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1<- function()
 			theme_bw() + theme(legend.position='bottom') +			
 			labs(x='\nmedian subtree distance (subst/site)', y='', fill='')
 	ggsave(file=paste0(outfile.base,'distances_consPatristic_filled_part2_b.pdf'), w=5, h=4)
-		
+	
 	#	dip test
 	#dfdp2	<- subset(dfdt, TYPE_TO=='disconnected' & PKEFF<0.33, c(MALE_RID, FEMALE_RID))	
 	#dfdp2	<- merge(dmin, dfdp2, by=c('MALE_RID','FEMALE_RID'))
@@ -19009,6 +19056,204 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1<- function()
 }
 
 
+RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1.mostfrequent<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda'	
+	outfile.base	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_"	
+	load(infile)
+	
+	#	add RID and SEX
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))
+	
+	#
+	#	merge NEFF and Distances
+	#
+	dmin	<- merge(dmin, rn, by=c('ID1','ID2','PTY_RUN'))
+	#	add GENDER
+	tmp		<- unique(subset(rd, select=c(RID, SEX)))
+	setnames(tmp, c('RID','SEX'), c('ID1','ID1_SEX'))
+	dmin	<- merge(dmin, tmp, by='ID1')
+	setnames(tmp, c('ID1','ID1_SEX'), c('ID2','ID2_SEX'))
+	dmin	<- merge(dmin, tmp, by='ID2')
+	#	re-arrange so that ID1<ID2 
+	tmp			<- subset(dmin, ID2<ID1)
+	setnames(tmp, c('ID1','ID2','ID1_SEX','ID2_SEX'), c('ID2','ID1','ID2_SEX','ID1_SEX'))	
+	dmin		<- rbind(subset(dmin, ID1<ID2), tmp)
+	#	keep only HSX pairings
+	#dmin	<- subset(dmin, ID1_SEX!=ID2_SEX)
+	#	keep only runs with NEFF>=3	
+	#dmin	<- subset(dmin, NEFF>3)
+	#	keep average distance per pair in run with largest neff
+	setkey(dmin, ID1, ID2, PTY_RUN)
+	dmin	<- dmin[, list(	PHSC_PD_MEAN=PATRISTIC_DISTANCE_MEDIAN[which.max(NEFF)[1]],
+							PTY_RUN=PTY_RUN[which.max(NEFF)[1]], 
+							NEFF=max(NEFF)), by=c('ID1','ID2','ID1_SEX','ID2_SEX')]
+	set(dmin, dmin[, which(PHSC_PD_MEAN<0.0006)],'PHSC_PD_MEAN',0.0006)
+	
+	#
+	#	get proportion topological relationships for those pairings that we looked at
+	#
+	load('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_allwindows.rda')
+	tmp				<- subset(rplkl, GROUP=='TYPE_BASIC')	
+	tmp[, TYPE_TO:= 'disconnected']
+	set(tmp, tmp[,which(grepl('chain', TYPE))], 'TYPE_TO', 'ancestral')
+	set(tmp, tmp[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(tmp, tmp[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
+	set(tmp, NULL, 'TYPE_TO', tmp[, factor(TYPE_TO, levels=c('ancestral','intermingled','sibling','disconnected'))])
+	dfdt			<- tmp[, list(KEFF=sum(KEFF), NEFF=NEFF[1], PKEFF=sum(KEFF)/NEFF[1]), by=c('ID1','ID2','ID1_SEX','ID2_SEX','PTY_RUN','TYPE_TO')]
+	#	we only want the most frequent topology
+	dfdt			<- dfdt[, list(TYPE_TO_MAX=TYPE_TO[which.max(PKEFF)]), by=c('ID1','ID2','PTY_RUN')]
+	set(dfdt, NULL, 'PTY_RUN', NULL)
+	tmp				<- subset(dfdt, ID2<ID1)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+	dfdt			<- rbind(subset(dfdt, ID1<ID2),tmp)
+	dfdt			<- merge(dmin, dfdt, by=c('ID1','ID2'), all.x=TRUE)
+	
+	#
+	#	get all missing topologies from stage 1 re-analysis
+	#
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withtopology.rda'	
+	load(infile)	#loads ans
+	set(ans, ans[, which(grepl('chain',TYPE_BASIC))], 'TYPE_BASIC', 'ancestral')	
+	tmp				<- subset(ans, ID2<ID1)
+	setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+	ans			<- rbind(subset(ans, ID1<ID2),tmp)
+	tmp			<- unique(subset(dfdt, is.na(TYPE_TO_MAX), select=c(ID1,ID2)))
+	ans			<- merge(ans, tmp, by=c('ID1','ID2'))
+	tmp			<- ans[, list(PTY_RUN=PTY_RUN[which.max(N)[1]]), by=c('ID1','ID2')]
+	ans			<- merge(ans, tmp, by=c('ID1','ID2', 'PTY_RUN'))
+	ans			<- ans[, list(TYPE_TO_MAX2=TYPE_BASIC[which.max(K)[1]]), by=c('ID1','ID2')]
+	dfdt		<- merge(dfdt, ans, by=c('ID1','ID2'), all.x=TRUE)
+	tmp			<- dfdt[, which(is.na(TYPE_TO_MAX))]
+	set(dfdt, tmp, 'TYPE_TO_MAX', dfdt[tmp, TYPE_TO_MAX2])
+	dfdt[, TYPE_TO_MAX2:=NULL]
+	#
+	#	just ignore the remaining pairs that are topologically unresolved 
+	#
+	dfdt		<- subset(dfdt, !is.na(TYPE_TO_MAX) )	
+	#
+	#	make density histogram		
+	#	
+	dfdp	<- subset(dfdt, !is.na(PHSC_PD_MEAN))	
+	dfdp[, PHSC_PD_MEAN_LOG:= log(PHSC_PD_MEAN)]	
+	#dfdp		<- copy(dfdp.save)
+	dfdp.save	<- copy(dfdp)
+	tmp		<- c(rev(seq(log(0.025), log(0.0005), -0.2)), seq(log(0.025)+0.2, log(1.5), 0.2))
+	dfdp[, PHSC_PD_MEAN_LOG_FROM:= as.numeric(as.character(cut(	PHSC_PD_MEAN_LOG, 
+									breaks=tmp,
+									labels= round(tmp[-length(tmp)], d=4)
+							)))]
+	dfdp[, PHSC_PD_MEAN_LOG_TO:= PHSC_PD_MEAN_LOG_FROM+0.2]		
+	
+	nrow(subset(dfdp, PHSC_PD_MEAN<0.025))	# 1155	
+	subset(dfdp, PHSC_PD_MEAN<0.025)[, table(TYPE_TO_MAX)]
+	# ancestral intermingled      sibling disconnected       
+	#		694           15          103          343 
+	
+	nrow(subset(dfdp, PHSC_PD_MEAN<0.035))
+	subset(dfdp, PHSC_PD_MEAN<0.035)[, table(TYPE_TO_MAX)]
+	#	   ancestral     intermingled    sibling    disconnected        other         <NA> 
+    #      749           15              288        637            1            0 
+
+	subset(dfdp, TYPE_TO_MAX=='ancestral')[, table(PHSC_PD_MEAN>0.05)]
+	#	FALSE  TRUE 
+  	#	766    48
+  
+	dfdp2	<- dfdp[, list(Y=length(ID1)), by=c('PHSC_PD_MEAN_LOG_FROM','PHSC_PD_MEAN_LOG_TO','TYPE_TO_MAX')]
+	set(dfdp2, NULL, 'YSTD', dfdp2[, Y])
+	dfdp2	<- dfdp2[order(PHSC_PD_MEAN_LOG_FROM, TYPE_TO_MAX),]
+	dfdp2	<- dfdp2[, list(TYPE_TO_MAX=TYPE_TO_MAX, Y=Y, YSTD=YSTD, YSTD_FROM=c(0,cumsum(YSTD)[-length(TYPE_TO_MAX)]), YSTD_TO=cumsum(YSTD) ), by=c('PHSC_PD_MEAN_LOG_FROM','PHSC_PD_MEAN_LOG_TO')]
+	
+	cols.typet		<- c("ancestral"=brewer.pal(11, 'PuOr')[2], "intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4], 'not evaluated'='grey40')
+	#cols.typet		<- c("ancestral"=brewer.pal(11, 'PuOr')[2], "intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4], 'not evaluated'=rev(brewer.pal(11, 'RdGy'))[4])
+	tmp		<- copy(dfdp2)
+	set(tmp, tmp[, which(YSTD_FROM>100)], 'YSTD_FROM', 100)
+	set(tmp, tmp[, which(YSTD_TO>100)], 'YSTD_TO', 100)
+	ggplot(tmp) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.025), ymin=-Inf, ymax=Inf, fill="LightBlue", alpha=0.5) +
+			geom_rect(aes(xmin=PHSC_PD_MEAN_LOG_FROM, xmax=PHSC_PD_MEAN_LOG_TO, ymin=YSTD_FROM, ymax=YSTD_TO, fill=TYPE_TO_MAX), colour='white', lwd=0.1) + 
+			scale_fill_manual(values=cols.typet) + 
+			#geom_line(data=densm, aes(x=X, y=Y), colour='black') +
+			scale_y_continuous(expand=c(0,0)) +
+			coord_cartesian(ylim=c(0,100)) +
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nmedian subtree distance (subst/site)', y='', fill='')
+	ggsave(file=paste0(outfile.base,'distances_consPatristic_filled_topmostfreq_b.pdf'), w=5, h=4)
+	ggplot(dfdp2) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.025), ymin=70, ymax=900e3, fill="LightBlue", alpha=0.5) +
+			geom_rect(aes(xmin=PHSC_PD_MEAN_LOG_FROM, xmax=PHSC_PD_MEAN_LOG_TO, ymin=YSTD_FROM, ymax=YSTD_TO, fill=TYPE_TO_MAX), colour='white', lwd=0.1) + 
+			scale_fill_manual(values=cols.typet) + 			
+			scale_y_log10(expand=c(0,0), breaks=c(70, 100, 200, 500, 1e3, 1e4, 1e5, 5e5)) +
+			coord_cartesian(ylim=c(100,900e3)) +
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nmedian subtree distance (subst/site)', y='', fill='')
+	ggsave(file=paste0(outfile.base,'distances_consPatristic_filled_topmostfreq_part2_b.pdf'), w=5, h=4)
+}
+
+
 RakaiFull.analyze.couples.todi.171122.distance.histogram.couples<- function()
 {	
 	require(data.table)
@@ -19083,7 +19328,9 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.couples<- function()
 	#	make density histogram
 	tmp		<- c(rev(seq(log(0.025), log(0.0005), -0.2)), seq(log(0.025)+0.2, log(0.5), 0.2))
 	dfdp	<- merge(dfdt, dfds, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
-	dfdp[, PHSC_PD_MEAN_LOG:= log(PHSC_PD_MEAN)]
+	dfdp[, PHSC_PD_MEAN_LOG:= log(PHSC_PD_MEAN)]	
+	#nrow(subset(dfdp, PHSC_PD_MEAN<0.025 & TYPE_TO=='ancestral' & PKEFF>0.6))
+	#nrow(subset(dfdp, PHSC_PD_MEAN<0.025 & TYPE_TO=='ancestral'))
 	dfdp[, PHSC_PD_MEAN_LOG_FROM:= as.numeric(as.character(cut(	PHSC_PD_MEAN_LOG, 
 										breaks=tmp,
 										labels= round(tmp[-length(tmp)], d=4)
@@ -19123,6 +19370,133 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.couples<- function()
 			#geom_line(data=dens2, aes(x=X, y=Y*0.432), lwd=1.25, colour=rev(brewer.pal(11, 'RdGy'))[4]) +			
 			#scale_colour_brewer(palette='Set1') +			
 			 
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nmedian subtree distance (subst/site)', y='', colour='')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted.pdf'), w=6, h=3)
+	
+}
+
+RakaiFull.analyze.couples.todi.171122.distance.histogram.couples.mostfrequent<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'		
+	outfile.base	<- gsub('withmetadata.rda','',infile)		
+	load(infile)
+	
+	subset(rca, !grepl('insufficient',SELECT))[, length(unique(MALE_RID))]
+	#	314 males
+	subset(rca, !grepl('insufficient',SELECT))[, length(unique(FEMALE_RID))]
+	#	324 females
+	subset(rca, !grepl('insufficient',SELECT))[, length(unique(paste0(MALE_RID,':',FEMALE_RID)))]
+	#	331
+	
+	tmp				<- subset(rplkl, GROUP=='TYPE_CHAIN_TODI' & TYPE=='chain' & NEFF>3, c(MALE_RID, FEMALE_RID, PTY_RUN))
+	rpw				<- merge(tmp, rpw, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	dfd				<- subset(rpw, GROUP=='TYPE_BASIC')
+	#	get subtree distances
+	dfds			<- dfd[, list(	PHSC_PD_MEAN=mean(PATRISTIC_DISTANCE, na.rm=TRUE),
+					PHSC_PD_Q025=quantile(PATRISTIC_DISTANCE, p=0.025, na.rm=TRUE),
+					PHSC_PD_Q25=quantile(PATRISTIC_DISTANCE, p=0.25, na.rm=TRUE),
+					PHSC_PD_Q5=quantile(PATRISTIC_DISTANCE, p=0.5, na.rm=TRUE),
+					PHSC_PD_Q75=quantile(PATRISTIC_DISTANCE, p=0.75, na.rm=TRUE),
+					PHSC_PD_Q975=quantile(PATRISTIC_DISTANCE, p=0.975, na.rm=TRUE)	
+			), by=c('PTY_RUN','MALE_RID','FEMALE_RID')]
+	setnames(dfds, c('PHSC_PD_MEAN','PHSC_PD_Q5'), c('PHSC_PD_AVG','PHSC_PD_MEAN'))
+	
+	dfds[, table(cut(PHSC_PD_MEAN, breaks=c(-Inf, 0.025,0.05,Inf)))]
+	#	get proportion topological relationships
+	tmp				<- merge(subset(dfds, select=c(MALE_RID,FEMALE_RID,PTY_RUN)), subset(rplkl, GROUP=='TYPE_BASIC'), by=c('MALE_RID','FEMALE_RID','PTY_RUN'))	
+	tmp[, TYPE_TO:= 'disconnected']
+	set(tmp, tmp[,which(grepl('chain', TYPE))], 'TYPE_TO', 'ancestral')
+	set(tmp, tmp[,which(grepl('intermingled', TYPE))], 'TYPE_TO', 'intermingled')
+	set(tmp, tmp[,which(grepl('sibling', TYPE))], 'TYPE_TO', 'sibling')	
+	set(tmp, NULL, 'TYPE_TO', tmp[, factor(TYPE_TO, levels=c('ancestral','intermingled','sibling','disconnected'))])
+	dfdt			<- tmp[, list(KEFF=sum(KEFF), NEFF=NEFF[1], PKEFF=sum(KEFF)/NEFF[1]), by=c('MALE_RID','FEMALE_RID','PTY_RUN','TYPE_TO')]
+	
+	#
+	#	make bimodal fit
+	require(mclust)
+	dfds2	<- subset(dfds, PHSC_PD_MEAN>1e-3 & PHSC_PD_MEAN<1)
+	m1		<- densityMclust( log(dfds2$PHSC_PD_MEAN), G=2)
+	m2		<- densityMclust( log(dfds2$PHSC_PD_MEAN), G=3)	#best fit really is 2D
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_pdf.pdf'), w=5, h=5)
+	plot(m1, what='density', data= log(dfds2$PHSC_PD_MEAN), breaks=50)
+	dev.off()
+	pdf(file=paste0(outfile.base,'_distances_consPatristic_lognormalmixture_cdf.pdf'), w=5, h=5)
+	densityMclust.diagnostic(m1, type='cdf')	
+	dev.off()
+	#	mean and variance of first component	
+	tmp		<- log(seq(1e-5,1,0.0001))
+	th1		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(1,3,5)])
+	dens1	<- data.table(X=tmp, Y=dnorm(tmp, mean=th1[1], sd=sqrt(th1[2])))
+	th2		<- unname(c( summary(m1, parameters=TRUE)$mean, summary(m1, parameters=TRUE)$variance, summary(m1, parameters=TRUE)$pro)[c(2,4,6)])
+	dens2	<- data.table(X=tmp, Y=dnorm(tmp, mean=th2[1], sd=sqrt(th2[2])))
+	densm	<- data.table(X=tmp, Y=predict.densityMclust(m1, tmp))
+	densm2	<- data.table(X=tmp, Y=predict.densityMclust(m2, tmp))	
+	#	3.5% threshold corresponds to 1.68% quantile of the LogNormal
+	#	2.5% threshold corresponds to 5.48% quantile of the LogNormal
+	pnorm(log(c(0.025,0.035)), mean=th1[1], sd=sqrt(th1[2]), lower.tail=FALSE)
+	round(exp(qnorm(c(0.9,0.95,0.99,0.995,0.999), mean=th1[1], sd=sqrt(th1[2]))),d=3)
+	#	0.020 0.026 0.040 0.047 0.065
+	save(densm, file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted_curve.rda'))
+	#
+	#	make density histogram
+	tmp		<- c(rev(seq(log(0.025), log(0.0005), -0.2)), seq(log(0.025)+0.2, log(0.5), 0.2))
+	dfdp	<- merge(dfdt, dfds, by=c('MALE_RID','FEMALE_RID','PTY_RUN'))
+	dfdp[, PHSC_PD_MEAN_LOG:= log(PHSC_PD_MEAN)]	
+	#nrow(subset(dfdp, PHSC_PD_MEAN<0.025 & TYPE_TO=='ancestral' & PKEFF>0.6))
+	#nrow(subset(dfdp, PHSC_PD_MEAN<0.025 & TYPE_TO=='ancestral'))
+	dfdp[, PHSC_PD_MEAN_LOG_FROM:= as.numeric(as.character(cut(	PHSC_PD_MEAN_LOG, 
+									breaks=tmp,
+									labels= round(tmp[-length(tmp)], d=4)
+							)))]
+	dfdp[, PHSC_PD_MEAN_LOG_TO:= PHSC_PD_MEAN_LOG_FROM+0.2]		
+	dfdp	<- dfdp[, list(TYPE_TO_MAX= TYPE_TO[which.max(PKEFF)]), by=c('MALE_RID','FEMALE_RID','PTY_RUN','PHSC_PD_MEAN','PHSC_PD_MEAN_LOG','PHSC_PD_MEAN_LOG_FROM','PHSC_PD_MEAN_LOG_TO')]
+	dfdp2	<- subset(dfdp, !is.na(PHSC_PD_MEAN_LOG_FROM))
+	dfdp2	<- dfdp2[, list(Y=length(MALE_RID)), by=c('PHSC_PD_MEAN_LOG_FROM','PHSC_PD_MEAN_LOG_TO','TYPE_TO_MAX')]
+	tmp		<- dfdp2[, list(TOTAL=sum(Y)), by='PHSC_PD_MEAN_LOG_FROM']
+	tmp		<- tmp[, sum(TOTAL*.2)]		#area under the histogram
+	set(dfdp2, NULL, 'YSTD', dfdp2[, Y])
+	set(densm, NULL, 'Y', densm[, Y*tmp])
+	dfdp2	<- dfdp2[order(PHSC_PD_MEAN_LOG_FROM, TYPE_TO_MAX),]
+	dfdp2	<- dfdp2[, list(TYPE_TO_MAX=TYPE_TO_MAX, Y=Y, YSTD=YSTD, YSTD_FROM=c(0,cumsum(YSTD)[-length(TYPE_TO_MAX)]), YSTD_TO=cumsum(YSTD) ), by=c('PHSC_PD_MEAN_LOG_FROM','PHSC_PD_MEAN_LOG_TO')]
+	
+	cols.typet		<- c("ancestral"=brewer.pal(11, 'PuOr')[2], "intermingled"=brewer.pal(11, 'PuOr')[4], 'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], "disconnected"=rev(brewer.pal(11, 'RdGy'))[4])
+	ggplot(dfdp2) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.025), ymin=-Inf, ymax=Inf, fill="LightBlue", alpha=0.5) +
+			geom_rect(aes(xmin=PHSC_PD_MEAN_LOG_FROM, xmax=PHSC_PD_MEAN_LOG_TO, ymin=YSTD_FROM, ymax=YSTD_TO, fill=TYPE_TO_MAX), colour='white', lwd=0.1) +
+			scale_fill_manual(values=cols.typet) +
+			geom_line(data=densm, aes(x=X, y=Y), colour='black') +
+			scale_y_continuous(expand=c(0,0), limits=c(0,31)) +
+			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
+					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
+					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
+			theme_bw() + theme(legend.position='bottom') +			
+			labs(x='\nmedian subtree distance (subst/site)', y='', fill='')
+	ggsave(file=paste0(outfile.base,'_distances_consPatristic_lognormalfitted_filled_topmostfreq.pdf'), w=5, h=4)
+	
+	ggplot(dfds) +
+			annotate("rect", xmin=log(2e-4), xmax=log(0.025), ymin=-Inf, ymax=Inf, fill="LightBlue", alpha=0.5) +
+			#annotate("rect", xmin=log(0.08), xmax=log(1), ymin=-Inf, ymax=Inf, fill=rev(brewer.pal(11, 'RdGy'))[4], alpha=0.5) +
+			#geom_vline(xintercept=log(c(0.035,0.08)), colour='grey70') +
+			#geom_vline(xintercept=qnorm(c(1e-3, 0.005, 0.01), mean=th2[1], sd=sqrt(th2[2])), colour='blue') +
+			#geom_vline(xintercept=qnorm(c(0.8,0.9,0.95), mean=th1[1], sd=sqrt(th1[2])), colour='red') +
+			geom_histogram(aes(x=log(PHSC_PD_MEAN), fill=FILL), binwidth=0.2, colour='white') +
+			geom_line(data=densm, aes(x=X, y=Y), colour='black') +			
+			#geom_line(data=dens1, aes(x=X, y=Y*0.57), lwd=1.25, colour=brewer.pal(11, 'PuOr')[2]) +
+			#geom_line(data=dens2, aes(x=X, y=Y*0.432), lwd=1.25, colour=rev(brewer.pal(11, 'RdGy'))[4]) +			
+			#scale_colour_brewer(palette='Set1') +			
+			
 			scale_x_continuous(limits=log(c(2e-4, 1)), expand=c(0,0), 
 					breaks=log(c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5)), 
 					labels=paste0(100*c(0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5),'%')) +
