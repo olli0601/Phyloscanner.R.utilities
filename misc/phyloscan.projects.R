@@ -6337,15 +6337,6 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		outfile	<- paste("mct",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(work.dir, outfile, cmd)
 		
-		#stop()		
-		invisible(pty.c[,	{
-							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
-							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
-							cmd			<- paste(cmd,CMD,sep='\n')
-							cat(cmd)					
-							outfile		<- paste("scRAr",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')														
-							cmd.hpccaller(work.dir, outfile, cmd)														
-						}, by='PTY_RUN'])		
 		quit('no')		
 	}
 }
