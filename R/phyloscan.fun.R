@@ -584,6 +584,48 @@ phsc.cmd.phyloscanner.one.resume.onewindow<- function(prefix.infiles, pty.args)
 }
 
 #' @export
+#' @title Generate bash command to combine single window resumes of a phyloscanner run
+#' @param prefix.infiles File name that points phyloscanner output.
+#' @param pty.args List of phyloscanner input variables. See examples.
+#' @return Character string of phyloscanner commands.
+#' @description This function generates bash commands to resume a single phyloscanner run, from the point where all read alignments and read phylogenies were created. The bash script can be called via 'system' in R, or written to file to run on a UNIX system.
+#' @example example/ex.cmd.phyloscanner.one.resume.R      
+phsc.cmd.phyloscanner.one.resume.combinewindows<- function(prefix.infiles, pty.args)
+{	
+	stopifnot(pty.args$combine.processed.windows==1)
+	#	create local tmp dir
+	cmd			<- paste("CWD=$(pwd)\n",sep='\n')
+	cmd			<- paste(cmd,"echo $CWD\n",sep='')
+	tmpdir		<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
+	tmpdir		<- paste("$CWD/",tmpdir,sep='')
+	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
+	#	copy required files to local tmp dir	
+	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patients.txt',sep=''), full.names=TRUE)
+	stopifnot(length(file.patient)==1)	
+	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
+	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'output_Window.*',sep=''), full.names=TRUE)
+	for(i in seq_along(tmp))
+		cmd	<- paste(cmd,'unzip -n "',tmp[i],'" -d "',tmpdir,'"\n',sep='')
+	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'otherstuff_Window.*',sep=''), full.names=TRUE)
+	for(i in seq_along(tmp))
+		cmd	<- paste(cmd,'unzip -n "',tmp[i],'" -d "',tmpdir,'"\n',sep='')	
+	#	cd to tmp dir
+	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
+	#	add all toolkit commands according to pty.args
+	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
+	#	move all files starting with current run ID
+	run.id	<- gsub('_patients.txt','',basename(file.patient))
+	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
+	#	zip up everything else	
+	tmp	<- paste(run.id,'_otherstuff.zip',sep='')
+	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',tmp,' "$file"\ndone\n',sep='')
+	cmd		<- paste(cmd, 'mv ',tmp,' "',pty.args$out.dir,'"\n',sep='')
+	#	clean up
+	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')		
+	cmd	
+}
+
+#' @export
 #' @title Generate bash command for a single phyloscanner run
 #' @param pty.args List of phyloscanner input variables. See examples.
 #' @param file.input File name of the file that contains the list of bam files, reference files, and potentially aliases
@@ -942,6 +984,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	prior.neff.dir					<- pty.args[['pw.prior.neff.dir']] 	
 	prior.calibrated.prob			<- pty.args[['pw.prior.calibrated.prob']]
 	process.window					<- pty.args[['process.window']]
+	combine.processed.windows		<- pty.args[['combine.processed.windows']]
 	verbose							<- pty.args[['verbose']]	
 	#
 	pty.tools.dir.deprecated		<- file.path(dirname(prog.pty),'deprecated')
@@ -998,7 +1041,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#	bash command to define normalising constants, if
 	#		a reference file and a reference column name in that file are specified
 	#
-	if(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var))
+	if(	(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0) )
 	{
 		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser,
 																	pty.tools.dir.deprecated,
@@ -1014,7 +1058,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#	
-	if(any(grepl('MakeReadBlacklist', use.blacklisters)))
+	if(	any(grepl('MakeReadBlacklist', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0) )
 	{
 		cmd				<- paste(cmd, '\nfor file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
 		tmp				<- phsc.cmd.blacklist.reads(	prog.pty.readblacklist, 
@@ -1030,7 +1075,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
-	if(any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)))	
+	if( any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
 	{		
 		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff,																
 																file.path(tmp.dir,paste0(run.id_,'InWindow_')),
@@ -1052,7 +1098,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
 	#
-	if(any(grepl('MakeRogueBlacklist', use.blacklisters)))	
+	if(	any(grepl('MakeRogueBlacklist', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
 	{
 		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
@@ -1072,7 +1119,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
 	#
-	if(any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)))	
+	if(	any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
 	{
 		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
 		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
@@ -1093,7 +1141,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
 	#
-	if(any(grepl('DualPatientBlacklister', use.blacklisters)))	
+	if(	any(grepl('DualPatientBlacklister', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0)	)	
 	{			
 		tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
 																file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
@@ -1110,7 +1159,8 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	bash command to downsample tips (add to blacklist)
 	#
-	if(any(grepl('DownsampleReads|downsample_reads', use.blacklisters)))
+	if(	any(grepl('DownsampleReads|downsample_reads', use.blacklisters)) &&
+		(is.null(combine.processed.windows) || combine.processed.windows==0)	)
 	{
 		tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 																 
 																file.path(tmp.dir,run.id_),																
@@ -1129,45 +1179,51 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	}
 	#
 	#	bash command to plot trees and calculate splits
-	#			
-	tmp				<- phsc.cmd.SplitPatientsToSubGraphs(	prog.pty.split,															
-															file.path(tmp.dir,run.id_),
-															run.id, 
-															outputdir=tmp.dir, 
-															blacklistFiles=gsub('InWindow_','',blacklistFiles), 
-															outgroupName=root.name, 
-															splitsRule=split.rule, 
-															sankhoff.k=split.kParam,
-															proximityThreshold=split.proximityThreshold,
-															readCountsMatterOnZeroBranches=split.readCountsMatterOnZeroBranches,
-															multifurcation.threshold=multifurcation.threshold,
-															branchLengthNormalisation=bl.normalising.file,															 
-															tipRegex=tip.regex, 
-															pdfwidth=30, 
-															pdfrelheight=0.15,
-															useff=FALSE,
-															pruneBlacklist=split.pruneBlacklist,
-															idFile=file.path(tmp.dir, basename(file.patients)),
-															verbose=verbose)	
-	cmd				<- paste(cmd, tmp, sep='\n')
+	#	
+	if(is.null(combine.processed.windows) || combine.processed.windows==0)
+	{
+		tmp				<- phsc.cmd.SplitPatientsToSubGraphs(	prog.pty.split,															
+																file.path(tmp.dir,run.id_),
+																run.id, 
+																outputdir=tmp.dir, 
+																blacklistFiles=gsub('InWindow_','',blacklistFiles), 
+																outgroupName=root.name, 
+																splitsRule=split.rule, 
+																sankhoff.k=split.kParam,
+																proximityThreshold=split.proximityThreshold,
+																readCountsMatterOnZeroBranches=split.readCountsMatterOnZeroBranches,
+																multifurcation.threshold=multifurcation.threshold,
+																branchLengthNormalisation=bl.normalising.file,															 
+																tipRegex=tip.regex, 
+																pdfwidth=30, 
+																pdfrelheight=0.15,
+																useff=FALSE,
+																pruneBlacklist=split.pruneBlacklist,
+																idFile=file.path(tmp.dir, basename(file.patients)),
+																verbose=verbose)	
+		cmd				<- paste(cmd, tmp, sep='\n')
+	}
 	#
 	#	bash command to get likely transmissions 
 	#
-	tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 														 
-														file.path(tmp.dir,paste('ProcessedTree_',split.rule,'_',run.id_,sep='')), 
-														file.path(tmp.dir,paste('subgraphs_',split.rule,'_',run.id_,sep='')), 
-														file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1)),
-														branchLengthNormalisation=bl.normalising.file,
-														collapsedTree=FALSE,
-														verbose=verbose
-														)
-	cmd				<- paste(cmd, tmp, sep='\n')	
+	if(is.null(combine.processed.windows) || combine.processed.windows==0)
+	{
+		tmp				<- phsc.cmd.LikelyTransmissions(	prog.pty.lkltrm, 														 
+															file.path(tmp.dir,paste('ProcessedTree_',split.rule,'_',run.id_,sep='')), 
+															file.path(tmp.dir,paste('subgraphs_',split.rule,'_',run.id_,sep='')), 
+															file.path(tmp.dir,substr(run.id_,1,nchar(run.id_)-1)),
+															branchLengthNormalisation=bl.normalising.file,
+															collapsedTree=FALSE,
+															verbose=verbose
+															)
+		cmd				<- paste(cmd, tmp, sep='\n')	
+	}
 	#
 	#	bash command to calculate patient stats
 	#	
 	#file.bam		<- paste(run.id_,'bam.txt',sep='')	
 	#cmd			<- paste(cmd,"\nsed 's/.*\\///' \"", file.path(tmp.dir,basename(file.bam)), '" > "',file.path(tmp.dir,file.patients),'"', sep='')
-	if(is.na(process.window))
+	if(is.null(process.window) || is.na(process.window))
 	{
 		tmp			<- phsc.cmd.SummaryStatistics( 	prog.pty.smry, 
 													pty.tools.dir, 													 
@@ -1187,7 +1243,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	add bash command to get likely transmissions summary
 	#		
-	if(is.na(process.window))
+	if(is.null(process.window) || is.na(process.window))
 	{
 		tmp			<- phsc.cmd.LikelyTransmissionsSummary(	prog.pty.lkl.smry, 
 															pty.tools.dir.deprecated,
@@ -1204,7 +1260,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	add bash command to calculate pairwise relationships
 	#
-	if(is.na(process.window))
+	if(is.null(process.window) || is.na(process.window))
 	{
 		tmp			<- phsc.cmd.pairwise.relationships(	file.path(tmp.dir, paste(run.id_,'trmStatsPerWindow.rda',sep='')),
 														file.path(tmp.dir, paste(run.id_,'pairwise_relationships.rda',sep='')),
@@ -1228,7 +1284,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#
 	#	add bash command to compress phyloscanner output
 	#				
-	if(is.na(process.window))
+	if(is.null(process.window) || is.na(process.window))
 	{
 		tmp			<- phsc.cmd.read.processed.phyloscanner.output.in.directory(file.path(tmp.dir, run.id_), 
 																				file.path(tmp.dir, run.id_), 

@@ -6245,8 +6245,8 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		quit('no')		
 	}
 	#
-	#	process windows one by one
-	if(1)	
+	#	process windows one by one, part 1
+	if(0)	
 	{	
 		#hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 471; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
 		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 71; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
@@ -6338,6 +6338,98 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		cmd.hpccaller(work.dir, outfile, cmd)
 		
 		quit('no')		
+	}
+	#
+	#	process windows one by one, part 2
+	if(1)	
+	{	
+		
+		hpc.select	<- 1; hpc.nproc<- 1; 	hpc.walltime<- 167; hpc.mem<-"6gb"; hpc.q<- "pqeelab"
+		#HOME				<<- '/Users/Oliver/duke/2018_MunichCluster'
+		HOME				<<- '/work/or105/MUNICH'
+		in.dir				<- file.path(HOME,"MunichCluster_180815_out")
+		out.dir				<- in.dir
+		work.dir			<- file.path(HOME,"MunichCluster_180815_work") 			
+		dir.create(out.dir, showWarnings=FALSE)
+		pty.args			<- list(	prog.pty=prog.pty, 
+				prog.mafft=NA, 
+				prog.raxml=NA, 
+				data.dir=NA, 
+				work.dir=work.dir, 
+				out.dir=out.dir, 
+				alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_B.fasta"),
+				alignments.root='REF_B_K03455', 
+				alignments.pairwise.to='REF_B_K03455',				
+				bl.normalising.reference.file=system.file(package="Phyloscanner.R.utilities", "data", "hiv.hxb2.norm.constants.rda"),
+				bl.normalising.reference.var='MEDIAN_PWD',														
+				window.automatic= '', 
+				merge.threshold=1, 
+				min.read.count=1, 
+				quality.trim.ends=23, 
+				min.internal.quality=23, 
+				merge.paired.reads=TRUE, 
+				no.trees=FALSE, 
+				dont.check.duplicates=FALSE,
+				dont.check.recombination=TRUE,
+				num.bootstraps=1,
+				all.bootstrap.trees=TRUE,
+				strip.max.len=350, 
+				min.ureads.individual=NA, 
+				win=c(2000,5750,25,250), 				
+				keep.overhangs=FALSE,
+				use.blacklisters=c('ParsimonyBasedBlacklister'), #,'DownsampleReads'),
+				tip.regex='^(.*)_[A-Z]+_read_([0-9]+)_count_([0-9]+)$',
+				roguesubtree.kParam=20,
+				roguesubtree.prop.threshold=0,
+				roguesubtree.read.threshold=20,
+				#dwns.maxReadsPerPatient=1000,	
+				multifurcation.threshold=1e-5,
+				split.rule='s',
+				split.kParam=20,
+				split.proximityThreshold=0,
+				split.readCountsMatterOnZeroBranches=TRUE,
+				split.pruneBlacklist=FALSE,
+				trms.allowMultiTrans=TRUE,
+				pw.trmw.min.reads=30,									
+				pw.trmw.min.tips=1,
+				pw.trmw.close.brl=0.025,
+				pw.trmw.distant.brl=0.05,
+				pw.prior.keff=2,
+				pw.prior.neff=3,
+				pw.prior.keff.dir=2,
+				pw.prior.neff.dir=3,				
+				pw.prior.calibrated.prob=0.6,
+				mem.save=0,
+				verbose=TRUE,				
+				select=NA 
+		)	
+		save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
+		
+		pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+		pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]				
+		tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
+		tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
+		pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
+		pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+		setkey(pty.c, PTY_RUN)
+		pty.args$process.window				<- NULL
+		pty.args$combine.processed.windows	<- 1
+		pty.c	<- pty.c[, { 					
+					prefix.infiles			<- gsub('patients.txt','',FILE_BAM)					
+					cmd						<- phsc.cmd.phyloscanner.one.resume.combinewindows(prefix.infiles, pty.args)
+					list(CMD=cmd) 
+				}, by=c('PTY_RUN')]		
+		pty.c[1,cat(CMD)]	
+		
+		invisible(pty.c[,	{
+							cmd			<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)							
+							cmd			<- paste(cmd,'cd $TMPDIR',sep='\n')
+							cmd			<- paste(cmd,CMD,sep='\n')
+							cat(cmd)					
+							outfile		<- paste("mcc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')														
+							cmd.hpccaller(work.dir, outfile, cmd)														
+						}, by='PTY_RUN'])		
+		quit('no')				
 	}
 }
 

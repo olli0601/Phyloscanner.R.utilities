@@ -1986,7 +1986,7 @@ RakaiFull.transmitter.171122.gender.multivariatemodels.stan.with.threshold<- fun
 	ggsave(file=paste0(outfile.base,'_odds_diffhh_noage.pdf'), w=6, h=5)
 }
 
-RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
+RakaiFull.transmitter.180423.mxmy.stan.oddsratio.seqsampling<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2305,7 +2305,7 @@ RakaiFull.transmitter.180423.stan.oddsratio.seqsampling<- function()
 	save(df, mt.6r, mt.6cc, file=paste0(outfile.base,'_stanmodels_cc_ipw.rda'))
 }
 	
-RakaiFull.transmitter.180423.stan.oddsratio.other<- function()
+RakaiFull.transmitter.180423.mxmy.stan.oddsratio.other<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2699,7 +2699,7 @@ RakaiFull.transmitter.180423.stan.oddsratio.other<- function()
 	precis(mt.9, prob=0.8)
 }
 	
-RakaiFull.transmitter.180423.stan.oddsratio.final.noseqsampling<- function()
+RakaiFull.transmitter.180423.mxmy.stan.oddsratio.final.noseqsampling<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2849,7 +2849,283 @@ RakaiFull.transmitter.180423.stan.oddsratio.final.noseqsampling<- function()
 	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mt6b.csv'))
 }
 
-RakaiFull.transmitter.180727.univariate.odds.ratios<- function()
+RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help<- function(dh)
+{
+	dh		<- subset(dh, !is.na(VAR))
+	mxfx.1 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base + coeff_var*VAR,
+					#VAR <- dnorm(miss_mean, miss_sigma),					
+					base ~ dnorm(0,100),
+					#c(miss_mean) ~ dnorm(0.5, 1),
+					#c(miss_sigma) ~ dcauchy(0,1),
+					c(coeff_var) ~ dnorm(0,10)					
+			),
+			data=as.data.frame(dh), 
+			start=list(	base=0, coeff_var=0),			
+			warmup=500, iter=2e3, chains=1, cores=1)
+	#plot(precis(mxfx.1, prob=0.95))
+	
+	#	add odds Mx->F / F->Mx
+	post	<- as.data.table(extract.samples(mxfx.1))
+	post[, MC:= seq_len(nrow(post))]	
+	#set(post, NULL, colnames(post)[grepl('impute|_mean|_sigma', colnames(post))], NULL)
+	setnames(post, colnames(post), toupper(colnames(post)))
+	post[, PROP_MF_X1:= logistic(BASE+COEFF_VAR) ]
+	post[, PROP_MF_X0:= logistic(BASE) ]	
+	post[, ODDS_MFvsFM_X1:= logistic(BASE+COEFF_VAR) / (1-logistic(BASE+COEFF_VAR)) ]
+	post[, ODDS_MFvsFM_X0:= logistic(BASE) / (1-logistic(BASE)) ]	
+	post[, ODDSRATIO_X1:= exp(COEFF_VAR) ]	
+	post	<- melt(post, id.vars='MC', measure.vars=c('ODDS_MFvsFM_X1','ODDS_MFvsFM_X0','PROP_MF_X1','PROP_MF_X0', 'ODDSRATIO_X1'))	
+	post	<- post[, list( 	
+					STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+			by=c('variable')]						
+	post	<- dcast.data.table(post, variable~STAT, value.var='V')
+	post[, VAR:= as.integer(gsub('(.*)_X([0-9]+)','\\2',variable))]
+	post[, variable:= gsub('(.*)_X([0-9]+)','\\1',variable)]
+	tmp		<- post[, which(grepl('PROP',variable))]
+	post[, LABEL:= paste0(round(MED, d=2),' [',round(CL, d=2),'-',round(CU, d=2),']')]
+	set(post, tmp, 'LABEL', post[tmp, paste0(round(MED, d=2),'% [',round(CL, d=2),'%-',round(CU, d=2),'%]')])
+	post	<- dcast.data.table(post, VAR~variable, value.var='LABEL')
+	#	extract number of individuals (n) and proportion (freq)
+	tmp	<- dh[, list(N=length(MALE_IS_TR), FREQ_MALE_TR= mean(MALE_IS_TR)), by=c('VAR')]
+	tmp[, FREQ_FEMALE_TR:= 1-FREQ_MALE_TR]	
+	post	<- merge(tmp, post, by='VAR')
+	list(ds=post, m=mxfx.1)
+}
+
+RakaiFull.transmitter.180924.mxfx.stan.oddsratio<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_transmitterrecipientdata.rda"
+	outfile.base	<- gsub('data.rda','',infile)
+	load(infile)
+	setnames(df, 'LINK_MF', 'MALE_IS_TR')
+	
+	#	build model with closest viral load greater 10e3 and 100e3
+	df[, MALE_CLOSEST_VL_1YR_G10E3:= as.integer(MALE_CLOSEST_VL_1YR>10e3)]
+	df[, FEMALE_CLOSEST_VL_1YR_G10E3:= as.integer(FEMALE_CLOSEST_VL_1YR>10e3)]
+	#	add sex partners and education
+	set(df, df[, which(FEMALE_EDUCAT=='Unknown')], 'FEMALE_EDUCAT', NA_character_)
+	set(df, df[, which(MALE_EDUCAT=='Unknown')], 'MALE_EDUCAT', NA_character_)	
+	df[, FE_NOEDU:= as.integer(FEMALE_EDUCAT=='None')]	
+	df[, MA_NOEDU:= as.integer(MALE_EDUCAT=='None')]
+	set(df, df[, which(FEMALE_SEXP1YR=='Unknown')], 'FEMALE_SEXP1YR', NA_character_)
+	set(df, df[, which(MALE_SEXP1YR=='Unknown')], 'MALE_SEXP1YR', NA_character_)	
+	df[, FE_SEXP1YR_G1:= as.integer(FEMALE_SEXP1YR!='1')]
+	df[, MA_SEXP1YR_G1:= as.integer(MALE_SEXP1YR!='1')]
+	#	add fishing, same household, same community, inmigrant
+	set(df, NULL, 'FISH', df[, as.integer(PAIR_COMM_TYPE=='fisherfolk')])
+	#	add age as random effect 
+	#	because I don t think it s a linearly increasing relationship
+	df[, MALE_AGE_AT_MID_C:= df[,as.character(cut(MALE_AGE_AT_MID, breaks=c(15,25,30,35,52), right=FALSE, labels=c('15-24','25-29','30-34','35-50')))]]
+	df[, MALE_AGE_AT_MID_C2:= as.integer(as.factor(MALE_AGE_AT_MID_C))]
+	df[, FEMALE_AGE_AT_MID_C:= df[,as.character(cut(FEMALE_AGE_AT_MID, breaks=c(15,20,25,30,35,52), right=FALSE, labels=c('15-19','20-24','25-29','30-34','35-50')))]]
+	df[, FEMALE_AGE_AT_MID_C2:= as.integer(as.factor(FEMALE_AGE_AT_MID_C))]
+	df[, MALE_AGE_24:= as.integer(MALE_AGE_AT_MID_C=='15-24')]
+	df[, MALE_AGE_29:= as.integer(MALE_AGE_AT_MID_C=='25-29')]
+	df[, MALE_AGE_34:= as.integer(MALE_AGE_AT_MID_C=='30-34')]
+	df[, FEMALE_AGE_19:= as.integer(FEMALE_AGE_AT_MID_C=='15-19')]
+	df[, FEMALE_AGE_24:= as.integer(FEMALE_AGE_AT_MID_C=='20-24')]
+	df[, FEMALE_AGE_29:= as.integer(FEMALE_AGE_AT_MID_C=='25-29')]
+	df[, FEMALE_AGE_34:= as.integer(FEMALE_AGE_AT_MID_C=='30-34')]	
+	
+	
+	set(df, NULL, 'VAR', df[, SAME_HH])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='SAME_HH']
+	m		<- tmp$m	
+	ans		<- copy(ds)
+	#
+	set(df, NULL, 'VAR', df[, MALE_CLOSEST_VL_1YR_G10E3])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_CLOSEST_VL_1YR_G10E3']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_CLOSEST_VL_1YR_G10E3])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_CLOSEST_VL_1YR_G10E3']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FE_NOEDU])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FE_NOEDU']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MA_NOEDU])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MA_NOEDU']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FE_SEXP1YR_G1])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FE_SEXP1YR_G1']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MA_SEXP1YR_G1])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MA_SEXP1YR_G1']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_INMIGRATE_1YR])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_INMIGRATE_1YR']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MALE_INMIGRATE_1YR])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_INMIGRATE_1YR']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_GUD])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_GUD']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MALE_GUD])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_GUD']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_ALCEVER_LASTYEAR])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_ALCEVER_LASTYEAR']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MALE_ALCEVER_LASTYEAR])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_ALCEVER_LASTYEAR']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)		
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_CONDOM_NEVER])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_CONDOM_NEVER']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, MALE_CONDOM_NEVER])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_CONDOM_NEVER']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)		
+	#
+	set(df, NULL, 'VAR', df[, FEMALE_PREGNANT])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='FEMALE_PREGNANT']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)	
+	#
+	set(df, NULL, 'VAR', df[, MALE_CIRCUM])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='MALE_CIRCUM']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)	
+	#
+	set(df, NULL, 'VAR', df[, 1-FISH])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='NO_FISH']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)	
+	#
+	set(df, NULL, 'VAR', df[, SAME_COMM])
+	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='SAME_COMM']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)	
+	set(ans, NULL, 'VARNAME', ans[, factor(VARNAME, levels=c('SAME_HH','SAME_COMM','NO_FISH',
+									'MALE_CLOSEST_VL_1YR_G10E3','MA_SEXP1YR_G1','MA_NOEDU','MALE_INMIGRATE_1YR','MALE_GUD','MALE_CONDOM_NEVER','MALE_ALCEVER_LASTYEAR','MALE_CIRCUM',
+									# 'MALE_AGE_24','MALE_AGE_29','MALE_AGE_34',
+									'FEMALE_CLOSEST_VL_1YR_G10E3','FE_SEXP1YR_G1','FE_NOEDU','FEMALE_INMIGRATE_1YR','FEMALE_GUD','FEMALE_CONDOM_NEVER','FEMALE_ALCEVER_LASTYEAR','FEMALE_PREGNANT'
+									# 'FEMALE_AGE_19','FEMALE_AGE_24','FEMALE_AGE_29','FEMALE_AGE_34',	
+									))])	
+	setkey(ans, VARNAME, VAR)
+	ans		<- subset(ans, select=c(VARNAME, VAR, N, PROP_MF, ODDS_MFvsFM, ODDSRATIO))
+	
+	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mxfx.csv'))
+}
+
+RakaiFull.transmitter.180727.mxmy.univariate.odds.ratios<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2975,7 +3251,7 @@ RakaiFull.transmitter.180727.univariate.odds.ratios<- function()
 }
 
 
-RakaiFull.transmitter.180423.stan.oddsratio.horseshoe<- function()
+RakaiFull.transmitter.180423.mxmy.stan.oddsratio.horseshoe<- function()
 {
 	require(data.table)
 	require(scales)
@@ -3422,7 +3698,7 @@ RakaiFull.transmitter.180423.stan.oddsratio.horseshoe<- function()
 }
 
 
-RakaiFull.transmitter.180423.stan.oddsratiomodels<- function()
+RakaiFull.transmitter.180423.mxmy.stan.oddsratiomodels<- function()
 {
 	require(data.table)
 	require(scales)
@@ -3725,7 +4001,7 @@ RakaiFull.transmitter.180423.stan.oddsratiomodels<- function()
 }
 
 
-RakaiFull.transmitter.180423.stan.interactionmodels<- function()
+RakaiFull.transmitter.180423.mxmy.stan.interactionmodels<- function()
 {
 	require(data.table)
 	require(scales)
