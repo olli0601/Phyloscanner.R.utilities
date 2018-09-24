@@ -1041,138 +1041,152 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 	#	bash command to define normalising constants, if
 	#		a reference file and a reference column name in that file are specified
 	#
-	if(	(!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0) )
+	if(	!is.null(bl.normalising.reference.file) & !is.null(bl.normalising.reference.var) )
 	{
-		tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser,
-																	pty.tools.dir.deprecated,
-																	file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
-																	bl.normalising.reference.file, 
-																	file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
-																	bl.normalising.reference.var,
-																	standardize=TRUE
-																	)
-		cmd					<- paste(cmd, tmp, sep='\n')	
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{
+			tmp					<- phsc.cmd.NormalisationLookupWriter(	prog.pty.bl.normaliser,
+																		pty.tools.dir.deprecated,
+																		file.path(tmp.dir,paste0(run.id_,'InWindow_')), 
+																		bl.normalising.reference.file, 
+																		file.path(tmp.dir,paste0(run.id_,'normconst.csv')),
+																		bl.normalising.reference.var,
+																		standardize=TRUE
+																		)
+			cmd					<- paste(cmd, tmp, sep='\n')	
+		}
 		bl.normalising.file	<- file.path(tmp.dir,paste0(run.id_,'normconst.csv'))
 	}
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#	
-	if(	any(grepl('MakeReadBlacklist', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0) )
+	if(	any(grepl('MakeReadBlacklist', use.blacklisters)) )
 	{
-		cmd				<- paste(cmd, '\nfor file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
-		tmp				<- phsc.cmd.blacklist.reads(	prog.pty.readblacklist, 
-														'"$file"', 
-														paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), 
-														contaminant.read.threshold, 
-														contaminant.prop.threshold, 
-														tipRegex=tip.regex)
-		cmd				<- paste(cmd, tmp, '\ndone', sep='')	
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{					
+			cmd				<- paste(cmd, '\nfor file in ', run.id_,'DuplicateReadCounts_*.csv; do\n\t',sep='')
+			tmp				<- phsc.cmd.blacklist.reads(	prog.pty.readblacklist, 
+															'"$file"', 
+															paste('"${file//DuplicateReadCounts/blacklist}"',sep=''), 
+															contaminant.read.threshold, 
+															contaminant.prop.threshold, 
+															tipRegex=tip.regex)
+			cmd				<- paste(cmd, tmp, '\ndone', sep='')	
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to blacklist taxa with duplicate counts that suggest contaminants
 	#		and identifying contaminants through a Sankhoff parsimony reconstruction
 	#
-	if( any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
+	if( any(grepl('ParsimonyBasedBlacklister|parsimony_based_blacklister', use.blacklisters)))	
 	{		
-		tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff,																
-																file.path(tmp.dir,paste0(run.id_,'InWindow_')),
-																file.path(tmp.dir,paste0(run.id_,'blacklistsank_InWindow')),																 
-																dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow')),
-																blackListFileName=blacklistFiles,
-																rawThreshold=roguesubtree.read.threshold, 
-																ratioThreshold=roguesubtree.prop.threshold, 
-																sankhoffK=roguesubtree.kParam,
-																multifurcation.threshold=multifurcation.threshold,
-																outgroupName=root.name,
-																tipRegex=tip.regex,
-																branchLengthNormalisation=bl.normalising.file,
-																verbose=verbose
-																)
-		cmd				<- paste(cmd, tmp, sep='\n')	
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{					
+			tmp				<- phsc.cmd.blacklist.parsimonybased( 	prog.pty.readblacklistsankoff,																
+																	file.path(tmp.dir,paste0(run.id_,'InWindow_')),
+																	file.path(tmp.dir,paste0(run.id_,'blacklistsank_InWindow')),																 
+																	dualCandidatesOutputFileName=file.path(tmp.dir,paste0(run.id_,'duallistsank_InWindow')),
+																	blackListFileName=blacklistFiles,
+																	rawThreshold=roguesubtree.read.threshold, 
+																	ratioThreshold=roguesubtree.prop.threshold, 
+																	sankhoffK=roguesubtree.kParam,
+																	multifurcation.threshold=multifurcation.threshold,
+																	outgroupName=root.name,
+																	tipRegex=tip.regex,
+																	branchLengthNormalisation=bl.normalising.file,
+																	verbose=verbose
+																	)
+			cmd				<- paste(cmd, tmp, sep='\n')
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
 	}		
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
 	#
-	if(	any(grepl('MakeRogueBlacklist', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
+	if(	any(grepl('MakeRogueBlacklist', use.blacklisters)))	
 	{
-		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
-		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
-		tmp				<- ifelse(any(is.na(blacklistFiles)), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
-		tmp				<- phsc.cmd.blacklist.rogue.geneticdistance(	prog.pty.rogueblacklist, 
-															pty.tools.dir, 
-															'"$file"', 
-															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
-															longestBranchLength=rogue.longestBranchLength, 
-															dropProportion=rogue.prop.threshold, 
-															blackListFileName=tmp, 
-															outgroupName=root.name, 
-															tipRegex=tip.regex)				
-		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{
+			cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+			cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
+			tmp				<- ifelse(any(is.na(blacklistFiles)), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+			tmp				<- phsc.cmd.blacklist.rogue.geneticdistance(	prog.pty.rogueblacklist, 
+																pty.tools.dir, 
+																'"$file"', 
+																'"${TMP//InWindow/blacklistrogue_InWindow}"', 
+																longestBranchLength=rogue.longestBranchLength, 
+																dropProportion=rogue.prop.threshold, 
+																blackListFileName=tmp, 
+																outgroupName=root.name, 
+																tipRegex=tip.regex)				
+			cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
 	#
-	if(	any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0) )	
+	if(	any(grepl('MakeRogueBlacklistWeibull', use.blacklisters)))	
 	{
-		cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
-		cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
-		tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
-		tmp				<- phsc.cmd.blacklist.rogue.extremeprob(	prog.pty.roguewblacklist, 
-															pty.tools.dir, 
-															'"$file"', 
-															'"${TMP//InWindow/blacklistrogue_InWindow}"', 
-															probThreshold=rogue.probThreshold,
-															longestBranchLength=rogue.longestBranchLength, 
-															dropProportion=rogue.prop.threshold, 
-															blackListFileName=tmp, 
-															outgroupName=root.name, 
-															tipRegex=tip.regex)				
-		cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		if((is.null(combine.processed.windows) || combine.processed.windows==0))
+		{			
+			cmd				<- paste(cmd, '\nfor file in ', file.path(tmp.dir,run.id_),'*tree; do\n\t',sep='')
+			cmd				<- paste(cmd,'TMP=${file//tree/csv}\n\t',sep='')
+			tmp				<- ifelse(is.na(blacklistFiles), NA_character_, '"${TMP//InWindow/blacklist_InWindow}"')
+			tmp				<- phsc.cmd.blacklist.rogue.extremeprob(	prog.pty.roguewblacklist, 
+																pty.tools.dir, 
+																'"$file"', 
+																'"${TMP//InWindow/blacklistrogue_InWindow}"', 
+																probThreshold=rogue.probThreshold,
+																longestBranchLength=rogue.longestBranchLength, 
+																dropProportion=rogue.prop.threshold, 
+																blackListFileName=tmp, 
+																outgroupName=root.name, 
+																tipRegex=tip.regex)				
+			cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
 	#
-	if(	any(grepl('DualPatientBlacklister', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0)	)	
+	if(	any(grepl('DualPatientBlacklister', use.blacklisters)))	
 	{			
-		tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
-																file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
-																file.path(tmp.dir,paste0(run.id_,'blacklistdual_')),
-																treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')),
-																summaryFileName=file.path(tmp.dir,paste0(run.id_,'dualsummary.csv')),
-																blacklistFileName=blacklistFiles, 
-																dual.prop.threshold=dual.prop.threshold)
-		cmd				<- paste(cmd, tmp, sep='\n')
-		cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
-		cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{
+			tmp				<- phsc.cmd.blacklist.dualinfections(	prog.pty.dualblacklist, 																 
+																	file.path(tmp.dir,paste0(run.id_,'duallistsank_')),
+																	file.path(tmp.dir,paste0(run.id_,'blacklistdual_')),
+																	treeFileName=file.path(tmp.dir,paste0(run.id_,'.*tree')),
+																	summaryFileName=file.path(tmp.dir,paste0(run.id_,'dualsummary.csv')),
+																	blacklistFileName=blacklistFiles, 
+																	dual.prop.threshold=dual.prop.threshold)
+			cmd				<- paste(cmd, tmp, sep='\n')
+			cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
+			cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_InWindow_',sep=''))
 	}
 	#
 	#	bash command to downsample tips (add to blacklist)
 	#
-	if(	any(grepl('DownsampleReads|downsample_reads', use.blacklisters)) &&
-		(is.null(combine.processed.windows) || combine.processed.windows==0)	)
+	if(	any(grepl('DownsampleReads|downsample_reads', use.blacklisters)))
 	{
-		tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 																 
-																file.path(tmp.dir,run.id_),																
-																file.path(tmp.dir,paste(run.id_,'blacklistdwns_',sep='')), 
-																maxReadsPerPatient=dwns.maxReadsPerPatient, 
-																blackListFileName=blacklistFiles, 
-																tipRegex=tip.regex,
-																seed=42L,
-																hosts=NA,
-																excludeUnderrepresented=FALSE,
-																verbose=verbose)
-		cmd				<- paste(cmd, tmp, sep='\n')
+		if(is.null(combine.processed.windows) || combine.processed.windows==0)
+		{
+			tmp				<- phsc.cmd.blacklist.downsample(		prog.pty.downsample, 																 
+																	file.path(tmp.dir,run.id_),																
+																	file.path(tmp.dir,paste(run.id_,'blacklistdwns_',sep='')), 
+																	maxReadsPerPatient=dwns.maxReadsPerPatient, 
+																	blackListFileName=blacklistFiles, 
+																	tipRegex=tip.regex,
+																	seed=42L,
+																	hosts=NA,
+																	excludeUnderrepresented=FALSE,
+																	verbose=verbose)
+			cmd				<- paste(cmd, tmp, sep='\n')
+		}
 		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistdwns_InWindow_',sep=''))
 		#cmd				<- paste(cmd, '\n','for file in ', file.path(tmp.dir,paste(run.id_,'blacklistdwns_*',sep='')),'; do\n\t',sep='')
 		#cmd				<- paste(cmd, 'mv "$file" "${file//blacklistdwns/blacklist}"\ndone',sep='')		
