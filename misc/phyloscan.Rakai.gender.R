@@ -2887,13 +2887,107 @@ RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help<- function(dh)
 	post[, variable:= gsub('(.*)_X([0-9]+)','\\1',variable)]
 	tmp		<- post[, which(grepl('PROP',variable))]
 	post[, LABEL:= paste0(round(MED, d=2),' [',round(CL, d=2),'-',round(CU, d=2),']')]
-	set(post, tmp, 'LABEL', post[tmp, paste0(round(MED, d=2),'% [',round(CL, d=2),'%-',round(CU, d=2),'%]')])
-	post	<- dcast.data.table(post, VAR~variable, value.var='LABEL')
+	set(post, tmp, 'LABEL', post[tmp, paste0(100*round(MED, d=3),'% [',100*round(CL, d=3),'%-',100*round(CU, d=3),'%]')])	
+	tmp		<- dcast.data.table(post, VAR~variable, value.var='LABEL')
+	post	<- subset(post, grepl('ODDS_',variable), select=c(VAR, MED, CL, CU))
+	setnames(post, c('MED','CL','CU'), c('ODDS_MFvsFM_MED','ODDS_MFvsFM_CL','ODDS_MFvsFM_CU'))
+	post	<- merge(post, tmp, by='VAR')
 	#	extract number of individuals (n) and proportion (freq)
 	tmp	<- dh[, list(N=length(MALE_IS_TR), FREQ_MALE_TR= mean(MALE_IS_TR)), by=c('VAR')]
 	tmp[, FREQ_FEMALE_TR:= 1-FREQ_MALE_TR]	
 	post	<- merge(tmp, post, by='VAR')
 	list(ds=post, m=mxfx.1)
+}
+
+RakaiFull.transmitter.180924.mxfx.stan.oddsratio.plot<- function()
+{
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_transmitterrecipient_stanmodels_mxfx.rda"
+	outfile.base	<- gsub('\\.rda','',infile)
+	load(infile)
+	
+	overall.odds	<- ans[VARNAME=='OVERALL',c(ODDS_MFvsFM_MED, ODDS_MFvsFM_CL, ODDS_MFvsFM_CU)]
+			
+	ans[, Y:= paste0(VARNAME,'-',VAR)]
+	tmp	 <- c(	"SAME_HH-0","(Both) Partners from the same household: no",
+				"SAME_HH-1","(Both) Partners from the same household: yes",
+				"SAME_HH_FISH-0","(Both) Partners from the same household in fishing sites: no",
+				"SAME_HH_FISH-1","(Both) Partners from the same household in fishing sites: yes",
+				"SAME_HH_NOTFISH-0","(Both) Partners from the same household in inland communities: no",
+				"SAME_HH_NOTFISH-1","(Both) Partners from the same household in inland communities: yes",				
+				"SAME_COMM-0","(Both) Partners from the same community: no",
+				"SAME_COMM-1","(Both) Partners from the same community: yes",
+				"NO_FISH-0","(Both) Partners resident in inland communities: no",
+				"NO_FISH-1","(Both) Partners resident in inland communities: yes",                    
+				"MALE_CLOSEST_VL_1YR_G10E3-0","(Male) Plasma viral load: <=10,000 copies/ml",    
+				"MALE_CLOSEST_VL_1YR_G10E3-1","(Male) Plasma viral load: >10,000 copies/ml",   
+				"MA_SEXP1YR_G1-0","(Male) Self reported sex partners in last year: <=1",               
+				"MA_SEXP1YR_G1-1","(Male) Self reported sex partners in last year: >1",
+				"MA_NOEDU-0","(Male) Education: at least primary",
+				"MA_NOEDU-1","(Male) Education: none",
+				"MALE_INMIGRATE_1YR-0","(Male) Migration into community in last year: no",
+				"MALE_INMIGRATE_1YR-1","(Male) Migration into community in last year: yes",
+				"MALE_GUD-0","(Male) Genital ulcer disease: not diagnosed",
+				"MALE_GUD-1","(Male) Genital ulcer disease: diagnosed",
+				"MALE_CONDOM_NEVER-0","(Male) Reported condom use in last year: with at least one partner",
+				"MALE_CONDOM_NEVER-1","(Male) Reported condom use in last year: with no partner",
+				"MALE_ALCEVER_LASTYEAR-0","(Male) Reported alcohol use before/during sexual contacts in last year: never",
+				"MALE_ALCEVER_LASTYEAR-1","(Male) Reported alcohol use before/during sexual contacts in last year: with at least one partner",
+				"MALE_CIRCUM-0","(Male) Circumcision: no",
+				"MALE_CIRCUM-1","(Male) Circumcision: yes",
+				"FEMALE_CLOSEST_VL_1YR_G10E3-0","(Female) Plasma viral load: <=10,000 copies/ml",
+				"FEMALE_CLOSEST_VL_1YR_G10E3-1","(Female) Plasma viral load: >10,000 copies/ml",
+				"FE_SEXP1YR_G1-0","(Female) Self reported sex partners in last year: <=1",
+				"FE_SEXP1YR_G1-1","(Female) Self reported sex partners in last year: >1",
+				"FE_NOEDU-0","(Female) Education: at least primary",
+				"FE_NOEDU-1","(Female) Education: none",
+				"FEMALE_INMIGRATE_1YR-0","(Female) Migration into community in last year: no",
+				"FEMALE_INMIGRATE_1YR-1","(Female) Migration into community in last year: yes",
+				"FEMALE_GUD-0","(Female) Genital ulcer disease: not diagnosed",
+				"FEMALE_GUD-1","(Female) Genital ulcer disease: diagnosed",
+				"FEMALE_CONDOM_NEVER-0","(Female) Reported condom use in last year: with at least one partner",
+				"FEMALE_CONDOM_NEVER-1","(Female) Reported condom use in last year: with no partner",
+				"FEMALE_ALCEVER_LASTYEAR-0","(Female) Reported alcohol use before/during sexual contacts in last year: never",
+				"FEMALE_ALCEVER_LASTYEAR-1","(Female) Reported alcohol use before/during sexual contacts in last year: with at least one partner",
+				"FEMALE_PREGNANT-0","(Female) Pregnant at first concordant positive visit: no",
+				"FEMALE_PREGNANT-1","(Female) Pregnant at first concordant positive visit: yes"
+				)
+	tmp	<- matrix(tmp, ncol=2, byrow=TRUE)
+	tmp	<- data.table(Y= tmp[,1], YLABEL=tmp[,2])
+	ans	<- merge(ans, tmp, by='Y')
+	ans	<- subset(ans, !VARNAME%in%c("SAME_HH","NO_FISH"))
+	setkey(ans, ODDS_MFvsFM_MED)	
+	set(ans, NULL, 'Y', ans[, factor(Y, labels=YLABEL, levels=Y)])
+	ans[, RISK_TYPE:= NA_character_]
+	set(ans, ans[, which(grepl('^MA', VARNAME))], 'RISK_TYPE', 'male partner')
+	set(ans, ans[, which(grepl('^FE', VARNAME))], 'RISK_TYPE', 'female partner')
+	set(ans, ans[, which(is.na(RISK_TYPE))], 'RISK_TYPE', 'pair')
+	tmp	<- subset(ans, VAR==1)
+	ggplot(tmp, aes(y=Y, x=ODDS_MFvsFM_MED)) +
+			geom_vline(xintercept= overall.odds[1], colour='black', lty=6) +
+			geom_vline(xintercept= overall.odds[2], colour='grey50', lty=1) +
+			geom_vline(xintercept= overall.odds[3], colour='grey50', lty=1) +
+			#geom_vline(xintercept= 1, colour='black') +
+			geom_point(aes(colour=RISK_TYPE)) + 
+			geom_errorbarh(aes(xmin=ODDS_MFvsFM_CL, xmax=ODDS_MFvsFM_CU, colour=RISK_TYPE), height=0.5) +
+			theme_bw() +
+			scale_x_log10(breaks=c(0.5,1,2,3,4,5)) +
+			scale_colour_manual(values=c('male partner'='steelblue2', 'female partner'='hotpink2', 'pair'='darkgreen')) +
+			theme(legend.position='bottom') +
+			labs(x='\nodds of male-to-female transmission', y='risk factors\n', colour='risk factor of')
+	ggsave(file=paste0(outfile.base,'MFranks_nonbaseline.pdf'), w=10.5, h=5.5, useDingbats=FALSE)	
+	ggplot(ans, aes(y=Y, x=ODDS_MFvsFM_MED)) +
+			geom_vline(xintercept= overall.odds[1], colour='black', lty=6) +
+			geom_vline(xintercept= overall.odds[2], colour='grey50', lty=1) +
+			geom_vline(xintercept= overall.odds[3], colour='grey50', lty=1) +			
+			#geom_vline(xintercept= 1, colour='black') +
+			geom_point(aes(colour=RISK_TYPE)) + 
+			geom_errorbarh(aes(xmin=ODDS_MFvsFM_CL, xmax=ODDS_MFvsFM_CU, colour=RISK_TYPE), height=0.5) +
+			theme_bw() +
+			scale_x_log10(breaks=c(0.5,1,2,3,4,5)) +
+			scale_colour_manual(values=c('male partner'='steelblue2', 'female partner'='hotpink2', 'pair'='darkgreen')) +
+			theme(legend.position='bottom') +
+			labs(x='\nodds of male-to-female transmission', y='risk factors\n', colour='risk factor of')
+	ggsave(file=paste0(outfile.base,'MFranks_withbaseline.pdf'), w=10.5, h=9, useDingbats=FALSE)	
 }
 
 RakaiFull.transmitter.180924.mxfx.stan.oddsratio<- function()
@@ -2942,7 +3036,42 @@ RakaiFull.transmitter.180924.mxfx.stan.oddsratio<- function()
 	df[, FEMALE_AGE_29:= as.integer(FEMALE_AGE_AT_MID_C=='25-29')]
 	df[, FEMALE_AGE_34:= as.integer(FEMALE_AGE_AT_MID_C=='30-34')]	
 	
-	
+	#	overall male-to-female odds
+	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR))
+	mxfx.1 	<- map2stan(
+			alist(
+					MALE_IS_TR ~ dbinom(1, ptr),
+					logit(ptr) <- base,										
+					base ~ dnorm(0,100)										
+			),
+			data=as.data.frame(dh), 
+			start=list(base=0),			
+			warmup=500, iter=2e3, chains=1, cores=1)
+	post	<- as.data.table(extract.samples(mxfx.1))
+	post[, MC:= seq_len(nrow(post))]		
+	setnames(post, colnames(post), toupper(colnames(post)))	
+	post[, PROP_MF_X1:= logistic(BASE) ]		
+	post[, ODDS_MFvsFM_X1:= logistic(BASE) / (1-logistic(BASE)) ]	
+	post	<- melt(post, id.vars='MC', measure.vars=c('ODDS_MFvsFM_X1','PROP_MF_X1'))	
+	post	<- post[, list( 	
+					STAT=c('MED','CL','IL','IU','CU'), 
+					V= quantile(value, prob=c(0.5,0.025,0.1,0.9,0.975))), 
+			by=c('variable')]						
+	post	<- dcast.data.table(post, variable~STAT, value.var='V')
+	post[, VAR:= as.integer(gsub('(.*)_X([0-9]+)','\\2',variable))]
+	post[, variable:= gsub('(.*)_X([0-9]+)','\\1',variable)]
+	tmp		<- post[, which(grepl('PROP',variable))]
+	post[, LABEL:= paste0(round(MED, d=2),' [',round(CL, d=2),'-',round(CU, d=2),']')]
+	set(post, tmp, 'LABEL', post[tmp, paste0(100*round(MED, d=3),'% [',100*round(CL, d=3),'%-',100*round(CU, d=3),'%]')])	
+	tmp		<- dcast.data.table(post, VAR~variable, value.var='LABEL')
+	post	<- subset(post, grepl('ODDS_',variable), select=c(VAR, MED, CL, CU))
+	setnames(post, c('MED','CL','CU'), c('ODDS_MFvsFM_MED','ODDS_MFvsFM_CL','ODDS_MFvsFM_CU'))
+	post	<- merge(post, tmp, by='VAR')
+	ans		<- copy(post)
+	ans[, VARNAME:='OVERALL']
+	set(ans, ans[, which(VARNAME=='OVERALL')], 'N', nrow(df))
+	#
+	#	now risk factors
 	set(df, NULL, 'VAR', df[, SAME_HH])
 	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
 	dh		<- subset(df, select=c(	PAIRID, MALE_IS_TR, VAR))	
@@ -2950,7 +3079,23 @@ RakaiFull.transmitter.180924.mxfx.stan.oddsratio<- function()
 	ds		<- tmp$ds
 	ds[, VARNAME:='SAME_HH']
 	m		<- tmp$m	
-	ans		<- copy(ds)
+	ans		<- rbind(ans, ds, fill=TRUE)
+	#
+	set(df, NULL, 'VAR', df[, SAME_HH])	
+	dh		<- subset(df, FISH==1, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='SAME_HH_FISH']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)
+	#
+	set(df, NULL, 'VAR', df[, SAME_HH])	
+	dh		<- subset(df, FISH==0, select=c(	PAIRID, MALE_IS_TR, VAR))	
+	tmp		<- RakaiFull.transmitter.180924.mxfx.stan.oddsratio.help(dh)
+	ds		<- tmp$ds
+	ds[, VARNAME:='SAME_HH_NOTFISH']
+	m		<- tmp$m	
+	ans		<- rbind(ans, ds)	
 	#
 	set(df, NULL, 'VAR', df[, MALE_CLOSEST_VL_1YR_G10E3])
 	subset(df, is.na(VAR), select=c(	PAIRID, MALE_IS_TR, VAR))
@@ -3113,16 +3258,17 @@ RakaiFull.transmitter.180924.mxfx.stan.oddsratio<- function()
 	ds[, VARNAME:='SAME_COMM']
 	m		<- tmp$m	
 	ans		<- rbind(ans, ds)	
-	set(ans, NULL, 'VARNAME', ans[, factor(VARNAME, levels=c('SAME_HH','SAME_COMM','NO_FISH',
+	set(ans, NULL, 'VARNAME', ans[, factor(VARNAME, levels=c('OVERALL','SAME_HH','SAME_HH_FISH','SAME_HH_NOTFISH','SAME_COMM','NO_FISH',
 									'MALE_CLOSEST_VL_1YR_G10E3','MA_SEXP1YR_G1','MA_NOEDU','MALE_INMIGRATE_1YR','MALE_GUD','MALE_CONDOM_NEVER','MALE_ALCEVER_LASTYEAR','MALE_CIRCUM',
 									# 'MALE_AGE_24','MALE_AGE_29','MALE_AGE_34',
 									'FEMALE_CLOSEST_VL_1YR_G10E3','FE_SEXP1YR_G1','FE_NOEDU','FEMALE_INMIGRATE_1YR','FEMALE_GUD','FEMALE_CONDOM_NEVER','FEMALE_ALCEVER_LASTYEAR','FEMALE_PREGNANT'
 									# 'FEMALE_AGE_19','FEMALE_AGE_24','FEMALE_AGE_29','FEMALE_AGE_34',	
 									))])	
 	setkey(ans, VARNAME, VAR)
-	ans		<- subset(ans, select=c(VARNAME, VAR, N, PROP_MF, ODDS_MFvsFM, ODDSRATIO))
+	ans		<- subset(ans, select=c(VARNAME, VAR, N, PROP_MF, ODDS_MFvsFM, ODDS_MFvsFM_MED, ODDS_MFvsFM_CL, ODDS_MFvsFM_CU, ODDSRATIO))
 	
 	write.csv(ans, file=paste0(outfile.base,'_stanmodels_mxfx.csv'))
+	save(ans, file=paste0(outfile.base,'_stanmodels_mxfx.rda'))
 }
 
 RakaiFull.transmitter.180727.mxmy.univariate.odds.ratios<- function()

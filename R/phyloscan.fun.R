@@ -1625,9 +1625,9 @@ phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10,
 	if(is.null(ylim))
 		ylim	<- c(1e-3,0.4)
 	if(is.null(cols.typet))
-		cols.typet			<- c(	"ancestral 1->2"=brewer.pal(11, 'PiYG')[1],
+		cols.typet			<- c(	"ancestral 1->2"=brewer.pal(11, 'PiYG')[2],
 				'ancestral m->f'='steelblue2',
-				"ancestral 2->1"=brewer.pal(11, 'PiYG')[2],
+				"ancestral 2->1"=brewer.pal(11, 'PiYG')[10],
 				'ancestral f->m'='hotpink2',
 				"intermingled"=brewer.pal(11, 'PuOr')[4], 
 				'sibling'=rev(brewer.pal(11, 'PuOr'))[c(3)], 
@@ -2351,9 +2351,16 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 	di	<- subset(di, select=c(ID, NODE_LABEL, NODE_SHAPE, NODE_FILL))
 	if(is.null(layout))
 	{
-		layout	<- as.data.table(ggnet2(network(unique(subset(df, select=c(ID1,ID2))), directed=FALSE, matrix.type="edgelist"))$data[,c("label", "x", "y")])
+		layout	<- as.data.table(ggnet2(network(unique(subset(df, select=c(ID1,ID2))), directed=FALSE, matrix.type="edgelist"))$data[,c("label", "x", "y")])		
 	}		
-	setnames(layout, c('label','x','y'), c('ID1','ID1_X','ID1_Y'))
+	if(any(grepl('label', colnames(layout))))
+	{		
+		setnames(layout, c('label','x','y'), c('ID1','ID1_X','ID1_Y'))
+	}
+	if(any(colnames(layout)=='ID'))
+	{
+		setnames(layout, c('ID','X','Y'), c('ID1','ID1_X','ID1_Y'))		
+	}	
 	df		<- merge(df, layout, by='ID1')
 	setnames(layout, c('ID1','ID1_X','ID1_Y'), c('ID2','ID2_X','ID2_Y'))
 	df		<- merge(df, layout, by='ID2')

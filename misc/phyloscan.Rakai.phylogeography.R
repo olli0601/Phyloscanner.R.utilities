@@ -4506,6 +4506,577 @@ RakaiFull.phylogeography.180521.gender.mobility.core.inference<- function()
 	save(zm, rtpdm, rtr2, ds, dc, dcb, file=paste0(outfile.base,'core_inference.rda'))	
 }
 
+mcmc.n.z.pi.eachcout.ok<- function(zm, rtpdm, rtr2, ds, dc, outfile.base)
+{
+	
+	# set up mcmc objects
+	mc				<- list()
+	mc$n			<- 1e6
+	mc$pars			<- list() 	
+	mc$pars$LAMBDA	<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=1)		#prior for proportions
+	mc$pars$S		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#sampling probabilities
+	mc$pars$Z		<- matrix(NA_integer_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n) #augmented data
+	mc$pars$NU		<- NA_real_															#prior for N
+	mc$pars$N		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data
+	mc$pars$PI		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#proportions	
+	mc$it.info		<- data.table(	IT= seq.int(1,mc$n),
+			BLOCK= rep(NA_integer_, mc$n),
+			MHRATIO= rep(NA_real_, mc$n),
+			ACCEPT=rep(NA_integer_, mc$n), 
+			LOG_LKL=rep(NA_real_, mc$n),
+			LOG_PRIOR=rep(NA_real_, mc$n))
+	
+	# initialise MCMC
+	setkey(dc, COUNT_ID)
+	mc$verbose			<- 0L
+	mc$curr.it			<- 1L
+	mc$seed				<- 42L
+	set(mc$it.info, mc$curr.it, 'BLOCK', 'INIT')
+	set.seed( mc$seed )
+	#	prior lambda: use the Berger objective prior with minimal loss compared to marginal Beta reference prior
+	#	(https://projecteuclid.org/euclid.ba/1422556416)	
+	mc$pars$LAMBDA[1,]	<- 0.8/nrow(dc)
+	# 	sampling: set to mean sampling probability
+	mc$pars$S[1,]		<- dc$S						
+	#	augmented data: proposal draw under mean sampling probability
+	mc$pars$Z[1,]		<- dc[, TR_OBS + rnbinom(nrow(dc), TR_OBS, S)]	# dc[, round(TR_OBS/S)]
+	#	prior nu: set Poisson rate to the expected augmented counts, under average sampling probability
+	mc$pars$NU			<- sum(dc$TR_OBS) / mean(dc$S)
+	#	total count: that s just the sum of Z
+	mc$pars$N[1,]		<- sum(mc$pars$Z[1,])
+	#	proportions: draw from full conditional
+	mc$pars$PI[1,]		<- rdirichlet(1, mc$pars$Z[1,] + mc$pars$LAMBDA[1,])[1,]			
+	#	store log likelihood
+	tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[1,], prob=dc$S, log=TRUE) ) +
+			dmultinom(mc$pars$Z[1,], size=mc$pars$N[1,], prob=mc$pars$PI[1,], log=TRUE)
+	set(mc$it.info, 1L, 'LOG_LKL', tmp)
+	# 	store log prior		
+	tmp	<- dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +
+			sum( log( ddirichlet(mc$pars$PI[1,], alpha=mc$pars$LAMBDA[1,]) ) )
+	set(mc$it.info, 1L, 'LOG_PRIOR', tmp)
+	
+	#	
+	# run mcmc
+	mc$blocks		<- ncol(mc$pars$Z)
+	for(i in 1L:(mc$n-1L))
+	{
+		mc$curr.it		<- i		
+		# determine source-recipient combination that will be updated in this iteration
+		update.count	<- i %% mc$blocks
+		
+		# update Z, N, PI for the source-recipient combination 'update.count'
+		#	propose
+		Z.prop					<- mc$pars$Z[mc$curr.it,]
+		Z.prop[update.count]	<- dc[COUNT_ID==update.count, TR_OBS + rnbinom(1, TR_OBS, S)]
+		N.prop					<- sum(Z.prop)
+		PI.prop					<- mc$pars$PI[mc$curr.it,]
+		tmp						<- c(Z.prop[update.count]+mc$pars$LAMBDA[1,update.count], sum(Z.prop + mc$pars$LAMBDA[1,]))
+		PI.prop[update.count]	<- rbeta(1, tmp[1], tmp[2]-tmp[1])							
+		
+		#	calculate MH ratio
+		log.prop.ratio	<- sum(dnbinom(mc$pars$Z[mc$curr.it,update.count], size=dc$TR_OBS[update.count], prob=dc$S[update.count], log=TRUE)) - 
+				sum(dnbinom(Z.prop[update.count], size=dc$TR_OBS[update.count], prob=dc$S[update.count], log=TRUE))
+		log.fc			<- sum(dbinom(dc$TR_OBS[update.count], size=mc$pars$Z[mc$curr.it,update.count], prob=dc$S[update.count], log=TRUE)) +								
+				dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)
+		log.fc.prop		<- sum(dbinom(dc$TR_OBS[update.count], size=Z.prop[update.count], prob=dc$S[update.count], log=TRUE)) +								
+				dpois(N.prop, lambda=mc$pars$NU, log=TRUE)
+		log.mh.ratio	<- log.fc.prop - log.fc + log.prop.ratio
+		mh.ratio		<- min(1,exp(log.mh.ratio))
+		
+		#	update
+		mc$curr.it				<- mc$curr.it+1L
+		set(mc$it.info, mc$curr.it, 'BLOCK', update.count)
+		set(mc$it.info, mc$curr.it, 'MHRATIO', mh.ratio)
+		set(mc$it.info, mc$curr.it, 'ACCEPT', as.integer(runif(1) < mh.ratio))							
+		mc$pars$S[mc$curr.it,]	<- mc$pars$S[mc$curr.it-1L,]
+		if(mc$verbose & mc$it.info[mc$curr.it, ACCEPT])
+		{
+			print(paste0('it ',mc$curr.it,' ACCEPT block ',update.count))
+		}
+		if(mc$it.info[mc$curr.it, ACCEPT])
+		{
+			mc$pars$Z[mc$curr.it,]	<- Z.prop
+			mc$pars$N[mc$curr.it,]	<- N.prop		
+			mc$pars$PI[mc$curr.it,]	<- PI.prop
+		}
+		if(mc$it.info[mc$curr.it, !ACCEPT])
+		{
+			mc$pars$Z[mc$curr.it,]	<- mc$pars$Z[mc$curr.it-1L,]
+			mc$pars$N[mc$curr.it,]	<- mc$pars$N[mc$curr.it-1L,]
+			mc$pars$PI[mc$curr.it,]	<- mc$pars$PI[mc$curr.it-1L,]
+		}			
+		
+		# store log likelihood
+		tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[mc$curr.it,], prob=dc$S, log=TRUE) ) +
+				dmultinom(mc$pars$Z[mc$curr.it,], size=mc$pars$N[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE)
+		set(mc$it.info, mc$curr.it, 'LOG_LKL', tmp)
+		# store log prior		
+		tmp	<- dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +
+				sum( log( ddirichlet(mc$pars$PI[mc$curr.it,], alpha=mc$pars$LAMBDA[1,]) ) )
+		set(mc$it.info, mc$curr.it, 'LOG_PRIOR', tmp)		
+	}
+	save(zm, rtpdm, rtr2, ds, dc, mc, file=paste0(outfile.base,'core_inference_mcmcEachCount.rda'))
+	
+	
+	#	to manage all further calculations, thin right at the start
+	tmp			<- seq.int(2, nrow(mc$pars$Z), 100)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	#	convert to coda
+	mcc			<- mcmc( cbind( mc$pars$N, mc$pars$Z, mc$pars$PI, mc$pars$S) )
+	mcc.eff		<- effectiveSize(mcc)
+	#	plot trace and autocorrelations for variable with worst 6 effective sizes
+	tmp			<- mcc.eff[mcc.eff>0] 
+	tmp			<- names(tmp[sort(tmp, index.return=TRUE)$ix[1:6]])	
+	pdf(file=paste0(outfile.base,'core_inference_mcmcEachCount_6worstchains_trace.pdf'), w=10, h=7)
+	plot( mcc[,tmp] )
+	dev.off()
+	pdf(file=paste0(outfile.base,'core_inference_mcmcEachCount_6worstchains_autocor.pdf'), w=5, h=7)
+	autocorr.plot( mcc[,tmp] )
+	dev.off()
+}	
+
+mcmc.n.z.pi.joint.low.acceptance.rate<- function(zm, rtpdm, rtr2, ds, dc, outfile.base)
+{
+	# set up mcmc objects
+	mc				<- list()
+	mc$n			<- 1e5
+	mc$pars			<- list() 	
+	mc$pars$LAMBDA	<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=1)		#prior for proportions
+	mc$pars$S		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#sampling probabilities
+	mc$pars$Z		<- matrix(NA_integer_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n) #augmented data
+	mc$pars$NU		<- NA_real_															#prior for N
+	mc$pars$N		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data
+	mc$pars$PI		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#proportions	
+	mc$it.info		<- data.table(	IT= seq.int(1,mc$n),
+			BLOCK= rep(NA_character_, mc$n),
+			MHRATIO= rep(NA_real_, mc$n),
+			ACCEPT=rep(NA_integer_, mc$n), 
+			LOG_LKL=rep(NA_real_, mc$n),
+			LOG_PRIOR=rep(NA_real_, mc$n))
+	
+	# initialise MCMC
+	setkey(dc, COUNT_ID)
+	mc$verbose			<- 1L
+	mc$curr.it			<- 1L
+	mc$seed				<- 42L
+	set(mc$it.info, mc$curr.it, 'BLOCK', 'INIT')
+	set.seed( mc$seed )
+	#	prior lambda: use the Berger objective prior with minimal loss compared to marginal Beta reference prior
+	#	(https://projecteuclid.org/euclid.ba/1422556416)	
+	mc$pars$LAMBDA[1,]	<- 0.8/nrow(dc)
+	# 	sampling: set to mean sampling probability
+	mc$pars$S[1,]		<- dc$S						
+	#	augmented data: proposal draw under mean sampling probability
+	mc$pars$Z[1,]		<- dc[, TR_OBS + rnbinom(nrow(dc), TR_OBS, S)]	# dc[, round(TR_OBS/S)]
+	#	prior nu: set Poisson rate to the expected augmented counts, under average sampling probability
+	mc$pars$NU			<- sum(dc$TR_OBS) / mean(dc$S)
+	#	total count: that s just the sum of Z
+	mc$pars$N[1,]		<- sum(mc$pars$Z[1,])
+	#	proportions: draw from full conditional
+	mc$pars$PI[1,]		<- rdirichlet(1, mc$pars$Z[1,] + mc$pars$LAMBDA[1,])[1,]			
+	#	store log likelihood
+	tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[1,], prob=dc$S, log=TRUE) ) +
+			dmultinom(mc$pars$Z[1,], size=mc$pars$N[1,], prob=mc$pars$PI[1,], log=TRUE)
+	set(mc$it.info, 1L, 'LOG_LKL', tmp)
+	# 	store log prior		
+	tmp	<- dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +
+			sum( log( ddirichlet(mc$pars$PI[1,], alpha=mc$pars$LAMBDA[1,]) ) )
+	set(mc$it.info, 1L, 'LOG_PRIOR', tmp)
+	
+	#	
+	# run mcmc
+	mc$blocks		<- 1
+	for(i in 1L:(mc$n-1L))
+	{
+		mc$curr.it		<- i		
+		#
+		# block 0: update Z, N, PI jointly
+		if(i %% mc$blocks==0)
+		{			
+			#	propose
+			Z.prop			<- dc[, TR_OBS + rnbinom(nrow(dc), TR_OBS, S)]
+			N.prop			<- sum(Z.prop)
+			PI.prop			<- rdirichlet(1, Z.prop + mc$pars$LAMBDA[1,])[1,]
+			#	calculate MH ratio
+			log.prop.ratio	<- sum(dnbinom(mc$pars$Z[mc$curr.it,], size=dc$TR_OBS, prob=dc$S, log=TRUE)) - sum(dnbinom(Z.prop, size=dc$TR_OBS, prob=dc$S, log=TRUE))
+			log.fc			<- sum(dbinom(dc$TR_OBS, size=mc$pars$Z[mc$curr.it,], prob=dc$S, log=TRUE)) +								
+					dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)
+			log.fc.prop		<- sum(dbinom(dc$TR_OBS, size=Z.prop, prob=dc$S, log=TRUE)) +								
+					dpois(N.prop, lambda=mc$pars$NU, log=TRUE)
+			log.mh.ratio	<- log.fc.prop - log.fc + log.prop.ratio
+			mh.ratio		<- min(1,exp(log.mh.ratio))
+			#	update
+			mc$curr.it				<- mc$curr.it+1L
+			set(mc$it.info, mc$curr.it, 'BLOCK', 'Z-N-PI')
+			set(mc$it.info, mc$curr.it, 'MHRATIO', mh.ratio)
+			set(mc$it.info, mc$curr.it, 'ACCEPT', as.integer(runif(1) < mh.ratio))							
+			mc$pars$S[mc$curr.it,]	<- mc$pars$S[mc$curr.it-1L,]
+			if(mc$verbose & mc$it.info[mc$curr.it, ACCEPT])
+			{
+				print(paste0('it ',mc$curr.it,' ACCEPT block Z-N-PI'))
+			}
+			if(mc$it.info[mc$curr.it, ACCEPT])
+			{
+				mc$pars$Z[mc$curr.it,]	<- Z.prop
+				mc$pars$N[mc$curr.it,]	<- N.prop		
+				mc$pars$PI[mc$curr.it,]	<- PI.prop
+			}
+			if(mc$it.info[mc$curr.it, !ACCEPT])
+			{
+				mc$pars$Z[mc$curr.it,]	<- mc$pars$Z[mc$curr.it-1L,]
+				mc$pars$N[mc$curr.it,]	<- mc$pars$N[mc$curr.it-1L,]
+				mc$pars$PI[mc$curr.it,]	<- mc$pars$PI[mc$curr.it-1L,]
+			}						
+		}		
+		# store log likelihood
+		tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[mc$curr.it,], prob=dc$S, log=TRUE) ) +
+				dmultinom(mc$pars$Z[mc$curr.it,], size=mc$pars$N[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE)
+		set(mc$it.info, mc$curr.it, 'LOG_LKL', tmp)
+		# store log prior		
+		tmp	<- dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +
+				sum( log( ddirichlet(mc$pars$PI[mc$curr.it,], alpha=mc$pars$LAMBDA[1,]) ) )
+		set(mc$it.info, mc$curr.it, 'LOG_PRIOR', tmp)		
+	}
+}
+
+
+RakaiFull.phylogeography.180928.gender.mobility.core.inference<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(Boom)	
+	
+	indir								<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"	
+	if(is.null(infile.inference))
+	{		
+		infile.inference	<- file.path(indir,"todi_pairs_180522_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")		
+	}
+	
+	outfile.base	<- gsub('180522','180928',gsub('data_with_inmigrants.rda','',infile.inference))
+	load(infile.inference)
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_180522_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	outfile.base	<- gsub('data_with_inmigrants.rda','',infile)
+	load(infile)
+	
+	#	select which inmigration data to work with
+	setnames(rtr2, c('TR_INMIGRATE_2YR','REC_INMIGRATE_2YR'), c('TR_INMIGRATE','REC_INMIGRATE'))
+	
+	#	sum transmission events by community and gender
+	dc	<- rtr2[, list(TR_OBS=length(PAIRID)), by=c('TR_COMM_NUM_A','REC_COMM_NUM_A','TR_SEX','REC_SEX')]
+	set(dc, NULL, 'TR_COMM_NUM_A', dc[, as.character(TR_COMM_NUM_A)])
+	set(dc, NULL, 'REC_COMM_NUM_A', dc[, as.character(REC_COMM_NUM_A)])	
+	setkey(dc, TR_COMM_NUM_A, REC_COMM_NUM_A, TR_SEX)
+	dc[, COUNT_ID:= seq_len(nrow(dc))]
+	#	101 non-zero counts
+	
+	#
+	#	sampling prior: 
+	#	define Beta prior for sampling probabilities as Empirical Bayes prior from cohort data (all alpha and betas)
+	#	currently sampling probs differ by community and sex
+	#
+	tmp	<- subset(ds, select=c(COMM_NUM_A, SEX, P_PART_ALPHA, P_PART_BETA, P_SEQ_ALPHA, P_SEQ_BETA))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc	<- merge(dc, tmp, by=c('TR_COMM_NUM_A','TR_SEX'))
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc	<- merge(dc, tmp, by=c('REC_COMM_NUM_A','REC_SEX'))
+	
+	
+	# for simplicity, calculate mean for now
+	dc[, S:=   TR_P_PART_ALPHA/(TR_P_PART_ALPHA+TR_P_PART_BETA) * 
+					TR_P_SEQ_ALPHA/(TR_P_SEQ_ALPHA+TR_P_SEQ_BETA) * 
+					REC_P_PART_ALPHA/(REC_P_PART_ALPHA+REC_P_PART_BETA) * 
+					REC_P_SEQ_ALPHA/(REC_P_SEQ_ALPHA+REC_P_SEQ_BETA)]	
+	
+	# set up mcmc objects
+	mc				<- list()
+	mc$n			<- 1e6
+	mc$pars			<- list() 	
+	mc$pars$LAMBDA	<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=1)		#prior for proportions
+	mc$pars$S		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#sampling probabilities (product)
+	mc$pars$S_DTL	<- data.table()														#sampling probabilities (detailed terms that make up product)
+	mc$pars$Z		<- matrix(NA_integer_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n) #augmented data
+	mc$pars$NU		<- NA_real_															#prior for N
+	mc$pars$N		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data
+	mc$pars$PI		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#proportions	
+	mc$it.info		<- data.table(	IT= seq.int(1,mc$n),
+									BLOCK= rep(NA_integer_, mc$n),
+									MHRATIO= rep(NA_real_, mc$n),
+									ACCEPT=rep(NA_integer_, mc$n), 
+									LOG_LKL=rep(NA_real_, mc$n),
+									LOG_PRIOR=rep(NA_real_, mc$n))
+	
+	#
+	# define helper functions
+	lddirichlet_vector	<- function(x, nu){
+		ans	<- sum((nu - 1) * log(x)) + sum(lgamma(nu)) - lgamma(sum(nu))
+		stopifnot(is.finite(ans))
+		ans
+	}
+							
+	# initialise MCMC
+	setkey(dc, COUNT_ID)
+	mc$verbose			<- 0L
+	mc$curr.it			<- 1L
+	mc$seed				<- 42L
+	set(mc$it.info, mc$curr.it, 'BLOCK', 0L)
+	set.seed( mc$seed )
+	#	prior lambda: use the Berger objective prior with minimal loss compared to marginal Beta reference prior
+	#	(https://projecteuclid.org/euclid.ba/1422556416)	
+	mc$pars$LAMBDA[1,]	<- 0.8/nrow(dc)
+	# 	sampling: set to draw from prior
+	tmp					<- dc[, list(	TR_PART_P= rbeta(1L, TR_P_PART_ALPHA, TR_P_PART_BETA),
+										TR_SEQ_P= rbeta(1L, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA),
+										REC_PART_P= rbeta(1L, REC_P_PART_ALPHA, REC_P_PART_BETA),
+										REC_SEQ_P= rbeta(1L, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA)
+										),			
+								by=c('COUNT_ID','TR_P_PART_ALPHA','TR_P_PART_BETA','REC_P_PART_ALPHA','REC_P_PART_BETA','TR_P_SEQ_ALPHA','TR_P_SEQ_BETA','REC_P_SEQ_ALPHA','REC_P_SEQ_BETA')]
+	tmp[, TR_PART_LOGD:= dbeta(TR_PART_P, TR_P_PART_ALPHA, TR_P_PART_BETA, log=TRUE)]
+	tmp[, TR_SEQ_LOGD:= dbeta(TR_SEQ_P, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA, log=TRUE)]
+	tmp[, REC_PART_LOGD:= dbeta(REC_PART_P, REC_P_PART_ALPHA, REC_P_PART_BETA, log=TRUE)]
+	tmp[, REC_SEQ_LOGD:= dbeta(REC_SEQ_P, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA, log=TRUE)]
+	mc$pars$S_DTL	<- copy(tmp)
+	tmp				<- mc$pars$S_DTL[, list(S=TR_PART_P*TR_SEQ_P*REC_PART_P*REC_SEQ_P), by='COUNT_ID']
+	setkey(tmp, COUNT_ID)			
+	mc$pars$S[1,]		<- tmp$S
+	#	augmented data: proposal draw under sampling probability
+	mc$pars$Z[1,]		<- dc[, TR_OBS + rnbinom(nrow(dc), TR_OBS, mc$pars$S[1,])]	
+	#	prior nu: set Poisson rate to the expected augmented counts, under average sampling probability
+	mc$pars$NU			<- sum(dc$TR_OBS) / mean(dc$S)
+	#	total count: that s just the sum of Z
+	mc$pars$N[1,]		<- sum(mc$pars$Z[1,])
+	#	proportions: draw from full conditional
+	mc$pars$PI[1,]		<- rdirichlet(1, mc$pars$Z[1,] + mc$pars$LAMBDA[1,])			
+	#	store log likelihood
+	tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[1,], prob=mc$pars$S[1,], log=TRUE) ) +
+			dmultinom(mc$pars$Z[1,], size=mc$pars$N[1,], prob=mc$pars$PI[1,], log=TRUE)
+	set(mc$it.info, 1L, 'LOG_LKL', tmp)
+	# 	store log prior		
+	tmp	<- dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +
+			lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) +
+			mc$pars$S_DTL[,sum(TR_PART_LOGD) + sum(TR_SEQ_LOGD) + sum(REC_PART_LOGD) + sum(REC_SEQ_LOGD)]	
+	set(mc$it.info, 1L, 'LOG_PRIOR', tmp)
+		
+	#	
+	# run mcmc
+	options(warn=2)
+	mc$blocks		<- ncol(mc$pars$Z)
+	for(i in 1L:(mc$n-1L))
+	{
+		mc$curr.it		<- i		
+		# determine source-recipient combination that will be updated in this iteration
+		update.count	<- (i-1L) %% mc$blocks + 1L
+		
+		# update S, Z, N, PI for the source-recipient combination 'update.count'
+		#	propose	
+		S.prop					<- mc$pars$S[mc$curr.it,]
+		S_DTL.prop				<- copy(mc$pars$S_DTL)
+		tmp						<- dc[COUNT_ID==update.count, list(	TR_PART_P= rbeta(1L, TR_P_PART_ALPHA, TR_P_PART_BETA),
+																	TR_SEQ_P= rbeta(1L, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA),
+																	REC_PART_P= rbeta(1L, REC_P_PART_ALPHA, REC_P_PART_BETA),
+																	REC_SEQ_P= rbeta(1L, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA)),			
+										by=c('COUNT_ID','TR_P_PART_ALPHA','TR_P_PART_BETA','REC_P_PART_ALPHA','REC_P_PART_BETA','TR_P_SEQ_ALPHA','TR_P_SEQ_BETA','REC_P_SEQ_ALPHA','REC_P_SEQ_BETA')]
+		tmp[, TR_PART_LOGD:= dbeta(TR_PART_P, TR_P_PART_ALPHA, TR_P_PART_BETA, log=TRUE)]
+		tmp[, TR_SEQ_LOGD:= dbeta(TR_SEQ_P, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA, log=TRUE)]
+		tmp[, REC_PART_LOGD:= dbeta(REC_PART_P, REC_P_PART_ALPHA, REC_P_PART_BETA, log=TRUE)]
+		tmp[, REC_SEQ_LOGD:= dbeta(REC_SEQ_P, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA, log=TRUE)]
+		S_DTL.prop				<- rbind(subset(S_DTL.prop, COUNT_ID!=update.count), tmp)
+		setkey(S_DTL.prop, COUNT_ID)
+		S.prop[update.count]	<- tmp[, TR_PART_P*TR_SEQ_P*REC_PART_P*REC_SEQ_P]
+		Z.prop					<- mc$pars$Z[mc$curr.it,]
+		Z.prop[update.count]	<- dc[COUNT_ID==update.count, TR_OBS + rnbinom(1, TR_OBS, S.prop)]
+		N.prop					<- sum(Z.prop)
+		PI.prop					<- mc$pars$PI[mc$curr.it,]
+		tmp						<- c(Z.prop[update.count]+mc$pars$LAMBDA[1,update.count], sum(Z.prop + mc$pars$LAMBDA[1,]))
+		PI.prop[update.count]	<- rbeta(1, tmp[1], tmp[2]-tmp[1])							
+				
+		#	calculate MH ratio
+		log.prop.ratio	<- sum(dnbinom(mc$pars$Z[mc$curr.it,update.count], size=dc$TR_OBS[update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) - 
+							sum(dnbinom(Z.prop[update.count], size=dc$TR_OBS[update.count], prob=S.prop[update.count], log=TRUE))
+		log.fc			<- sum(dbinom(dc$TR_OBS[update.count], size=mc$pars$Z[mc$curr.it,update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) +								
+							dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)
+		log.fc.prop		<- sum(dbinom(dc$TR_OBS[update.count], size=Z.prop[update.count], prob=S.prop[update.count], log=TRUE)) +								
+							dpois(N.prop, lambda=mc$pars$NU, log=TRUE)
+		log.mh.ratio	<- log.fc.prop - log.fc + log.prop.ratio
+		mh.ratio		<- min(1,exp(log.mh.ratio))
+		
+		#	update
+		mc$curr.it				<- mc$curr.it+1L
+		set(mc$it.info, mc$curr.it, 'BLOCK', update.count)
+		set(mc$it.info, mc$curr.it, 'MHRATIO', mh.ratio)
+		set(mc$it.info, mc$curr.it, 'ACCEPT', as.integer(runif(1) < mh.ratio))							
+		if(mc$verbose & mc$it.info[mc$curr.it, ACCEPT])
+		{
+			print(paste0('it ',mc$curr.it,' ACCEPT block ',update.count))
+		}
+		if(mc$it.info[mc$curr.it, ACCEPT])
+		{
+			mc$pars$Z[mc$curr.it,]	<- Z.prop
+			mc$pars$N[mc$curr.it,]	<- N.prop		
+			mc$pars$PI[mc$curr.it,]	<- PI.prop
+			mc$pars$S[mc$curr.it,]	<- S.prop
+			mc$pars$S_DTL			<- copy(S_DTL.prop)
+		}
+		if(mc$it.info[mc$curr.it, !ACCEPT])
+		{
+			mc$pars$Z[mc$curr.it,]	<- mc$pars$Z[mc$curr.it-1L,]
+			mc$pars$N[mc$curr.it,]	<- mc$pars$N[mc$curr.it-1L,]
+			mc$pars$PI[mc$curr.it,]	<- mc$pars$PI[mc$curr.it-1L,]
+			mc$pars$S[mc$curr.it,]	<- mc$pars$S[mc$curr.it-1L,]
+		}			
+													
+		# store log likelihood
+		tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[mc$curr.it,], prob=mc$pars$S[mc$curr.it,], log=TRUE) ) +
+				dmultinom(mc$pars$Z[mc$curr.it,], size=mc$pars$N[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE)
+		set(mc$it.info, mc$curr.it, 'LOG_LKL', tmp)
+		# store log prior	
+		tmp	<- dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +
+				lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) +
+				mc$pars$S_DTL[,sum(TR_PART_LOGD) + sum(TR_SEQ_LOGD) + sum(REC_PART_LOGD) + sum(REC_SEQ_LOGD)]
+		set(mc$it.info, mc$curr.it, 'LOG_PRIOR', tmp)		
+	}
+	save(zm, rtpdm, rtr2, ds, dc, mc, file=paste0(outfile.base,'core_inference_SNPIZ_mcmcEachCount.rda'))
+}
+
+RakaiFull.phylogeography.180928.mcmc.assess<- function()
+{
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_phylogeography_core_inference_SNPIZ_mcmcEachCount.rda"	
+	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	load(infile.inference)
+	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), 100)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	#	convert to coda
+	mcc			<- mcmc( cbind( mc$pars$N, mc$pars$Z, mc$pars$PI, mc$pars$S) )
+	mcc.eff		<- effectiveSize(mcc)
+	#	plot trace and autocorrelations for variable with worst 6 effective sizes
+	tmp			<- mcc.eff[mcc.eff>0] 
+	tmp			<- names(tmp[sort(tmp, index.return=TRUE)$ix[1:6]])	
+	pdf(file=paste0(outfile.base,'_6worstchains_trace.pdf'), w=10, h=7)
+	plot( mcc[,tmp] )
+	dev.off()
+	pdf(file=paste0(outfile.base,'_6worstchains_autocor.pdf'), w=5, h=7)
+	autocorr.plot( mcc[,tmp] )
+	dev.off()
+}
+
+RakaiFull.phylogeography.180928.flows.fishinland<- function()
+{
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_phylogeography_core_inference_SNPIZ_mcmcEachCount.rda"	
+	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	load(infile.inference)
+	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), 100)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	
+	#
+	#	prepare data.table of proportions
+	dc[, REC_COMM_TYPE:= as.character(factor(substr(REC_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
+	dc[, TR_COMM_TYPE:= as.character(factor(substr(TR_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
+	mcpi	<- as.data.table(mc$pars$PI)
+	mcpi[, IT:= seq.int(2, by=100, length.out=nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
+	tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
+	mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
+	
+	#
+	#	calculate overall transmission flows fishing-inland
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	adjusted P
+	z		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','IT')]
+	z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('REC_COMM_TYPE','TR_COMM_TYPE')]
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+	z[, STAT:='joint']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- copy(z)	
+
+	#
+	#	WAIFM
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{												
+				z		<- subset(mcpi, TR_COMM_TYPE==group)
+				z		<- z[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','IT')]
+				z		<- z[, list(REC_COMM_TYPE=REC_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]				
+				z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='REC_COMM_TYPE']
+				z[, TR_COMM_TYPE:= group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE)
+	z[, STAT:='waifm']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+
+	#
+	#	sources
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				z		<- subset(mcpi , REC_COMM_TYPE==group)
+				z		<- z[, list(PI=sum(PI)), by=c('TR_COMM_TYPE','IT')]
+				z		<- z[, list(TR_COMM_TYPE=TR_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]
+				z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='TR_COMM_TYPE']
+				z[, REC_COMM_TYPE:= group]
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+	z[, STAT:='sources']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+
+	save(ans, file=paste0(outfile.base,'_fishing_inland_results.rda'))
+}
+
 RakaiFull.phylogeography.180618.popviraemia<- function()
 {
 	require(data.table)
