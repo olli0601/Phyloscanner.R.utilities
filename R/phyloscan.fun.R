@@ -2529,6 +2529,145 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 	p
 }
 
+
+#' @export
+#' @import data.table grid ggtree ggnet
+#' @title Plot probability network with most likely edges
+#' @description This function plots the network showing the most likely edge types.  
+#' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
+#' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
+#' @param point.size size of the individual points
+#' @param point.sizec.couple size of the outer ring around individuals in couples
+#' @param edge.gap value to adjust start / end points of edges
+#' @param edge.size multiplier by which the size of edges is shrunk/magnified
+#' @param curvature curvature of directed edges  
+#' @param arrow type of arrow to be plotted
+#' @param curv.shift offset to place the label for directed edges
+#' @param label.size size of label
+#' @param node.label Text displayed on top of each node 
+#' @param node.shape column name in di by which the shape of each node is drawn 
+#' @param node.fill column name in di by which each node is coloured
+#' @param node.shape.values named vector associating shapes to the values in the node.shape column
+#' @param node.fill.values named vector associating colours to the values in the node.fill column
+#' @param threshold.linked treshold value between 0 and 1. Edges with weight above this treshold are shown in black.
+#' @return ggplot object
+phsc.plot.maxedge.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, edge.label=NA_character_, edge.label.values=NA_character_, threshold.linked=NA_real_)
+{	
+	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
+	#node.label='ID'; threshold.linked=0.6; node.shape=NA_character_; node.fill=NA_character_; node.shape.values=NA_integer_; node.fill.values=NA_character_
+	#node.shape='IN_COUPLE'; node.fill='SEX'
+	#node.fill.values=c('F'='hotpink2', 'M'='steelblue2')
+	#node.shape.values=c('not in long-term\nrelationship'=18,'in long-term\nrelationship'=16)
+	if(is.na(node.label))
+	{
+		node.label<- paste0('DUMMY',1+length(which(grepl('DUMMY',colnames(di)))))
+		set(di, NULL, node.label, NA_character_)
+	}
+	if(is.na(edge.label))
+	{
+		edge.label<- paste0('DUMMY',1+length(which(grepl('DUMMY',colnames(di)))))
+		set(df, NULL, edge.label, df[, TYPE])
+		edge.label.values	<- c('12'='red','21'='red','ambiguous'='grey50')
+	}
+	if(is.na(node.shape))
+	{
+		node.shape<- paste0('DUMMY',1+length(which(grepl('DUMMY',colnames(di)))))
+		set(di, NULL, node.shape, 'NA')
+	}
+	if(is.na(node.fill))
+	{
+		node.fill<- paste0('DUMMY',1+length(which(grepl('DUMMY',colnames(di)))))
+		set(di, NULL, node.fill, 'NA')
+	}
+	if(any(is.na(node.fill.values)))
+	{
+		z						<- unique(di[[node.fill]])
+		node.fill.values		<- heat.colors(length(z))
+		names(node.fill.values)	<- z
+	}
+	if(any(is.na(node.shape.values)))
+	{
+		z						<- unique(di[[node.shape]])
+		node.shape.values		<- seq_along(z)
+		names(node.shape.values)<- z
+	}
+	setnames(di, c(node.label, node.shape, node.fill), c('NODE_LABEL','NODE_SHAPE','NODE_FILL'))
+	tmp	<- c('NODE_LABEL','NODE_SHAPE','NODE_FILL')[which(c(node.label, node.shape, node.fill)=='ID')]
+	if(length(tmp))
+		set(di, NULL, 'ID', di[[tmp]])
+	di	<- subset(di, select=c(ID, NODE_LABEL, NODE_SHAPE, NODE_FILL))
+	setnames(df, c(edge.label), c('EDGE_LABEL'))
+	
+	layout	<- as.data.table(ggnet2(network(unique(subset(df, select=c(ID1,ID2))), directed=FALSE, matrix.type="edgelist"))$data[,c("label", "x", "y")])
+	setnames(layout, c('label','x','y'), c('ID1','ID1_X','ID1_Y'))
+	df		<- merge(df, layout, by='ID1')
+	setnames(layout, c('ID1','ID1_X','ID1_Y'), c('ID2','ID2_X','ID2_Y'))
+	df		<- merge(df, layout, by='ID2')
+	setnames(layout, c('ID2','ID2_X','ID2_Y'),  c('ID','X','Y'))	
+	layout	<- merge(layout,di, by='ID')	
+	
+	df[, EDGETEXT_X:= (ID1_X+ID2_X)/2]
+	df[, EDGETEXT_Y:= (ID1_Y+ID2_Y)/2]
+	#
+	#	calculate score for linked
+	if(is.na(threshold.linked))
+	{
+		df	<- merge(df,df[, 	{
+							z<- rep('alpha_1', length(TYPE))
+							z[which.max(POSTERIOR_SCORE)]	<- 'alpha_2'
+							list(ALPHA=z, TYPE=TYPE)	
+						}, by=c('ID1','ID2')], by=c('ID1','ID2','TYPE'))		
+	}
+	if(!is.na(threshold.linked))
+	{
+		tmp	<- subset(df, TYPE!='not close/disconnected')[, list( ALPHA=as.character(factor(sum(POSTERIOR_SCORE)>=threshold.linked, levels=c(TRUE, FALSE), labels=c('alpha_2','alpha_1'))) ), by=c('ID1','ID2')]
+		df	<- merge(df, tmp, by=c('ID1','ID2'))		
+	}	
+	#	for edges, move the start and end points on the line between X and Y
+	#	define unit gradient
+	df[, MX:= (ID2_X - ID1_X)]	
+	df[, MY:= (ID2_Y - ID1_Y)]
+	tmp		<- df[, sqrt(MX*MX+MY*MY)]
+	set(df, NULL, 'MX', df[, MX/tmp])
+	set(df, NULL, 'MY', df[, MY/tmp])	
+	set(df, NULL, 'ID1_X', df[, ID1_X + MX*edge.gap])
+	set(df, NULL, 'ID1_Y', df[, ID1_Y + MY*edge.gap])
+	set(df, NULL, 'ID2_X', df[, ID2_X - MX*edge.gap])
+	set(df, NULL, 'ID2_Y', df[, ID2_Y - MY*edge.gap])	
+	#	label could just be move on the tangent vector to the line
+	#	define unit tangent
+	df[, TX:= -MY]
+	df[, TY:= MX]
+	tmp		<- df[, which(TYPE=='12')]
+	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X + TX*curv.shift])
+	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y + TY*curv.shift])
+	tmp		<- df[, which(TYPE=='21')]
+	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X - TX*curv.shift])
+	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])
+	
+	tmp		<- df[, list(TYPE=TYPE[which.max(KEFF)]), by=c('ID1','ID2')]
+	df		<- merge(df, tmp, by=c('ID1','ID2','TYPE'))
+	#
+	p		<- ggplot() +			
+			geom_point(data=layout, aes(x=X, y=Y, fill=NODE_FILL, pch=NODE_SHAPE), size=point.size) +
+			geom_segment(data=subset(df, TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, alpha=ALPHA, colour=EDGE_LABEL), lineend="butt") +
+			geom_curve(data=subset(df, TYPE=='12' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, alpha=ALPHA, colour=EDGE_LABEL), curvature=curvature, arrow=arrow, lineend="butt") +
+			geom_curve(data=subset(df, TYPE=='21' & KEFF>0), aes(x=ID2_X, xend=ID1_X, y=ID2_Y, yend=ID1_Y, size=edge.size*KEFF, alpha=ALPHA, colour=EDGE_LABEL), curvature=curvature, arrow=arrow, lineend="butt") +
+			scale_shape_manual(values=c(node.shape.values, 'NA'=16)) +
+			scale_fill_manual(values=c(node.fill.values, 'NA'='grey50')) +
+			scale_alpha_manual(values=c('alpha_1'=0.5,'alpha_2'=1, 'NA'=0)) +
+			scale_colour_manual(values=c(edge.label.values, 'NA'='grey50')) +
+			scale_size_identity() +
+			geom_text(data=subset(df, TYPE!='not close/disconnected' & KEFF>0), aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=paste0(round(100*POSTERIOR_SCORE,d=1),'%')), size=label.size) +
+			geom_text(data=layout, aes(x=X, y=Y, label=NODE_LABEL)) +
+			theme_void() +
+			guides(colour='none', fill='none',size='none', pch='none') 
+	layout		<- subset(layout, select=c(ID,X,Y))
+	setnames(layout, c('ID','X','Y'), c('label','x','y'))	
+	p$layout	<- layout
+	p
+}
+
 #' @export
 #' @import data.table grid ggtree
 #' @title Plot short read phylogenies and highlight individuals
