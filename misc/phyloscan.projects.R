@@ -33,7 +33,7 @@ project.dual<- function()
 	#pty.pipeline.phyloscanner.180302.beehive67.process()
 	#pty.pipeline.phyloscanner.180605.MunichCluster.process()
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=15, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
