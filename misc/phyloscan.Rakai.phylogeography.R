@@ -5121,10 +5121,9 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 {
 	require(data.table)	
 	require(Boom)	
-	require(rethinking)
 	#require(gtools)	
 	
-	#logistic<- function(x) 1/(1+e(-x))
+	logistic<- function(x) 1/(1+e(-x))
 		
 	if(is.null(opt))
 	{
@@ -5179,12 +5178,11 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	#	define prior for sampling probabilities from previously fitted participation and sequencing models	
 	#	sampling probs differ by: age community and sex
 	#
-	infile.participation	<- file.path(indir,"participation_differences_180322_logisticmodels.rda")	
-	infile.sequencing		<- file.path(indir,"sequencing_differences_180322_logisticmodels.rda")
+	infile.participation	<- file.path(indir,"participation_differences_180322_logisticmodels_samples.rda")	
+	infile.sequencing		<- file.path(indir,"sequencing_differences_180322_logisticmodels_samples.rda")
 	if(opt$exclude.onART.from.denominator)
-		infile.sequencing	<- file.path(indir,"sequencing_differences_180322_exclART_logisticmodels.rda")
+		infile.sequencing	<- file.path(indir,"sequencing_differences_180322_exclART_logisticmodels_samples.rda")
 	load(infile.participation)
-	mp1 <- mp2 <- mp4 <- NULL
 	#	binarize covariates
 	dc	<- copy(rtr2)
 	dc[, TR_AGE_YOUNG:= as.integer(TR_AGE_AT_MID_C=='15-24')]
@@ -5207,7 +5205,6 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')
 	#	define community number to match STAN output for sequencing model
 	load(infile.sequencing)
-	ms2 <- ms3 <- ms4 <- NULL
 	tmp		<- unique(subset(dg, select=c(COMM_NUM_A,COMM_NUM_B)))
 	setnames(tmp, 'COMM_NUM_B', 'COMM_NUM_B2')
 	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
@@ -5215,8 +5212,6 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
 	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')
 	#	extract Monte Carlo samples from best WAIC participation and best WAIC sequencing models	
-	mps			<- extract.samples(mp3)
-	mss			<- extract.samples(ms1)
 	mc.it		<- 5e2
 	set.seed(42L)
 	gc()
