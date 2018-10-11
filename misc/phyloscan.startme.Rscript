@@ -35,7 +35,7 @@ default.fun		<- "project.dual"
 #default.fun		<- "hivc.pipeline.various"
 ###############################################################################
 function.list<-c(list.files(path= paste(CODE.HOME,"R",sep='/'), pattern = ".R$", all.files = FALSE,
-		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","phyloscan.projects.R","phyloscan.Rakai.phylogeography.R",sep='/'))
+		full.names = TRUE, recursive = FALSE),paste(CODE.HOME,"misc","phyloscan.projects.R",sep='/'),paste(CODE.HOME,"misc","phyloscan.Rakai.phylogeography.R",sep='/'))
 sapply(function.list,function(x){ print(x); source(x,echo=FALSE,print.eval=FALSE, verbose=FALSE) })
 ###############################################################################
 .ls.objects <- function (pos = 1, pattern, order.by,
