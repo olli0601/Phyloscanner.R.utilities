@@ -5123,7 +5123,7 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	require(Boom)	
 	#require(gtools)	
 	
-	logistic<- function(x) 1/(1+e(-x))
+	logistic<- function(x) 1/(1+exp(-x))
 		
 	if(is.null(opt))
 	{
