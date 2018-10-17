@@ -18044,6 +18044,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	
 	#
 	# anonymise tree files
+	options(expressions=5e4)
 	infiles		<- data.table(FI=list.files(indir, pattern='newick.zip$', full.names=TRUE))
 	infiles[, FO:= file.path(outdir, basename(FI))]
 	tip.regex	<- '^(.*)_(fq.*)$'
@@ -18060,29 +18061,28 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 		#	move from file_name to old_file_name
 		file.rename(tmp[,OUT],tmp[,IN])		
 		#	read each newick file, anonymize, and write to file
-		tmp[,  {
-					z			<- read.tree(IN)
-					zz			<- data.table(TAXA=z$tip.label)
-					zz[, TAXA_ID:=seq_len(Ntip(z))]
-					zz[, ID:= gsub(tip.regex,'\\1',TAXA)]
-					zz[, POST:= gsub(tip.regex,'\\2',TAXA)]
-					zz[, REF:= grepl('^REF',TAXA)]
-					zz			<- merge(zz, dfa, by='ID',all.x=TRUE)
-					zz[, TAXA2:= TAXA]
-					set(zz, zz[, which(!REF)], 'TAXA2', zz[zz[, which(!REF)],paste0(AID,'_',POST)])
-					stopifnot( zz[, all( REF == is.na(AID))] )
-					stopifnot( all( zz[zz$REF,TAXA] == zz[zz$REF,TAXA2] ) )
-					stopifnot( all( zz[!zz$REF,TAXA] != zz[!zz$REF,TAXA2] ) )
-					setkey(zz, TAXA_ID)
-					z$tip.label	<- zz$TAXA2
-					write.tree(z, file=OUT)
-				}, by='IN']		
+		for(jj in seq_len(nrow(tmp)))
+		{
+			z			<- read.tree(tmp[jj,IN])
+			zz			<- data.table(TAXA=z$tip.label)
+			zz[, TAXA_ID:=seq_len(Ntip(z))]
+			zz[, ID:= gsub(tip.regex,'\\1',TAXA)]
+			zz[, POST:= gsub(tip.regex,'\\2',TAXA)]
+			zz[, REF:= grepl('^REF',TAXA)]
+			zz			<- merge(zz, dfa, by='ID',all.x=TRUE)
+			zz[, TAXA2:= TAXA]
+			set(zz, zz[, which(!REF)], 'TAXA2', zz[zz[, which(!REF)],paste0(AID,'_',POST)])
+			stopifnot( zz[, all( REF == is.na(AID))] )
+			stopifnot( all( zz[zz$REF,TAXA] == zz[zz$REF,TAXA2] ) )
+			stopifnot( all( zz[!zz$REF,TAXA] != zz[!zz$REF,TAXA2] ) )
+			setkey(zz, TAXA_ID)
+			z$tip.label	<- zz$TAXA2
+			write.tree(z, file=tmp[jj,OUT])
+		}
 		#	remove old files
 		file.remove(tmp[,IN])
 		#	zip		
-		zip(outfile, tmp$OUT, flags="-umr9XTjq")
-		#	clean up
-		file.remove(tmp[,OUT])				
+		zip(outfile, tmp$OUT, flags="-umr9XTjq")						
 	}
 	
 	#

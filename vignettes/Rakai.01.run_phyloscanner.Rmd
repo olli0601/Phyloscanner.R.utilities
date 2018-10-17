@@ -1,6 +1,7 @@
 ---
 title: "Analysis of Rakai Population-Based Sample: 01 - run phyloscanner"
 date: "`r Sys.Date()`"
+output: html_document
 github_document:
     toc_dept: 1
 ---
@@ -9,7 +10,7 @@ github_document:
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-### Introduction: analysis of population-based sample
+### Introduction: analysis of deep-sequence trees from population-based sample
 It is computationally very challenging to reconstruct viral trees from all
 deep-sequence reads of hundreds or thousands of individuals. To
 address this challenge, we divide a large population-based sample into batches
@@ -30,7 +31,8 @@ following file structure.
    `ptyrX_trees_fasta.zip`. 
 4. Third, the deep-sequence phylogenies generated with *phyloscanner*, zipped
    into file `ptyrX_trees_newick.zip`. 
-   
+Data Set S1 contains these files for 345 batches.
+
 ### Setting up your work environment
 
 Start by defining the base directories for your project: 
@@ -63,7 +65,7 @@ dir.create(work.dir, showWarnings=FALSE)
 
 The next step is to define the input arguments to *phyloscanner*. Please see the
 *phyloscanner* manual for details. The default arguments that were used for
-analysis of the Rakai Population-Based Sample are as follows. 
+analysis of the Rakai population-based sample are as follows. 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE} 
 pty.args			<- list(	prog.pty=prog.pty, 
 		prog.mafft=NA, 
@@ -121,8 +123,10 @@ save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 ```
   
 Next, we will prepare UNIX *bash* scripts to run a large number of
-*phyloscanner* analyses on a population-based sample. Each analysis corresponds
-to a batch of patients that are analysed jointly. 
+*phyloscanner* analyses on a population-based sample. Each bash script
+corresponds to the deep-sequence phylogenetic analysis of one batch of patients
+that are analysed jointly.
+
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 #
