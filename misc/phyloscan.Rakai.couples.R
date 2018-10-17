@@ -18049,7 +18049,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	infiles[, FO:= file.path(outdir, basename(FI))]
 	tip.regex	<- '^(.*)_(fq.*)$'
 	#for(ii in seq_len(nrow(infiles)))	
-	for(ii in 1:10)
+	for(ii in 5:10)
 	{	
 		cat('process',ii)		
 		infile	<- infiles[ii,FI]
