@@ -119,19 +119,25 @@ Next, we will prepare UNIX *bash* scripts to run a large number of
 corresponds to the deep-sequence phylogenetic analysis of one batch of
 individuals that are analysed jointly.
 
+For each batch of individuals to be processed, find the corresponding list of
+patients in the input directory: 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
-#	for each batch of trees to be processed:
-#	find list of patients in input directory
 pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
 pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]
+```
 
-#	check which (if any) batches have already been processed, and remove from TODO list
+Check which (if any) batches have already been processed, and remove them from
+the TODO list:
+```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 tmp		<- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 pty.c	<- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
 pty.c	<- subset(pty.c, is.na(FILE_TRMW))
+```
 
-#	for each batch of deep-sequence trees: create bash script to run phyloscanner 
+For each batch of individuals, create a UNIX *bash* script to run
+*phyloscanner*: 
+```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 setkey(pty.c, PTY_RUN)		
 pty.c	<- pty.c[, { 
 			prefix.infiles	<- gsub('patients.txt','',FILE_BAM)			
