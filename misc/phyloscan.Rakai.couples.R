@@ -17919,86 +17919,175 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 		dir.group		<- 'TYPE_ADJ_DIR_TODI2'		
 	}
 	
-	infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"							   
-	outfile.base			<- gsub('withmetadata.rda','',infile.trmpairs.todi)
-	load(infile.trmpairs.todi)
+	indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_NotAnoymised'
+	outdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees'
+	tmpdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_tmp'	
 	
-	# 	anonymize labels
-	dfa		<- unique(subset(rd, select=c(RID,SEX)))
-	setkey(dfa, RID)	
-	dfa[, AID:= paste0('RkA',sprintf("%05d", seq_len(nrow(dfa))),SEX)]
-	setnames(dfa, 'RID', 'ID')
-	#	add sampling times
-	tmp		<- unique(subset(rs, select=c(RID, SEQ_DATE)))
-	setnames(tmp, 'RID', 'ID')
-	dfa		<- merge(dfa, tmp, by='ID', all.x=TRUE)
-	write.csv(dfa, row.names=FALSE, file=paste0(outfile.base,'anonymised_RIDs.csv'))
 	
-	require(colorspace)
-	indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
-	outdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_anonymised'
-	infiles		<- data.table(FI=list.files(indir, pattern='trees.rda$', full.names=TRUE))
-	infiles[, FO:= file.path(outdir, basename(FI))]
-	tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
-	dfb			<- dfa[0,]
-	for(ii in seq_len(nrow(infiles)))
-	#for(ii in 293:345)
-	{	
-		cat('process',ii)
-		# load dfr and phs
-		load( infiles[ii,FI] )		
-		# anonymize labels			
-		tmp			<- subset(dfr[, {
-							ph	<- phs[[ IDX ]]
-							list(ID= unique(gsub(tip.regex,'\\1',ph$tip.label)))													  				
-						}, by='IDX'], !grepl('REF', ID))
-		tmp			<- data.table( ID=unique(tmp$ID) )
-		df			<- merge(tmp, dfa, by='ID')
-		dfb			<- rbind(df, dfb)
-		# anonymize phs
-		for(k in seq_along(phs))				
-			for(j in seq_len(nrow(df)))
-			{
-				phs[[k]]$tip.label				<- gsub(df[j,ID],df[j,AID],phs[[k]]$tip.label)			
-				attr(phs[[k]], "SPLIT")			<- gsub(df[j,ID],df[j,AID],attr(phs[[k]], "SPLIT"))
-				attr(phs[[k]], "INDIVIDUAL")	<- gsub(df[j,ID],df[j,AID],attr(phs[[k]], "INDIVIDUAL"))
-				attr(phs[[k]], "BRANCH_COLOURS")<- gsub(df[j,ID],df[j,AID],attr(phs[[k]], "BRANCH_COLOURS"))				
-			}	
-		#
-		str(phs[[1]])
-		# save trees
-		save( phs, file=infiles[ii,FO] )														
+	#	make anonymisation keys
+	if(0)
+	{
+		infile.trmpairs.todi	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"							   
+		outfile.base			<- gsub('withmetadata.rda','',infile.trmpairs.todi)
+		load(infile.trmpairs.todi)	
+		# 	anonymize labels
+		dfa		<- unique(subset(rd, select=c(RID,SEX)))
+		setkey(dfa, RID)	
+		dfa[, AID:= paste0('RkA',sprintf("%05d", seq_len(nrow(dfa))),SEX)]
+		setnames(dfa, 'RID', 'ID')
+		#	add sampling times
+		tmp		<- unique(subset(rs, select=c(RID, SEQ_DATE)))
+		setnames(tmp, 'RID', 'ID')
+		dfa		<- merge(dfa, tmp, by='ID', all.x=TRUE)
+		write.csv(dfa, row.names=FALSE, file=paste0(outfile.base,'anonymised_RIDs.csv'))		
 	}
-	#
-	#	write file with all patients in networks, containing gender and seq year+month
-	#
-	dfb	<- unique(subset(dfb, select=c(AID, SEX, SEQ_DATE)))
-	dfb	<- dfb[, list(SEX=SEX, SID=paste0(AID,'-fq',seq_along(SEQ_DATE)), SEQ_DATE=sort(SEQ_DATE)), by='AID']
-	dfb[, SEQ_YEAR:= floor(SEQ_DATE)]
-	dfb[, SEQ_MONTH:= ceiling( (SEQ_DATE%%1)*12 )]
-	setnames(dfb, 'AID', 'ID')
-	set(dfb, NULL, c('SEQ_DATE'), NULL)
-	write.csv(dfb, row.names=FALSE, file.path(outdir,'RCCS_PANGEAHIV_2012-2014_gender_and_sequence_sampling_dates.csv'))
+	#	update anonymisation keys, leaving all old ones intact
+	if(0)
+	{
+		dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
+		dfa			<- dfa[, list(SEX=SEX[1], SEQ_DATE=min(SEQ_DATE)), by=c('ID','AID')]		
+		
+		tmp			<- data.table(FI=list.files(indir, pattern='patients.txt$', full.names=TRUE))
+		tmp			<- tmp[, list(ID=read.csv(FI, header=FALSE, stringsAsFactors=FALSE )[,1]), by='FI']
+		tmp			<- unique(subset(tmp, select=ID))
+		dfa			<- merge(dfa, tmp, all=TRUE)
+		
+		#	get meta data
+		z		<- subset(dfa, is.na(AID), ID)		
+		tmp		<- RakaiCirc.epi.get.info.170208()
+		rh		<- tmp$rh
+		rd		<- tmp$rd
+		rn		<- tmp$rn
+		ra		<- tmp$ra
+		tmp		<- unique(rbind(subset(rn, select=c(RID,SEX)),subset(ra, select=c(RID,SEX)),subset(rd, select=c(RID,SEX))))
+		setnames(tmp, 'RID', 'ID')
+		z		<- merge(z, tmp, by='ID', all.x=TRUE)
+		stopifnot( z[, all(!is.na(SEX)) ])
+		tmp		<- unique(subset(rs, select=c(RID, SEQ_DATE)))
+		setnames(tmp, 'RID', 'ID')
+		z		<- merge(z, tmp, by='ID', all.x=TRUE)
+		stopifnot( z[, all(!is.na(SEQ_DATE)) ])
+		# 	anonymize labels
+		tmp		<- nrow(subset(dfa, !is.na(AID)))
+		z[, AID:= paste0('RkA',sprintf("%05d", tmp+seq_len(nrow(z))),SEX)]
+		
+		#	merge
+		dfa		<- rbind( subset(dfa, !is.na(AID)), z )
+		write.csv(dfa, row.names=FALSE, file=paste0(outfile.base,'anonymised_RIDs.csv'))
+		
+	}
+	
+	#  read anonymisation keys
+	dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
+	dfa			<- unique(subset(dfa, select=c(ID,AID)))
+	
 	#
 	#	anonymize patients file
-	#
-	indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
-	outdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean_anonymised'
 	infiles		<- data.table(FI=list.files(indir, pattern='patients.txt$', full.names=TRUE))
-	infiles[, FO:= file.path(outdir, basename(FI))]
-	tip.regex	<- '^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$'
+	infiles[, FO:= file.path(outdir, basename(FI))]	
 	for(ii in seq_len(nrow(infiles)))	
 	{	
-		cat('process',ii)
+		cat('\nprocess',ii)
 		# load dfr and phs
 		tmp			<- as.data.table(read.csv( infiles[ii,FI], header=FALSE, stringsAsFactors=FALSE ))
 		setnames(tmp, 'V1', 'ID')
 		# anonymize labels
-		tmp			<- merge(tmp, dfa, by='ID')
-		tmp			<- unique(subset(tmp, select=AID))
+		tmp			<- merge(tmp, dfa, by='ID', all=TRUE)
+		stopifnot( tmp[, all(!is.na(AID))] )
+		tmp			<- unique(subset(tmp, select=AID))		
 		# write to file
 		write.table(tmp, row.names=FALSE, col.names=FALSE, file=infiles[ii,FO] , quote=FALSE)														
 	}
+	
+	#
+	# anonymise fasta files
+	infiles		<- data.table(FI=list.files(indir, pattern='fasta.zip$', full.names=TRUE))
+	infiles[, FO:= file.path(outdir, basename(FI))]
+	tip.regex	<- '^(.*)_(fq.*)$'
+	#for(ii in seq_len(nrow(infiles)))
+	for(ii in 1:10)
+	{	
+		cat('\nprocess',ii)		
+		#FI	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_NotAnoymised/ptyr223_trees_fasta.zip"
+		#FO	<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees/ptyr223_trees_fasta.zip"
+		infile	<- infiles[ii,FI]
+		outfile	<- infiles[ii,FO]
+		#	unzip
+		suppressWarnings(invisible(unzip(infile, overwrite=FALSE, exdir=tmpdir)))
+		tmp		<- data.table(OUT=list.files(tmpdir, full.names=TRUE))
+		tmp[, IN:= file.path(tmpdir, paste0('old_',basename(OUT)))]
+		#	move from file_name to old_file_name
+		file.rename(tmp[,OUT],tmp[,IN])		
+		#	read each fasta file, anonymize, and write to file
+		tmp[,  {
+					z			<- read.FASTA(IN)
+					zz			<- data.table(TAXA=names(z))
+					zz[, TAXA_ID:=seq_len(nrow(zz))]
+					zz[, ID:= gsub(tip.regex,'\\1',TAXA)]
+					zz[, POST:= gsub(tip.regex,'\\2',TAXA)]
+					zz[, REF:= grepl('^REF',TAXA)]
+					zz			<- merge(zz, dfa, by='ID',all.x=TRUE)
+					zz[, TAXA2:= TAXA]
+					set(zz, zz[, which(!REF)], 'TAXA2', zz[zz[, which(!REF)],paste0(AID,'_',POST)])
+					stopifnot( zz[, all( REF == is.na(AID))] )
+					stopifnot( all( zz[zz$REF,TAXA] == zz[zz$REF,TAXA2] ) )
+					stopifnot( all( zz[!zz$REF,TAXA] != zz[!zz$REF,TAXA2] ) )
+					setkey(zz, TAXA_ID)
+					names(z)	<- zz$TAXA2
+					write.dna(z, file=OUT, format='fasta', colsep='', nbcol=-1)
+				}, by='IN']		
+		#	remove old files
+		file.remove(tmp[,IN])
+		#	zip		
+		zip(outfile, tmp$OUT, flags="-umr9XTjq")						
+	}
+	
+	#
+	# anonymise tree files
+	infiles		<- data.table(FI=list.files(indir, pattern='newick.zip$', full.names=TRUE))
+	infiles[, FO:= file.path(outdir, basename(FI))]
+	tip.regex	<- '^(.*)_(fq.*)$'
+	#for(ii in seq_len(nrow(infiles)))	
+	for(ii in 1:10)
+	{	
+		cat('process',ii)		
+		infile	<- infiles[ii,FI]
+		outfile	<- infiles[ii,FO]
+		#	unzip
+		suppressWarnings(invisible(unzip(infile, overwrite=FALSE, exdir=tmpdir)))
+		tmp		<- data.table(OUT=list.files(tmpdir, full.names=TRUE))
+		tmp[, IN:= file.path(tmpdir, paste0('old_',basename(OUT)))]
+		#	move from file_name to old_file_name
+		file.rename(tmp[,OUT],tmp[,IN])		
+		#	read each newick file, anonymize, and write to file
+		tmp[,  {
+					z			<- read.tree(IN)
+					zz			<- data.table(TAXA=z$tip.label)
+					zz[, TAXA_ID:=seq_len(Ntip(z))]
+					zz[, ID:= gsub(tip.regex,'\\1',TAXA)]
+					zz[, POST:= gsub(tip.regex,'\\2',TAXA)]
+					zz[, REF:= grepl('^REF',TAXA)]
+					zz			<- merge(zz, dfa, by='ID',all.x=TRUE)
+					zz[, TAXA2:= TAXA]
+					set(zz, zz[, which(!REF)], 'TAXA2', zz[zz[, which(!REF)],paste0(AID,'_',POST)])
+					stopifnot( zz[, all( REF == is.na(AID))] )
+					stopifnot( all( zz[zz$REF,TAXA] == zz[zz$REF,TAXA2] ) )
+					stopifnot( all( zz[!zz$REF,TAXA] != zz[!zz$REF,TAXA2] ) )
+					setkey(zz, TAXA_ID)
+					z$tip.label	<- zz$TAXA2
+					write.tree(z, file=OUT)
+				}, by='IN']		
+		#	remove old files
+		file.remove(tmp[,IN])
+		#	zip		
+		zip(outfile, tmp$OUT, flags="-umr9XTjq")
+		#	clean up
+		file.remove(tmp[,OUT])				
+	}
+	
+	#
+	#	make meta-data files
+	
 }
 
 RakaiFull.analyze.trmpairs.todi.171122.proportion.couples<- function()
