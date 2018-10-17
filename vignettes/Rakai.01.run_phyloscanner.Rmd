@@ -1,16 +1,6 @@
----
-title: "Analysis of Rakai Population-Based Sample: 01 - run phyloscanner"
-date: "`r Sys.Date()`"
-output: html_document
-github_document:
-    toc_dept: 1
----
+# Phyloscanner analysis of deep-sequence trees from a population-based sample
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
-```
-
-### Introduction: analysis of deep-sequence trees from population-based sample
+### Introduction: batches and input data
 It is computationally very challenging to reconstruct viral trees from all
 deep-sequence reads of hundreds or thousands of individuals. To
 address this challenge, we divide a large population-based sample into batches
@@ -123,7 +113,7 @@ save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 ```
   
 Next, we will prepare UNIX *bash* scripts to run a large number of
-*phyloscanner* analyses on a population-based sample. Each bash script
+*phyloscanner* analyses on a population-based sample. Each *bash* script
 corresponds to the deep-sequence phylogenetic analysis of one batch of patients
 that are analysed jointly.
 
