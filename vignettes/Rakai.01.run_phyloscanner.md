@@ -54,6 +54,7 @@ dir.create(work.dir, showWarnings=FALSE)
 
 The input directory should have a file structure similar to this (just unzip
 Data Set S1): 
+
 <p align="center"><img src="vignettes/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
 ### Prepare bash scripts to run phyloscanner
