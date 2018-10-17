@@ -26,7 +26,6 @@ Data Set S1 contains these files for 345 batches of individuals of the Rakai
 population-based sample.
 
 ### Setting up your work environment
-
 Start by defining the base directories for your project: 
 1. `HOME` Base directory.
 2. `in.dir` Name of directory containing read alignments and deep-sequence
@@ -39,7 +38,7 @@ Start by defining the base directories for your project:
    *phyloscanner_make_trees.py*
     
 For example:    
-```{r, eval=FALSE, message=FALSE, warning= FALSE, include=TRUE} 
+```r 
 require(Phyloscanner.R.utilities)
 
 HOME		<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'								
@@ -53,13 +52,16 @@ dir.create(out.dir, showWarnings=FALSE)
 dir.create(work.dir, showWarnings=FALSE)
 ```  
 
-### Prepare bash scripts to run phyloscanner
+The input directory should have a file structure similar to this (just unzip
+Data Set S1): 
 
+
+### Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
 *phyloscanner* manual for details. The default arguments that were used for
 analysis of the Rakai population-based sample are as follows. 
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE} 
-pty.args			<- list(	prog.pty=prog.pty, 
+```r 
+pty.args <- list(	prog.pty=prog.pty, 
 		prog.mafft=NA, 
 		prog.raxml=NA, 
 		data.dir=NA, 
@@ -121,14 +123,14 @@ individuals that are analysed jointly.
 
 For each batch of individuals to be processed, find the corresponding list of
 patients in the input directory: 
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
 pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]
 ```
 
 Check which (if any) batches have already been processed, and remove them from
 the TODO list:
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 tmp <- data.table(FILE_TRMW=list.files(out.dir, pattern='_pairwise_relationships.rda', full.names=TRUE))
 tmp[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_pairwise_relationships.rda','',basename(FILE_TRMW))))]
 pty.c <- merge(pty.c, tmp, by='PTY_RUN', all.x=1)
@@ -137,7 +139,7 @@ pty.c <- subset(pty.c, is.na(FILE_TRMW))
 
 For each batch of individuals, create a UNIX *bash* script to run
 *phyloscanner*: 
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 setkey(pty.c, PTY_RUN)		
 pty.c	<- pty.c[, { 
 		prefix.infiles <- gsub('patients.txt','',FILE_BAM)			
@@ -148,10 +150,10 @@ pty.c[1,cat(CMD)]
 ```
 
 Each bash script should look similar to this:
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 pty.c[1,cat(CMD)]		
 ```
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}		
+```r		
 '
 CWD=$(pwd)
 echo $CWD
@@ -185,17 +187,17 @@ Each *bash* script can be run from a UNIX terminal, we only have to
 write the scripts to file. This following code will write each script to the
 temp directory that you specified above, to a file named
 `phsc.Wed_Oct_17_101858_2018.sh` or similar: 
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 invisible(pty.c[,	{					
-		outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
-		outfile		<- file.path(pty.args[['work.dir']], outfile)
+		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile <- file.path(pty.args[['work.dir']], outfile)
 		cat(CMD, file=outfile)
 		Sys.chmod(outfile, mode="777")
 		Sys.sleep(1)
 	}, by='PTY_RUN'])					
 ```
 Each file can be run on a UNIX terminal, e.g.:
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 '
 cd /Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_work
 phsc.Wed_Oct_17_101858_2018.sh 
@@ -210,17 +212,17 @@ job scheduling system, add the header to each script, and then submit each
 script to the job scheduling system. The exact form of the PBS header depends
 on your job scheduler, below is an example that works at Imperial.
 
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
-hpc.load <- "module load R/3.3.3"	# make R available 
+```r
+hpc.load <- "module load R/3.3.3"			# make R available 
 hpc.select <- 1						# number of nodes
 hpc.nproc <- 1						# number of processors on node
 hpc.walltime <- 15					# walltime
 hpc.q <- "pqeelab"					# PBS queue
 hpc.mem <- "6gb" 					# RAM
 pbshead	<- "#!/bin/sh"
-tmp		<- paste("#PBS -l walltime=", hpc.walltime, ":59:59,pcput=", hpc.walltime, ":45:00", sep = "")
+tmp <- paste("#PBS -l walltime=", hpc.walltime, ":59:59,pcput=", hpc.walltime, ":45:00", sep = "")
 pbshead	<- paste(pbshead, tmp, sep = "\n")
-tmp		<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+tmp <- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
 pbshead <- paste(pbshead, tmp, sep = "\n")
 pbshead <- paste(pbshead, "#PBS -j oe", sep = "\n")
 pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
@@ -228,7 +230,7 @@ pbshead <- paste(pbshead, hpc.load, sep = "\n")
 ```
 
 Our header thus looks as follows:	
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 ' 
 #!/bin/sh 
 #PBS -l walltime=15:59:59,pcput=15:45:00 
@@ -240,14 +242,14 @@ module load R/3.3.3
 ```
 	
 We are now ready to add the header to each script, and submit the job:		
-```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+```r
 invisible(pty.c[,	{					
-		cmd			<- paste(pbshead,'cd $TMPDIR',sep='\n')
-		cmd			<- paste(cmd,CMD,sep='\n')	
-		outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
-		outfile		<- file.path(pty.args[['work.dir']], outfile)
+		cmd <- paste(pbshead,'cd $TMPDIR',sep='\n')
+		cmd <- paste(cmd,CMD,sep='\n')	
+		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile <- file.path(pty.args[['work.dir']], outfile)
 		cat(CMD, file=outfile)
-		cmd 		<- paste("qsub", outfile)
+		cmd <- paste("qsub", outfile)
 		cat(cmd)
 		cat(system(cmd, intern= TRUE))
 		Sys.sleep(1)						
