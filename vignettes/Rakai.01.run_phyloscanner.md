@@ -282,21 +282,38 @@ Below is a description of the full output.
 3. `ptyrX_trees_newick.zip` Input file, deep sequence trees.
 4. `ptyrX_pairwise_relationships.rda` Main output file for
    reconstructing HIV-1 transmission networks.     
-5. `ptyrX_normconst.csv`               
-6. `ptyrX_trees.rda`
-7. `ptyrX_trees_pdf.zip`
-8. `ptyrX_trees_collapsed.zip` 
-9. `ptyrX_trees_processed_nexus.zip`
-10. `ptyrX_patStatsFull.csv`                   
-11. `ptyrX_patStatsSummary.csv`  
-12. `ptyrX_patStats.pdf`
-13. `ptyrX_trmStats.zip`
-14. `ptyrX_trmStatsPerWindow.rda`
-15. `ptyrX_trmStats.csv` 
-16. `ptyrX_subtrees_r.rda`
-17. `ptyrX_subtrees_r_rda.zip`   
-18. `ptyrX_subtrees_r_csv.zip` 
-19. `ptyrX_trees_blacklist.zip`
-20. `ptyrX_trees_duallist.zip`   
+5. `ptyrX_normconst.csv` File containing multipliers used to standardise branch
+   lengths of each deep-sequence phylogeny.
+6. `ptyrX_trees.rda` Deep-sequence phylogenies in *ape* format, annotated with
+   subgraphs of each individual.
+7. `ptyrX_trees_processed_nexus.zip` Deep-sequence phylogenies in *nexus*
+   format, annotated with subgraphs of each individual. 
+8. `ptyrX_trees_collapsed.zip` Collaposed deep-sequence phylogenies, with all
+   blacklisted taxa removed.
+9. `ptyrX_trees_pdf.zip` PDFs of the deep-sequence phylogenies.
+10. `ptyrX_patStatsFull.csv` Detailed description of subgraphs of all
+    individuals in this batch across the genome.
+11. `ptyrX_patStatsSummary.csv` Summary description of subgraphs of all
+    individuals in this batch across the genome. 
+12. `ptyrX_patStats.pdf` PDFs visualising properties of the subgraphs of all
+    individuals in this batch across the genome. 
+13. `ptyrX_trmStats.zip` Detailed description of pairwise phylogenetic
+    relationships of all individuals in this batch across the genome, in *csv*
+    format.
+14. `ptyrX_trmStatsPerWindow.rda` Detailed description of pairwise phylogenetic
+    relationships of all individuals in this batch across the genome, in *R*
+    format.
+15. `ptyrX_trmStats.csv` Summary description of pairwise phylogenetic
+    relationships of all individuals in this batch across the genome.
+16. `ptyrX_subtrees_r_csv.zip` Detailed description of subgraphs of all
+    individuals in this batch across the genome, in *csv* format.
+17. `ptyrX_subtrees_r_rda.zip` Detailed description of subgraphs of all
+    individuals in this batch across the genome, in *R* format.   
+18. `ptyrX_trees_blacklist.zip` Names of blacklisted taxa of all individuals in
+    this batch.
+19. `ptyrX_trees_duallist.zip` Names of potential contaminants of all
+    individuals in this batch.   
 
-<p align="center"><img src="Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+Once all scripts are run, the output directory should have a file structure
+similar to that shown here:
+<p align="center"><img src="Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>
