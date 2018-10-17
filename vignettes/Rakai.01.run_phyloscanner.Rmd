@@ -15,23 +15,23 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 Start by defining the base directories for your project: 
 1. `HOME` Base directory.
 2. `in.dir` Name of directory containing read alignments and deep-sequence
-   trees, which can be generated from `bam` files with `phyloscanner`. If you
+   trees, which can be generated from *bam* files with *phyloscanner*. If you
    would like to start with Data Set S1, you should unzip files in Data Set S1
    to this directory.
 3. `out.dir` Name of output directory.
 4. `work.dir` Name of temp directory.
-5. `prog.pty` Full path to the `phyloscanner` program
-   `phyloscanner_make_trees.py`
+5. `prog.pty` Full path to the *phyloscanner* program
+   *phyloscanner_make_trees.py*
     
 For example:    
 ```{r, eval=FALSE, message=FALSE, warning= FALSE, include=TRUE} 
 require(Phyloscanner.R.utilities)
 
-HOME				<<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'								
-in.dir				<- file.path(HOME,'RakaiPopSample_deepseqtrees')	
-out.dir				<- file.path(HOME,"RakaiPopSample_phyloscanner_out")
-work.dir			<- file.path(HOME,"RakaiPopSample_phyloscanner_work")				
-prog.pty			<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
+HOME		<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'								
+in.dir		<- file.path(HOME,'RakaiPopSample_deepseqtrees')	
+out.dir		<- file.path(HOME,"RakaiPopSample_phyloscanner_out")
+work.dir	<- file.path(HOME,"RakaiPopSample_phyloscanner_work")				
+prog.pty	<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
 
 # create directories if they dont exist
 dir.create(out.dir, showWarnings=FALSE)
@@ -40,9 +40,9 @@ dir.create(work.dir, showWarnings=FALSE)
 
 ### Prepare bash scripts to run phyloscanner
 
-The next step is to define the input arguments to `phyloscanner`. The default
+The next step is to define the input arguments to *phyloscanner*. The default
 arguments that were used for analysis of the Rakai Population-Based Sample are
-as follows. Please see the `phyloscanner` manual for details.
+as follows. Please see the *phyloscanner* manual for details.
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE} 
 pty.args			<- list(	prog.pty=prog.pty, 
 		prog.mafft=NA, 
