@@ -18049,9 +18049,9 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	infiles[, FO:= file.path(outdir, basename(FI))]
 	tip.regex	<- '^(.*)_(fq.*)$'
 	#for(ii in seq_len(nrow(infiles)))	
-	for(ii in 11:30)
+	for(ii in 71:345)
 	{	
-		cat('process',ii)		
+		cat('\nprocess',ii)		
 		infile	<- infiles[ii,FI]
 		outfile	<- infiles[ii,FO]
 		#	unzip

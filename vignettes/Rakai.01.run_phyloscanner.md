@@ -1,20 +1,39 @@
 # Perform *phyloscanner* analysis on deep-sequence trees from a population-based sample
 
-### Introduction: batches and input data
-It is computationally very challenging to reconstruct viral trees from all
+## Introduction: stage 1 and 2 of population-level analysis
+It is computationally challenging to reconstruct viral trees from all
 deep-sequence reads of hundreds or thousands of individuals. To
-address this challenge, we divide a large population-based sample into batches
-of 50 to 75 individuals, and then run *phyloscanner* on all possible
-pairs of batches to generate read alignments and deep-sequence phylogenies. 
+address this challenge, we proceed in two stages. 
 
-This tutorial describes the steps to infer phylogenetic deep-sequence
-relationships from a large number of deep-sequence phylogenies of batches of
-individuals. 
+In a first stage, we divide a large population-based sample into groups of 50
+to 75 individuals, and then run *phyloscanner* on all possible pairs of groups
+to generate read alignments and deep-sequence phylogenies. From this trees, we
+identified potentially phylogenetically close pairs and, from those, networks of
+pairs that were connected through at least one common, phylogenetically close
+individual. Networks were extended to include spouses of partners in networks,
+couples in no network, and the ten most closely related individuals from stage 1
+as controls. 
+
+In a second stage, analyses are repeated on all individuals that together form
+a potential transmission network. This step allows us to resolve the ordering of
+transmission events within transmission networks, and to confirm potential
+transmission pairs within a network. 
+
+## Introduction: generate trees, then infer phylogenetic relationships
+Both stages 1 and 2 consist of very similar steps. First, deep-sequence trees
+are generated, and thereafter phylogenetic relationships between individuals
+are estimated. This vignette describes the steps to infer phylogenetic
+relationships from a large number of deep-sequence phylogenies of individuals in
+the same potential transmission network (stage 2).  
 
 The code below assumes that *phyloscanner_make_trees.py* was already run to
-generate read alignments and deep-sequence phylogenies for each batch, and the
-following file structure.
-1. Each batch is identified with the prefix `ptyrX_` where `X` is an integer.
+generate read alignments and deep-sequence phylogenies for individuals in the
+same potential transmission network (see here); and that output from this step
+is available in the following file structure.
+1. Each analysis of a potential transmission network is identified with the
+   prefix `ptyrX_` where `X` is an integer. Note that, to minimise computations,
+   individuals in small transmission networks can be grouped into a single
+   *phyloscanner* analysis, which we call a *batch* in this tutorial. 
 2. Three files are available for each batch. First, a text file listing all
    individuals in the batch, in file `ptyrX_patients.txt`. 
 3. Second, the read alignments generated with *phyloscanner*, zipped into file
@@ -23,9 +42,10 @@ following file structure.
    into file `ptyrX_trees_newick.zip`. 
 
 Data Set S1 contains these files for 345 batches of individuals of the Rakai
-population-based sample.
+population-based sample, that comprise 1,426 potential transmission pairs and
+closely related control sequences.
 
-### Setting up your work environment
+## Setting up your work environment
 Start by defining the base directories for your project: 
 1. `HOME` Base directory.
 2. `in.dir` Name of directory containing read alignments and deep-sequence
@@ -57,7 +77,7 @@ Data Set S1):
 
 <p align="center"><img src="Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
-### Prepare bash scripts to run phyloscanner
+## Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
 *phyloscanner* manual for details. The default arguments that were used for
 analysis of the Rakai population-based sample are as follows. 
@@ -125,8 +145,8 @@ individuals that are analysed jointly.
 For each batch of individuals to be processed, find the corresponding list of
 patients in the input directory: 
 ```r
-pty.c	<- data.table(FILE_BAM=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
-pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_BAM))))]
+pty.c	<- data.table(FILE_PAT=list.files(in.dir, pattern='_patients.txt', full.names=TRUE))
+pty.c[, PTY_RUN:= as.integer(gsub('ptyr','',gsub('_patients.txt','',basename(FILE_PAT))))]
 ```
 
 Check which (if any) batches have already been processed, and remove them from
@@ -143,7 +163,7 @@ For each batch of individuals, create a UNIX *bash* script to run
 ```r
 setkey(pty.c, PTY_RUN)		
 pty.c	<- pty.c[, { 
-		prefix.infiles <- gsub('patients.txt','',FILE_BAM)			
+		prefix.infiles <- gsub('patients.txt','',FILE_PAT)			
 		cmd <- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 		list(CMD=cmd) 
 	}, by='PTY_RUN']		
@@ -180,7 +200,7 @@ cd $CWD
 rm -r "$CWD/pty_18-10-17-10-03-47"	
 ```
 	
-### Run bash scripts (option 1)
+## Run bash scripts (option 1)
 Each *bash* script can be run from a UNIX terminal, we only have to
 write the scripts to file. This following code will write each script to the
 temp directory that you specified above, to a file named
@@ -196,13 +216,11 @@ invisible(pty.c[,	{
 ```
 Each file can be run on a UNIX terminal, e.g.:
 ```r
-'
 cd /Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_work
-phsc.Wed_Oct_17_101858_2018.sh 
-' 	
+phsc.Wed_Oct_17_101858_2018.sh 	
 ```	
 
-### Run bash scripts (option 2)
+## Run bash scripts (option 2)
 
 Alternatively, the bash scripts can be processed on a high performance
 environment with a job scheduling system. We first define a PBS header for the
@@ -251,3 +269,34 @@ invisible(pty.c[,	{
 		Sys.sleep(1)						
 	}, by='PTY_RUN'])
 ```
+
+## Expected output
+Once all scripts are run, the output directory contains for each batch a number
+of files, of which the files called `ptyrX_pairwise_relationships.rda`
+are used for reconstructing HIV-1 transmission networks from the
+population-based sample.
+
+Below is a description of the full output. 
+1. `ptyrX_patients.txt` Input file, list of individuals in this batch.
+2. `ptyrX_trees_fasta.zip` Input file, read alignments.
+3. `ptyrX_trees_newick.zip` Input file, deep sequence trees.
+4. `ptyrX_pairwise_relationships.rda` Main output file for
+   reconstructing HIV-1 transmission networks.     
+5. `ptyrX_normconst.csv`               
+6. `ptyrX_trees.rda`
+7. `ptyrX_trees_pdf.zip`
+8. `ptyrX_trees_collapsed.zip` 
+9. `ptyrX_trees_processed_nexus.zip`
+10. `ptyrX_patStatsFull.csv`                   
+11. `ptyrX_patStatsSummary.csv`  
+12. `ptyrX_patStats.pdf`
+13. `ptyrX_trmStats.zip`
+14. `ptyrX_trmStatsPerWindow.rda`
+15. `ptyrX_trmStats.csv` 
+16. `ptyrX_subtrees_r.rda`
+17. `ptyrX_subtrees_r_rda.zip`   
+18. `ptyrX_subtrees_r_csv.zip` 
+19. `ptyrX_trees_blacklist.zip`
+20. `ptyrX_trees_duallist.zip`   
+
+<p align="center"><img src="Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
