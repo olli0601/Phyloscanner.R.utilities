@@ -9,7 +9,28 @@ github_document:
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
+### Introduction: analysis of population-based sample
+It is computationally very challenging to reconstruct viral trees from all
+deep-sequence reads of hundreds or thousands of individuals. To
+address this challenge, we divide a large population-based sample into batches
+of 50 to 75 individuals, and then run *phyloscanner* on all possible
+pairs of batches to generate read alignments and deep-sequence phylogenies. 
 
+This tutorial describes the steps to infer phylogenetic deep-sequence
+relationships from a large number of deep-sequence phylogenies of batches of
+individuals. 
+
+The code below assumes that *phyloscanner_make_trees.py* was already run to
+generate read alignments and deep-sequence phylogenies for each batch, and the
+following file structure.
+1. Each batch is identified with the prefix `ptyrX_` where `X` is an integer.
+2. Three files are available for each batch. First, a text file listing all
+   individuals in the batch, in file `ptyrX_patients.txt`. 
+3. Second, the read alignments generated with *phyloscanner*, zipped into file
+   `ptyrX_trees_fasta.zip`. 
+4. Third, the deep-sequence phylogenies generated with *phyloscanner*, zipped
+   into file `ptyrX_trees_newick.zip`. 
+   
 ### Setting up your work environment
 
 Start by defining the base directories for your project: 
@@ -40,9 +61,9 @@ dir.create(work.dir, showWarnings=FALSE)
 
 ### Prepare bash scripts to run phyloscanner
 
-The next step is to define the input arguments to *phyloscanner*. The default
-arguments that were used for analysis of the Rakai Population-Based Sample are
-as follows. Please see the *phyloscanner* manual for details.
+The next step is to define the input arguments to *phyloscanner*. Please see the
+*phyloscanner* manual for details. The default arguments that were used for
+analysis of the Rakai Population-Based Sample are as follows. 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE} 
 pty.args			<- list(	prog.pty=prog.pty, 
 		prog.mafft=NA, 
@@ -99,6 +120,10 @@ pty.args			<- list(	prog.pty=prog.pty,
 save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 ```
   
+Next, we will prepare UNIX *bash* scripts to run a large number of
+*phyloscanner* analyses on a population-based sample. Each analysis corresponds
+to a batch of patients that are analysed jointly. 
+
 ```{r, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 #
 #	phyloscanner runs on batches of deep-sequence trees	
