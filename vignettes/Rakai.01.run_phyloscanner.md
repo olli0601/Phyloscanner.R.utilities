@@ -54,7 +54,7 @@ dir.create(work.dir, showWarnings=FALSE)
 
 The input directory should have a file structure similar to this (just unzip
 Data Set S1): 
-
+<p align="center"><img src="vignettes/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
 ### Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
@@ -115,7 +115,7 @@ pty.args <- list(	prog.pty=prog.pty,
 )	
 save(pty.args, file=file.path(out.dir, 'pty.args.rda'))
 ```
-  
+
 Next, we will prepare UNIX *bash* scripts to run a large number of
 *phyloscanner* analyses on a population-based sample. Each *bash* script
 corresponds to the deep-sequence phylogenetic analysis of one batch of
@@ -153,8 +153,7 @@ Each bash script should look similar to this:
 ```r
 pty.c[1,cat(CMD)]		
 ```
-```r		
-'
+```bash		
 CWD=$(pwd)
 echo $CWD
 mkdir -p "$CWD/pty_18-10-17-10-03-47"
@@ -177,9 +176,7 @@ for file in *; do
 done
 mv ptyr223_otherstuff.zip "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_out"
 cd $CWD
-rm -r "$CWD/pty_18-10-17-10-03-47"
-NULL
-'		
+rm -r "$CWD/pty_18-10-17-10-03-47"	
 ```
 	
 ### Run bash scripts (option 1)
@@ -230,15 +227,13 @@ pbshead <- paste(pbshead, hpc.load, sep = "\n")
 ```
 
 Our header thus looks as follows:	
-```r
-' 
+```bash
 #!/bin/sh 
 #PBS -l walltime=15:59:59,pcput=15:45:00 
 #PBS -l select=1:ncpus=1:mem=6gb 
 #PBS -j oe 
 #PBS -q pqeelab 
 module load R/3.3.3
-'
 ```
 	
 We are now ready to add the header to each script, and submit the job:		
