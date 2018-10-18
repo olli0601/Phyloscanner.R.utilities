@@ -1,4 +1,4 @@
-# Reconstruct transmission networks
+# Reconstructing transmission networks
 
 ## Introduction
 [In the previous tutorial](Rakai.01.run_phyloscanner.md), we performed *phyloscanner* analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix `ptyrX_` where `X` is the batch number. 
@@ -9,9 +9,35 @@
 3. Calculate the proportion of male-female, male-male, and female-female links in the most likely transmission chains. 
 
 ## Setting up the analysis
-copy pairwise_relationships.rda to new folder
+[In the previous tutorial](Rakai.01.run_phyloscanner.md), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
+
+To be safe, it might be a good idea to copy them into a new directory. I copied them to the analysis directory:
+```r
+indir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis' 
+```
  
-## Analysis
+## Find all pairs of individuals between whom linkage cannot be excluded, then reconstruct transmission networks
+The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.md), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
+1. `batch.regex` identifies the batch number from the file names of *phyloscanner* output; 
+2. `neff.cut`  specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 
+3. `conf.cut` specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).
+
+At this stage, it is also easy to add any further individual-level meta-data to the analysis output. Simply specify a data.table to the `dmeta` input variable. 
+
+For the analysis of the Rakai population-based sample:
+```r
+infile <- "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"
+dmeta <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	
+indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis'
+outfile <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis/todi_pairs_171122_cl25_d50_prior23_min30.rda'
+tmp <- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
+rtp				<- copy(tmp$linked.pairs)
+rplkl			<- copy(tmp$relationship.counts)
+rpw				<- copy(tmp$windows)
+save(rtp, rplkl, rpw, file=outfile)	 
+```
+
 we now combine results from analysis of all potential transmission networks
 keep all pairs of individuals between whom linkage cannot be excluded
 
