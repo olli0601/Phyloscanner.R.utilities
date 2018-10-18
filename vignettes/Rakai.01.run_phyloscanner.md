@@ -24,7 +24,7 @@ Both stages 1 and 2 consist of very similar steps. First, deep-sequence trees
 are generated, and thereafter phylogenetic relationships between individuals
 are estimated. 
 
-**This vignette describes the steps to infer phylogenetic
+**This tutorial describes the steps to infer phylogenetic
 relationships from a large number of deep-sequence phylogenies of individuals in
 the same potential transmission network (stage 2).**  
 
@@ -47,7 +47,7 @@ Data Set S1 contains these files for 345 batches of individuals of the Rakai
 population-based sample, that comprise 1,426 potential transmission pairs and
 closely related control sequences.
 
-## Setting up your work environment
+## Setting up the analysis
 Start by defining the base directories for your project: 
 1. `HOME` Base directory.
 2. `in.dir` Name of directory containing read alignments and deep-sequence

@@ -69,7 +69,7 @@ Munich.networks.plot.180924<- function()
 				di[, variable:=NULL]
 				di[, TYPE:= 'IDU']
 				di[, TYPE2:= 'IDU']
-				p		<- phsc.plot.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -132,7 +132,7 @@ Munich.networks.plot.180924<- function()
 				di[, variable:=NULL]
 				di[, TYPE:= 'IDU']
 				di[, TYPE2:= 'IDU']				
-				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 						edge.gap=0.03, 
 						edge.size=0.4, 
 						curvature= -0.2, 

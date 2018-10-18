@@ -2308,7 +2308,7 @@ RakaiFull.preprocess.phyloscanneroutput.couples.171122<- function()
 					setnames(di, 'RID', 'ID')
 					df		<- subset(rtn, IDCLU==idclu)
 					set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-					p		<- phsc.plot.probability.network(df, di, point.size=10, 
+					p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 							edge.gap=0.04, 
 							edge.size=0.4, 
 							curvature= -0.2, 
@@ -2330,7 +2330,7 @@ RakaiFull.preprocess.phyloscanneroutput.couples.171122<- function()
 					di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
 					setnames(di, 'RID', 'ID')
 					df	<- subset(rtnn, IDCLU==idclu)				
-					p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+					p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 							edge.gap=0.04, 
 							edge.size=0.4, 
 							curvature= -0.2, 
@@ -3051,7 +3051,7 @@ BEEHIVE.process.phyloscanneroutput.180216<- function()
 	di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
 	set(di, NULL, 'variable', NULL)
 	di	<- unique(di)
-	p	<- phsc.plot.probability.network(df, di, point.size=10, 
+	p	<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.015, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -3069,7 +3069,7 @@ BEEHIVE.process.phyloscanneroutput.180216<- function()
 	di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
 	set(di, NULL, 'variable', NULL)
 	di	<- unique(di) 
-	q		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+	q		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 			edge.gap=0.015, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -12659,7 +12659,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 				di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 				df		<- subset(rtn, IDCLU==idclu)
 				set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-				p		<- phsc.plot.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -12697,7 +12697,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 				setnames(di, 'RID', 'ID')
 				di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 				df	<- subset(rtnn, IDCLU==idclu)				
-				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -12734,7 +12734,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 	df		<- subset(rtn, IDCLU%in%idclu)
 	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.01, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -12766,7 +12766,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')				
 	df		<- subset(rtn, IDCLU==idclu)
 	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.04, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -12789,7 +12789,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	setnames(di, 'RID', 'ID')
 	di		<- merge(di, subset(dfa, select=c(ID, AID)), by='ID')
 	df	<- subset(rtnn, IDCLU==idclu)				
-	p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 			edge.gap=0.04, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -12852,7 +12852,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	setnames(di, 'RID', 'ID')	
 	df		<- copy(rtn) #df		<- subset(rtn, IDCLU==idclus[1:2])
 	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.005, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -12930,7 +12930,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 				setnames(di, 'RID', 'ID')
 				df		<- subset(rtn, IDCLU==idclu)
 				set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-				p		<- phsc.plot.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -12952,7 +12952,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
 				setnames(di, 'RID', 'ID')
 				df	<- subset(rtnn, IDCLU==idclu)				
-				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -14078,7 +14078,7 @@ RakaiFull.analyze.couples.todi.171122.networks<- function()
 	setnames(di, 'RID', 'ID')	
 	df		<- copy(rtn) #df		<- subset(rtn, IDCLU==idclus[1:2])
 	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.005, 
 			edge.size=0.4, 
 			curvature= -0.2, 
@@ -14156,7 +14156,7 @@ RakaiFull.analyze.couples.todi.171122.networks<- function()
 				setnames(di, 'RID', 'ID')
 				df		<- subset(rtn, IDCLU==idclu)
 				set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-				p		<- phsc.plot.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -14178,7 +14178,7 @@ RakaiFull.analyze.couples.todi.171122.networks<- function()
 				di[, IN_COUPLE:= factor(di[,RID]%in% c(rp$FEMALE_RID, rp$MALE_RID), levels=c(TRUE,FALSE),labels=c('in long-term\nrelationship','not in long-term\nrelationship'))]	
 				setnames(di, 'RID', 'ID')
 				df	<- subset(rtnn, IDCLU==idclu)				
-				p		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+				p		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 						edge.gap=0.04, 
 						edge.size=0.4, 
 						curvature= -0.2, 
@@ -18048,7 +18048,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	
 	#  read anonymisation keys
 	dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
-	dfa			<- unique(subset(dfa, select=c(ID,AID)))
+	dfa			<- unique(subset(dfa, select=c(ID,AID)))		
 	
 	#
 	#	anonymize patients file
@@ -18074,7 +18074,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	infiles[, FO:= file.path(outdir, basename(FI))]
 	tip.regex	<- '^(.*)_(fq.*)$'
 	#for(ii in seq_len(nrow(infiles)))
-	for(ii in 11:150)
+	for(ii in 151:345)
 	{	
 		cat('\nprocess',ii)		
 		#FI	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_NotAnoymised/ptyr223_trees_fasta.zip"
@@ -18155,8 +18155,52 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	}
 	
 	#
+	#	anonymise pairwise_relationships.rda
+	indir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_adj_chain_mean'
+	outdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis'
+	infiles		<- data.table(FI=list.files(indir, pattern='pairwise_relationships.rda$', full.names=TRUE))
+	infiles[, FO:= file.path(outdir, basename(FI))]
+	tip.regex	<- '^(.*)_(fq.*)$'
+	for(ii in 1:345)
+	{	
+		cat('\nprocess',ii)		
+		infile	<- infiles[ii,FI]
+		outfile	<- infiles[ii,FO]
+		#
+		load(infile)
+		dwin.old	<- copy(dwin)
+		rplkl.old	<- copy(rplkl)
+		tmp			<- subset(dfa, select=c(ID, AID))
+		setnames(tmp, c('ID','AID'), c('ID1','AID1'))
+		dwin		<- merge(dwin.old, tmp, by='ID1')
+		rplkl		<- merge(rplkl.old, tmp, by='ID1')
+		setnames(tmp, c('ID1','AID1'), c('ID2','AID2'))
+		dwin		<- merge(dwin, tmp, by='ID2')
+		rplkl		<- merge(rplkl, tmp, by='ID2')
+		set(dwin, NULL, c('ID1','ID2'), NULL)
+		set(rplkl, NULL, c('ID1','ID2'), NULL)
+		setnames(dwin, c('AID1','AID2'), c('ID1','ID2'))
+		setnames(rplkl, c('AID1','AID2'), c('ID1','ID2'))
+		stopifnot( nrow(dwin)==nrow(dwin.old))
+		stopifnot( nrow(rplkl)==nrow(rplkl.old))
+		#
+		save(dwin, rplkl, file=outfile)							
+	}
+
+	#
 	#	make meta-data files
-	
+	outfile		<- '~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv'
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/181018_Rakai_GenPopCohort_metadata.rda"
+	load(infile)	#load rd	
+	dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
+	#	select individuals in gen pop cohort who were sequenced
+	dfa			<- subset(dfa, !is.na(SEQ_DATE))
+	tmp			<- unique(subset(rd, select=RID))
+	setnames(tmp, 'RID', 'ID')
+	dfa			<- merge(dfa, tmp, by='ID')
+	dfa[, ID:=NULL]
+	setnames(dfa, 'AID', 'ID')
+	write.csv(dfa, row.names=FALSE, file=outfile)
 }
 
 RakaiFull.analyze.trmpairs.todi.171122.proportion.couples<- function()
@@ -19945,7 +19989,7 @@ RakaiFull.analyze.couples.todi.171122.fig2<- function()
 	
 	df		<- copy(rtn)
 	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.probability.network(df, di, point.size=10, 
+	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.005, 
 			edge.size=0.4, 
 			curvature= -0.2, 

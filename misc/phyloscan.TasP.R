@@ -228,7 +228,7 @@ Tasp.180513.process.phyloscanneroutput<- function()
 		di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
 		set(di, NULL, 'variable', NULL)
 		di	<- unique(di)
-		p	<- phsc.plot.probability.network(df, di, point.size=10, 
+		p	<- phsc.plot.transmission.network(df, di, point.size=10, 
 				edge.gap=0.015, 
 				edge.size=0.4, 
 				curvature= -0.2, 
@@ -249,7 +249,7 @@ Tasp.180513.process.phyloscanneroutput<- function()
 		di	<- melt(subset(df, select=c(ID1,ID2,PTY_RUN)), id.vars='PTY_RUN', value.name='ID')
 		set(di, NULL, 'variable', NULL)
 		di	<- unique(di) 
-		q		<- phsc.plot.max.probability.network(df, di, point.size=10, 
+		q		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 				edge.gap=0.015, 
 				edge.size=0.4, 
 				curvature= -0.2, 

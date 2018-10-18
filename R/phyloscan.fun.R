@@ -49,7 +49,7 @@ phsc.find.transmission.networks.from.linked.pairs<- function(rtp, rplkl, conf.cu
 	tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=tmp2)
 	tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
 	rtn		<- rbind(tmp, rtn)
-	if(verbose) cat('\nFound transmission networks, n=',rtn[, length(unique(IDCLU))], '. Number of links (either direction and ambiguous)=', nrow(subset(rtn, GROUP==scores.group & TYPE=='not close/disconnected')), '. Number of individuals=', length(unique(c(rtn$ID1, rtnn$ID2))),'.')
+	if(verbose) cat('\nFound transmission networks, n=',rtn[, length(unique(IDCLU))], '. Number of links (either direction and ambiguous)=', nrow(subset(rtn, GROUP==scores.group & TYPE=='not close/disconnected')), '. Number of individuals=', length(unique(c(rtn$ID1, rtn$ID2))),'.')
 	
 	#
 	#	generate most likely transmission chains
@@ -166,6 +166,14 @@ phsc.find.linked.pairs<- function(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cu
 	set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
 	set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])
 	
+	#	make sure IDs are characters
+	set(rpw, NULL, 'ID1', as.character(rpw$ID1))
+	set(rpw, NULL, 'ID2', as.character(rpw$ID2))
+	set(rplkl, NULL, 'ID1', as.character(rplkl$ID1))
+	set(rplkl, NULL, 'ID2', as.character(rplkl$ID2))
+	set(rtp.todi2, NULL, 'ID1', as.character(rtp.todi2$ID1))
+	set(rtp.todi2, NULL, 'ID2', as.character(rtp.todi2$ID2))
+	
 	#
 	#	re-arrange pairs so that ID1<ID2
 	if(verbose) cat('\nRe-arrange pairs so that ID1<ID2...')
@@ -201,8 +209,9 @@ phsc.find.linked.pairs<- function(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cu
 	#
 	#	add meta-data if provided
 	if(!is.null(dmeta))
-	{
+	{		
 		stopifnot( 'ID'%in%colnames(dmeta) )
+		set(dmeta, NULL, 'ID', as.character(dmeta$ID))
 		if(verbose) cat('\nAdd meta-data...')
 		tmp			<- unique(dmeta, by='ID')
 		setnames(tmp, colnames(tmp), gsub('ID1_ID','ID1',paste0('ID1_',colnames(tmp))))			
@@ -1026,8 +1035,10 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 
 #' @export
 #' @import data.table grid ggtree ggnet
-#' @title Plot maximum probability network
-#' @description This function plots a maximum probability network.  
+#' @title Plot most likely transmission chain
+#' @description This function plots a most likely transmission chain, showing one edges with two labels: 
+#' L (linked) indicates the proportion of deep-sequence phylogenies in whom the two individuals are phylogenetically close and adjacent.
+#' D (direction) indicates the proportion of deep-sequence phylogenies that support the indicated direction of transmission, out of all deep-sequence phylogenies that support either direction of transmission.    
 #' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
 #' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
 #' @param point.size size of the individual points
@@ -1045,7 +1056,7 @@ phsc.plot.phycollapsed.selected.individuals<- function(phs, dfs, ids, plot.cols=
 #' @param node.fill.values named vector associating colours to the values in the node.fill column
 #' @param threshold.linked treshold value between 0 and 1. Edges with weight above this treshold are shown in black.
 #' @return ggplot object
-phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_, layout=NULL)
+phsc.plot.most.likely.transmission.chain<- function(df, di, point.size=10, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_, layout=NULL)
 {
 	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
 	#node.label='ID'; node.shape='IN_COUPLE'; node.fill='SEX'
@@ -1102,7 +1113,7 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 	layout	<- merge(layout,di, by='ID')		
 	df[, EDGETEXT_X:= (ID1_X+ID2_X)/2]
 	df[, EDGETEXT_Y:= (ID1_Y+ID2_Y)/2]
-	df[, EDGE_LABEL:= paste0('D',round(100*pmax(NETWORK_SCORE_12,NETWORK_SCORE_21),d=1),'%',' // ','L',round(100*POSTERIOR_SCORE_LINKED,d=1),'%' ) ]
+	df[, EDGE_LABEL:= paste0('L',round(100*POSTERIOR_SCORE_LINKED,d=1),'%',' // ','D',round(100*pmax(POSTERIOR_SCORE_12,POSTERIOR_SCORE_21),d=1),'%') ]
 	df[, EDGE_COL:= as.character(factor(POSTERIOR_SCORE_LINKED>threshold.linked, levels=c(TRUE,FALSE),labels=c('edge_col_2','edge_col_1')))]	
 	#	for edges, move the start and end points on the line between X and Y
 	#	define unit gradient
@@ -1135,8 +1146,9 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 
 #' @export
 #' @import data.table grid ggtree ggnet
-#' @title Plot probability network
-#' @description This function plots a probability network.  
+#' @title Plot transmission network
+#' @description This function plots a phylogenetic transmission network, showing three types of edges: 
+#' two directed edges respectively in the 1->2 and 2->1 direction, and an undirected edge that represents phylogenetic support of close and adjacent individuals without evidence into the direction transmission.  
 #' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
 #' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
 #' @param point.size size of the individual points
@@ -1154,7 +1166,7 @@ phsc.plot.max.probability.network<- function(df, di, point.size=10, edge.gap=0.0
 #' @param node.fill.values named vector associating colours to the values in the node.fill column
 #' @param threshold.linked treshold value between 0 and 1. Edges with weight above this treshold are shown in black.
 #' @return ggplot object
-phsc.plot.probability.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_)
+phsc.plot.transmission.network<- function(df, di, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.04, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=NA_integer_, node.fill.values=NA_character_, threshold.linked=NA_real_)
 {	
 	#point.size=10; point.size.couple=14; edge.gap=0.04; edge.size=0.4; curvature= -0.2; arrow=arrow(length=unit(0.04, "npc"), type="open"); curv.shift=0.08; label.size=3
 	#node.label='ID'; threshold.linked=0.6; node.shape=NA_character_; node.fill=NA_character_; node.shape.values=NA_integer_; node.fill.values=NA_character_
@@ -1241,6 +1253,10 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X - TX*curv.shift])
 	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])
 	#
+print(layout)
+print(node.fill.values)
+print(node.shape.values)
+
 	p		<- ggplot() +			
 			geom_point(data=layout, aes(x=X, y=Y, colour=NODE_FILL, pch=NODE_SHAPE), size=point.size) +
 			geom_segment(data=subset(df, EDGE_COL=='edge_col_1' & TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), lineend="butt") +
@@ -1250,7 +1266,7 @@ phsc.plot.probability.network<- function(df, di, point.size=10, point.size.coupl
 			geom_curve(data=subset(df, EDGE_COL=='edge_col_2' & TYPE=='12' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +
 			geom_curve(data=subset(df, EDGE_COL=='edge_col_2' & TYPE=='21' & KEFF>0), aes(x=ID2_X, xend=ID1_X, y=ID2_Y, yend=ID1_Y, size=edge.size*KEFF, colour=EDGE_COL), curvature=curvature, arrow=arrow, lineend="butt") +									
 			scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey80', 'edge_col_2'='grey40','NA'='grey50')) +
-			scale_shape_manual(values=c(node.shape.values, 'NA'=16)) +
+			scale_shape_manual(values=c(node.shape.values, 'NA'=21)) +
 			scale_fill_manual(values=c(node.fill.values, 'NA'='grey50')) +
 			scale_size_identity() +
 			geom_text(data=subset(df, TYPE!='not close/disconnected' & KEFF>0), aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=paste0(round(100*POSTERIOR_SCORE,d=1),'%')), size=label.size) +
