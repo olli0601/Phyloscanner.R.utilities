@@ -56,11 +56,11 @@ rpw <- copy(tmp$windows)
 save(rtp, rplkl, rpw, file=outfile)	 
 ```
 
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw" alt="Output of phyloscanner statistics for each window."/></p>
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
 
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rplkl" alt="Phylogenetic relationship counts."/></p>
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
 
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rtp" alt="Pairs between whom transmission cannot be excluded phylogenetically."/></p>
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rtp.png" alt="Pairs between whom transmission cannot be excluded phylogenetically."/></p>
 
 
 plot phyloscans for some pairs
