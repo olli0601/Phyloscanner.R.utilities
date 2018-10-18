@@ -48,13 +48,19 @@ Add meta-data...
 Done. Found pairs, n= 1251 . Found relationship counts, n= 60570 . Found phyloscanner statistics, n= 1076768 .
 ```
 
-We can now extract and save the output:
+Let us save the output, and then take a closer look:
 ```r
 rtp <- copy(tmp$linked.pairs)
 rplkl <- copy(tmp$relationship.counts)
 rpw <- copy(tmp$windows)
 save(rtp, rplkl, rpw, file=outfile)	 
 ```
+
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw" alt="Output of phyloscanner statistics for each window."/></p>
+
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rplkl" alt="Phylogenetic relationship counts."/></p>
+
+<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rtp" alt="Pairs between whom transmission cannot be excluded phylogenetically."/></p>
 
 
 plot phyloscans for some pairs
