@@ -16,7 +16,7 @@ To be safe, it might be a good idea to copy them into a new directory. I copied 
 indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis' 
 ```
  
-## Find all pairs of individuals between whom linkage cannot be excluded, then reconstruct transmission networks
+## Find all pairs of individuals between whom linkage cannot be excluded, then reconstruct transmission networks among them
 The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.md), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
 1. `batch.regex` identifies the batch number from the file names of *phyloscanner* output; 
 2. `neff.cut`  specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 
@@ -55,6 +55,8 @@ rplkl <- copy(tmp$relationship.counts)
 rpw <- copy(tmp$windows)
 save(rtp, rplkl, rpw, file=outfile)	 
 ```
+
+`rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome. In addition, `rpw` describes how the phylogenetic relationship of the two individuals is classified in each window. There are several classifications, the most interesting is probably `GROUP=='TYPE_ADJ_NETWORK_SCORES'`.  
 
 <p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
 
