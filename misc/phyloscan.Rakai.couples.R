@@ -2707,7 +2707,7 @@ RakaiFull.preprocess.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)	
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
@@ -2791,7 +2791,7 @@ RakaiFull.preprocess.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 	rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, POSTERIOR_SCORE, MX_PROB_12, MX_PROB_21, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))
 	#
 	#	work out prob for linkage in max prob network, when 'inconsistent direction' is ignored
@@ -2976,7 +2976,7 @@ BEEHIVE.process.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)	
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
@@ -3364,7 +3364,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 		rtn		<- rbind(tmp, rtn)
 		#	generate maximum branch transmission network
 		rtn		<- subset(rtn, GROUP==scores.group)
-		rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)
+		rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 		#	merge scores on max prob network
 		rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))	
 		tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
@@ -3427,7 +3427,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 		rtn		<- rbind(tmp, rtn)
 		#	generate maximum branch transmission network
 		rtn		<- subset(rtn, GROUP==scores.group)
-		rtnn	<- phsc.get.maximum.probability.transmission.network(rtn, verbose=0)
+		rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 		#	merge scores on max prob network
 		rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))	
 		tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
@@ -13010,7 +13010,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtnn, verbose=0)
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -13986,7 +13986,7 @@ RakaiFull.analyze.couples.todi.171119.networks<- function()
 		
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtnn, verbose=0)
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -14236,7 +14236,7 @@ RakaiFull.analyze.couples.todi.171122.networks<- function()
 	
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.maximum.probability.transmission.network(rtnn, verbose=0)
+	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -17895,6 +17895,75 @@ RakaiFull.analyze.trmpairs.todi.171122.intermingled.among.linked<- function()
 	2/68*pw/(13/354)
 }
 
+RakaiFull.analyze.trmpairs.todi.171122.prepare.meta.data<- function()
+{
+	#
+	#	load couples to search for in phyloscanner output
+	#load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v180417_info.rda")
+	#
+	#	load sequence data
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
+	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
+	
+	#	outfile
+	outfile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/181018_Rakai_GenPopCohort_metadata.rda"
+	
+	#
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	
+	save(rp, rd, rh, ra, rn, rs, file=outfile)	
+}
+
 RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 {
 	require(data.table)
@@ -18005,7 +18074,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	infiles[, FO:= file.path(outdir, basename(FI))]
 	tip.regex	<- '^(.*)_(fq.*)$'
 	#for(ii in seq_len(nrow(infiles)))
-	for(ii in 1:10)
+	for(ii in 11:150)
 	{	
 		cat('\nprocess',ii)		
 		#FI	<- "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_NotAnoymised/ptyr223_trees_fasta.zip"

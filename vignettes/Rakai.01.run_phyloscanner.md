@@ -22,9 +22,11 @@ transmission pairs within a network.
 ## Introduction: generate trees, then infer phylogenetic relationships
 Both stages 1 and 2 consist of very similar steps. First, deep-sequence trees
 are generated, and thereafter phylogenetic relationships between individuals
-are estimated. This vignette describes the steps to infer phylogenetic
+are estimated. 
+
+**This vignette describes the steps to infer phylogenetic
 relationships from a large number of deep-sequence phylogenies of individuals in
-the same potential transmission network (stage 2).  
+the same potential transmission network (stage 2).**  
 
 The code below assumes that *phyloscanner_make_trees.py* was already run to
 generate read alignments and deep-sequence phylogenies for individuals in the
@@ -270,7 +272,7 @@ invisible(pty.c[,	{
 	}, by='PTY_RUN'])
 ```
 
-## Expected output
+## Expected *phyloscanner* output
 Once all scripts are run, the output directory contains for each batch a number
 of files, of which the files called `ptyrX_pairwise_relationships.rda`
 are used for reconstructing HIV-1 transmission networks from the
