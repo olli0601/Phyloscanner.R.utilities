@@ -13,7 +13,7 @@
 
 To be safe, it might be a good idea to copy them into a new directory. I copied them to the analysis directory:
 ```r
-indir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis' 
+indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis' 
 ```
  
 ## Find all pairs of individuals between whom linkage cannot be excluded, then reconstruct transmission networks
@@ -32,16 +32,31 @@ dmeta <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis'
 outfile <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis/todi_pairs_171122_cl25_d50_prior23_min30.rda'
 tmp <- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
-rtp				<- copy(tmp$linked.pairs)
-rplkl			<- copy(tmp$relationship.counts)
-rpw				<- copy(tmp$windows)
+```
+
+This will produce the following output (when `verbose=TRUE`):
+```text
+Found phylogenetic relationship files, n= 345
+Processing...
+Found (potentially duplicate) pairs between whom linkage is not excluded phylogenetically, n= 1705
+Collect phylogenetic relationship counts for each pair...
+Collect basic phyloscanner statistics (distance, adjacency, paths between subgraphs) for each pair...
+Re-arrange pairs so that ID1<ID2...
+If pairs are in several batches, select batch with most deep-sequence phylogenies...
+Left with pairs between whom linkage is not excluded phylogenetically, n= 1326
+Add meta-data...
+Done. Found pairs, n= 1251 . Found relationship counts, n= 60570 . Found phyloscanner statistics, n= 1076768 .
+```
+
+We can now extract and save the output:
+```r
+rtp <- copy(tmp$linked.pairs)
+rplkl <- copy(tmp$relationship.counts)
+rpw <- copy(tmp$windows)
 save(rtp, rplkl, rpw, file=outfile)	 
 ```
 
-we now combine results from analysis of all potential transmission networks
-keep all pairs of individuals between whom linkage cannot be excluded
 
-get linked pairs
 plot phyloscans for some pairs
 get networks
 plot networks
