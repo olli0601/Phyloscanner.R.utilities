@@ -39,7 +39,7 @@ rpw <- copy(tmp$windows)
 rplkl <- copy(tmp$relationship.counts)
 ```
 
-This will produce the following output (when `verbose=TRUE`):
+On the *phyloscanner* output of the Rakai population-based sample, this will produce the following output (when `verbose=TRUE`):
 ```text
 Found phylogenetic relationship files, n= 345
 Processing...
@@ -77,21 +77,62 @@ ggsave(file=paste0(outfile.base,'_phyloscan_RkA04565F_RkA05315F.png'), width=6, 
 ```	
 <p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_RkA04565F_RkA05315F.png" alt="Output of phyloscanner statistics for each window."/></p>
 
-The plot shows the phylogenetic relationship between the two females *RkA04565F* *RkA05315F* across 55 overlapping deep-sequence trees on reads that cover the *gag* gene. The start position of each 250bp genomic window is plotted on the x-axis. The genetic distance between the subgraphs of both females are shown on the y-axis: the two females have nearly identical virus in all trees. The topological relationship of the subgraphs of the two females is indicated in colours: the two females have intermingled virus across nearly all deep-sequence phylogenies. Since HIV is extremely rarely transmitter between women, the important conclusion is that even when virus is heavily intermingled and nearly identical, it is not possible to prove that transmission occurred between the corresponding two individuals.    
+The plot shows the phylogenetic relationship between the two females *RkA04565F* *RkA05315F* across 55 overlapping deep-sequence trees on reads that cover the *gag* gene. The start position of each 250bp genomic window is plotted on the x-axis. The genetic distance between the subgraphs of both females are shown on the y-axis: the two females have nearly identical virus in all trees. The topological relationship of the subgraphs of the two females is indicated in colours: the two females have intermingled virus across nearly all deep-sequence phylogenies. Since HIV is extremely rarely transmitter between women, the important conclusion is that even when virus is heavily intermingled and nearly identical, it is not possible to prove that transmission occurred between the corresponding two individuals. One more thing: the same function can also be used on a large number of pairs.   
 
 ## Relationship counts for each pair
 The data.table `rplkl` is a summary of the information in `rpw` for each genomic window, and gives for each pair the counts of how often certain phylogenetic relationships were seen across the genome. 
 1. For each pair, column `N` gives the total number of deep-sequence phylogenies in which both individuals had sufficient reads for phylogenetic analysis.
 2. Column `TYPE` gives a particular phylogenetic relationship type, for example '12', and column `K` gives the number of deep-sequence phylogenies in whom the subgraphs of both individuals were of that type.
-3. Colums `NEFF` and `KEFF` are similar to `N` and `K`, but adjust for potential overlap in read alignments.     
+3. Colums `NEFF` and `KEFF` are similar to `N` and `K`, but adjust for potential overlap in read alignments.
+     
 Here is a screenshot of data.table `rplkl` for the *phyloscanner* analysis of the Rakai population-based sample:   
 <p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
 
 
-## Finally reconstruct transmission networks
-plot phyloscans for some pairs
-get networks
-plot networks
+## Reconstructing transmission networks among individuals between whom phylogenetic linkage cannot be excluded
+We can now reconstruct transmission networks simply by connecting pairs of linked individuals that have one individual in common with the function `phsc.find.transmission.networks.from.linked.pairs`: 
+```r
+tmp <- phsc.find.transmission.networks.from.linked.pairs(rtp, rplkl, conf.cut=conf.cut, neff.cut=neff.cut, verbose=TRUE)
+rtn <- copy(tmp$transmission.networks)
+rtnn <- copy(tmp$most.likely.transmission.chains)		
+save(rtn, rtnn, file=paste0(outfile.base,'_allnetworks.rda'))
+```
+On the *phyloscanner* output of the Rakai population-based sample, this will produce the following output (when `verbose=TRUE`):
+```text
+Reconstruct transmission networks among linked pairs, n= 1191
+Found transmission networks, n= 446 . Number of links (either direction and ambiguous)= 1191 . Number of individuals= 1339 .
+Reconstruct most likely transmission chains...
+Found most likely transmission chains, n= 446 . Number of links= 888 . Number of individuals= 1334 .
+Done.
+```
+The data.table `rtn` lists the linked pairs (`ID1`,`ID2`) and how they are connected in transmission networks. Each network is given a unique identifier, which is listed in column `IDCLU`. The number of individuals in each transmission network is given in column `CLU_SIZE`. Finally, the data.table also provides information on the phylogenetic support for each of the phylogenetic relationship types '12', '21', 'ambiguous', and 'not close/disconnected':   
+<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
+
+We can visualise each transmission network between two individuals across the genome with the function `phsc.plot.transmission.network`. It is possible to highlight different individual-level variables in `dmeta` on the network by *shape* and *colour*: 
+```r
+idclus <- sort(unique(rtn$IDCLU))
+di <- copy(dmeta)									
+df <- subset(rtn, IDCLU==idclus[34])
+set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
+p <- phsc.plot.transmission.network(df, di, point.size=10, 
+			edge.gap=0.04, 
+			edge.size=0.4, 
+			curvature= -0.2, 
+			arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+			curv.shift=0.06, 
+			label.size=3, 
+			node.label='ID', 			 
+			node.fill='SEX', 
+			node.shape.values=c('NA'=16), 
+			node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+			threshold.linked=0.6)	
+png(file=paste0(outfile.base,'_trmnetwork_34.png'), width=6, height=6, units='in', res=400)		
+print(p)
+dev.off()
+```
+<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission networks number 34"/></p>
+
+
 plot ML chains
 
 
