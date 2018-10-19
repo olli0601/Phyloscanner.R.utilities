@@ -11,12 +11,17 @@
 ## Setting up the analysis
 [In the previous tutorial](Rakai.01.run_phyloscanner.md), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
 
-To be safe, it might be a good idea to copy them into a new directory. I copied them to the analysis directory:
+To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:
 ```r
-indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis' 
+HOME <- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+indir <- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
+outdir <- indir
+outfile.base <- file.path(outdir,'phsc_analysis_of_dataset_S1')
+neff.cut <- 3
+conf.cut <- 0.6		 
 ```
  
-## Find all pairs of individuals between whom linkage cannot be excluded, then reconstruct transmission networks among them
+## Find all pairs of individuals between whom linkage cannot be excluded
 The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.md), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
 1. `batch.regex` identifies the batch number from the file names of *phyloscanner* output; 
 2. `neff.cut`  specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 
@@ -28,10 +33,10 @@ For the analysis of the Rakai population-based sample:
 ```r
 infile <- "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"
 dmeta <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
-	
-indir <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis'
-outfile <- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_analysis/todi_pairs_171122_cl25_d50_prior23_min30.rda'
 tmp <- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
+rtp <- copy(tmp$linked.pairs)
+rpw <- copy(tmp$windows)
+rplkl <- copy(tmp$relationship.counts)
 ```
 
 This will produce the following output (when `verbose=TRUE`):
@@ -50,21 +55,28 @@ Done. Found pairs, n= 1251 . Found relationship counts, n= 60570 . Found phylosc
 
 Let us save the output, and then take a closer look:
 ```r
-rtp <- copy(tmp$linked.pairs)
-rplkl <- copy(tmp$relationship.counts)
-rpw <- copy(tmp$windows)
-save(rtp, rplkl, rpw, file=outfile)	 
+save(rtp, rplkl, rpw, file=paste0(outfile.base,'_allpairs.rda'))	 
 ```
 
-`rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome. In addition, `rpw` describes how the phylogenetic relationship of the two individuals is classified in each window. There are several classifications, the most interesting is probably `GROUP=='TYPE_ADJ_NETWORK_SCORES'`.  
-
+## *phyloscanner* statistics for each window
+The data.table `rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome: 
+ 
 <p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
+
+In addition, `rpw` describes how the phylogenetic relationship of the two individuals is classified in each genomic window. There are several classifications: 
+1. The most important one is probably `GROUP=='TYPE_ADJ_NETWORK_SCORES'`. In each genomic window, pairs are classified as either '12' (subgraphs of individual 1 are close, adjacent and ancestral to those from individual 2), '21' (subgraphs of individual 2 are close, adjacent and ancestral to those from individual 1), 'ambiguous' (subgraphs are close, adjacent and either intermingled or sibling), or 'not close/disconnected' (subgraphs are either not close, or not adjacent).
+2. There are two more important classification types. The relationship types that support phylogenetic linkage are '12', '21', and 'ambiguous'. In the classification `GROUP=='TYPE_CHAIN_TODI'` these three states are already summarised to state 'chain'. 
+3. Finally, the classification `GROUP=='TYPE_ADJ_DIR_TODI2'` only considers genomic windows with phylogenetic support into the direction of transmission. The possible states are either '12', '21', and all other genomic windows are assigned NA.     
+	
+With `rpw`, we can generate phyloscans that summarise the genetic distance and subgraph relationships between two individuals across the genome:   
+
+## Relationship counts for each pair
 
 <p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
 
 <p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rtp.png" alt="Pairs between whom transmission cannot be excluded phylogenetically."/></p>
 
-
+## Finally reconstruct transmission networks
 plot phyloscans for some pairs
 get networks
 plot networks
