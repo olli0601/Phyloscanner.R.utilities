@@ -17,9 +17,9 @@ provided in Data Set S1.
 Start by extracting Dataset S1 from the command line, assuming that it was
 copied into a data folder called 'RakaiPopSample_data':
 ```bash
-cd /Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_data
-mkdir /Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees
-tar -xvf Dataset_S1.tar -C ../RakaiPopSample_deepseqtrees
+cd /Users/Oliver/sandbox/DeepSeqProjects
+mkdir RakaiPopSample_deepseqtrees
+tar -xvf RakaiPopSample_data/Dataset_S1.tar -C RakaiPopSample_deepseqtrees
 ```
 The new directory should contain files that look as follows:
 
@@ -38,17 +38,6 @@ The new directory should contain files that look as follows:
     files in the directory.    
 
 Next, open R and define the base directories for your project: 
-1. `HOME` Base directory.
-2. `in.dir` Name of directory containing read alignments and deep-sequence
-   trees, which can be generated from *bam* files with *phyloscanner*. If you
-   would like to start with Data Set S1, you should unzip files in Data Set S1
-   to this directory.
-3. `out.dir` Name of output directory.
-4. `work.dir` Name of temp directory.
-5. `prog.pty` Full path to the *phyloscanner* program
-   *phyloscanner_make_trees.py*
-    
-To follow the file structure generated above:    
 ```r 
 require(Phyloscanner.R.utilities)
 HOME		<- '~/sandbox/DeepSeqProjects'								
@@ -59,6 +48,9 @@ prog.pty	<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
 dir.create(out.dir, showWarnings=FALSE)
 dir.create(work.dir, showWarnings=FALSE)
 ```
+Here, `prog.pty` is the full path to the *phyloscanner*
+program *phyloscanner_make_trees.py* and `work.dir` is the name of temporary
+directory.
 
 ## Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
@@ -149,8 +141,7 @@ pty.c	<- pty.c[, {
 		prefix.infiles <- gsub('patients.txt','',FILE_PAT)			
 		cmd <- phsc.cmd.phyloscanner.one.resume(prefix.infiles, pty.args)
 		list(CMD=cmd) 
-	}, by='PTY_RUN']		
-pty.c[1,cat(CMD)]		
+	}, by='PTY_RUN']	
 ```
 
 Each bash script should look similar to this:
