@@ -108,7 +108,7 @@ Done.
 The data.table `rtn` lists the linked pairs (`ID1`,`ID2`) and how they are connected in transmission networks. Each network is given a unique identifier, which is listed in column `IDCLU`. The number of individuals in each transmission network is given in column `CLU_SIZE`. Finally, the data.table also provides information on the phylogenetic support for each of the phylogenetic relationship types '12', '21', 'ambiguous', and 'not close/disconnected':   
 <p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
 
-We can visualise each transmission network between two individuals across the genome with the function `phsc.plot.transmission.network`: 
+We can visualise each transmission network with the function `phsc.plot.transmission.network`: 
 ```r
 idclus <- sort(unique(rtn$IDCLU))
 di <- copy(dmeta)									
@@ -130,12 +130,38 @@ png(file=paste0(outfile.base,'_trmnetwork_34.png'), width=6, height=6, units='in
 print(p)
 dev.off()
 ```
-<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission networks number 34"/></p>
+<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission network number 34"/></p>
 
-In this plot, directed arrows with labels are drawn to indicate the phylogenetic support for transmission in the 1->2 or 2->1 direction (states '12' and '21' in `rtn`). An undirected labelled edge is drawn to indicate any additional phylogenetic support that the two individuals are linked even though the direction of transmission could not be determined (state 'ambiguous' in `rtn`). The labels indicate the proportion of dee-sequence phylogenies that support each relationship state, after adjusting for overlap in read alignments. Edges between pairs of individuals are highlighted in dark grey for pairs who have phylogenetic support for linkage above the threshold `threshold.linked`. 
+In this plot, directed arrows with labels are drawn to indicate the phylogenetic support for transmission in the 1->2 or 2->1 direction (states '12' and '21' in `rtn`). An undirected labelled edge is drawn to indicate any additional phylogenetic support that the two individuals are linked even though the direction of transmission could not be determined (state 'ambiguous' in `rtn`). The labels indicate the proportion of deep-sequence phylogenies that support each relationship state, after adjusting for overlap in read alignments. Edges between pairs of individuals are highlighted in dark grey for pairs who have phylogenetic support for linkage above the threshold `threshold.linked`. 
 
 It is possible to highlight different individual-level variables in `dmeta` on the network by *shape* and *colour*, by setting the input arguments `node.label`, `node.fill`, `node.shape` and `node.fill.values`, `node.shape.values`. Just try it out! Also not that, to obtain nicely looking plots, I typically have to adjust the plotting parameters for networks of different sizes.
 
-plot ML chains
+## Identifying the most likely transmission chain for each transmission network
+As expected given the uncertainty in our inferences, the reconstructed transmission networks typically include cycles of possible transmission flows and recipients with more than one probable source case, indicating that multiple transmission chains are consistent with the phylogenetic data. [We can apply Edmonds algorithm](https://en.wikipedia.org/wiki/Edmonds%27_algorithm) to solve for the most likely transmission chain, and this is already done as part of the function `phsc.find.transmission.networks.from.linked.pairs`.
 
+The data.table `rtnn` lists as before the linked pairs (`ID1`,`ID2`) along with the transmission network that they belong to (`IDCLU`). The data.table contains two new columns, `LINK_12` and `LINK_21`, that describe if the most likely transmission chain passes through individuals 1 and 2, and in which direction. Here is a screenshot of data.table `rtnn` for the phyloscanner analysis of the Rakai population-based sample: 
+<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"/></p>
 
+We can visualise the most likely transmission chains with the function `phsc.plot.most.likely.transmission.chain`:
+```r
+layout	<- p$layout 
+di		<- copy(dmeta)									
+df		<- subset(rtnn, IDCLU==idclus[34])	
+p2		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
+			edge.gap=0.04, 
+			edge.size=0.4, 
+			curvature= -0.2, 
+			arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+			curv.shift=0.06, 
+			label.size=3, 
+			node.label='ID', 			 
+			node.fill='SEX', 
+			node.shape.values=c('NA'=16), 
+			node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+			threshold.linked=0.6,
+			layout=layout)	
+png(file=paste0(outfile.base,'_trmchain_34.png'), width=6, height=6, units='in', res=400)		
+print(p2)
+dev.off()
+```
+<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmchain_34.png" alt="Most likely transmission chain for network number 34"/></p>
