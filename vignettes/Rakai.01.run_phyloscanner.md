@@ -1,54 +1,43 @@
 # Perform *phyloscanner* analysis on deep-sequence trees from a population-based sample
 
-## Introduction: stage 1 and 2 of population-level analysis
-It is computationally challenging to reconstruct viral trees from all
-deep-sequence reads of hundreds or thousands of individuals. To
-address this challenge, we proceed in two stages. 
+## Introduction
+This tutorial describes the steps to infer phylogenetic relationships from a
+large number of deep-sequence phylogenies of individuals in the same potential
+transmission network. The main objective is to illustrate how large numbers of
+phyloscanner runs can be generated and run in parallel with the utility
+functions in this software package, without too much computational overhead. 
 
-In a first stage, we divide a large population-based sample into groups of 50
-to 75 individuals, and then run *phyloscanner* on all possible pairs of groups
-to generate read alignments and deep-sequence phylogenies. From this trees, we
-identified potentially phylogenetically close pairs and, from those, networks of
-pairs that were connected through at least one common, phylogenetically close
-individual. Networks were extended to include spouses of partners in networks,
-couples in no network, and the ten most closely related individuals from stage 1
-as controls. 
-
-In a second stage, analyses are repeated on all individuals that together form
-a potential transmission network. This step allows us to resolve the ordering of
-transmission events within transmission networks, and to confirm potential
-transmission pairs within a network. 
-
-## Introduction: generate trees, then infer phylogenetic relationships
-Both stages 1 and 2 consist of very similar steps. First, deep-sequence trees
-are generated, and thereafter phylogenetic relationships between individuals
-are estimated. 
-
-**This tutorial describes the steps to infer phylogenetic
-relationships from a large number of deep-sequence phylogenies of individuals in
-the same potential transmission network (stage 2).**  
-
-The code below assumes that *phyloscanner_make_trees.py* was already run to
+The tutorial assumes that *phyloscanner_make_trees.py* was already run to
 generate read alignments and deep-sequence phylogenies for individuals in the
-same potential transmission network (see here); and that output from this step
-is available in the following file structure.
+same potential transmission network. For the demo analysis of data from the
+Rakai population-based sample of 2,652 infected individuals, these data are
+provided in Data Set S1.  
+
+## Setting up the analysis
+Start by extracting Dataset S1 from the command line, assuming that it was
+copied into a data folder called 'RakaiPopSample_data':
+```bash
+cd /Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_data
+mkdir /Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees
+tar -xvf Dataset_S1.tar -C ../RakaiPopSample_deepseqtrees
+```
+The new directory should contain files that look as follows:
+
+<p align="center"><img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+
 1. Each analysis of a potential transmission network is identified with the
    prefix `ptyrX_` where `X` is an integer. Note that, to minimise computations,
    individuals in small transmission networks can be grouped into a single
-   *phyloscanner* analysis, which we call a *batch* in this tutorial. 
-2. Three files are available for each batch. First, a text file listing all
+   *phyloscanner* analysis, which we call a *batch* in this tutorial. In total, there are 345 batches.
+2. Two files are available for each batch. First, a text file listing all
    individuals in the batch, in file `ptyrX_patients.txt`. 
-3. Second, the read alignments generated with *phyloscanner*, zipped into file
-   `ptyrX_trees_fasta.zip`. 
-4. Third, the deep-sequence phylogenies generated with *phyloscanner*, zipped
-   into file `ptyrX_trees_newick.zip`. 
+3. Second, deep-sequence phylogenies of reads from individuals in the same batch, 
+    generated from overlapping read alignments across the genome, 
+    in file `ptyrX_trees_newick.zip`. You can unzip the trees to see the coordinates of the genomic windows 
+    for which deep-sequence trees could be generated, but make sure you leave the zip
+    files in the directory.    
 
-Data Set S1 contains these files for 345 batches of individuals of the Rakai
-population-based sample, that comprise 1,426 potential transmission pairs and
-closely related control sequences.
-
-## Setting up the analysis
-Start by defining the base directories for your project: 
+Next, open R and define the base directories for your project: 
 1. `HOME` Base directory.
 2. `in.dir` Name of directory containing read alignments and deep-sequence
    trees, which can be generated from *bam* files with *phyloscanner*. If you
@@ -59,25 +48,17 @@ Start by defining the base directories for your project:
 5. `prog.pty` Full path to the *phyloscanner* program
    *phyloscanner_make_trees.py*
     
-For example:    
+To follow the file structure generated above:    
 ```r 
 require(Phyloscanner.R.utilities)
-
 HOME		<- '~/sandbox/DeepSeqProjects'								
 in.dir		<- file.path(HOME,'RakaiPopSample_deepseqtrees')	
 out.dir		<- file.path(HOME,"RakaiPopSample_phyloscanner_out")
 work.dir	<- file.path(HOME,"RakaiPopSample_phyloscanner_work")				
 prog.pty	<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
-
-# create directories if they dont exist
 dir.create(out.dir, showWarnings=FALSE)
 dir.create(work.dir, showWarnings=FALSE)
-```  
-
-The input directory should have a file structure similar to this (just unzip
-Data Set S1): 
-
-<p align="center"><img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+```
 
 ## Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
