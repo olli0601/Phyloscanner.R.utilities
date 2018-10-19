@@ -108,7 +108,7 @@ Done.
 The data.table `rtn` lists the linked pairs (`ID1`,`ID2`) and how they are connected in transmission networks. Each network is given a unique identifier, which is listed in column `IDCLU`. The number of individuals in each transmission network is given in column `CLU_SIZE`. Finally, the data.table also provides information on the phylogenetic support for each of the phylogenetic relationship types '12', '21', 'ambiguous', and 'not close/disconnected':   
 <p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
 
-We can visualise each transmission network between two individuals across the genome with the function `phsc.plot.transmission.network`. It is possible to highlight different individual-level variables in `dmeta` on the network by *shape* and *colour*: 
+We can visualise each transmission network between two individuals across the genome with the function `phsc.plot.transmission.network`: 
 ```r
 idclus <- sort(unique(rtn$IDCLU))
 di <- copy(dmeta)									
@@ -132,6 +132,9 @@ dev.off()
 ```
 <p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission networks number 34"/></p>
 
+In this plot, directed arrows with labels are drawn to indicate the phylogenetic support for transmission in the 1->2 or 2->1 direction (states '12' and '21' in `rtn`). An undirected labelled edge is drawn to indicate any additional phylogenetic support that the two individuals are linked even though the direction of transmission could not be determined (state 'ambiguous' in `rtn`). The labels indicate the proportion of dee-sequence phylogenies that support each relationship state, after adjusting for overlap in read alignments. Edges between pairs of individuals are highlighted in dark grey for pairs who have phylogenetic support for linkage above the threshold `threshold.linked`. 
+
+It is possible to highlight different individual-level variables in `dmeta` on the network by *shape* and *colour*, by setting the input arguments `node.label`, `node.fill`, `node.shape` and `node.fill.values`, `node.shape.values`. Just try it out! Also not that, to obtain nicely looking plots, I typically have to adjust the plotting parameters for networks of different sizes.
 
 plot ML chains
 
