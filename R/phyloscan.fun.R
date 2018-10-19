@@ -868,7 +868,7 @@ phsc.plot.phy.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=
 }
 
 
-phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+phsc.plot.windowscan.for.pairs<- function(rpw2, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 {		
 	#	make manual plot to show intermingled
 	if(is.null(ylim))
@@ -898,7 +898,7 @@ phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10,
 	set(rpw3, NULL, 'TYPE_TO', rpw3[, factor(TYPE_TO, levels=c('ancestral 1->2','ancestral m->f','ancestral 2->1','ancestral f->m','intermingled','sibling','disconnected'))])	
 	setnames(rpw3, id.cols, c('PRIVATECOL_ID1','PRIVATECOL_ID2'))	
 	#	
-	ggplot(rpw3, aes(x=W_FROM)) +
+	p <- ggplot(rpw3, aes(x=W_FROM)) +
 			geom_hline(yintercept=0.025, colour='grey50') +
 			geom_bar(aes(y=Y, fill=TYPE_TO), colour='transparent', stat='identity', width=25) +
 			geom_point(aes(y=PATRISTIC_DISTANCE), size=1) +				
@@ -909,8 +909,8 @@ phsc.plot.windowscan.for.pairs<- function(rpw2, plot.file, plot.w=10, plot.h=10,
 			scale_fill_manual(values=cols.typet) +
 			theme_bw() + 
 			theme(legend.position='bottom', panel.spacing = unit(1, "lines")) +
-			facet_grid(PRIVATECOL_ID1+PRIVATECOL_ID2~.)	
-	ggsave(file=plot.file, w=plot.w, h=plot.h, useDingbats=FALSE, limitsize=FALSE)
+			facet_grid(PRIVATECOL_ID1+PRIVATECOL_ID2~.)
+	p	
 }	
 
 #' @export

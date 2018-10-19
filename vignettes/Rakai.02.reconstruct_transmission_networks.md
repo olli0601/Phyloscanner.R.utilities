@@ -59,16 +59,24 @@ save(rtp, rplkl, rpw, file=paste0(outfile.base,'_allpairs.rda'))
 ```
 
 ## *phyloscanner* statistics for each window
-The data.table `rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome: 
+The data.table `rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome, plus any meta-data that was potentially added: 
  
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
+<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
 
 In addition, `rpw` describes how the phylogenetic relationship of the two individuals is classified in each genomic window. There are several classifications: 
 1. The most important one is probably `GROUP=='TYPE_ADJ_NETWORK_SCORES'`. In each genomic window, pairs are classified as either '12' (subgraphs of individual 1 are close, adjacent and ancestral to those from individual 2), '21' (subgraphs of individual 2 are close, adjacent and ancestral to those from individual 1), 'ambiguous' (subgraphs are close, adjacent and either intermingled or sibling), or 'not close/disconnected' (subgraphs are either not close, or not adjacent).
 2. There are two more important classification types. The relationship types that support phylogenetic linkage are '12', '21', and 'ambiguous'. In the classification `GROUP=='TYPE_CHAIN_TODI'` these three states are already summarised to state 'chain'. 
 3. Finally, the classification `GROUP=='TYPE_ADJ_DIR_TODI2'` only considers genomic windows with phylogenetic support into the direction of transmission. The possible states are either '12', '21', and all other genomic windows are assigned NA.     
-	
-With `rpw`, we can generate phyloscans that summarise the genetic distance and subgraph relationships between two individuals across the genome:   
+
+We can visualise the phylogenetic relationships between two individuals across the genome as follows:	
+```r
+rpw2 <- subset(rpw, ID1=='RkA04565F' & ID2=='RkA05315F')		
+p	<- phsc.plot.windowscan.for.pairs(rpw2)
+p
+ggsave(file=paste0(outfile.base,'_phyloscan_RkA04565F_RkA05315F.png'), width=6, height=2.8, units='in', dpi=400)
+```	
+<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_RkA04565F_RkA05315F.png" alt="Output of phyloscanner statistics for each window."/></p>
+
 
 ## Relationship counts for each pair
 

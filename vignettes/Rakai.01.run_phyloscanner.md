@@ -77,7 +77,7 @@ dir.create(work.dir, showWarnings=FALSE)
 The input directory should have a file structure similar to this (just unzip
 Data Set S1): 
 
-<p align="center"><img src="Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+<p align="center"><img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
 ## Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the
@@ -318,4 +318,4 @@ Below is a description of the full output.
 
 Once all scripts are run, the output directory should have a file structure
 similar to that shown here:
-<p align="center"><img src="Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>
+<p align="center"><img src="figures/Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>
