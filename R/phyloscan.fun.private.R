@@ -347,7 +347,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 			)
 			cmd				<- paste(cmd, tmp, sep='\n')
 		}
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_InWindow_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistsank_',sep=''))
 	}		
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on branch lengths
@@ -370,7 +370,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 					tipRegex=tip.regex)				
 			cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
 		}
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of rogue taxa for each window based on Weibull extreme value probability of branch lengths
@@ -394,7 +394,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 					tipRegex=tip.regex)				
 			cmd				<- paste(cmd, tmp, '\n\t','mv "${TMP//InWindow/blacklistrogue_InWindow}" "${TMP//InWindow/blacklist_InWindow}"','\n','done', sep='')
 		}
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_InWindow_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklist_',sep=''))
 	}
 	#
 	#	bash command to make blacklists of duplicate taxa based on candidate duplicates output from ParsimonyBlacklist.R
@@ -414,7 +414,7 @@ phsc.cmd.process.phyloscanner.output.in.directory<- function(tmp.dir, file.patie
 			cmd				<- paste0(cmd, '\n','for file in ', basename(blacklistFiles),'*csv; do\n\t','cp "$file" "${file//',basename(blacklistFiles),'/',paste0(run.id_,'blacklistfinal_'),'}"','\n','done')
 			cmd				<- paste0(cmd, '\n','for file in ', paste0(run.id_,'blacklistdual_'),'*csv; do\n\t','cp "$file" "${file//blacklistdual/blacklistfinal}"','\n','done')
 		}
-		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_InWindow_',sep=''))
+		blacklistFiles	<- file.path(tmp.dir, paste(run.id_,'blacklistfinal_',sep=''))
 	}
 	#
 	#	bash command to downsample tips (add to blacklist)

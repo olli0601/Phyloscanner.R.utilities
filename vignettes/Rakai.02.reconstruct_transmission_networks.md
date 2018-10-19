@@ -6,7 +6,6 @@
 **In this tutorial, we will take a look at the output.** We will:
 1. Collect pairs of individuals between whom phylogenetic linkage cannot be excluded based on the distance and topological relationship of viral reads from both individuals. 
 2. Reconstruct transmission networks from these pairs. Unlike typical phylogenetic clusters, the transmission networks that we reconstruct from deep-sequence data contain information into the direction of transmission. 
-3. Calculate the proportion of male-female, male-male, and female-female links in the most likely transmission chains. 
 
 ## Setting up the analysis
 [In the previous tutorial](Rakai.01.run_phyloscanner.md), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 

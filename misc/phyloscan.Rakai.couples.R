@@ -17992,6 +17992,8 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	outdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees'
 	tmpdir		<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees_tmp'	
 	
+	#	make dataset S1
+	#	tar -cvf ../Dataset_S1.tar *
 	
 	#	make anonymisation keys
 	if(0)

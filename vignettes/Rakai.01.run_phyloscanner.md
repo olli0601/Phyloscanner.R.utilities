@@ -63,7 +63,7 @@ For example:
 ```r 
 require(Phyloscanner.R.utilities)
 
-HOME		<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'								
+HOME		<- '~/sandbox/DeepSeqProjects'								
 in.dir		<- file.path(HOME,'RakaiPopSample_deepseqtrees')	
 out.dir		<- file.path(HOME,"RakaiPopSample_phyloscanner_out")
 work.dir	<- file.path(HOME,"RakaiPopSample_phyloscanner_work")				
@@ -179,27 +179,27 @@ pty.c[1,cat(CMD)]
 ```bash		
 CWD=$(pwd)
 echo $CWD
-mkdir -p "$CWD/pty_18-10-17-10-03-47"
-cp "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees/ptyr223_patients.txt" "$CWD/pty_18-10-17-10-03-47"
-unzip "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees/ptyr223_trees_fasta.zip" -d "$CWD/pty_18-10-17-10-03-47"
-unzip "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_deepseqtrees/ptyr223_trees_newick.zip" -d "$CWD/pty_18-10-17-10-03-47"
-cd "$CWD/pty_18-10-17-10-03-47"
-Rscript /Users/Oliver/git/phylotypes/deprecated/NormalisationLookupWriter.R --scriptdir /Users/Oliver/git/phylotypes/deprecated "$CWD/pty_18-10-17-10-03-47/ptyr223_InWindow_" "/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda" "$CWD/pty_18-10-17-10-03-47/ptyr223_normconst.csv" "MEDIAN_PWD"  --standardize
-Rscript /Users/Oliver/git/phylotypes/tools/parsimony_based_blacklister.R 20 0 20 "$CWD/pty_18-10-17-10-03-47/ptyr223_InWindow_" "$CWD/pty_18-10-17-10-03-47/ptyr223_blacklistsank_InWindow" --dualsOutputFile "$CWD/pty_18-10-17-10-03-47/ptyr223_duallistsank_InWindow" --outgroupName REF_CPX_AF460972 --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --multifurcationThreshold 1e-05  --branchLengthNormalisation "$CWD/pty_18-10-17-10-03-47/ptyr223_normconst.csv" --verbose
-Rscript /Users/Oliver/git/phylotypes/tools/downsample_reads.R 50 $CWD/pty_18-10-17-10-03-47/ptyr223_ $CWD/pty_18-10-17-10-03-47/ptyr223_blacklistdwns_ --blacklist $CWD/pty_18-10-17-10-03-47/ptyr223_blacklistsank_InWindow_ --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --seed 42 --verbose
-Rscript /Users/Oliver/git/phylotypes/tools/split_hosts_to_subgraphs.R "$CWD/pty_18-10-17-10-03-47/ptyr223_" "ptyr223" --blacklist "$CWD/pty_18-10-17-10-03-47/ptyr223_blacklistdwns_" --outputdir "$CWD/pty_18-10-17-10-03-47" --idFile "$CWD/pty_18-10-17-10-03-47/ptyr223_patients.txt" --outgroupName REF_CPX_AF460972 --splitsRule s --kParam 20 --proximityThreshold 0 --readCountsMatterOnZeroBranches --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --multifurcationThreshold 1e-05 --branchLengthNormalisation "$CWD/pty_18-10-17-10-03-47/ptyr223_normconst.csv" --outputAsRDA --pdfwidth 30 --pdfrelheight 0.15 --verbose
-Rscript /Users/Oliver/git/phylotypes/tools/classify_relationships.R "$CWD/pty_18-10-17-10-03-47/ProcessedTree_s_ptyr223_" "$CWD/pty_18-10-17-10-03-47/subgraphs_s_ptyr223_" "$CWD/pty_18-10-17-10-03-47/ptyr223" --branchLengthNormalisation "$CWD/pty_18-10-17-10-03-47/ptyr223_normconst.csv" --verbose
-Rscript /Users/Oliver/git/phylotypes/tools/summary_statistics.R --scriptDir /Users/Oliver/git/phylotypes/tools "$CWD/pty_18-10-17-10-03-47/ptyr223_patients.txt" "$CWD/pty_18-10-17-10-03-47/ProcessedTree_s_ptyr223_InWindow_" "$CWD/pty_18-10-17-10-03-47/subgraphs_s_ptyr223_InWindow_" "$CWD/pty_18-10-17-10-03-47/ptyr223_" --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --blacklists "$CWD/pty_18-10-17-10-03-47/ptyr223_blacklistdwns_InWindow_" --verbose
-Rscript /Users/Oliver/git/phylotypes/deprecated/TransmissionSummary.R "$CWD/pty_18-10-17-10-03-47/ptyr223_patients.txt" "$CWD/pty_18-10-17-10-03-47/ptyr223_classification_InWindow_" "$CWD/pty_18-10-17-10-03-47/ptyr223_trmStats.csv" --scriptdir /Users/Oliver/git/phylotypes/deprecated --summaryFile "$CWD/pty_18-10-17-10-03-47/ptyr223_patStatsFull.csv" --minThreshold 1 --detailedOutput "$CWD/pty_18-10-17-10-03-47/ptyr223_trmStatsPerWindow.rda" --allowMultiTrans --verbose
-Rscript /Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/phsc.pairwise.relationships.Rscript --infile "$CWD/pty_18-10-17-10-03-47/ptyr223_trmStatsPerWindow.rda" --outfile "$CWD/pty_18-10-17-10-03-47/ptyr223_pairwise_relationships.rda" --trmw.min.reads 30 --trmw.min.tips 1 --trmw.close.brl 0.025 --trmw.distant.brl 0.05 --prior.keff 2 --prior.neff 3 --prior.keff.dir 2 --prior.neff.dir 3 --prior.calibrated.prob 0.66 --rel.likely.pair --rel.likely.pair.by.distance.only --rel.likely.pair.by.topology.only --rel.likely.pair.by.cross.table --rel.direction --rel.chain
-Rscript /Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/phsc.read.processed.phyloscanner.output.in.directory.Rscript --prefix.infiles "$CWD/pty_18-10-17-10-03-47/ptyr223_" --save.file.base "$CWD/pty_18-10-17-10-03-47/ptyr223_" --read.likelytransmissions --read.trees --read.subtrees --zip
-mv ptyr223* "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_out"
+mkdir -p "$CWD/pty_18-10-19-15-43-41"
+cp "/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees/ptyr2_patients.txt" "$CWD/pty_18-10-19-15-43-41"
+unzip "/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees/ptyr2_trees_fasta.zip" -d "$CWD/pty_18-10-19-15-43-41"
+unzip "/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees/ptyr2_trees_newick.zip" -d "$CWD/pty_18-10-19-15-43-41"
+cd "$CWD/pty_18-10-19-15-43-41"
+Rscript /Users/Oliver/git/phylotypes/deprecated/NormalisationLookupWriter.R --scriptdir /Users/Oliver/git/phylotypes/deprecated "$CWD/pty_18-10-19-15-43-41/ptyr2_InWindow_" "/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda" "$CWD/pty_18-10-19-15-43-41/ptyr2_normconst.csv" "MEDIAN_PWD"  --standardize
+Rscript /Users/Oliver/git/phylotypes/tools/parsimony_based_blacklister.R 20 0 20 "$CWD/pty_18-10-19-15-43-41/ptyr2_InWindow_" "$CWD/pty_18-10-19-15-43-41/ptyr2_blacklistsank_InWindow" --dualsOutputFile "$CWD/pty_18-10-19-15-43-41/ptyr2_duallistsank_InWindow" --outgroupName REF_CPX_AF460972 --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --multifurcationThreshold 1e-05  --branchLengthNormalisation "$CWD/pty_18-10-19-15-43-41/ptyr2_normconst.csv" --verbose
+Rscript /Users/Oliver/git/phylotypes/tools/downsample_reads.R 50 $CWD/pty_18-10-19-15-43-41/ptyr2_ $CWD/pty_18-10-19-15-43-41/ptyr2_blacklistdwns_ --blacklist $CWD/pty_18-10-19-15-43-41/ptyr2_blacklistsank_InWindow_ --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --seed 42 --verbose
+Rscript /Users/Oliver/git/phylotypes/tools/split_hosts_to_subgraphs.R "$CWD/pty_18-10-19-15-43-41/ptyr2_" "ptyr2" --blacklist "$CWD/pty_18-10-19-15-43-41/ptyr2_blacklistdwns_" --outputdir "$CWD/pty_18-10-19-15-43-41" --idFile "$CWD/pty_18-10-19-15-43-41/ptyr2_patients.txt" --outgroupName REF_CPX_AF460972 --splitsRule s --kParam 20 --proximityThreshold 0 --readCountsMatterOnZeroBranches --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --multifurcationThreshold 1e-05 --branchLengthNormalisation "$CWD/pty_18-10-19-15-43-41/ptyr2_normconst.csv" --outputAsRDA --pdfwidth 30 --pdfrelheight 0.15 --verbose
+Rscript /Users/Oliver/git/phylotypes/tools/classify_relationships.R "$CWD/pty_18-10-19-15-43-41/ProcessedTree_s_ptyr2_" "$CWD/pty_18-10-19-15-43-41/subgraphs_s_ptyr2_" "$CWD/pty_18-10-19-15-43-41/ptyr2" --branchLengthNormalisation "$CWD/pty_18-10-19-15-43-41/ptyr2_normconst.csv" --verbose
+Rscript /Users/Oliver/git/phylotypes/tools/summary_statistics.R --scriptDir /Users/Oliver/git/phylotypes/tools "$CWD/pty_18-10-19-15-43-41/ptyr2_patients.txt" "$CWD/pty_18-10-19-15-43-41/ProcessedTree_s_ptyr2_InWindow_" "$CWD/pty_18-10-19-15-43-41/subgraphs_s_ptyr2_InWindow_" "$CWD/pty_18-10-19-15-43-41/ptyr2_" --tipRegex "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$" --blacklists "$CWD/pty_18-10-19-15-43-41/ptyr2_blacklistdwns_InWindow_" --verbose
+Rscript /Users/Oliver/git/phylotypes/deprecated/TransmissionSummary.R "$CWD/pty_18-10-19-15-43-41/ptyr2_patients.txt" "$CWD/pty_18-10-19-15-43-41/ptyr2_classification_InWindow_" "$CWD/pty_18-10-19-15-43-41/ptyr2_trmStats.csv" --scriptdir /Users/Oliver/git/phylotypes/deprecated --summaryFile "$CWD/pty_18-10-19-15-43-41/ptyr2_patStatsFull.csv" --minThreshold 1 --detailedOutput "$CWD/pty_18-10-19-15-43-41/ptyr2_trmStatsPerWindow.rda" --allowMultiTrans --verbose
+Rscript /Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/phsc.pairwise.relationships.Rscript --infile "$CWD/pty_18-10-19-15-43-41/ptyr2_trmStatsPerWindow.rda" --outfile "$CWD/pty_18-10-19-15-43-41/ptyr2_pairwise_relationships.rda" --trmw.min.reads 30 --trmw.min.tips 1 --trmw.close.brl 0.025 --trmw.distant.brl 0.05 --prior.keff 2 --prior.neff 3 --prior.keff.dir 2 --prior.neff.dir 3 --prior.calibrated.prob 0.66 --rel.likely.pair --rel.likely.pair.by.distance.only --rel.likely.pair.by.topology.only --rel.likely.pair.by.cross.table --rel.direction --rel.chain
+Rscript /Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/phsc.read.processed.phyloscanner.output.in.directory.Rscript --prefix.infiles "$CWD/pty_18-10-19-15-43-41/ptyr2_" --save.file.base "$CWD/pty_18-10-19-15-43-41/ptyr2_" --read.likelytransmissions --read.trees --read.subtrees --zip
+mv ptyr2* "~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_out"
 for file in *; do
-   zip -ur9XTj ptyr223_otherstuff.zip "$file"
+	zip -ur9XTj ptyr2_otherstuff.zip "$file"
 done
-mv ptyr223_otherstuff.zip "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiPopSample_phyloscanner_out"
+mv ptyr2_otherstuff.zip "~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_out"
 cd $CWD
-rm -r "$CWD/pty_18-10-17-10-03-47"	
+rm -r "$CWD/pty_18-10-19-15-43-41"	
 ```
 	
 ## Run bash scripts (option 1)
