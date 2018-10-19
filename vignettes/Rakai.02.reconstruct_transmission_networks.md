@@ -130,7 +130,7 @@ png(file=paste0(outfile.base,'_trmnetwork_34.png'), width=6, height=6, units='in
 print(p)
 dev.off()
 ```
-<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission network number 34"/></p>
+<p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_trmnetwork_34.png" alt="Transmission network number 34" width=50%/></p>
 
 In this plot, directed arrows with labels are drawn to indicate the phylogenetic support for transmission in the 1->2 or 2->1 direction (states '12' and '21' in `rtn`). An undirected labelled edge is drawn to indicate any additional phylogenetic support that the two individuals are linked even though the direction of transmission could not be determined (state 'ambiguous' in `rtn`). The labels indicate the proportion of deep-sequence phylogenies that support each relationship state, after adjusting for overlap in read alignments. Edges between pairs of individuals are highlighted in dark grey for pairs who have phylogenetic support for linkage above the threshold `threshold.linked`. 
 
