@@ -868,7 +868,7 @@ phsc.plot.phy.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=
 }
 
 
-phsc.plot.windowscan.for.pairs<- function(rpw2, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+phsc.plot.phyloscan<- function(rpw2, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 {		
 	#	make manual plot to show intermingled
 	if(is.null(ylim))

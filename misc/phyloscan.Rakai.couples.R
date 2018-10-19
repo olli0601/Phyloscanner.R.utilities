@@ -3091,7 +3091,7 @@ BEEHIVE.process.phyloscanneroutput.180216<- function()
 	#
 	plot.file	<- paste0(outfile.base,'scanplot.pdf')
 	rpw2		<- merge(rpw, subset(rtp, select=c(ID1, ID2, PTY_RUN)), by=c('ID1','ID2','PTY_RUN'))
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=55, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=55, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 
 }
 
@@ -18374,11 +18374,11 @@ RakaiFull.analyze.trmpairs.todi.171122.DIRext<- function()
 	#	make manual plot to show intermingled
 	plot.file	<- paste0(outfile.base,'_incorrect_direction_scanplot.pdf')
 	rpw2		<- merge(subset(ffd, select=c(MALE_RID,FEMALE_RID,MALE_ARID,FEMALE_ARID,PTY_RUN)), rpw, by=c('MALE_RID', 'FEMALE_RID','PTY_RUN'))
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=12, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)	
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=12, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)	
 	plot.file	<- paste0(outfile.base,'_correct_direction_scanplot.pdf')
 	tmp			<- subset(rca, DIRECTION=='correct', c(MALE_RID, FEMALE_RID, MALE_ARID, FEMALE_ARID, PTY_RUN))
 	rpw2		<- merge(subset(tmp, select=c(MALE_RID,FEMALE_RID,MALE_ARID,FEMALE_ARID,PTY_RUN)), rpw, by=c('MALE_RID', 'FEMALE_RID','PTY_RUN'))
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=55, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=55, id.cols=c('MALE_ARID','FEMALE_ARID'), ylim=NULL, cols.typet=NULL)
 	
 	require(colorspace)
 	for(ii in seq_len(nrow(ffd)))
@@ -19974,7 +19974,7 @@ RakaiFull.analyze.couples.todi.171122.fig2<- function()
 	rpw2	<- merge(rpw2, dfa, by='FEMALE_RID')
 	setnames(dfa, c('FEMALE_RID','FEMALE_AID'), c('ID','AID'))
 	plot.file	<- paste0(outfile.base,'_fig2_scanplot.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=5, id.cols=c('MALE_AID','FEMALE_AID'), ylim=c(1e-3,0.4))
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=5, id.cols=c('MALE_AID','FEMALE_AID'), ylim=c(1e-3,0.4))
 	
 	
 	#	plot network
@@ -20041,7 +20041,7 @@ RakaiFull.analyze.couples.todi.171119.compare.to.consensus.scan.plot<- function(
 	rpw2	<- merge(rpw2, dfa, by='FEMALE_RID')
 		
 	plot.file	<- paste0(outfile.base,'_linkage_disagreement_scanplot.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=9, id.cols=c('MALE_AID','FEMALE_AID'), ylim=c(1e-3,0.4))
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=9, id.cols=c('MALE_AID','FEMALE_AID'), ylim=c(1e-3,0.4))
 		
 	#
 	#	frequency of divergent clades by cons/netw combinations 00, 01, 10, 11

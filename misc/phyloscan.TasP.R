@@ -271,7 +271,7 @@ Tasp.180513.process.phyloscanneroutput<- function()
 	{
 		plot.file	<- paste0(outfile.base,'scanplot.pdf')
 		rpw2		<- merge(rpw, subset(rtp, select=c(ID1, ID2, PTY_RUN)), by=c('ID1','ID2','PTY_RUN'))
-		phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=35, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)		
+		phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=35, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)		
 	}	
 }
 

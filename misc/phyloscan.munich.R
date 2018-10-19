@@ -239,7 +239,7 @@ Munich.phyloscan.plots.180924<- function()
 	rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('id1 ',ID1,' id2 ', ID2,'\n', SELECT,'\nunlinked: ',round(POSTERIOR_SCORE_UNLINKED, d=3), ' linked: ', round(POSTERIOR_SCORE_LINKED, d=3), ' 12: ', round(POSTERIOR_SCORE_12, d=3), ' 21: ', round(POSTERIOR_SCORE_21, d=3),'\nrun',PTY_RUN))]]	
 	rpw2		<- merge(rpw, unique(subset(rps, select=c(ID1,ID2,PTY_RUN))), by=c('ID1', 'ID2','PTY_RUN'))
 	plot.file	<- paste0(outfile.base,'_phyloscans_lklpairs_withdir.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=40, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=40, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 	
 	rps		<- subset(rtp, grepl('couple most likely a pair direction not resolved', SELECT), select=c(ID1, ID2, PTY_RUN, SELECT, POSTERIOR_SCORE_UNLINKED, POSTERIOR_SCORE_LINKED, POSTERIOR_SCORE_12, POSTERIOR_SCORE_21))
 	setkey(rps, SELECT, POSTERIOR_SCORE_LINKED)
@@ -248,7 +248,7 @@ Munich.phyloscan.plots.180924<- function()
 	rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('id1 ',ID1,' id2 ', ID2,'\n', SELECT,'\nunlinked: ',round(POSTERIOR_SCORE_UNLINKED, d=3), ' linked: ', round(POSTERIOR_SCORE_LINKED, d=3), ' 12: ', round(POSTERIOR_SCORE_12, d=3), ' 21: ', round(POSTERIOR_SCORE_21, d=3),'\nrun',PTY_RUN))]]	
 	rpw2		<- merge(rpw, unique(subset(rps, select=c(ID1,ID2,PTY_RUN))), by=c('ID1', 'ID2','PTY_RUN'))
 	plot.file	<- paste0(outfile.base,'_phyloscans_lklpairs_nodir.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=300, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=300, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 	
 	
 	if(0)
@@ -345,7 +345,7 @@ Munich.phyloscan.plots.on.MLE.network.180924<- function()
 	rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('id1 ',ID1,' id2 ', ID2,'\n', SELECT,'\nunlinked: ',round(POSTERIOR_SCORE_UNLINKED, d=3), ' linked: ', round(POSTERIOR_SCORE_LINKED, d=3), ' 12: ', round(POSTERIOR_SCORE_12, d=3), ' 21: ', round(POSTERIOR_SCORE_21, d=3),'\nrun',PTY_RUN))]]	
 	rpw2		<- merge(rpw, unique(subset(rps, select=c(ID1,ID2,PTY_RUN))), by=c('ID1', 'ID2','PTY_RUN'))
 	plot.file	<- paste0(outfile.base,'_phyloscans_lklpairs.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=40, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=40, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 	
 	rps		<- subset(rtp, grepl('ambiguous', SELECT), select=c(ID1, ID2, PTY_RUN, SELECT, POSTERIOR_SCORE_UNLINKED, POSTERIOR_SCORE_LINKED, POSTERIOR_SCORE_12, POSTERIOR_SCORE_21))
 	setkey(rps, SELECT, POSTERIOR_SCORE_LINKED)
@@ -354,7 +354,7 @@ Munich.phyloscan.plots.on.MLE.network.180924<- function()
 	rps[, LABEL:=rps[, factor(DUMMY, levels=DUMMY, labels=paste0('id1 ',ID1,' id2 ', ID2,'\n', SELECT,'\nunlinked: ',round(POSTERIOR_SCORE_UNLINKED, d=3), ' linked: ', round(POSTERIOR_SCORE_LINKED, d=3), ' 12: ', round(POSTERIOR_SCORE_12, d=3), ' 21: ', round(POSTERIOR_SCORE_21, d=3),'\nrun',PTY_RUN))]]	
 	rpw2		<- merge(rpw, unique(subset(rps, select=c(ID1,ID2,PTY_RUN))), by=c('ID1', 'ID2','PTY_RUN'))
 	plot.file	<- paste0(outfile.base,'_phyloscans_ambiguouspairs.pdf')
-	phsc.plot.windowscan.for.pairs(rpw2, plot.file, plot.w=10, plot.h=350, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
+	phsc.plot.phyloscan(rpw2, plot.file, plot.w=10, plot.h=350, id.cols=c('ID1','ID2'), ylim=NULL, cols.typet=NULL)
 	
 	
 	if(0)

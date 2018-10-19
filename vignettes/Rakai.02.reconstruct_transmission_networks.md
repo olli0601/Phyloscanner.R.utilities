@@ -68,21 +68,25 @@ In addition, `rpw` describes how the phylogenetic relationship of the two indivi
 2. There are two more important classification types. The relationship types that support phylogenetic linkage are '12', '21', and 'ambiguous'. In the classification `GROUP=='TYPE_CHAIN_TODI'` these three states are already summarised to state 'chain'. 
 3. Finally, the classification `GROUP=='TYPE_ADJ_DIR_TODI2'` only considers genomic windows with phylogenetic support into the direction of transmission. The possible states are either '12', '21', and all other genomic windows are assigned NA.     
 
-We can visualise the phylogenetic relationships between two individuals across the genome as follows:	
+We can visualise the phylogenetic relationships between two individuals across the genome with the function `phsc.plot.phyloscan`:	
 ```r
 rpw2 <- subset(rpw, ID1=='RkA04565F' & ID2=='RkA05315F')		
-p	<- phsc.plot.windowscan.for.pairs(rpw2)
+p	<- phsc.plot.phyloscan(rpw2)
 p
 ggsave(file=paste0(outfile.base,'_phyloscan_RkA04565F_RkA05315F.png'), width=6, height=2.8, units='in', dpi=400)
 ```	
 <p align="center"><img src="figures/phsc_analysis_of_dataset_S1_phyloscan_RkA04565F_RkA05315F.png" alt="Output of phyloscanner statistics for each window."/></p>
 
+The plot shows the phylogenetic relationship between the two females *RkA04565F* *RkA05315F* across 55 overlapping deep-sequence trees on reads that cover the *gag* gene. The start position of each 250bp genomic window is plotted on the x-axis. The genetic distance between the subgraphs of both females are shown on the y-axis: the two females have nearly identical virus in all trees. The topological relationship of the subgraphs of the two females is indicated in colours: the two females have intermingled virus across nearly all deep-sequence phylogenies. Since HIV is extremely rarely transmitter between women, the important conclusion is that even when virus is heavily intermingled and nearly identical, it is not possible to prove that transmission occurred between the corresponding two individuals.    
 
 ## Relationship counts for each pair
+The data.table `rplkl` is a summary of the information in `rpw` for each genomic window, and gives for each pair the counts of how often certain phylogenetic relationships were seen across the genome. 
+1. For each pair, column `N` gives the total number of deep-sequence phylogenies in which both individuals had sufficient reads for phylogenetic analysis.
+2. Column `TYPE` gives a particular phylogenetic relationship type, for example '12', and column `K` gives the number of deep-sequence phylogenies in whom the subgraphs of both individuals were of that type.
+3. Colums `NEFF` and `KEFF` are similar to `N` and `K`, but adjust for potential overlap in read alignments.     
+Here is a screenshot of data.table `rplkl` for the *phyloscanner* analysis of the Rakai population-based sample:   
+<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
 
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
-
-<p align="center"><img src="Rakai.02.reconstruct_transmission_networks.rtp.png" alt="Pairs between whom transmission cannot be excluded phylogenetically."/></p>
 
 ## Finally reconstruct transmission networks
 plot phyloscans for some pairs
