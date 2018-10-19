@@ -2,8 +2,8 @@
 #' @import data.table grid ggtree ggnet
 #' @title Plot probability network with most likely edges
 #' @description This function plots the network showing the most likely edge types.  
-#' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
-#' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
+#' @param df data.table with the following columns 'IDCLU','ID1', 'ID2', 'TYPE','KEFF','LKL_MAX','POSTERIOR_SCORE' 
+#' @param di data.table with meta-data to customize the plot with columns ID, node.shape, node.label, node.fill 
 #' @param point.size size of the individual points
 #' @param point.sizec.couple size of the outer ring around individuals in couples
 #' @param edge.gap value to adjust start / end points of edges
@@ -254,10 +254,11 @@ phsc.plot.phy.selected.individuals<- function(phs, dfs, ids, plot.cols=rainbow(l
 #' @import data.table grid ggtree ggnet
 #' @title Plot most likely transmission chain
 #' @description This function plots a most likely transmission chain, showing one edges with two labels: 
-#' L (linked) indicates the proportion of deep-sequence phylogenies in whom the two individuals are phylogenetically close and adjacent.
-#' D (direction) indicates the proportion of deep-sequence phylogenies that support the indicated direction of transmission, out of all deep-sequence phylogenies that support either direction of transmission.    
-#' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
-#' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
+#' L indicates the proportion of deep-sequence phylogenies in whom the two individuals are phylogenetically close and adjacent.
+#' D indicates the proportion of deep-sequence phylogenies that support the indicated direction of transmission, out of all 
+#' deep-sequence phylogenies that support either direction of transmission.    
+#' @param df data.table with the following columns 'IDCLU','ID1', 'ID2', 'TYPE','KEFF','LKL_MAX','POSTERIOR_SCORE' 
+#' @param di data.table with meta-data to customize the plot with columns ID, node.shape, node.label, node.fill 
 #' @param point.size size of the individual points
 #' @param point.sizec.couple size of the outer ring around individuals in couples
 #' @param edge.gap value to adjust start / end points of edges
@@ -366,8 +367,8 @@ phsc.plot.most.likely.transmission.chain<- function(df, di, point.size=10, edge.
 #' @title Plot transmission network
 #' @description This function plots a phylogenetic transmission network, showing three types of edges: 
 #' two directed edges respectively in the 1->2 and 2->1 direction, and an undirected edge that represents phylogenetic support of close and adjacent individuals without evidence into the direction transmission.  
-#' @param df data.table with the following columns  "IDCLU","ID1", "ID2", "TYPE","KEFF","LKL_MAX","POSTERIOR_SCORE" 
-#' @param di data.table with meta-data to customize the plot with columns  "ID", node.shape, node.label, node.fill 
+#' @param df data.table with the following columns 'IDCLU','ID1', 'ID2', 'TYPE','KEFF','LKL_MAX','POSTERIOR_SCORE' 
+#' @param di data.table with meta-data to customize the plot with columns ID, node.shape, node.label, node.fill 
 #' @param point.size size of the individual points
 #' @param point.sizec.couple size of the outer ring around individuals in couples
 #' @param edge.gap value to adjust start / end points of edges
@@ -580,7 +581,7 @@ phsc.plot.phy.selected.pairs<- function(phs, dfs, id1, id2, plot.file=NA, pdf.h=
 #' @description 
 #' This function generates scan plots that summarize reconstructed viral phylogenetic relationships of two individuals.
 #' Several pairs of individuals can be processed simultaneously. For each pair of individuals, the scan plot shows the 
-#' phylogenetic distance (y-axis) and topological relationship (colours) between subgraphs from both individuals in each 
+#' phylogenetic distance on the y-axis and topological relationship in colours between subgraphs from both individuals in each 
 #' deep-sequence phylogeny across the genome. The genomic position on the x-axis indicates the start of each 250bp read alignment. 
 #' @param rpw2 data.table containing the basic phyloscanner statistics for each genomic window. 
 #' @param id.cols name of columns in rpw2 that identify the two individuals 

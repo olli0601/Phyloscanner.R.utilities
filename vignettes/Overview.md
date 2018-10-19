@@ -11,7 +11,7 @@ The software package comprises
 ## Installation
 Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and *MacOS*. 
 1. Instructions for installing *phyloscanner* on either system [are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). In addition, *phyloscanner* requires *R* version >= 3.1, and the following *R* packages: argparse, ape, data.table, dplyr, dtplyr, ff, ggplot2, grid, gridExtra, gtable, ggtree, kimisc, pegas, phangorn, phytools, prodlim, RColorBrewer, reshape, reshape2, scales. Please install these first. If you have issues with installation of *phyloscanner*, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). 
-2. *Phyloscanner.R.utilities* requires *R* version >= 3.1, and the following additional *R* packages: colorspace, devtools, zoo. Please install these first. When done, the software package can be installed as described below. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
+2. *Phyloscanner.R.utilities* requires *R* version >= 3.1, and the following additional *R* packages: colorspace, devtools, ggnet, igraph, Rsamtools, RBGL, sna. Please install these first. When done, the software package can be installed as described below. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
 ```r
 devtools:::install_github("olli0601/Phyloscanner.R.utilities")
 require(Phyloscanner.R.utilities)

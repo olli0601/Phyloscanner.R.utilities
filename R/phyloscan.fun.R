@@ -1,5 +1,6 @@
 
 #' @export
+#' @import data.table igraph sna
 #' @title Find phylogenetic transmission networks
 #' @param rtp Pairs of individuals between whom linkage is not excluded, stored as data.table.
 #' @param rplkl Summary of phylogenetic relationship counts for each pair, stored as data.table.
@@ -7,8 +8,7 @@
 #' @param neff.cut Threshold on the minimum number of deep-sequence phylogenies with sufficient reads from two individuals to make any phylogenetic inferences. Default: 3.
 #' @param verbose Flag to switch on/off verbose mode. Default: TRUE. 
 #' @return list of two R objects 'transmission.networks', 'most.likely.transmission.chains'. See description.
-#' @description This function reconstructs phylogenetic transmission networks from pairs of individuals between whom linkage is not excluded.
-#' @import data.table, igraph, sna 
+#' @description This function reconstructs phylogenetic transmission networks from pairs of individuals between whom linkage is not excluded. 
 #' Two R objects are generated: 
 #' 	  'transmission.networks' is a data.table describing transmission networks, with information of phylogenetic support for transmission in direction 12, direction 21, linkage with direction unclear, and no linkage. 
 #' 	  'most.likely.transmission.chains' is a data.table describing the most likely transmission chain for each transmission network.
@@ -107,6 +107,7 @@ phsc.find.transmission.networks.from.linked.pairs<- function(rtp, rplkl, conf.cu
 
 
 #' @export
+#' @import data.table 
 #' @title Find pairs of individuals between whom linkage is not excluded phylogenetically
 #' @param indir Full directory path to output of phyloscanner runs
 #' @param batch.regex Regular expression that identifies the batch ID of multiple phyloscanner analyses. Default: '^ptyr([0-9]+)_.*'.
@@ -116,7 +117,6 @@ phsc.find.transmission.networks.from.linked.pairs<- function(rtp, rplkl, conf.cu
 #' @param dmeta Optional individual-level meta-data that is to be added to output. Can be NULL.
 #' @return list of three R objects 'linked.pairs', 'relationship.counts', 'windows'. See description.
 #' @description This function identifies pairs of individuals between whom linkage is not excluded phylogenetically in a large number of phyloscanner analyses, and provides detailed information on them.
-#' @import data.table 
 #' Three R objects are generated: 
 #' 	  'linked.pairs' is a data.table that describes pairs of individuals between whom linkage is not excluded phylogenetically.
 #' 	  'relationship.counts' is a data.table that summarises the phylogenetic relationship counts for each pair. 
@@ -451,15 +451,9 @@ phsc.bam.get.length.and.pos.of.mergedreads<- function(bam.file.name, error.stric
 	dlen
 }
 
-
-
-
-
-
-
+#' @export    
 #' @title Calculate basic pairwise relationships
 #' @description This function calculates basic pairwise relationships of two individuals in any window. Several different relationship groups can be calculated, for example just using pairwise distance, or using both pairwise distance and topology to define likely pairs.
-#' @export    
 #' @param df data.table to which basic pairwise relationships will be added. Must contain columns with name 'ADJACENT','TYPE_RAW','PATRISTIC_DISTANCE','PATHS_12','PATHS_21'. 
 #' @param trmw.close.brl  Maximum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically close.
 #' @param trmw.distant.brl   Minimum patristic distance between any two read trees from both individuals in a window to classify the individuals as phylogenetically distant.
@@ -785,10 +779,10 @@ phsc.get.pairwise.relationships<- function(df, get.groups=c('TYPE_PAIR_DI2','TYP
 }
 
 #' @export
+#' @import sna igraph
 #' @title Reconstruct most likely transmission chains
 #' @description This function reconstructs most likely transmission chains 
 #' from the scores associated with directed and undirected edges.
-#' @import sna igraph
 #' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
 phsc.get.most.likely.transmission.chains<- function(rtnn, verbose=0, method='Edmonds')
@@ -800,7 +794,7 @@ phsc.get.most.likely.transmission.chains<- function(rtnn, verbose=0, method='Edm
 }
 		
 
-
+#' @import sna igraph RBGL
 #' @title Construct maximum probability transmission network
 #' @description This function reconstructs a maximum probility transmission 
 #' network from the scores associated with directed and undirected edges.
@@ -808,7 +802,6 @@ phsc.get.most.likely.transmission.chains<- function(rtnn, verbose=0, method='Edm
 #' It then removes the competitor in the opposite direction, and any conflicting edges that would result in indegrees larger than one.
 #' By construction, all removed edges have lower probability.
 #' The algorithm proceeds until all edges have been processed.
-#' @import sna igraph RBGL
 #' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
 phsc.get.most.likely.transmission.chains.RBGLedmonds<- function(rtnn, verbose=0)
