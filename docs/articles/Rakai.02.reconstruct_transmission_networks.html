@@ -95,7 +95,7 @@
 <a href="#setting-up-the-analysis" class="anchor"></a>Setting up the analysis</h2>
 <p><a href="Rakai.01.run_phyloscanner.html">In the previous tutorial</a>, we generated a large number of files, including <code>ptyrX_pairwise_relationships.rda</code>. We will need only these files to reconstruct HIV-1 transmission networks.</p>
 <p>To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "~/sandbox/DeepSeqProjects"</span>
 indir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_analysis"</span>)
 outdir &lt;-<span class="st"> </span>indir
 outfile.base &lt;-<span class="st"> </span><span class="kw">file.path</span>(outdir, <span class="st">"phsc_analysis_of_dataset_S1"</span>)
@@ -108,7 +108,7 @@ conf.cut &lt;-<span class="st"> </span><span class="fl">0.6</span></code></pre><
 <p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.01.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 1. <code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output; 2. <code>neff.cut</code> specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 3. <code>conf.cut</code> specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).</p>
 <p>At this stage, it is also easy to add any further individual-level meta-data to the analysis output. Simply specify a data.table to the <code>dmeta</code> input variable.</p>
 <p>For the analysis of the Rakai population-based sample:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">infile &lt;-<span class="st"> "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">infile &lt;-<span class="st"> "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Data_Set_S2.csv"</span>
 dmeta &lt;-<span class="st"> </span><span class="kw">as.data.table</span>(<span class="kw">read.csv</span>(infile, <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>))
 tmp &lt;-<span class="st"> </span><span class="kw"><a href="../reference/phsc.find.linked.pairs.html">phsc.find.linked.pairs</a></span>(indir, <span class="dt">batch.regex =</span> <span class="st">"^ptyr([0-9]+)_.*"</span>, <span class="dt">conf.cut =</span> <span class="fl">0.6</span>, 
     <span class="dt">neff.cut =</span> <span class="dv">3</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>, <span class="dt">dmeta =</span> dmeta)

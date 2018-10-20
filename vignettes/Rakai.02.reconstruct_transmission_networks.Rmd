@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
 
 To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
-HOME <- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+HOME <- '~/sandbox/DeepSeqProjects'
 indir <- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
 outdir <- indir
 outfile.base <- file.path(outdir,'phsc_analysis_of_dataset_S1')
@@ -46,7 +46,7 @@ At this stage, it is also easy to add any further individual-level meta-data to 
 
 For the analysis of the Rakai population-based sample:
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
-infile <- "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"
+infile <- "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Data_Set_S2.csv"
 dmeta <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 tmp <- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
 rtp <- copy(tmp$linked.pairs)
