@@ -19,3 +19,4 @@ data.table with columns ID1 ID2 W_FROM (window start) W_TO (window end), and fur
 \description{
 This function extracts all transmission assignments per window for two individuals.
 }
+\keyword{internal}

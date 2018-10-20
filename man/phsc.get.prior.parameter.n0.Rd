@@ -20,3 +20,4 @@ Prior parameter n0
 \description{
 This function calculates the prior parameter n0 such that the minimum number of windows needed is at least n.obs in order to select a pair of individuals with confidence at least confidence.cut.
 }
+\keyword{internal}

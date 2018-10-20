@@ -1,0 +1,25 @@
+---
+title: "Data description"
+author: "Oliver Ratmann"
+date: "2018-10-18"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Individuals aged 15-49 years were surveyed from August 2011 to January 2015 in
+40 communities of the Rakai Community Cohort Study (RCCS). 5,142 men and women
+were found positive. Samples from 3,878 individuals were deep-sequenced (nearly
+all individuals who did not report using antiretrovirals), and samples from
+2,652 individuals were of sufficient quality for molecular epidemiological
+analyses. We estimate that these samples correspond to approximately 47.0% of
+eligible, infected and infectious individuals in the 40 RCCS communities.

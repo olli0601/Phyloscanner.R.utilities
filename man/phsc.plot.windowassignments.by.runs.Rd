@@ -26,3 +26,4 @@ Plots to file.
 \description{
 This function plots the window assignments for each pair of individuals and for several phyloscanner runs.
 }
+\keyword{internal}

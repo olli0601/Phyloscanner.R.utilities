@@ -20,3 +20,4 @@ character string of bash commands.
 \description{
 This function generates bash commands that combine the various Rscripts in the phyloscanner toolkit
 }
+\keyword{internal}

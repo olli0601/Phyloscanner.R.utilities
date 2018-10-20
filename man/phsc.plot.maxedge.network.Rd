@@ -52,3 +52,4 @@ ggplot object
 \description{
 This function plots the network showing the most likely edge types.
 }
+\keyword{internal}

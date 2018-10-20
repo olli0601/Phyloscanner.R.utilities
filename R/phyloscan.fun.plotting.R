@@ -1,4 +1,5 @@
 #' @export
+#' @keywords internal
 #' @import data.table grid ggtree ggnet
 #' @title Plot probability network with most likely edges
 #' @description This function plots the network showing the most likely edge types.  

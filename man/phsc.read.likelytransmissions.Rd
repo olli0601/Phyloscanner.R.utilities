@@ -25,3 +25,4 @@ Data table with columns PAIR_ID, ID1, ID2, TYPE, WIN_OF_TYPE, PTY_RUN, WIN_TOTAL
 \description{
 This function reads likely transmissions summary files from the phyloscanner toolkit.
 }
+\keyword{internal}

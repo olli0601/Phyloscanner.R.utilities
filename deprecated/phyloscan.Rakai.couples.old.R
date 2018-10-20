@@ -7963,7 +7963,7 @@ RakaiAll.analyze.pairs.170120.distances<- function()
 	#
 	#	double check NA's
 	#
-	tmp		<- phsc.combine.phyloscanner.output('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270_d50_p001_rerun')
+	tmp		<- Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161213_couples_w270_d50_p001_rerun')
 	dwin	<- tmp$dwin
 	tmp		<- subset(pty.runs, select=c('TAXA','FILE_ID','PTY_RUN'))
 	setnames(tmp, c('TAXA','FILE_ID'), c('TAXA1','ID1'))

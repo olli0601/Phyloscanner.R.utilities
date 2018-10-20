@@ -77,6 +77,16 @@ my.mkdir<-function(root,data.name)
 my.make.documentation<- function()
 {
 	roxygen2::roxygenize("/Users/Oliver/git/Phyloscanner.R.utilities")
+	
+	require(devtools)
+	setwd('~/git/Phyloscanner.R.utilities')
+	devtools::document()
+	devtools::use_github_links()
+	use_vignette("Phyloscanner.R.utilities")
+	
+	require(pkgdown)
+	setwd('~/git/Phyloscanner.R.utilities')	
+	pkgdown::build_site()
 }
 
 #index of row i (i=1..n) and col j (j=1..n) of nxn matrix in a distance object (as.vector of lower triangular matrix)

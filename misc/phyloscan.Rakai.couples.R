@@ -1212,14 +1212,14 @@ Rakai.BEEHIVE.compare<- function()
 	prior.calibrated.prob	<- 0.5
 	
 	dwin	<- subset(dwin, select=c(SUFFIX, ID1,ID2,TYPE_RAW,PATRISTIC_DISTANCE,ADJACENT,PATHS_12,PATHS_21,ID1_L,ID1_R,ID2_L,ID2_R))	
-	dwin	<- phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)	
+	dwin	<- Phyloscanner.R.utilities:::phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)	
 	setnames(dwin, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	#for backwards compatibility
 	dwin	<- phsc.get.pairwise.relationships(dwin, get.groups=relationship.types, make.pretty.labels=FALSE)
 	setnames(dwin, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
 	set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
 	set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
-	rplkl	<- phsc.get.pairwise.relationships.keff.and.neff(dwin, relationship.types)
-	rplkl	<- phsc.get.pairwise.relationships.posterior(rplkl, n.type=prior.keff, n.obs=prior.neff, confidence.cut=prior.calibrated.prob)
+	rplkl	<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.keff.and.neff(dwin, relationship.types)
+	rplkl	<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.posterior(rplkl, n.type=prior.keff, n.obs=prior.neff, confidence.cut=prior.calibrated.prob)
 	#	make TYBE_BASIC labels nice
 	tmp		<- rplkl[, which(GROUP=='TYPE_BASIC')]
 	set(rplkl, tmp, 'TYPE', rplkl[tmp, gsub('other_withintermediate_distant','other_distant',gsub('other_withintermediate_close','other_close',gsub('other_withintermediate$','other',gsub('other_nointermediate$','other',gsub('other_nointermediate_distant','other_distant',TYPE)))))])	
@@ -1521,7 +1521,7 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170421<- function()
 				#if(use.direction.prior.23)
 				#{
 				#	set(rtp, NULL, c('N_TYPE','PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
-				#	rtp	<- phsc.get.pairwise.relationships.posterior(rtp, n.type=2, n.obs=3, confidence.cut=0.66)
+				#	rtp	<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.posterior(rtp, n.type=2, n.obs=3, confidence.cut=0.66)
 				#}					
 				if(!use.posterior.mode)
 					rtp[, POSTERIOR_SCORE:=pbeta(1/N_TYPE+(1-1/N_TYPE)/(N_TYPE+1), POSTERIOR_ALPHA, POSTERIOR_BETA, lower.tail=FALSE)]
@@ -2707,7 +2707,7 @@ RakaiFull.preprocess.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
@@ -2791,7 +2791,7 @@ RakaiFull.preprocess.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 	rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, POSTERIOR_SCORE, MX_PROB_12, MX_PROB_21, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))
 	#
 	#	work out prob for linkage in max prob network, when 'inconsistent direction' is ignored
@@ -2976,7 +2976,7 @@ BEEHIVE.process.phyloscanneroutput.180216<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
@@ -3364,7 +3364,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 		rtn		<- rbind(tmp, rtn)
 		#	generate maximum branch transmission network
 		rtn		<- subset(rtn, GROUP==scores.group)
-		rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
+		rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 		#	merge scores on max prob network
 		rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))	
 		tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
@@ -3427,7 +3427,7 @@ RakaiFull.preprocess.phyloscanneroutput.171122<- function()
 		rtn		<- rbind(tmp, rtn)
 		#	generate maximum branch transmission network
 		rtn		<- subset(rtn, GROUP==scores.group)
-		rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)
+		rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)
 		#	merge scores on max prob network
 		rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))	
 		tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
@@ -10012,7 +10012,7 @@ RakaiFull.analyze.ffpairs.170522<- function()
 			if(nrow(tt))
 			{
 				#	redo relationships + likelihood at new distance threshold		
-				tmp			<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=20, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI','TYPE_PAIR_TODI','TYPE_PAIR_TODI2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3'), verbose=FALSE)
+				tmp			<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=20, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI','TYPE_PAIR_TODI','TYPE_PAIR_TODI2','TYPE_DIR_TODI3','TYPE_DIRSCORE_TODI3'), verbose=FALSE)
 				rpw			<- tmp$dwin	
 				rplkl		<- tmp$rplkl				
 				#	mop up
@@ -10345,7 +10345,7 @@ RakaiFull.analyze.ffpairs.170811<- function()
 				if(nrow(tt))
 				{
 					#	redo relationships + likelihood at new distance threshold		
-					tmp			<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=trmw.min.reads, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI','TYPE_ADJ_DIR_TODI2','TYPE_ADJ_NETWORK_SCORES'), verbose=FALSE)
+					tmp			<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=trmw.min.reads, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI','TYPE_ADJ_DIR_TODI2','TYPE_ADJ_NETWORK_SCORES'), verbose=FALSE)
 					rpw			<- tmp$dwin	
 					rplkl		<- tmp$rplkl				
 					#	mop up
@@ -10897,7 +10897,7 @@ RakaiFull.analyze.ffpairs.171119<- function()
 				if(nrow(tt))
 				{
 					#	redo relationships + likelihood at new distance threshold		
-					tmp			<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=trmw.min.reads, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI','TYPE_ADJ_DIR_TODI2','TYPE_ADJ_NETWORK_SCORES'), verbose=FALSE)
+					tmp			<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=trmw.min.reads, trmw.min.tips=1, close, trmw.distant.brl=0.08, prior.keff=prior.keff, prior.neff=prior.neff, prior.calibrated.prob=confidence.cut, relationship.types=c('TYPE_PAIR_DI2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI','TYPE_ADJ_DIR_TODI2','TYPE_ADJ_NETWORK_SCORES'), verbose=FALSE)
 					rpw			<- tmp$dwin	
 					rplkl		<- tmp$rplkl				
 					#	mop up
@@ -13010,7 +13010,7 @@ RakaiFull.analyze.trmpairs.todi.171122.networks.plot<- function()
 	
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -13986,7 +13986,7 @@ RakaiFull.analyze.couples.todi.171119.networks<- function()
 		
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -14236,7 +14236,7 @@ RakaiFull.analyze.couples.todi.171122.networks<- function()
 	
 	#	generate maximum branch transmission network
 	rtnn	<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtnn, verbose=0)
 	rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)
 	save(rtn, rtnn, file=paste0(outfile.base,'summary.rda'))
 }
@@ -15372,12 +15372,12 @@ RakaiFull.analyze.couples.todi.170811.shorter.than.fulllength<- function()
 					setnames(tmp, c('MALE_RID','FEMALE_RID','TYPE','PATHS_MF','PATHS_FM'), c('ID1','ID2','TYPE_RAW','PATHS_12','PATHS_21'))
 					set(tmp, NULL, 'TYPE_RAW', tmp[, gsub('fm','21',gsub('mf','12',TYPE_RAW))])
 					set(tmp, NULL, 'GROUP', NULL)
-					dwin	<- phsc.get.basic.pairwise.relationships(tmp, trmw.close.brl, trmw.distant.brl, verbose=FALSE)
+					dwin	<- Phyloscanner.R.utilities:::phsc.get.basic.pairwise.relationships(tmp, trmw.close.brl, trmw.distant.brl, verbose=FALSE)
 					setnames(dwin, 'TYPE_BASIC', 'TYPE_DIR_TODI7x3')	
 					dwin	<- phsc.get.pairwise.relationships(dwin, get.groups=get.groups, make.pretty.labels=FALSE)
 					setnames(dwin, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
-					dl		<- phsc.get.pairwise.relationships.keff.and.neff(dwin, get.groups, w.slide=25L)
-					dl		<- phsc.get.pairwise.relationships.posterior(dl, n.type=prior.keff, n.obs=prior.neff, n.type.dir=prior.keff.dir, n.obs.dir=prior.neff.dir, confidence.cut=prior.calibrated.prob)
+					dl		<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.keff.and.neff(dwin, get.groups, w.slide=25L)
+					dl		<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.posterior(dl, n.type=prior.keff, n.obs=prior.neff, n.type.dir=prior.keff.dir, n.obs.dir=prior.neff.dir, confidence.cut=prior.calibrated.prob)
 					dl[, POSTERIOR_SCORE:= pmin(1,(POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-2))]
 					#	see if linked unlinked or ambiguous
 					rtp		<- subset(dl, GROUP==linked.group)
@@ -15676,7 +15676,7 @@ RakaiFull.analyze.couples.todi.171119.checkalphabeta<- function()
 	tmp 	<- load("~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170704_w250_s20_p35_stagetwo_rerun23_min30_adj_chain_mean/ptyr11_trmStatsPerWindow.rda")
 	dwin	<- copy(tt)
 	relationship.types		<- c('TYPE_CHAIN_TODI','TYPE_ADJ_NETWORK_SCORES','TYPE_ADJ_DIR_TODI2')
-	tmp 	<- phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=30, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.66, relationship.types, prior.keff.dir=2, prior.neff.dir=3)
+	tmp 	<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.likelihoods(tt, trmw.min.reads=30, trmw.min.tips=1, trmw.close.brl=0.035, trmw.distant.brl=0.08, prior.keff=2, prior.neff=3, prior.calibrated.prob=0.66, relationship.types, prior.keff.dir=2, prior.neff.dir=3)
 	rplkl2 	<- tmp$rplkl
 	rplkl2[, MEAN:= POSTERIOR_ALPHA/(POSTERIOR_ALPHA+POSTERIOR_BETA)]
 	tmp		<- rplkl2[, list(TYPE=TYPE, MEAN= POSTERIOR_ALPHA/(POSTERIOR_ALPHA+POSTERIOR_BETA), TOTAL= sum( POSTERIOR_ALPHA/(POSTERIOR_ALPHA+POSTERIOR_BETA) ) ), by=c('ID1','ID2','GROUP')]
@@ -17238,7 +17238,7 @@ RakaiFull.analyze.couples.todi.170811.check.linkage<- function()
 	trmw.distant.brl<- 0.08
 	dwin	<- subset(dwin, ID1_R>=trmw.min.reads & ID2_R>=trmw.min.reads & ID1_L>=trmw.min.tips & ID2_L>=trmw.min.tips)
 	setnames(dwin, 'TYPE', 'TYPE_RAW')	
-	dwin	<- phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)
+	dwin	<- Phyloscanner.R.utilities:::phsc.get.basic.pairwise.relationships(dwin, trmw.close.brl, trmw.distant.brl)
 	
 	subset(dwin, ID1==male & ID2==female & PTY_RUN==run & W_FROM==1050)
 	

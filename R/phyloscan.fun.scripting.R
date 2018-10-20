@@ -1,5 +1,71 @@
 #' @export
-#' @title Generate bash commands for a multiple phyloscanner runs
+#' @import data.table
+#' @title Generate bash commands to calculate read distribution in bam file
+#' @description This function generates bash commands to calculate read distribution in bam file   
+#' @param pty.runs data.table with columns SAMPLE_ID and PTY_RUN
+#' @param pty.args List of input variables containing the fields "prog.bam.distr.calculator", "data.dir", "out.dir", "work.dir"
+#' @return character string of bash commands.
+phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args) 		
+{
+	#
+	#	associate BAM and REF files with each scheduled phylotype run
+	#	
+	set(pty.runs, NULL, 'SAMPLE_ID',  pty.runs[, gsub('\\.bam$','',SAMPLE_ID)])
+	#	get available Bam files
+	ptyd		<- data.table(FILE=list.files(pty.args[['data.dir']], full.names=TRUE))
+	ptyd[, TYPE:=NA_character_]
+	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
+	#	get Reference files
+	#	if reference files that were used in assembly are not specified in pty.runs, search for SAMPLE_ID+'_ref.fasta'
+	if(!any(colnames(pty.runs)=='REFERENCE_ID'))
+	{		
+		set(ptyd, ptyd[, which(grepl('_ref.fasta$',FILE))], 'TYPE', 'REF')		
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam|_ref\\.fasta','',basename(FILE))]
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')		
+	}
+	#	if reference files that were used in assembly are specified in pty.runs, use these
+	if(any(colnames(pty.runs)=='REFERENCE_ID'))
+	{
+		tmp			<- subset(ptyd, is.na(TYPE))
+		tmp[, REFERENCE_ID:= gsub('\\.bam','',basename(FILE))]
+		tmp			<- merge(subset(pty.runs, select=c(SAMPLE_ID, REFERENCE_ID)), subset(tmp, select=c(REFERENCE_ID, FILE)), by='REFERENCE_ID')
+		tmp[, TYPE:='REF']
+		tmp[, REFERENCE_ID:=NULL]
+		ptyd		<- subset(ptyd, !is.na(TYPE))
+		ptyd[, SAMPLE_ID:= gsub('\\.bam$','',basename(FILE))]
+		ptyd		<- rbind(ptyd, tmp)
+		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
+	}
+	#	merge
+	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)	
+	if(ptyd[,any(is.na(BAM))])
+		warning('\nCould not find location of BAM files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(BAM)))],'\nMissing individuals are ignored. Please check.')	
+	if(ptyd[,any(is.na(REF))])
+		warning('\nCould not find location of reference files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(REF)))],'\nMissing individuals are ignored. Please check.')
+	ptyd	<- subset(ptyd, !is.na(BAM) & !is.na(REF))
+	setkey(ptyd, PTY_RUN)
+	#
+	#	write pty.run files and get pty command lines
+	#
+	pty.c		<- ptyd[, {
+				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]				
+				file.input		<- file.path(pty.args[['work.dir']], paste('bamr',PTY_RUN,'_input.csv',sep=''))
+				file.output		<- file.path(pty.args[['out.dir']], paste('bamr',PTY_RUN,'_read_distributions.csv',sep=''))
+				tmp				<- cbind(BAM[!is.na(BAM)&!is.na(REF)], REF[!is.na(BAM)&!is.na(REF)])
+				write.table(tmp, file=file.input, row.names=FALSE, col.names=FALSE, quote=FALSE, sep=',')
+				cmd				<- paste0( 	pty.args[['prog.bam.distr.calculator']],
+						' "',file.input,'"',
+						' --out-filename "',file.output,'"',
+						' --overlapping-insert-sizes',
+						' --dont-plot')				
+				list(CMD= cmd)				
+			},by='PTY_RUN']
+	pty.c
+}	
+
+#' @export
+#' @title Generate bash commands for multiple phyloscanner runs
 #' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
 #' @param pty.args List of phyloscanner input variables. See examples.
 #' @return Data.table with columns 'PTY_RUN' (run id) and 'CMD' (bash commands for that run). 
@@ -247,88 +313,3 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	cmd
 }
 
-#' @export
-#' @title Generate bash command to resume a single window of a phyloscanner run
-#' @param prefix.infiles File name that points phyloscanner output.
-#' @param pty.args List of phyloscanner input variables. See examples.
-#' @return Character string of phyloscanner commands.
-#' @description This function generates bash commands to resume a single phyloscanner run, from the point where all read alignments and read phylogenies were created. The bash script can be called via 'system' in R, or written to file to run on a UNIX system.
-#' @example example/ex.cmd.phyloscanner.one.resume.R      
-phsc.cmd.phyloscanner.one.resume.onewindow<- function(prefix.infiles, pty.args)
-{	
-	stopifnot(!is.na(pty.args$process.window))
-	#	create local tmp dir
-	cmd			<- paste("CWD=$(pwd)\n",sep='\n')
-	cmd			<- paste(cmd,"echo $CWD\n",sep='')
-	tmpdir		<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
-	tmpdir		<- paste("$CWD/",tmpdir,sep='')
-	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
-	#	copy required files to local tmp dir	
-	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patients.txt',sep=''), full.names=TRUE)
-	stopifnot(length(file.patient)==1)	
-	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*fasta.zip',sep=''), full.names=TRUE)
-	stopifnot(length(tmp)==1)	
-	cmd	<- paste(cmd,'unzip -j "',tmp,'" "*',pty.args$process.window,'*" -d "',tmpdir,'"\n',sep='')	
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'.*newick.zip',sep=''), full.names=TRUE)
-	stopifnot(length(tmp)==1)	
-	cmd	<- paste(cmd,'unzip -j "',tmp,'" "*',pty.args$process.window,'*" -d "',tmpdir,'"\n',sep='')
-	#	cd to tmp dir
-	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
-	#	add all toolkit commands according to pty.args
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
-	#	zip up window output
-	run.id	<- gsub('_patients.txt','',basename(file.patient))
-	tmp		<- paste(run.id,'_output_Window',pty.args$process.window,'.zip',sep='')
-	cmd		<- paste(cmd, '\nfor file in ',run.id,'*; do\n\tzip -ur9XTj ',tmp,' "$file"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,' "',pty.args$out.dir,'"\n',sep='')
-	#	zip up everything else
-	tmp		<- paste(run.id,'_otherstuff_Window',pty.args$process.window,'.zip',sep='')
-	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',tmp,' "$file"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,' "',pty.args$out.dir,'"\n',sep='')
-	#	clean up
-	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')		
-	cmd
-}
-
-#' @export
-#' @title Generate bash command to combine single window resumes of a phyloscanner run
-#' @param prefix.infiles File name that points phyloscanner output.
-#' @param pty.args List of phyloscanner input variables. See examples.
-#' @return Character string of phyloscanner commands.
-#' @description This function generates bash commands to resume a single phyloscanner run, from the point where all read alignments and read phylogenies were created. The bash script can be called via 'system' in R, or written to file to run on a UNIX system.
-#' @example example/ex.cmd.phyloscanner.one.resume.R      
-phsc.cmd.phyloscanner.one.resume.combinewindows<- function(prefix.infiles, pty.args)
-{	
-	stopifnot(pty.args$combine.processed.windows==1)
-	#	create local tmp dir
-	cmd			<- paste("CWD=$(pwd)\n",sep='\n')
-	cmd			<- paste(cmd,"echo $CWD\n",sep='')
-	tmpdir		<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')	
-	tmpdir		<- paste("$CWD/",tmpdir,sep='')
-	cmd			<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
-	#	copy required files to local tmp dir	
-	file.patient<- list.files(dirname(prefix.infiles), pattern=paste(basename(prefix.infiles),'.*patients.txt',sep=''), full.names=TRUE)
-	stopifnot(length(file.patient)==1)	
-	cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')	
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'output_Window.*',sep=''), full.names=TRUE)
-	for(i in seq_along(tmp))
-		cmd	<- paste(cmd,'unzip -n "',tmp[i],'" -d "',tmpdir,'"\n',sep='')
-	tmp		<- list.files(dirname(prefix.infiles), pattern=paste('^',basename(prefix.infiles),'otherstuff_Window.*',sep=''), full.names=TRUE)
-	for(i in seq_along(tmp))
-		cmd	<- paste(cmd,'unzip -n "',tmp[i],'" -d "',tmpdir,'"\n',sep='')	
-	#	cd to tmp dir
-	cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')	
-	#	add all toolkit commands according to pty.args
-	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
-	#	move all files starting with current run ID
-	run.id	<- gsub('_patients.txt','',basename(file.patient))
-	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
-	#	zip up everything else	
-	tmp	<- paste(run.id,'_otherstuff.zip',sep='')
-	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',tmp,' "$file"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,' "',pty.args$out.dir,'"\n',sep='')
-	#	clean up
-	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')		
-	cmd	
-}

@@ -20,3 +20,4 @@ It then removes the competitor in the opposite direction, and any conflicting ed
 By construction, all removed edges have lower probability.
 The algorithm proceeds until all edges have been processed.
 }
+\keyword{internal}

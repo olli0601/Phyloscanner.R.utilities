@@ -1,17 +1,33 @@
-# Reconstructing transmission networks
+---
+title: "Reconstructing transmission networks"
+author: "Oliver Ratmann"
+date: "2018-10-19"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+``` 
 
 ## Introduction
-[In the previous tutorial](Rakai.01.run_phyloscanner.md), we performed *phyloscanner* analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix `ptyrX_` where `X` is the batch number. 
+[In the previous tutorial](Rakai.01.run_phyloscanner.html), we performed *phyloscanner* analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix `ptyrX_` where `X` is the batch number. 
 
 **In this tutorial, we will take a look at the output.** We will:
 1. Collect pairs of individuals between whom phylogenetic linkage cannot be excluded based on the distance and topological relationship of viral reads from both individuals. 
 2. Reconstruct transmission networks from these pairs. Unlike typical phylogenetic clusters, the transmission networks that we reconstruct from deep-sequence data contain information into the direction of transmission. 
 
 ## Setting up the analysis
-[In the previous tutorial](Rakai.01.run_phyloscanner.md), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
+[In the previous tutorial](Rakai.01.run_phyloscanner.html), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
 
 To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 HOME <- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
 indir <- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
 outdir <- indir
@@ -21,7 +37,7 @@ conf.cut <- 0.6
 ```
  
 ## Find all pairs of individuals between whom linkage cannot be excluded
-The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.md), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
+The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.html), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
 1. `batch.regex` identifies the batch number from the file names of *phyloscanner* output; 
 2. `neff.cut`  specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 
 3. `conf.cut` specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).
@@ -29,7 +45,7 @@ The following code snippet processes all pairwise phylogenetic relationships tha
 At this stage, it is also easy to add any further individual-level meta-data to the analysis output. Simply specify a data.table to the `dmeta` input variable. 
 
 For the analysis of the Rakai population-based sample:
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 infile <- "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"
 dmeta <- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 tmp <- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
@@ -53,7 +69,7 @@ Done. Found pairs, n= 1251 . Found relationship counts, n= 60570 . Found phylosc
 ```
 
 Let us save the output, and then take a closer look:
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 save(rtp, rplkl, rpw, file=paste0(outfile.base,'_allpairs.rda'))	 
 ```
 
@@ -68,7 +84,7 @@ In addition, `rpw` describes how the phylogenetic relationship of the two indivi
 3. Finally, the classification `GROUP=='TYPE_ADJ_DIR_TODI2'` only considers genomic windows with phylogenetic support into the direction of transmission. The possible states are either '12', '21', and all other genomic windows are assigned NA.     
 
 We can visualise the phylogenetic relationships between two individuals across the genome with the function `phsc.plot.phyloscan`:	
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 rpw2 <- subset(rpw, ID1=='RkA04565F' & ID2=='RkA05315F')		
 p	<- phsc.plot.phyloscan(rpw2)
 p
@@ -90,7 +106,7 @@ Here is a screenshot of data.table `rplkl` for the *phyloscanner* analysis of th
 
 ## Reconstructing transmission networks among individuals between whom phylogenetic linkage cannot be excluded
 We can now reconstruct transmission networks simply by connecting pairs of linked individuals that have one individual in common with the function `phsc.find.transmission.networks.from.linked.pairs`: 
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 tmp <- phsc.find.transmission.networks.from.linked.pairs(rtp, rplkl, conf.cut=conf.cut, neff.cut=neff.cut, verbose=TRUE)
 rtn <- copy(tmp$transmission.networks)
 rtnn <- copy(tmp$most.likely.transmission.chains)		
@@ -108,10 +124,10 @@ The data.table `rtn` lists the linked pairs (`ID1`,`ID2`) and how they are conne
 <p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
 
 We can visualise each transmission network with the function `phsc.plot.transmission.network`: 
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 idclus <- sort(unique(rtn$IDCLU))
 di <- copy(dmeta)									
-df <- subset(rtn, IDCLU==idclus[34])
+df <- subset(rtn, IDCLU==34)
 set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
 p <- phsc.plot.transmission.network(df, di, point.size=10, 
 			edge.gap=0.04, 
@@ -142,10 +158,10 @@ The data.table `rtnn` lists as before the linked pairs (`ID1`,`ID2`) along with 
 <p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"/></p>
 
 We can visualise the most likely transmission chains with the function `phsc.plot.most.likely.transmission.chain`:
-```r
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 layout	<- p$layout 
 di		<- copy(dmeta)									
-df		<- subset(rtnn, IDCLU==idclus[34])	
+df		<- subset(rtnn, IDCLU==34)	
 p2		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
 			edge.gap=0.04, 
 			edge.size=0.4, 

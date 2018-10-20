@@ -3951,7 +3951,7 @@ pty.process.160901<- function()
 		save.file		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/RCCS_161027_w270_d200_phscout.rda'
 		in.dir			<- '~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/Rakai_ptoutput_161027_couples_w270_d50_r004_rerun'
 		save.file		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/RCCS_161027_w270_d50_r004_phscout.rda'
-		tmp				<- phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
+		tmp				<- Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(in.dir, save.file=save.file)
 	}	
 	
 	#	161107
@@ -3970,7 +3970,7 @@ pty.process.160901<- function()
 				tmp.in		<- paste(in.dir, opt, sep='_')
 				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', tmp.min.tips, '_phscout.rda', sep='')
 				cat('\n',tmp.in,' -> ',tmp.out)
-				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=tmp.min.tips))		
+				invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=tmp.min.tips))		
 			}
 		}
 	}
@@ -3989,7 +3989,7 @@ pty.process.160901<- function()
 					tmp.in		<- paste(infile.base, opt, sep='_')
 					tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 					cat('\n',tmp.in,' -> ',tmp.out)
-					invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+					invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 				}		
 	}
 	#	161219
@@ -4006,7 +4006,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 	#	170227
@@ -4023,7 +4023,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 	#	170309
@@ -4040,7 +4040,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 	#	170320
@@ -4057,7 +4057,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(gsub('170309','170320',save.file), '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 	#	170324
@@ -4075,7 +4075,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 	#	170410
@@ -4090,7 +4090,7 @@ pty.process.160901<- function()
 		trmw.min.tips	<- 1
 		in.dir			<- paste(infile.base, opt, sep='_')
 		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
-		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
+		invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
 													trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
 													norm.file.name="/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda"))
 				
@@ -4107,7 +4107,7 @@ pty.process.160901<- function()
 		trmw.min.tips	<- 1
 		in.dir			<- paste(infile.base, opt, sep='_')
 		save.file		<- paste(save.file, '_', gsub('_rerun','_blNormedOnFly', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')		
-		invisible(phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
+		invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(	in.dir, save.file=save.file, 
 						trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl,
 						norm.file.name="/Users/Oliver/Library/R/3.3/library/Phyloscanner.R.utilities/data/hiv.hxb2.norm.constants.rda"))
 		norm.file.name	<- NA
@@ -4117,14 +4117,14 @@ pty.process.160901<- function()
 				tmp.in		<- paste(infile.base, opt, sep='_')
 				tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 				cat('\n',tmp.in,' -> ',tmp.out)
-				invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+				invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 		}	
 		for(opt in c('d50_st20_trB_blInScriptNormed_rerun'))
 		{					
 			tmp.in		<- paste(infile.base, opt, sep='_')
 			tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 			cat('\n',tmp.in,' -> ',tmp.out)
-			invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+			invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 		}	
 	}
 	#	170426
@@ -4141,7 +4141,7 @@ pty.process.160901<- function()
 						tmp.in		<- paste(infile.base, opt, sep='_')
 						tmp.out		<- paste(save.file, '_', gsub('_rerun','', opt),'_mr', trmw.min.reads, '_mt', trmw.min.tips, '_cl', 100*trmw.close.brl, '_d', 100*trmw.distant.brl, '_phscout.rda', sep='')
 						cat('\n',tmp.in,' -> ',tmp.out)
-						invisible(phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
+						invisible(Phyloscanner.R.utilities:::phsc.combine.phyloscanner.output(tmp.in, save.file=tmp.out, trmw.min.reads=trmw.min.reads, trmw.min.tips=trmw.min.tips, trmw.close.brl=trmw.close.brl, trmw.distant.brl=trmw.distant.brl))		
 					}		
 	}
 }
@@ -6228,7 +6228,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 					pty.args$process.window<- 2500
 					prefix.infiles	<- gsub('patients.txt','',FILE_BAM)
 					print(prefix.infiles)
-					cmd				<- phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
+					cmd				<- Phyloscanner.R.utilities:::phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
 					cat(cmd)
 					stop()
 					list(CMD=cmd) 
@@ -6324,7 +6324,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		pty.c	<- pty.c[, { 
 					pty.args$process.window	<- W_FROM
 					prefix.infiles			<- gsub('patients.txt','',FILE_BAM)					
-					cmd						<- phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
+					cmd						<- Phyloscanner.R.utilities:::phsc.cmd.phyloscanner.one.resume.onewindow(prefix.infiles, pty.args)
 					list(CMD=cmd) 
 				}, by=c('PTY_RUN','W_FROM')]		
 		pty.c[1,cat(CMD)]	
@@ -6417,7 +6417,7 @@ pty.pipeline.phyloscanner.180605.MunichCluster.process<- function()
 		pty.args$combine.processed.windows	<- 1
 		pty.c	<- pty.c[, { 					
 					prefix.infiles			<- gsub('patients.txt','',FILE_BAM)					
-					cmd						<- phsc.cmd.phyloscanner.one.resume.combinewindows(prefix.infiles, pty.args)
+					cmd						<- Phyloscanner.R.utilities:::phsc.cmd.phyloscanner.one.resume.combinewindows(prefix.infiles, pty.args)
 					list(CMD=cmd) 
 				}, by=c('PTY_RUN')]		
 		pty.c[1,cat(CMD)]	

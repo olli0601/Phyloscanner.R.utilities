@@ -12,3 +12,4 @@ Named list with names corresponding to RELATIONSHIP GROUPS. For each relationshi
 \description{
 This function returns default colours for each relationship type in one of the defined relationship groups.
 }
+\keyword{internal}

@@ -2,40 +2,48 @@ Package: Phyloscanner.R.utilities
 Version: 0.6-0
 Date: 2018/10/17
 Title: 
-Author: {Oliver Ratmann}
-Maintainer: Oliver Ratmann <oliver.ratmann@imperial.ac.uk>
-Suggests:
-    R (>= 3.1),
-    argparse, 
-    ape, 
-    data.table, 
-    dplyr, 
-    dtplyr, 
-    ff, 
-    ggplot2, 
+Authors@R: c(person("Oliver", "Ratmann", role = c("aut", "cre"), email = "oliver.ratmann@imperial.ac.uk"),
+	person("Matthew", "Hall", role = "ctb"),
+	person("Chris", "Wymant", role = "ctb"),
+	person("Christophe", "Fraser", role = "ctb"))
+Depends:
+	R (>= 3.1)
+Suggests:    
+    argparse (>= 1.0.4), 
+    ape (>= 4.1), 
+    data.table (>= 1.10.5), 
+    dplyr (>= 0.7.4), 
+    dtplyr (>= 0.0.1), 
+    ff (>= 2.2-13), 
+    ggplot2 (>= 2.2.1.9000), 
     grid, 
     gridExtra, 
-    gtable, 
-    ggtree, 
+    gtable (>= 0.2.0), 
+    ggtree (>= 1.6.9), 
     kimisc, 
-    pegas, 
-    phangorn, 
-    phytools, 
-    prodlim, 
+    pegas (>= 0.9), 
+    phangorn (>= 2.1.1), 
+    phytools (>= 0.5-64), 
+    prodlim (>= 1.5.7), 
     RColorBrewer, 
-    reshape, 
-    reshape2, 
+    reshape (>= 0.8.6), 
+    reshape2 (>= 1.4.3), 
     scales,
     colorspace, 
     devtools, 
-    ggnet, 
-    igraph, 
-    Rsamtools, 
-    RBGL, 
-    sna    
+    ggnet (>= 0.1.0), 
+    igraph (>= 1.0.1), 
+    Rsamtools (>= 1.26.1), 
+    RBGL (>= 1.55.1), 
+    sna (>= 2.4),
+    knitr,
+    rmarkdown
 Description: Please see https://github.com/BDI-pathogens/phyloscanner for the PHYLOSCANNER package.
     Phyloscanner.R.utilities is a set of functions used to help apply phyloscanner to very large datasets, and analyse and merge outputs from multiple runs.
     Please go to the PHYLOSCANNER page for access to the main software package.
 License: GPL (>=2)
 LazyLoad: yes
 RoxygenNote: 6.0.1
+URL: https://github.com/olli0601/Phyloscanner.R.utilities
+BugReports: https://github.com/olli0601/Phyloscanner.R.utilities/issues
+VignetteBuilder: knitr

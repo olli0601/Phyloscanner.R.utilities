@@ -32,3 +32,4 @@ list of named trees in ape format.
 \description{
 This function reads short read trees that are generated with the phyloscanner toolkit.
 }
+\keyword{internal}

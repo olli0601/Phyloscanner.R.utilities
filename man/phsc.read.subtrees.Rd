@@ -32,3 +32,4 @@ data.table with columns PTY_RUN W_FROM W_TO orig.patients patient.splits tip.nam
 \description{
 This function reads the subtree information that is generated with the phyloscanner toolkit.
 }
+\keyword{internal}

@@ -1,6 +1,6 @@
 # Phyloscanner.R.utilities
 
-# Utility functions for deep-sequence phylogenetic analyses at the population level with *phyloscanner*
+# Utility functions for deep-sequence phylogenetic analyses with *phyloscanner*
 
 ## Overview
 *Phyloscanner.R.utilities* is a set of functions used to help apply [the phyloscanner software](https://github.com/BDI-pathogens/phyloscanner) to large datasets of a population-based sample, and reconstruct transmission networks from multiple *phyloscanner* runs. Please go to the [*phyloscanner* github page](https://github.com/BDI-pathogens/phyloscanner) for access to the main software package.
@@ -12,17 +12,14 @@ The software package comprises
 
 ## Installation
 Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and *MacOS*. 
-1. Instructions for installing *phyloscanner* on either system [are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). In addition, *phyloscanner* requires *R* version >= 3.1, and the following *R* packages: argparse, ape, data.table, dplyr, dtplyr, ff, ggplot2, grid, gridExtra, gtable, ggtree, kimisc, pegas, phangorn, phytools, prodlim, RColorBrewer, reshape, reshape2, scales. Please install these first. If you have issues with installation of *phyloscanner*, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). 
-2. *Phyloscanner.R.utilities* requires *R* version >= 3.1, and the following additional *R* packages: colorspace, devtools, ggnet, igraph, Rsamtools, RBGL, sna. Please install these first. When done, the software package can be installed as described below. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
+1. Instructions for installing *phyloscanner* on either system [are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). In addition, *phyloscanner* requires *R* version >= 3.1, and the following *R* packages: argparse, ape, data.table, dplyr, dtplyr, ff, ggplot2, grid, gridExtra, gtable, ggtree, kimisc, pegas, phangorn, phytools, prodlim, RColorBrewer, reshape, reshape2, scales. These should be installed as part of the `devtools:::install_github` command below. If you have issues with installation of *phyloscanner*, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). 
+2. *Phyloscanner.R.utilities* requires *R* version >= 3.1, and the following additional *R* packages: colorspace, devtools, ggnet, igraph, Rsamtools, RBGL, sna. These should be installed as part of the `devtools:::install_github` command below. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
 ```r
-devtools:::install_github("olli0601/Phyloscanner.R.utilities")
+devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 require(Phyloscanner.R.utilities)
 ```
 
-## Testing
-The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611.  
-
-## General analysis protocol
+## General protocol for analyses at the population-level
 It is computationally challenging to reconstruct viral trees from 
 deep-sequence reads of hundreds or thousands of individuals. To
 address this challenge, we generally proceed in two stages. 
@@ -42,13 +39,19 @@ transmission pairs within a network.
 **The similarity of the two stages allows us to use the same high-throughput R scripts for analysis**  
 
 ## Tutorials for *phyloscanner* analyses of large population-based samples
-To demonstrate analysis of a deep-sequence reads from of large population-based sample of individuals, we here provide three tutorials on data from Rakai District Uganda. 
+To demonstrate analysis of a deep-sequence reads from of large population-based sample of individuals, we here provide several tutorials on data from Rakai District, Uganda. [The data are described here.](articles/Rakai.01.data_description.html)
 
-Individuals aged 15-49 years were surveyed from August 2011 to January 2015 in 40 communities of the Rakai Community Cohort Study (RCCS). 5,142 men and women were found positive. Samples from 3,878 individuals were deep-sequenced (nearly all individuals who did not report using antiretrovirals), and samples from 2,652 individuals were of sufficient quality for molecular epidemiological analyses. We estimate that these samples correspond to approximately 47.0% of eligible, infected and infectious individuals in the 40 RCCS communities.
 
-[The first tutorial](vignettes/Rakai.01.run_phyloscanner.md) starts with *phyloscanner* analyses of deep-sequence phylogenetic trees for each potential transmission network identified on this population-based sample of 2,652 infected individuals. The main objective is to illustrate how large numbers of phyloscanner runs can be generated and run in parallel with the utility functions in this software package, without too much computational overhead.
+### [Running *phyloscanner* in high-throughput](articles/Rakai.01.run_phyloscanner.html)
+[This tutorial](articles/Rakai.01.run_phyloscanner.html) starts with *phyloscanner* analyses of deep-sequence phylogenetic trees for each potential transmission network identified on this population-based sample of 2,652 infected individuals. The main objective is to illustrate how large numbers of phyloscanner runs can be generated and run in parallel with the utility functions in this software package, without too much computational overhead.
 
- [The second tutorial](vignettes/Rakai.02.reconstruct_transmission_networks.md) uses the generated *phyloscanner* output to reconstruct partially sampled HIV-1 transmission networks, of individuals who are in the population-based sample. We will illustrate a range of analytical functions to create these networks, and plotting functions to visualise phylogenetic inferences.  
+Expected runtime: *phyloscanner* analysis of each batch of transmission networks takes about 2 hours, and the 345 batches can be processed in parallel.
 
-The third tutorial.
+### [Reconstructing transmission networks](articles/Rakai.02.reconstruct_transmission_networks.html)
+[This tutorial](articles/Rakai.02.reconstruct_transmission_networks.html) uses the generated *phyloscanner* output to reconstruct partially sampled HIV-1 transmission networks, of individuals who are in the population-based sample. We will illustrate a range of analytical functions to create these networks, and plotting functions to visualise phylogenetic inferences.  
+
+Expected runtime: 10 minutes.
+
+## Testing
+The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611.  
 

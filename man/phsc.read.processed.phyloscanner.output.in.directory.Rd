@@ -29,3 +29,4 @@ Nothing, rda objects written to file.
 \description{
 This function creates R data.tables from processed phyloscanner output, for further data analysis in R.
 }
+\keyword{internal}

@@ -33,3 +33,4 @@ Plots to file.
 \description{
 This function plots the window summaries for each pair of individuals.
 }
+\keyword{internal}

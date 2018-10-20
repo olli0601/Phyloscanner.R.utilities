@@ -526,7 +526,7 @@ Munich.preprocess.phyloscanneroutput.based.on.exclude.180924<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
@@ -721,7 +721,7 @@ Munich.preprocess.phyloscanneroutput.based.on.strongsupport.180924<- function()
 	rtn		<- rbind(tmp, rtn)
 	#	generate maximum branch transmission network
 	rtn		<- subset(rtn, GROUP==scores.group)
-	rtnn	<- phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
+	rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
 	#	for TYPE=='ambiguous', this has the cols:
 	#	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
 	#	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence

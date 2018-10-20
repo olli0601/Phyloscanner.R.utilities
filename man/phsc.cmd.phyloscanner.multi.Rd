@@ -2,7 +2,7 @@
 % Please edit documentation in R/phyloscan.fun.scripting.R
 \name{phsc.cmd.phyloscanner.multi}
 \alias{phsc.cmd.phyloscanner.multi}
-\title{Generate bash commands for a multiple phyloscanner runs}
+\title{Generate bash commands for multiple phyloscanner runs}
 \usage{
 phsc.cmd.phyloscanner.multi(pty.runs, pty.args, regex.ref = "_ref.fasta$",
   postfix.sample.id = "\\\\.bam|_ref\\\\.fasta")
