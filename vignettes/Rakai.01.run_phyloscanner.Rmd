@@ -72,7 +72,7 @@ directory.
 The next step is to define the input arguments to *phyloscanner*. Please see the
 *phyloscanner* manual for details. The default arguments that were used for
 analysis of the Rakai population-based sample are as follows. 
-```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+```{r, include=TRUE, eval=FALSE, echo=TRUE}
 pty.args <- list(	prog.pty=prog.pty, 
 		prog.mafft=NA, 
 		prog.raxml=NA, 
