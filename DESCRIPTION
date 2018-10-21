@@ -8,7 +8,7 @@ Authors@R: c(person("Oliver", "Ratmann", role = c("aut", "cre"), email = "oliver
 	person("Christophe", "Fraser", role = "ctb"))
 Depends:
 	R (>= 3.1)
-Suggests:    
+Imports:    
     argparse (>= 1.0.4), 
     ape (>= 4.1), 
     data.table (>= 1.10.5), 
