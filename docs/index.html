@@ -48,7 +48,7 @@
       <a href="articles/Rakai.01.data_description.html">Data description</a>
     </li>
     <li>
-      <a href="articles/Rakai.01.run_phyloscanner.html">Perform *phyloscanner* analysis on deep-sequence trees from a population-based sample</a>
+      <a href="articles/Rakai.01.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a>
     </li>
     <li>
       <a href="articles/Rakai.02.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
@@ -99,11 +99,24 @@
 <a href="#installation" class="anchor"></a>Installation</h2>
 <p>Both <em>phyloscanner</em> and <em>Phyloscanner.R.utilities</em> are supported on <em>Linux</em> and <em>MacOS</em>.</p>
 <ol>
-<li>Instructions for installing <em>phyloscanner</em> on either system <a href="https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh">are available here</a>. In addition, <em>phyloscanner</em> requires <em>R</em> version &gt;= 3.1, and the following <em>R</em> packages: argparse, ape, data.table, dplyr, dtplyr, ff, ggplot2, grid, gridExtra, gtable, ggtree, kimisc, pegas, phangorn, phytools, prodlim, RColorBrewer, reshape, reshape2, scales. These should be installed as part of the <code>devtools:::install_github</code> command below. If you have issues with installation of <em>phyloscanner</em>, <a href="https://github.com/BDI-pathogens/phyloscanner/issues">please report it here and we will get back to you</a>.</li>
 <li>
-<p><em>Phyloscanner.R.utilities</em> requires <em>R</em> version &gt;= 3.1, and the following additional <em>R</em> packages: colorspace, devtools, ggnet, igraph, Rsamtools, RBGL, sna. These should be installed as part of the <code>devtools:::install_github</code> command below. If you have issues with installation/running of <em>Phyloscanner.R.utilities</em>, <a href="https://github.com/olli0601/Phyloscanner.R.utilities/issues">please report it here and we will get back to you</a>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">devtools:::<span class="kw">install_github</span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
-<span class="kw">require</span>(Phyloscanner.R.utilities)</code></pre></div>
+<em>phyloscanner</em> builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as <em>samtools</em> and <em>RAxML</em>. Please install these first; <a href="https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh">instructions are available here</a>. If you have installation issues, <a href="https://github.com/BDI-pathogens/phyloscanner/issues">please report it here and we will get back to you</a>. This may take 30 minutes.</li>
+<li>
+<p><em>phyloscanner</em> and <em>Phyloscanner.R.utilities</em> depend on several <em>R</em> packages, some of which are on Bioconductor. To avoid back/forth, we find it easiest to install as many as possible via the following <code>install_github</code> command, then install any missing packages from Bioconductor/ github, and finally re-run the <code>install_github</code> command to complete installation. That is:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">devtools:::<span class="kw">install_github</span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)</code></pre></div>
+<p>On a fresh R build, installation will fail with</p>
+<pre class="text"><code>ERROR: dependencies ‘ggtree’, ‘ggnet’, ‘Rsamtools’, ‘RBGL’ are not available</code></pre>
+<p>You will then need</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">source</span>(<span class="st">"https://bioconductor.org/biocLite.R"</span>)
+<span class="kw">biocLite</span>(<span class="kw">c</span>(<span class="st">"Rsamtools"</span>,<span class="st">"RBGL"</span>,<span class="st">"ggtree"</span>),<span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
+devtools:::<span class="kw">install_github</span>(<span class="st">"briatte/ggnet"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
+devtools:::<span class="kw">install_github</span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)</code></pre></div>
+This may take 30 minutes. If you have issues with installation/running of <em>Phyloscanner.R.utilities</em>, <a href="https://github.com/olli0601/Phyloscanner.R.utilities/issues">please report it here and we will get back to you</a>.</li>
+<li>
+<a href="misc/phyloscanner_v1.1.2.tar.gz">Download <em>phyloscanner</em> version 1.1.2</a> and unzip.</li>
+<li>
+<p>Load <em>Phyloscanner.R.utilities</em> in R:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(Phyloscanner.R.utilities)</code></pre></div>
 </li>
 </ol>
 </div>

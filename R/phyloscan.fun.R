@@ -1,6 +1,7 @@
 
 #' @export
-#' @import data.table igraph sna
+#' @import data.table
+#' @importFrom igraph graph.data.frame clusters
 #' @title Find phylogenetic transmission networks
 #' @param rtp Pairs of individuals between whom linkage is not excluded, stored as data.table.
 #' @param rplkl Summary of phylogenetic relationship counts for each pair, stored as data.table.

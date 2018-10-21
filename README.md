@@ -11,13 +11,29 @@ The software package comprises
 3. R functions to visualise reconstructed transmission networks and primary *phyloscanner* output. 
 
 ## Installation
-Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and *MacOS*. 
-1. Instructions for installing *phyloscanner* on either system [are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). In addition, *phyloscanner* requires *R* version >= 3.1, and the following *R* packages: argparse, ape, data.table, dplyr, dtplyr, ff, ggplot2, grid, gridExtra, gtable, ggtree, kimisc, pegas, phangorn, phytools, prodlim, RColorBrewer, reshape, reshape2, scales. These should be installed as part of the `devtools:::install_github` command below. If you have issues with installation of *phyloscanner*, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). 
-2. *Phyloscanner.R.utilities* requires *R* version >= 3.1, and the following additional *R* packages: colorspace, devtools, ggnet, igraph, Rsamtools, RBGL, sna. These should be installed as part of the `devtools:::install_github` command below. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
+Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and *MacOS*.
+1. *phyloscanner* builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as *samtools* and *RAxML*. Please install these first; [instructions are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). If you have installation issues, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). This may take 30 minutes. 
+2. *phyloscanner* and *Phyloscanner.R.utilities* depend on several *R* packages, some of which are on Bioconductor. To avoid back/forth, we find it easiest to install as many as possible via the following `install_github` command, then install any missing packages from Bioconductor/ github, and finally re-run the `install_github` command to complete installation. That is:    
 ```r
 devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
-require(Phyloscanner.R.utilities)
+``` 
+On a fresh R build, installation will fail with
+```text
+ERROR: dependencies ‘ggtree’, ‘ggnet’, ‘Rsamtools’, ‘RBGL’ are not available
 ```
+You will then need
+```r
+source("https://bioconductor.org/biocLite.R")
+biocLite(c("Rsamtools","RBGL","ggtree"),dependencies=TRUE, build_vignettes=FALSE)
+devtools:::install_github("briatte/ggnet", dependencies=TRUE, build_vignettes=FALSE)
+devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
+``` 
+This may take 30 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
+3. [Download *phyloscanner* version 1.1.2](misc/phyloscanner_v1.1.2.tar.gz) and unzip.
+4. Load *Phyloscanner.R.utilities* in R:
+```r
+require(Phyloscanner.R.utilities)
+``` 
 
 ## General protocol for analyses at the population-level
 It is computationally challenging to reconstruct viral trees from 

@@ -1,5 +1,5 @@
 ---
-title: "Perform *phyloscanner* analysis on deep-sequence trees from a population-based sample"
+title: "Running *phyloscanner* in high-throughput on a population-based sample"
 author: "Oliver Ratmann"
 date: "2018-10-18"
 output: rmarkdown::html_vignette

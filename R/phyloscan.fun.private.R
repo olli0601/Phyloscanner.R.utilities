@@ -11,8 +11,8 @@ PR.pairwise.relationships								<- paste('Rscript', system.file(package=PR.PACK
 {
 	suppressMessages(library(ape))
 	suppressMessages(library(argparse))	
-	suppressMessages(library(phytools))
-	suppressMessages(library(phangorn))	
+	#suppressMessages(library(phytools))
+	##suppressMessages(library(phangorn))	
 	suppressMessages(library(reshape2))
 	suppressMessages(library(data.table))
 	suppressMessages(library(RColorBrewer))
@@ -22,7 +22,7 @@ PR.pairwise.relationships								<- paste('Rscript', system.file(package=PR.PACK
 	suppressMessages(library(scales))
 	suppressMessages(library(ggplot2))
 	suppressMessages(library(ggtree))
-	suppressMessages(library(zoo))	
+	##suppressMessages(library(zoo))	
 }
 
 phsc.cmd.mafft.add<- function(infile, reffile, outfile, options='')
@@ -740,7 +740,8 @@ phsc.extract.clade <- function(phy, node, root.edge = 0, interactive = FALSE)
 	drop.tip(phy, (1:n)[-keep], root.edge = root.edge, rooted = TRUE)
 }
 
-#' @import data.table phangorn ape
+#' @import data.table ape
+#' @importFrom phangorn Ancestors Children Siblings Descendants
 phsc.phy.collapse.monophyletic.clades<- function(ph, drop.blacklisted=TRUE, tip.regex='(.*)_read_([0-9]+)_count_([0-9]+)')
 {
 	#ph<- phs[[1]]
@@ -1211,7 +1212,8 @@ phsc.get.assignments.by.window.for.couple<- function(id1, id2, infiles)
 #' It then removes the competitor in the opposite direction, and any conflicting edges that would result in indegrees larger than one.
 #' By construction, all removed edges have lower probability.
 #' The algorithm proceeds until all edges have been processed.   
-#' @import sna igraph
+#' @importFrom igraph get.adjacency graph.data.frame
+#' @importFrom sna kcycle.census
 #' @param rtn data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.   
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
 phsc.get.most.likely.transmission.chains.greedy<- function(rtnn, verbose=0)
@@ -2428,7 +2430,8 @@ phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trm
 }
 
 #' @keywords internal
-#' @import sna igraph RBGL
+#' @importFrom igraph graph.data.frame igraph.to.graphNEL
+#' @importFrom RBGL edmondsOptimumBranching
 #' @title Construct maximum probability transmission network
 #' @description This function reconstructs a maximum probility transmission 
 #' network from the scores associated with directed and undirected edges.
@@ -2440,9 +2443,6 @@ phsc.get.pairwise.relationships.likelihoods<- function(dwin, trmw.min.reads, trm
 #' @return new data.table with added columns LINK_12 LINK_21 (either 1 or 0), and MX_PROB_12 MX_PROB_21 (associated posterior probabilities)  
 phsc.get.most.likely.transmission.chains.RBGLedmonds<- function(rtnn, verbose=0)
 {
-	require(igraph)
-	require(RBGL)
-	
 	stopifnot(c('ID1','ID2','IDCLU','TYPE','POSTERIOR_SCORE','KEFF')%in%colnames(rtnn))		
 	stopifnot( !length(setdiff(c('ambiguous','21','12'), rtnn[, unique(TYPE)])) )
 	
@@ -2508,7 +2508,6 @@ phsc.get.most.likely.transmission.chains.RBGLedmonds<- function(rtnn, verbose=0)
 }
 
 #' @keywords internal
-#' @import sna igraph
 #' @title Reconstruct most likely transmission chains
 #' @description This function reconstructs most likely transmission chains 
 #' from the scores associated with directed and undirected edges.
