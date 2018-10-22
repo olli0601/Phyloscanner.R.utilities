@@ -23,7 +23,7 @@ tar -xvf RakaiPopSample_data/Dataset_S1.tar -C RakaiPopSample_deepseqtrees
 ```
 The new directory should contain files that look as follows:
 
-<p align="center"><img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+<p align="center"><img src="figures/Rakai.02.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
 1. Each analysis of a potential transmission network is identified with the
    prefix `ptyrX_` where `X` is an integer. Note that, to minimise computations,
@@ -289,4 +289,4 @@ Below is a description of the full output.
 
 Once all scripts are run, the output directory should have a file structure
 similar to that shown here:
-<p align="center"><img src="figures/Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>
+<p align="center"><img src="figures/Rakai.02.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>

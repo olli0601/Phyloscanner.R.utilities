@@ -39,7 +39,7 @@ tar -xvf RakaiPopSample_data/Dataset_S1.tar -C RakaiPopSample_deepseqtrees
 ```
 The new directory should contain files that look as follows:
 
-<p align="center"><img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
+<p align="center"><img src="figures/Rakai.02.run_phyloscanner.directorystructure.png" alt="File structure of input directory"/></p>
 
 1. Each analysis of a potential transmission network is identified with the
    prefix `ptyrX_` where `X` is an integer. Note that, to minimise computations,
@@ -197,7 +197,7 @@ temp directory that you specified above, to a file named
 `phsc.Wed_Oct_17_101858_2018.sh` or similar: 
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 invisible(pty.c[,	{					
-		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[ 1 ]],collapse='_',sep=''),'sh',sep='.'))
 		outfile <- file.path(pty.args[['work.dir']], outfile)
 		cat(CMD, file=outfile)
 		Sys.chmod(outfile, mode="777")
@@ -250,7 +250,7 @@ We are now ready to add the header to each script, and submit the job:
 invisible(pty.c[,	{					
 		cmd <- paste(pbshead,'cd $TMPDIR',sep='\n')
 		cmd <- paste(cmd,CMD,sep='\n')	
-		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile <- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[ 1 ]],collapse='_',sep=''),'sh',sep='.'))
 		outfile <- file.path(pty.args[['work.dir']], outfile)
 		cat(CMD, file=outfile)
 		cmd <- paste("qsub", outfile)
@@ -306,4 +306,4 @@ Below is a description of the full output.
 
 Once all scripts are run, the output directory should have a file structure
 similar to that shown here:
-<p align="center"><img src="figures/Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>
+<p align="center"><img src="figures/Rakai.02.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"/></p>

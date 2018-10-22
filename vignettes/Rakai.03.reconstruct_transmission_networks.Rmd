@@ -17,14 +17,14 @@ knitr::opts_chunk$set(
 ``` 
 
 ## Introduction
-[In the previous tutorial](Rakai.01.run_phyloscanner.html), we performed *phyloscanner* analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix `ptyrX_` where `X` is the batch number. 
+[In the previous tutorial](Rakai.02.run_phyloscanner.html), we performed *phyloscanner* analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix `ptyrX_` where `X` is the batch number. 
 
 **In this tutorial, we will take a look at the output.** We will:
 1. Collect pairs of individuals between whom phylogenetic linkage cannot be excluded based on the distance and topological relationship of viral reads from both individuals. 
 2. Reconstruct transmission networks from these pairs. Unlike typical phylogenetic clusters, the transmission networks that we reconstruct from deep-sequence data contain information into the direction of transmission. 
 
 ## Setting up the analysis
-[In the previous tutorial](Rakai.01.run_phyloscanner.html), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
+[In the previous tutorial](Rakai.02.run_phyloscanner.html), we generated a large number of files, including `ptyrX_pairwise_relationships.rda`. We will need only these files to reconstruct HIV-1 transmission networks. 
 
 To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
@@ -37,7 +37,7 @@ conf.cut <- 0.6
 ```
  
 ## Find all pairs of individuals between whom linkage cannot be excluded
-The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.01.run_phyloscanner.html), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
+The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.02.run_phyloscanner.html), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 
 1. `batch.regex` identifies the batch number from the file names of *phyloscanner* output; 
 2. `neff.cut`  specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 
 3. `conf.cut` specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).
@@ -76,7 +76,7 @@ save(rtp, rplkl, rpw, file=paste0(outfile.base,'_allpairs.rda'))
 ## *phyloscanner* statistics for each window
 The data.table `rpw` describes for each pair (`ID1`, `ID2`) the basic *phyloscanner* statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome, plus any meta-data that was potentially added: 
  
-<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
+<p align="center"><img src="figures/Rakai.03.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."/></p>
 
 In addition, `rpw` describes how the phylogenetic relationship of the two individuals is classified in each genomic window. There are several classifications: 
 1. The most important one is probably `GROUP=='TYPE_ADJ_NETWORK_SCORES'`. In each genomic window, pairs are classified as either '12' (subgraphs of individual 1 are close, adjacent and ancestral to those from individual 2), '21' (subgraphs of individual 2 are close, adjacent and ancestral to those from individual 1), 'ambiguous' (subgraphs are close, adjacent and either intermingled or sibling), or 'not close/disconnected' (subgraphs are either not close, or not adjacent).
@@ -101,7 +101,7 @@ The data.table `rplkl` is a summary of the information in `rpw` for each genomic
 3. Colums `NEFF` and `KEFF` are similar to `N` and `K`, but adjust for potential overlap in read alignments.
      
 Here is a screenshot of data.table `rplkl` for the *phyloscanner* analysis of the Rakai population-based sample:   
-<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
+<p align="center"><img src="figures/Rakai.03.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."/></p>
 
 
 ## Reconstructing transmission networks among individuals between whom phylogenetic linkage cannot be excluded
@@ -121,7 +121,7 @@ Found most likely transmission chains, n= 446 . Number of links= 888 . Number of
 Done.
 ```
 The data.table `rtn` lists the linked pairs (`ID1`,`ID2`) and how they are connected in transmission networks. Each network is given a unique identifier, which is listed in column `IDCLU`. The number of individuals in each transmission network is given in column `CLU_SIZE`. Finally, the data.table also provides information on the phylogenetic support for each of the phylogenetic relationship types '12', '21', 'ambiguous', and 'not close/disconnected':   
-<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
+<p align="center"><img src="figures/Rakai.03.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."/></p>
 
 We can visualise each transmission network with the function `phsc.plot.transmission.network`: 
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
@@ -155,7 +155,7 @@ It is possible to highlight different individual-level variables in `dmeta` on t
 As expected given the uncertainty in our inferences, the reconstructed transmission networks typically include cycles of possible transmission flows and recipients with more than one probable source case, indicating that multiple transmission chains are consistent with the phylogenetic data. [We can apply Edmonds algorithm](https://en.wikipedia.org/wiki/Edmonds%27_algorithm) to solve for the most likely transmission chain, which corresponds to the transmission flow with the largest product of weights (the labels) along directed edges that connects all individuals, subject to the constraint that there are no circles and that each individual has one incoming edge. This is already done as part of the function `phsc.find.transmission.networks.from.linked.pairs`.
 
 The data.table `rtnn` lists as before the linked pairs (`ID1`,`ID2`) along with the transmission network that they belong to (`IDCLU`). The data.table contains two new columns, `LINK_12` and `LINK_21`, that describe if the most likely transmission chain passes through individuals 1 and 2, and in which direction. Here is a screenshot of data.table `rtnn` for the phyloscanner analysis of the Rakai population-based sample: 
-<p align="center"><img src="figures/Rakai.02.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"/></p>
+<p align="center"><img src="figures/Rakai.03.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"/></p>
 
 We can visualise the most likely transmission chains with the function `phsc.plot.most.likely.transmission.chain`:
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}

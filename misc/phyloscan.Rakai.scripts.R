@@ -163,13 +163,10 @@ pty.2.infer.phylo.relationships.on.stage2.trees<- function()
 
 pty.3.infer.transmission.networks.from.phylo.relationships<- function()
 {
-	require(data.table)	
-	require(igraph)
-	require(sna)
 	require(Phyloscanner.R.utilities)
 		
 	#	setting up workspace
-	HOME			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+	HOME			<- '~/sandbox/DeepSeqProjects'
 	indir			<- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
 	outdir			<- indir
 	outfile.base	<- file.path(outdir,'phsc_analysis_of_dataset_S1')
@@ -244,84 +241,61 @@ pty.3.infer.transmission.networks.from.phylo.relationships<- function()
 }
 
 
-pty.4.female.female.links<- function()
+pty.4.highlysupported.links<- function()
 {
-	require(data.table)	
-	require(igraph)
-	require(sna)
 	require(Phyloscanner.R.utilities)
 	
 	#	setting up workspace
-	HOME			<- '/Users/Oliver/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA'
+	HOME			<- '~/sandbox/DeepSeqProjects'
 	indir			<- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
-	outdir			<- indir
-	outfile.base	<- file.path(outdir,'phsc_analysis_of_dataset_S1')
-	neff.cut		<- 3
-	conf.cut		<- 0.6		
 	
-	#	get meta-data for individuals in general pop cohort
-	infile			<- "~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv"
-	dmeta			<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	#	load pairs and networks
+	infile.pairs	<- file.path(indir,'phsc_analysis_of_dataset_S1_allpairs.rda')
+	infile.networks	<- file.path(indir,'phsc_analysis_of_dataset_S1_allnetworks.rda')
+	load( infile.pairs )	# loads rtp, rplkl, rpw
+	load( infile.networks )	# loads rtn, rtnn
+		
+	#	classify linkages
+	conf.cut		<- 0.6				
+	rtnn[, SELECT:= NA_character_]
+	set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one individual')
+	set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'ph unlinked pair')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=conf.cut)], 'SELECT', 'unclear if pair ph linked or unlinked')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut)], 'SELECT', 'ph linked pair direction not resolved')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_12>conf.cut)], 'SELECT', 'ph linked pair direction 12')
+	set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_21>conf.cut)], 'SELECT', 'ph linked pair direction 21')	
+	
+	#	add gender
+	tmp		<- subset(rtp, select=c(ID1, ID2, ID1_SEX, ID2_SEX))
+	rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2'))
+	#	re-order so male is ID1
+	tmp		<- subset(rtnn, ID1_SEX=='F' & ID2_SEX=='M')
+	setnames(tmp, colnames(tmp), gsub('xx','ID2',gsub('ID2','ID1',gsub('ID1','xx',gsub('xx','12',gsub('12','21',gsub('21','xx',colnames(tmp))))))))
+	set(tmp, NULL, 'SELECT', tmp[, gsub('xx','12',gsub('12','21',gsub('21','xx',SELECT)))])
+	rtnn	<- rbind(subset(rtnn, !(ID1_SEX=='F' & ID2_SEX=='M')), tmp)
+	#	define gender pair
+	rtnn[, PAIR_SEX:= paste0(ID1_SEX,ID2_SEX)]
+	
+	#	select pairs with highly supported linkages
+	rtp		<- subset(rtnn, !grepl('unlinked|insufficient',SELECT))
+	rtp[, table(PAIR_SEX)]
+	#FF  MF  MM 
+	#80 376  81
+	#	conclusion: high proportion of missed intermediates
 	
 	
-	#	get pairs between whom linkage is not excluded
-	tmp				<- phsc.find.linked.pairs(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=conf.cut, neff.cut=neff.cut, verbose=TRUE, dmeta=dmeta)
-	rtp				<- copy(tmp$linked.pairs)
-	rplkl			<- copy(tmp$relationship.counts)
-	rpw				<- copy(tmp$windows)
-	save(rtp, rplkl, rpw, file=paste0(outfile.base,'_allpairs.rda'))
-	
-	#	plot phyloscan
-	rpw2 <- subset(rpw, ID1=='RkA04565F' & ID2=='RkA05315F')		
-	p	<- phsc.plot.phyloscan(rpw2)
-	p
-	ggsave(file=paste0(outfile.base,'_phyloscan_RkA04565F_RkA05315F.png'), width=6, height=2.8, units='in', dpi=400)
-	
-	#	reconstruct transmission networks	
-	tmp				<- phsc.find.transmission.networks.from.linked.pairs(rtp, rplkl, conf.cut=conf.cut, neff.cut=neff.cut, verbose=TRUE)
-	rtn				<- copy(tmp$transmission.networks)
-	rtnn			<- copy(tmp$most.likely.transmission.chains)		
-	save(rtn, rtnn, file=paste0(outfile.base,'_allnetworks.rda'))
-	
-	#	plot transmission networks: one example	
-	idclus	<- sort(unique(rtn$IDCLU))
-	di		<- copy(dmeta)									
-	df		<- subset(rtn, IDCLU==idclus[34])
-	set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
-	p		<- phsc.plot.transmission.network(df, di, point.size=10, 
-			edge.gap=0.04, 
-			edge.size=0.4, 
-			curvature= -0.2, 
-			arrow=arrow(length=unit(0.04, "npc"), type="open"), 
-			curv.shift=0.06, 
-			label.size=3, 
-			node.label='ID', 			 
-			node.fill='SEX', 
-			node.shape.values=c('NA'=16), 
-			node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
-			threshold.linked=0.6)	
-	png(file=paste0(outfile.base,'_trmnetwork_34.png'), width=6, height=6, units='in', res=400)		
-	print(p)
-	dev.off()
-	
-	#	plot the corresponding most likely transmission chain
-	layout	<- p$layout 
-	di		<- copy(dmeta)									
-	df		<- subset(rtnn, IDCLU==idclus[34])	
-	p2		<- phsc.plot.most.likely.transmission.chain(df, di, point.size=10, 
-			edge.gap=0.04, 
-			edge.size=0.4, 
-			curvature= -0.2, 
-			arrow=arrow(length=unit(0.04, "npc"), type="open"), 
-			curv.shift=0.06, 
-			label.size=3, 
-			node.label='ID', 			 
-			node.fill='SEX', 
-			node.shape.values=c('NA'=16), 
-			node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
-			threshold.linked=0.6,
-			layout=layout)	
-	png(file=paste0(outfile.base,'_trmchain_34.png'), width=6, height=6, units='in', res=400)		
-	print(p2)
-	dev.off()
+	#	select male-female pairs with highly supported direction
+	rtpd	<- subset(rtnn, ID1_SEX=='M' & ID2_SEX=='F' & grepl('direction 12|direction 21',SELECT))
+	set(rtpd, NULL, 'SELECT', rtpd[, gsub('ph linked pair direction 21','fm',gsub('ph linked pair direction 12','mf',SELECT))])
+	setnames(rtpd, 'SELECT', 'PHYSCANNER_DIR')
+	rtpd	<- subset(rtpd, select=c(ID1, ID2, PHYSCANNER_DIR))
+	#	293/376
+
+	#	read pairs with clinical data on direction (assuming these are linked)
+	infile		<- '~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S3.csv'
+	red			<- as.data.table(read.csv(infile))
+	setnames(red, c('MALE_ID','FEMALE_ID'), c('ID1','ID2'))
+	rtpd		<- merge(rtpd, red, by=c('ID1','ID2'))
+	rtpd[, PHYSCANNER_DIR_CONSISTENT:= as.integer(PHYSCANNER_DIR==EPID_EVIDENCE_DIR)]
+	rtpd[, table(PHYSCANNER_DIR_CONSISTENT)]
 }

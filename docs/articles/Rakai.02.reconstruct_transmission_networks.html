@@ -48,10 +48,10 @@
       <a href="../articles/Rakai.01.data_description.html">Data description</a>
     </li>
     <li>
-      <a href="../articles/Rakai.01.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a>
+      <a href="../articles/Rakai.02.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a>
     </li>
     <li>
-      <a href="../articles/Rakai.02.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
+      <a href="../articles/Rakai.03.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
     </li>
   </ul>
 </li>
@@ -87,13 +87,13 @@
 <div id="introduction" class="section level2">
 <h2 class="hasAnchor">
 <a href="#introduction" class="anchor"></a>Introduction</h2>
-<p><a href="Rakai.01.run_phyloscanner.html">In the previous tutorial</a>, we performed <em>phyloscanner</em> analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix <code>ptyrX_</code> where <code>X</code> is the batch number.</p>
+<p><a href="Rakai.02.run_phyloscanner.html">In the previous tutorial</a>, we performed <em>phyloscanner</em> analyses to reconstruct phylogenetic relationships between individuals that together form a potential transmission network. The analysis proceeded in batches, in which each transmission network was given a batch number, and small networks were combined into a single batch. Each batch was identified by the prefix <code>ptyrX_</code> where <code>X</code> is the batch number.</p>
 <p><strong>In this tutorial, we will take a look at the output.</strong> We will: 1. Collect pairs of individuals between whom phylogenetic linkage cannot be excluded based on the distance and topological relationship of viral reads from both individuals. 2. Reconstruct transmission networks from these pairs. Unlike typical phylogenetic clusters, the transmission networks that we reconstruct from deep-sequence data contain information into the direction of transmission.</p>
 </div>
 <div id="setting-up-the-analysis" class="section level2">
 <h2 class="hasAnchor">
 <a href="#setting-up-the-analysis" class="anchor"></a>Setting up the analysis</h2>
-<p><a href="Rakai.01.run_phyloscanner.html">In the previous tutorial</a>, we generated a large number of files, including <code>ptyrX_pairwise_relationships.rda</code>. We will need only these files to reconstruct HIV-1 transmission networks.</p>
+<p><a href="Rakai.02.run_phyloscanner.html">In the previous tutorial</a>, we generated a large number of files, including <code>ptyrX_pairwise_relationships.rda</code>. We will need only these files to reconstruct HIV-1 transmission networks.</p>
 <p>To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "~/sandbox/DeepSeqProjects"</span>
 indir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_analysis"</span>)
@@ -105,7 +105,7 @@ conf.cut &lt;-<span class="st"> </span><span class="fl">0.6</span></code></pre><
 <div id="find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="section level2">
 <h2 class="hasAnchor">
 <a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="anchor"></a>Find all pairs of individuals between whom linkage cannot be excluded</h2>
-<p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.01.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 1. <code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output; 2. <code>neff.cut</code> specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 3. <code>conf.cut</code> specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).</p>
+<p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.02.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 1. <code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output; 2. <code>neff.cut</code> specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 3. <code>conf.cut</code> specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).</p>
 <p>At this stage, it is also easy to add any further individual-level meta-data to the analysis output. Simply specify a data.table to the <code>dmeta</code> input variable.</p>
 <p>For the analysis of the Rakai population-based sample:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">infile &lt;-<span class="st"> "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Data_Set_S2.csv"</span>
@@ -134,7 +134,7 @@ Done. Found pairs, n= 1251 . Found relationship counts, n= 60570 . Found phylosc
 <a href="#phyloscanner-statistics-for-each-window" class="anchor"></a><em>phyloscanner</em> statistics for each window</h2>
 <p>The data.table <code>rpw</code> describes for each pair (<code>ID1</code>, <code>ID2</code>) the basic <em>phyloscanner</em> statistics (patristic distance, adjacency, contiguity, paths from subgraphs of individual 1 to subgraphs of individual 2, and vice versa) across the genome, plus any meta-data that was potentially added:</p>
 <p align="center">
-<img src="figures/Rakai.02.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."></p>
+<img src="figures/Rakai.03.reconstruct_transmission_networks.rpw.png" alt="Output of phyloscanner statistics for each window."></p>
 <p>In addition, <code>rpw</code> describes how the phylogenetic relationship of the two individuals is classified in each genomic window. There are several classifications: 1. The most important one is probably <code>GROUP=='TYPE_ADJ_NETWORK_SCORES'</code>. In each genomic window, pairs are classified as either ‘12’ (subgraphs of individual 1 are close, adjacent and ancestral to those from individual 2), ‘21’ (subgraphs of individual 2 are close, adjacent and ancestral to those from individual 1), ‘ambiguous’ (subgraphs are close, adjacent and either intermingled or sibling), or ‘not close/disconnected’ (subgraphs are either not close, or not adjacent). 2. There are two more important classification types. The relationship types that support phylogenetic linkage are ‘12’, ‘21’, and ‘ambiguous’. In the classification <code>GROUP=='TYPE_CHAIN_TODI'</code> these three states are already summarised to state ‘chain’. 3. Finally, the classification <code>GROUP=='TYPE_ADJ_DIR_TODI2'</code> only considers genomic windows with phylogenetic support into the direction of transmission. The possible states are either ‘12’, ‘21’, and all other genomic windows are assigned NA.</p>
 <p>We can visualise the phylogenetic relationships between two individuals across the genome with the function <code>phsc.plot.phyloscan</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">rpw2 &lt;-<span class="st"> </span><span class="kw">subset</span>(rpw, ID1 ==<span class="st"> "RkA04565F"</span> &amp;<span class="st"> </span>ID2 ==<span class="st"> "RkA05315F"</span>)
@@ -151,7 +151,7 @@ p
 <a href="#relationship-counts-for-each-pair" class="anchor"></a>Relationship counts for each pair</h2>
 <p>The data.table <code>rplkl</code> is a summary of the information in <code>rpw</code> for each genomic window, and gives for each pair the counts of how often certain phylogenetic relationships were seen across the genome. 1. For each pair, column <code>N</code> gives the total number of deep-sequence phylogenies in which both individuals had sufficient reads for phylogenetic analysis. 2. Column <code>TYPE</code> gives a particular phylogenetic relationship type, for example ‘12’, and column <code>K</code> gives the number of deep-sequence phylogenies in whom the subgraphs of both individuals were of that type. 3. Colums <code>NEFF</code> and <code>KEFF</code> are similar to <code>N</code> and <code>K</code>, but adjust for potential overlap in read alignments.</p>
 Here is a screenshot of data.table <code>rplkl</code> for the <em>phyloscanner</em> analysis of the Rakai population-based sample:<br><p align="center">
-<img src="figures/Rakai.02.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."></p>
+<img src="figures/Rakai.03.reconstruct_transmission_networks.rplkl.png" alt="Phylogenetic relationship counts."></p>
 </div>
 <div id="reconstructing-transmission-networks-among-individuals-between-whom-phylogenetic-linkage-cannot-be-excluded" class="section level2">
 <h2 class="hasAnchor">
@@ -169,7 +169,7 @@ Reconstruct most likely transmission chains...
 Found most likely transmission chains, n= 446 . Number of links= 888 . Number of individuals= 1334 .
 Done.</code></pre>
 The data.table <code>rtn</code> lists the linked pairs (<code>ID1</code>,<code>ID2</code>) and how they are connected in transmission networks. Each network is given a unique identifier, which is listed in column <code>IDCLU</code>. The number of individuals in each transmission network is given in column <code>CLU_SIZE</code>. Finally, the data.table also provides information on the phylogenetic support for each of the phylogenetic relationship types ‘12’, ‘21’, ‘ambiguous’, and ‘not close/disconnected’:<br><p align="center">
-<img src="figures/Rakai.02.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."></p>
+<img src="figures/Rakai.03.reconstruct_transmission_networks.rtn.png" alt="Phylogenetic transmission networks."></p>
 <p>We can visualise each transmission network with the function <code>phsc.plot.transmission.network</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">idclus &lt;-<span class="st"> </span><span class="kw">sort</span>(<span class="kw">unique</span>(rtn$IDCLU))
 di &lt;-<span class="st"> </span><span class="kw">copy</span>(dmeta)
@@ -195,7 +195,7 @@ p &lt;-<span class="st"> </span><span class="kw"><a href="../reference/phsc.plot
 <p>As expected given the uncertainty in our inferences, the reconstructed transmission networks typically include cycles of possible transmission flows and recipients with more than one probable source case, indicating that multiple transmission chains are consistent with the phylogenetic data. <a href="https://en.wikipedia.org/wiki/Edmonds%27_algorithm">We can apply Edmonds algorithm</a> to solve for the most likely transmission chain, which corresponds to the transmission flow with the largest product of weights (the labels) along directed edges that connects all individuals, subject to the constraint that there are no circles and that each individual has one incoming edge. This is already done as part of the function <code>phsc.find.transmission.networks.from.linked.pairs</code>.</p>
 The data.table <code>rtnn</code> lists as before the linked pairs (<code>ID1</code>,<code>ID2</code>) along with the transmission network that they belong to (<code>IDCLU</code>). The data.table contains two new columns, <code>LINK_12</code> and <code>LINK_21</code>, that describe if the most likely transmission chain passes through individuals 1 and 2, and in which direction. Here is a screenshot of data.table <code>rtnn</code> for the phyloscanner analysis of the Rakai population-based sample:
 <p align="center">
-<img src="figures/Rakai.02.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"></p>
+<img src="figures/Rakai.03.reconstruct_transmission_networks.rtnn.png" alt="Most likely transmission chains"></p>
 <p>We can visualise the most likely transmission chains with the function <code>phsc.plot.most.likely.transmission.chain</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">layout &lt;-<span class="st"> </span>p$layout
 di &lt;-<span class="st"> </span><span class="kw">copy</span>(dmeta)

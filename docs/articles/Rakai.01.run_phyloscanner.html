@@ -48,10 +48,10 @@
       <a href="../articles/Rakai.01.data_description.html">Data description</a>
     </li>
     <li>
-      <a href="../articles/Rakai.01.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a>
+      <a href="../articles/Rakai.02.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a>
     </li>
     <li>
-      <a href="../articles/Rakai.02.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
+      <a href="../articles/Rakai.03.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
     </li>
   </ul>
 </li>
@@ -99,7 +99,7 @@
 <span class="kw">tar</span> -xvf RakaiPopSample_data/Dataset_S1.tar -C RakaiPopSample_deepseqtrees</code></pre></div>
 <p>The new directory should contain files that look as follows:</p>
 <p align="center">
-<img src="figures/Rakai.01.run_phyloscanner.directorystructure.png" alt="File structure of input directory"></p>
+<img src="figures/Rakai.02.run_phyloscanner.directorystructure.png" alt="File structure of input directory"></p>
 <ol style="list-style-type: decimal">
 <li>Each analysis of a potential transmission network is identified with the prefix <code>ptyrX_</code> where <code>X</code> is an integer. Note that, to minimise computations, individuals in small transmission networks can be grouped into a single <em>phyloscanner</em> analysis, which we call a <em>batch</em> in this tutorial. In total, there are 345 batches.</li>
 <li>Two files are available for each batch. First, a text file listing all individuals in the batch, in file <code>ptyrX_patients.txt</code>.</li>
@@ -323,7 +323,7 @@ pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, hpc
 </ol>
 Once all scripts are run, the output directory should have a file structure similar to that shown here:
 <p align="center">
-<img src="figures/Rakai.01.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"></p>
+<img src="figures/Rakai.02.run_phyloscanner.expectedoutput.png" alt="Expected output of phyloscanner analysis of potential transmission networks"></p>
 </div>
 </div>
   </div>

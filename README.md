@@ -10,10 +10,10 @@ The software package comprises
 2. R functions for collecting *phyloscanner* output of multiple batches, and for reconstructing transmission networks.
 3. R functions to visualise reconstructed transmission networks and primary *phyloscanner* output. 
 
-## Installation
+## System requirements
 Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and *MacOS*.
-1. *phyloscanner* builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as *samtools* and *RAxML*. Please install these first; [instructions are available here](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). If you have installation issues, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). This may take 30 minutes. 
-2. *phyloscanner* and *Phyloscanner.R.utilities* depend on several *R* packages, some of which are on Bioconductor. To avoid back/forth, we find it easiest to install as many as possible via the following `install_github` command, then install any missing packages from Bioconductor/ github, and finally re-run the `install_github` command to complete installation. That is:    
+1. *phyloscanner* builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as *samtools* and *RAxML*. Please install these first; [instructions are available here for *Linux* and *MacOS*](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). If you have installation issues, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). This step may take up to 60 minutes. 
+2. *phyloscanner* and *Phyloscanner.R.utilities* depend on several *R* packages. We find it easiest to install them as follows. First run the following `install_github` command, and then install any packages that could not be installed manually (these packages not on CRAN and need to be installed from Bioconductor/ github) That is:    
 ```r
 devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 ``` 
@@ -26,14 +26,20 @@ You will then need
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("Rsamtools","RBGL","ggtree"),dependencies=TRUE, build_vignettes=FALSE)
 devtools:::install_github("briatte/ggnet", dependencies=TRUE, build_vignettes=FALSE)
-devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 ``` 
-This may take 30 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
-3. [Download *phyloscanner* version 1.1.2](misc/phyloscanner_v1.1.2.tar.gz) and unzip.
-4. Load *Phyloscanner.R.utilities* in R:
+This step may take up to 60 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
+
+## Installation
+3. [Download *phyloscanner* version 1.1.2](../misc/phyloscanner_v1.1.2.tar.gz) and unzip to a directory of your choice.
+4. Install *Phyloscanner.R.utilities* in R:
 ```r
+devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 require(Phyloscanner.R.utilities)
 ``` 
+If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues). This step takes 5 minutes.
+
+## Installation
+
 
 ## General protocol for analyses at the population-level
 It is computationally challenging to reconstruct viral trees from 
@@ -58,16 +64,17 @@ transmission pairs within a network.
 To demonstrate analysis of a deep-sequence reads from of large population-based sample of individuals, we here provide several tutorials on data from Rakai District, Uganda. [The data are described here.](articles/Rakai.01.data_description.html)
 
 
-### [Running *phyloscanner* in high-throughput](articles/Rakai.01.run_phyloscanner.html)
-[This tutorial](articles/Rakai.01.run_phyloscanner.html) starts with *phyloscanner* analyses of deep-sequence phylogenetic trees for each potential transmission network identified on this population-based sample of 2,652 infected individuals. The main objective is to illustrate how large numbers of phyloscanner runs can be generated and run in parallel with the utility functions in this software package, without too much computational overhead.
+### [Running *phyloscanner* in high-throughput](articles/Rakai.02.run_phyloscanner.html)
+[This tutorial](articles/Rakai.02.run_phyloscanner.html) starts with *phyloscanner* analyses of deep-sequence phylogenetic trees for each potential transmission network identified on this population-based sample of 2,652 infected individuals. The main objective is to illustrate how large numbers of phyloscanner runs can be generated and run in parallel with the utility functions in this software package, without too much computational overhead.
 
 Expected runtime: *phyloscanner* analysis of each batch of transmission networks takes about 2 hours, and the 345 batches can be processed in parallel.
 
-### [Reconstructing transmission networks](articles/Rakai.02.reconstruct_transmission_networks.html)
-[This tutorial](articles/Rakai.02.reconstruct_transmission_networks.html) uses the generated *phyloscanner* output to reconstruct partially sampled HIV-1 transmission networks, of individuals who are in the population-based sample. We will illustrate a range of analytical functions to create these networks, and plotting functions to visualise phylogenetic inferences.  
+### [Reconstructing transmission networks](articles/Rakai.03.reconstruct_transmission_networks.html)
+[This tutorial](articles/Rakai.03.reconstruct_transmission_networks.html) uses the generated *phyloscanner* output to reconstruct partially sampled HIV-1 transmission networks, of individuals who are in the population-based sample. We will illustrate a range of analytical functions to create these networks, and plotting functions to visualise phylogenetic inferences.  
 
 Expected runtime: 10 minutes.
 
 ## Testing
-The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611.  
+The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611; and RAxML (8.2.9), 
+MAFFT (7.212), samtools (1.2), anaconda (2.3.0), pysam (0.8.1), R (3.1), argparse (1.0.4), ape (4.1), data.table (1.10.5), dplyr (0.7.4), dtplyr (0.0.1), ff (2.2-13), ggplot2 (2.2.1.9000), grid (3.3.3), gridExtra (2.2.1), gtable (0.2.0), ggtree (1.6.9), kimisc (0.3), pegas (0.9), phangorn (2.1.1), phytools (0.5-64), prodlim (1.5.7), RColorBrewer (1.1-2), reshape (0.8.6), reshape2 (1.4.3), scales (0.5.0.9000), colorspace (1.3-2), devtools (1.13.4), ggnet (0.1.0), igraph (1.0.1), Rsamtools (1.26.1), RBGL (1.55.1), sna (2.4), knitr (1.17), rmarkdown (1.7). 
 

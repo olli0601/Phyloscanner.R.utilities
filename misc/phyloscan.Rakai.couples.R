@@ -18191,7 +18191,7 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 
 	#
 	#	make meta-data files
-	outfile		<- '~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/Supp_Data/Data_Set_S2.csv'
+	outfile		<- '~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S2.csv'
 	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/181018_Rakai_GenPopCohort_metadata.rda"
 	load(infile)	#load rd	
 	dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
@@ -18203,6 +18203,79 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	dfa[, ID:=NULL]
 	setnames(dfa, 'AID', 'ID')
 	write.csv(dfa, row.names=FALSE, file=outfile)
+	
+	#
+	#	make data set S3
+	indir				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'	
+	infiles				<- data.table(F=list.files(indir, pattern='.*_networksallpairs.rda'), CONF_CUT=0.6)
+	infiles				<- subset(infiles, !grepl('cl[0-9]+_prior',F))	
+	infiles				<- rbind(infiles, data.table(F='todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda', CONF_CUT=c(0.5, 0.55, 0.65, 0.7, 0.75, 0.8)))
+	ans					<- infiles[, {
+				infile			<- file.path(indir,F)
+				confidence.cut	<- CONF_CUT
+				cat('\nprocessing\n',infile,'\n',confidence.cut)				
+				load(infile)
+				
+				#	prepare SELECT
+				rtnn[, SXO:= paste0(ID1_SEX,ID2_SEX)]
+				rtnn[, SELECT:= NA_character_]
+				set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'SELECT', 'insufficient deep sequence data for at least one partner of couple')
+				set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'SELECT', 'couple most likely not a pair')
+				set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=confidence.cut)], 'SELECT', 'couple ambiguous if pair or not pair')
+				set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut)], 'SELECT', 'couple most likely a pair direction not resolved')
+				set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_12>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 12')
+				set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>confidence.cut & POSTERIOR_SCORE_21>confidence.cut)], 'SELECT', 'couple most likely a pair direction resolved to 21')
+				#	select male-female with direction
+				ans	<- subset(rtnn, ID1_SEX=='M' & ID2_SEX=='F' & grepl('12|21', SELECT), c(ID1,ID2))
+				setnames(ans, c('ID1','ID2'), c('MALE_RID','FEMALE_RID'))
+				#	add meta-data
+				ans	<- merge(ans, rtp, by=c('MALE_RID','FEMALE_RID'))
+				ans							
+			}, by=c('F','CONF_CUT')]
+	ans	<- unique(ans, by=c('MALE_RID','FEMALE_RID'))
+	
+	rca	<- copy(ans)
+	#	prepare extending serodiscordant couples	
+	rca[, EXT_TYPE:=NA_character_]
+	set(rca, rca[, which(FEMALE_LASTNEGDATE>=MALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-mf')		
+	set(rca, rca[, which(MALE_LASTNEGDATE>=FEMALE_FIRSTPOSDATE)], 'EXT_TYPE', 'serodisc-fm')	
+	#	add extra couples in who one has CD4<400 and the other has CD4>800
+	#	for male potential recipient - evaluate CD4 around time male first positive
+	tmp	<- rca[, which(is.na(EXT_TYPE) &
+							MALE_RECENTCD4>800 & abs(MALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2 &
+							FEMALE_RECENTCD4<400 & abs(FEMALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<2)]
+	set(rca, tmp, 'EXT_TYPE', 'CD4disc_2yrs-fm')
+	#	for female potential recipient - evaluate CD4 around time female first positive
+	tmp	<- rca[, which(is.na(EXT_TYPE) &
+							FEMALE_RECENTCD4>800 & abs(FEMALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2 &
+							MALE_RECENTCD4<400 & abs(MALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<2)]
+	set(rca, tmp, 'EXT_TYPE', 'CD4disc_2yrs-mf')
+	#	within 1 year
+	tmp	<- rca[, which((is.na(EXT_TYPE)|grepl('CD4disc_2yrs',EXT_TYPE)) &
+							MALE_RECENTCD4>800 & abs(MALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<1 &
+							FEMALE_RECENTCD4<400 & abs(FEMALE_RECENTCD4DATE-MALE_FIRSTPOSDATE)<1)]
+	set(rca, tmp, 'EXT_TYPE', 'CD4disc_1yr-fm')
+	#	for female potential recipient - evaluate CD4 around time female first positive
+	tmp	<- rca[, which((is.na(EXT_TYPE)|grepl('CD4disc_2yrs',EXT_TYPE)) &
+							FEMALE_RECENTCD4>800 & abs(FEMALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<1 &
+							MALE_RECENTCD4<400 & abs(MALE_RECENTCD4DATE-FEMALE_FIRSTPOSDATE)<1)]
+	set(rca, tmp, 'EXT_TYPE', 'CD4disc_1yr-mf')	
+	#	separate into EXT_TYPE and EXT_DIR
+	set(rca, NULL, 'EXT_DIR', rca[, gsub('^([a-zA-Z0-9_]+)-([a-zA-Z]+)$','\\2',EXT_TYPE)])
+	set(rca, NULL, 'EXT_TYPE', rca[, gsub('^([a-zA-Z0-9_]+)-([a-zA-Z]+)$','\\1',EXT_TYPE)])
+	#	save
+	ans	<- subset(rca, !is.na(EXT_TYPE), select=c(MALE_RID, FEMALE_RID, EXT_TYPE, EXT_DIR))
+	setnames(ans, c('EXT_TYPE','EXT_DIR'), c('EPID_EVIDENCE_TYPE','EPID_EVIDENCE_DIR'))
+	dfa			<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv"))
+	dfa			<- unique(subset(dfa, select=c(ID, AID)))
+	setnames(dfa, c('ID','AID'), c('MALE_RID','MALE_ID'))
+	ans			<- merge(ans, dfa, by='MALE_RID')
+	setnames(dfa, c('MALE_RID','MALE_ID'), c('FEMALE_RID','FEMALE_ID'))
+	ans			<- merge(ans, dfa, by='FEMALE_RID')
+	outfile		<- '~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S3.csv'
+	
+	write.csv(subset(ans, select=c(MALE_ID, FEMALE_ID, EPID_EVIDENCE_TYPE, EPID_EVIDENCE_DIR)), row.names=FALSE, file=outfile)
+	
 }
 
 RakaiFull.analyze.trmpairs.todi.171122.proportion.couples<- function()
