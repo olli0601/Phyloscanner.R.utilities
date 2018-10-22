@@ -1,0 +1,114 @@
+---
+title: "Inferring the direction of transmission"
+author: "Oliver Ratmann"
+date: "2018-10-21"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+``` 
+
+## Introduction
+[In the previous tutorial](Rakai.03.reconstruct_transmission_networks.html), we
+inferred transmission networks from large scale *phyloscanner* output. 
+
+**In this tutorial, we will identify phylogenetically highly-supported
+source-recipient pairs within reconstructed transmission networks.** We will:
+
+1. Classify phylogenetic linkages based on their phylogenetic support. 
+2. Test phylogenetic inferences into the direction of transmission against
+   available epidemiologic data.
+   
+
+## Setting up the analysis
+We resume analysis from [the previous
+tutorial](Rakai.03.reconstruct_transmission_networks.html), and start by loading
+the pairs of individuals between whom linkage could not be excluded, and the
+transmission networks that could be inferred amongst them:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+HOME			<- '~/sandbox/DeepSeqProjects'
+indir			<- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
+infile.pairs	<- file.path(indir,'phsc_analysis_of_dataset_S1_allpairs.rda')
+infile.networks	<- file.path(indir,'phsc_analysis_of_dataset_S1_allnetworks.rda')
+load( infile.pairs )	# loads rtp, rplkl, rpw
+load( infile.networks )	# loads rtn, rtnn
+```
+
+## Classify phylogenetic linkages
+The data.table `rtnn` contains all information needed to classify linkages.
+Following analysis of the Rakai population-based sample, we specify as cut-off
+for strong support of phylogenetic linkage that the proportion of deep-sequence
+phylogenies with close and adjacent subgraphs of two indivuals in the
+most likely transmission chain exceeds 60% (`conf.cut`= 60%):
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+conf.cut		<- 0.6				
+rtnn[, PHYLOSCANNER_CLASSIFY:= NA_character_]
+set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'PHYLOSCANNER_CLASSIFY', 'insufficient deep sequence data for at least one individual')
+set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'PHYLOSCANNER_CLASSIFY', 'ph unlinked pair')
+set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'unclear if pair ph linked or unlinked')
+set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction not resolved')
+set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_12>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction 12')
+set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_21>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction 21')
+```
+
+We already noted [in the previous
+tutorial](Rakai.03.reconstruct_transmission_networks.html) that highly-supported
+phylogenetic linkage does not exclude the possibility that unsampled
+intermediates may be present, even with deep sequence data. To better interpret
+inferred, phylogenetically highly supported linkages, we add information by
+gender:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+tmp		<- subset(rtp, select=c(ID1, ID2, ID1_SEX, ID2_SEX))
+rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2'))
+tmp		<- subset(rtnn, ID1_SEX=='F' & ID2_SEX=='M')
+setnames(tmp, colnames(tmp), gsub('xx','ID2',gsub('ID2','ID1',gsub('ID1','xx',gsub('xx','12',gsub('12','21',gsub('21','xx',colnames(tmp))))))))
+set(tmp, NULL, 'PHYLOSCANNER_CLASSIFY', tmp[, gsub('xx','12',gsub('12','21',gsub('21','xx',PHYLOSCANNER_CLASSIFY)))])
+rtnn	<- rbind(subset(rtnn, !(ID1_SEX=='F' & ID2_SEX=='M')), tmp)
+rtnn[, PAIR_SEX:= paste0(ID1_SEX,ID2_SEX)]
+rtp		<- subset(rtnn, !grepl('unlinked|insufficient',PHYLOSCANNER_CLASSIFY))
+rtp[, table(PAIR_SEX)]
+```
+Thus, a considerable proportion of highly supported phylogenetic links were between two women, 
+even though HIV-1 is extremely rarely transmitted sexually between women, 
+suggesting that unsampled intermediates are likely present. From these numbers, we expect that the 
+proportion of highly supported male-female links between whom there are likely unsampled intermediates could be 
+up to 35.4%, because there are almost twice as many possible male-female combinations than female-female 
+combinations.
+
+## Validate phylogenetic inferences into the direction of transmission
+These observations prompted us to focus on using deep-sequence data for
+inferences into the direction of transmission at the population-level, and
+within partially sampled networks. Our main idea is that source cases, that were
+phylogenetically identified, likely are transmitters regardless of the presence
+of unsampled intermediates. Therefore, as a whole they provide evidence into the
+sources of epidemic spread. To validate our inferences, we considered
+phylogenetically linked pairs of individuals with epidemiological and clinical
+data on the direction of transmission. We start by loading these data:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+infile		<- '~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S3.csv'
+red			<- as.data.table(read.csv(infile))
+setnames(red, c('MALE_ID','FEMALE_ID'), c('ID1','ID2'))
+```
+
+Let us compare the epidemiologic data against our phylogenetic inferences:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+#	select male-female pairs with highly supported direction
+rtpd	<- subset(rtnn, ID1_SEX=='M' & ID2_SEX=='F' & grepl('direction 12|direction 21',PHYLOSCANNER_CLASSIFY))
+set(rtpd, NULL, 'PHYLOSCANNER_CLASSIFY', rtpd[, gsub('ph linked pair direction 21','fm',gsub('ph linked pair direction 12','mf',PHYLOSCANNER_CLASSIFY))])
+setnames(rtpd, 'PHYLOSCANNER_CLASSIFY', 'PHYSCANNER_DIR')
+rtpd	<- subset(rtpd, select=c(ID1, ID2, PHYSCANNER_DIR))
+rtpd		<- merge(rtpd, red, by=c('ID1','ID2'))
+rtpd[, PHYSCANNER_DIR_CONSISTENT:= as.integer(PHYSCANNER_DIR==EPID_EVIDENCE_DIR)]
+rtpd[, table(PHYSCANNER_DIR_CONSISTENT)]
+```
+Thus, the large majority of phylogenetic inferences in our validation panel are consistent with 
+epidemiologic and clinical data.
+  

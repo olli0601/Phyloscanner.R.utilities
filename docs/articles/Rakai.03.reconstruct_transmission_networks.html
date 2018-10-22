@@ -53,6 +53,9 @@
     <li>
       <a href="../articles/Rakai.03.reconstruct_transmission_networks.html">Reconstructing transmission networks</a>
     </li>
+    <li>
+      <a href="../articles/Rakai.04.direction_of_transmission.html">Inferring the direction of transmission</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -105,7 +108,15 @@ conf.cut &lt;-<span class="st"> </span><span class="fl">0.6</span></code></pre><
 <div id="find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="section level2">
 <h2 class="hasAnchor">
 <a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="anchor"></a>Find all pairs of individuals between whom linkage cannot be excluded</h2>
-<p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.02.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments: 1. <code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output; 2. <code>neff.cut</code> specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3); 3. <code>conf.cut</code> specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).</p>
+<p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.02.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments:</p>
+<ol style="list-style-type: decimal">
+<li>
+<code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output;</li>
+<li>
+<code>neff.cut</code> specifies the minimum number of deep-sequence phylogenies with sufficient reads from two individuals in order to make any phylogenetic inferences (default is 3);</li>
+<li>
+<code>conf.cut</code> specifies the proportion of deep-sequence phylogenies with distant/disconnected subgraphs above which pairs are considered phylogenetically unlinked (default is 60%).</li>
+</ol>
 <p>At this stage, it is also easy to add any further individual-level meta-data to the analysis output. Simply specify a data.table to the <code>dmeta</code> input variable.</p>
 <p>For the analysis of the Rakai population-based sample:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">infile &lt;-<span class="st"> "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Data_Set_S2.csv"</span>
