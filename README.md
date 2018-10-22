@@ -30,8 +30,9 @@ devtools:::install_github("briatte/ggnet", dependencies=TRUE, build_vignettes=FA
 This step may take up to 60 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
 
 ## Installation
-3. [Download *phyloscanner* version 1.1.2](../misc/phyloscanner_v1.1.2.tar.gz) and unzip to a directory of your choice.
-4. Install *Phyloscanner.R.utilities* in R:
+Please do:
+1. [Download *phyloscanner* version 1.1.2](../misc/phyloscanner_v1.1.2.tar.gz) and unzip to a directory of your choice.
+2. Install *Phyloscanner.R.utilities* in R:
 ```r
 devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 require(Phyloscanner.R.utilities)
