@@ -36,10 +36,7 @@ This step may take up to 60 minutes. If you have issues with installation/runnin
 devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 require(Phyloscanner.R.utilities)
 ``` 
-If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues). This step takes 5 minutes.
-
-## Installation
-
+This step takes less than 5 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues). 
 
 ## General protocol for analyses at the population-level
 It is computationally challenging to reconstruct viral trees from 
