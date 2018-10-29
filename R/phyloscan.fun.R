@@ -1,3 +1,32 @@
+#' @export
+#' @import data.table
+#' @title Determine stage 1 phyloscanner runs
+#' @description This function groups individuals for phyloscanner analyses, so that phylogenetic linkage between every pair of individuals is assessed at least once.
+#'   Specifically, individuals are grouped into batches of specified size, and then, all possible pairs of batches are formed. 
+#'   Each of these pairs of batches defines a group of individuals between whom phylogenetic linkages are assessed in one phyloscanner run.
+#'   The number of individuals in each group is twice the batch size.
+#' @param x Character vector of individual identifiers. 
+#' @param batch.size Batch size. Default is 50.
+#' @return data.table with rows 'IND' (individual identifiers), 'PTY_RUN' group for phyloscanner analysis, and 'BATCH' batch of individuals (not used further, but there should be two batches of individuals in each phyloscanner analysis).
+phsc.define.stage1.analyses<- function(x, batch.size=50)	
+{
+	dind		<- data.table(IND=x)
+	#	assign batches
+	set(dind, NULL, 'BATCH', dind[, 1L+floor((seq_len(nrow(dind))-1)/batch.size)])
+	batches		<- dind[, unique(BATCH)]
+	#	assign phyloscanner runs
+	pty.runs	<- as.data.table(t(combn(batches,2)))
+	setnames(pty.runs, c('V1','V2'), c('BATCH','BATCH2'))	
+	pty.runs[, PTY_RUN:= seq_len(nrow(pty.runs))]
+	#	merge individuals to phyloscanner runs based on batches
+	tmp			<- merge(pty.runs, dind, by='BATCH', allow.cartesian=TRUE)
+	setnames(dind, c('IND','BATCH'), c('IND2','BATCH2'))
+	tmp2		<- merge(pty.runs, dind, by='BATCH2', allow.cartesian=TRUE)
+	setnames(dind, c('IND2','BATCH2'), c('IND','BATCH'))
+	setnames(tmp2, 'IND2', 'IND')
+	pty.runs	<- rbind(tmp, tmp2)
+	pty.runs
+}
 
 #' @export
 #' @import data.table

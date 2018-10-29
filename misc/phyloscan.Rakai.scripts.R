@@ -1,3 +1,115 @@
+pty.MRC.stage1.generate.read.alignments<- function()
+{
+	#	set up working environment
+	require(Phyloscanner.R.utilities)
+	HOME			<<- '~/sandbox/DeepSeqProjects'
+	in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage1_input')		
+	work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+	out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage1_output")
+	data.dir		<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'
+	prog.pty		<- '/work/or105/libs/phylotypes/phyloscanner_make_trees.py'
+	
+	#
+	#	define phyloscanner runs for all pairs of batches of individuals of the population-based sample
+	#
+	infile	<- 'phsc_runs_MRC_data.csv'	#	file listing all available bam files and corresponding individual IDs
+	outfile	<- 'phsc_runs_MRC_stage1_n2531_181026.csv'			
+	dbam	<- as.data.table(read.csv(file.path(in.dir,infile)))
+	dbam	<- subset(dbam, grepl('remap\\.bam',BAM))
+	setnames(dbam,'INDIVIDUAL','IND')
+	#	make data.table with just individuals
+	dind	<- unique(subset(dbam, select=c(IND)))
+	#	create batches and create runs of pairs of batches
+	pty.runs<- phsc.define.stage1.analyses(dind$IND, batch.size=50)
+	#	add BAM files per individual
+	pty.runs<- merge(pty.runs, subset(dbam, select=c(IND, BAM)), by='IND', allow.cartesian=TRUE)
+	setkey(pty.runs, PTY_RUN)
+	#	save to file
+	write.csv(pty.runs, file=file.path(in.dir,outfile), row.names=FALSE)
+	
+	#	TODO change names of columns etc
+	
+	#
+	#	define phyloscanner input args to generate read alignments
+	#
+	pty.select			<- 1
+	pty.args			<- list(	prog.pty=prog.pty, 
+									prog.mafft='mafft',  
+									data.dir=data.dir, 
+									work.dir=work.dir, 
+									out.dir=out.dir, 
+									alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_AD_B_CPX_v2.fasta"),
+									alignments.root='REF_CPX_AF460972', 
+									alignments.pairwise.to='REF_B_K03455',
+									window.automatic='', 
+									merge.threshold=2, 
+									min.read.count=1, 
+									quality.trim.ends=23, 
+									min.internal.quality=23, 
+									merge.paired.reads=TRUE, 
+									no.trees=TRUE, 
+									dont.check.duplicates=FALSE,
+									dont.check.recombination=TRUE,
+									win=c(800,9400,25,250),				 				
+									keep.overhangs=FALSE,
+									mem.save=0,
+									verbose=TRUE,					
+									select=pty.select	#of 240
+									)	
+	save(pty.args, file=file.path(out.dir, 'pty_args_stage1_create_read_alignments.rda'))
+	
+	#
+	#	define bash scripts to generate read alignments for all pairs of batches
+	#
+	
+	#	check which (if any) batches have already been processed, and remove from TODO list	
+	tmp		<- data.table(FILE_FASTA=list.files(out.dir, pattern='^ptyr[0-9]+_', full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
+	pty.runs<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
+	pty.runs<- subset(pty.runs, is.na(FILE_FASTA))
+	#	now create bash scripts 
+	setkey(pty.runs, PTY_RUN)		
+	pty.c				<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+	
+	#
+	#	submit jobs to PBS job scheduler
+	#
+	
+	#	define PBS variables
+	hpc.load			<- "module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 71						# walltime
+	hpc.q				<- "pqeelab"				# PBS queue
+	hpc.mem				<- "6gb" 					# RAM	
+	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead	<- "#!/bin/sh"
+	tmp		<- paste("#PBS -l walltime=", hpc.walltime, ":59:59,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead	<- paste(pbshead, tmp, sep = "\n")
+	tmp		<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		wrap<- paste(wrap, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead <- paste(pbshead, hpc.load, sep = "\n")	
+	#	create PBS job array
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(pty.args[['work.dir']], outfile)
+	cat(CMD, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))		
+}
+
+
 pty.2.infer.phylo.relationships.on.stage2.trees<- function() 
 {
 	require(Phyloscanner.R.utilities)

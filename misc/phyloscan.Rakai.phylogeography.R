@@ -748,7 +748,7 @@ RakaiFull.phylogeography.170421<- function()
 	
 }
 
-RakaiFull.phylogeography.171122.samplinglocations<- function()
+RakaiFull.phylogeography.181006.samplinglocations<- function()
 {
 	require(data.table)
 	require(scales)
@@ -760,9 +760,27 @@ RakaiFull.phylogeography.171122.samplinglocations<- function()
 	require(Hmisc)
 	require(gtools)	#rdirichlet
 	
-	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl35_prior23_min30_withmetadata.rda"
-	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30_withmetadata.rda"
-	outfile.base			<- gsub('_withmetadata.rda','',infile)
+	#infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl35_prior23_min30_withmetadata.rda"
+	#infile					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_prior23_min30_withmetadata.rda"
+	indir					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile					<- "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
+	load(file.path(indir, infile))
+	
+	#
+	#	all locations
+	tmp	<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT, COMM_TYPE)))
+	ggmap(zm) +
+		geom_point(data=tmp, aes(x=LONG, y=LAT, fill=COMM_TYPE), shape=21, size=6, alpha=1, colour='black') +
+		scale_fill_manual(values=c('fisherfolk'='#FF3030','inland'='#66BD63')) +
+		guides(fill='none') +
+		labs(x='', y='')
+		# + geom_text(data=unique(zc, by='COMM_NUM'), aes(x=longitude, y=latitude, label=COMM_NUM), nudge_x=0, nudge_y=0, size=3, colour='black')
+	ggsave(file=paste0(outfile.base,'_comm_all_locations.pdf'), w=6, h=6, useDingbats=FALSE)
+			
+	
+	
+	
 	
 	zm		<- get_googlemap(center="rakai district uganda", zoom=10, maptype="hybrid")
 	zc		<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
@@ -2260,6 +2278,313 @@ RakaiFull.phylogeography.180618.figure.flows.on.map<- function()
 			theme(legend.position='bottom', legend.box = "vertical") + 
 			guides(size='none', colour='none')
 	ggsave(file=paste0(outfile.base,'_flows_fishinginland_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+}
+
+RakaiFull.phylogeography.181006.figure.top.comms<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_topXcom_results.rda"
+	outfile.base	<- gsub('com_results.rda','',infile)
+	load(infile)
+	df		<- copy(ans)
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_topXinland_results.rda"
+	load(infile)
+	df		<- rbind(df, ans)
+	
+	
+	#	clean up	
+	df[, STAT2:= gsub('([a-z0-9]+)-([a-z0-9]+)','\\2',STAT)]
+	df[, STAT:= gsub('([a-z0-9]+)-([a-z0-9]+)','\\1',STAT)]
+	df[, TOP:= as.numeric(gsub('([a-z]+)([0-9]+)([a-z]+)','\\2',STAT2))]	
+	df	<- subset(df, (grepl('inland',STAT2) & TOP<39-6) | grepl('com',STAT2))
+	tmp	<- df[, which(grepl('inland',STAT2))]
+	set(df, tmp, 'TOP', df[tmp, TOP/36])
+	tmp	<- df[, which(grepl('com',STAT2))]
+	set(df, tmp, 'TOP', df[tmp, TOP/40])		
+	df[, STAT2:= gsub('([a-z]+)([0-9]+)([a-z]+)','\\3',STAT2)]
+	set(df, NULL, 'TR_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland','',TR_COMM_TYPE)])
+	set(df, NULL, 'REC_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland','',REC_COMM_TYPE)])
+	df[, FLOW:= paste0(TR_COMM_TYPE,'->',REC_COMM_TYPE)]
+	
+	#	plot topXcom waifm top->other
+	tmp	<- subset(df, STAT2=='com' & STAT=='waifm' & TR_COMM_TYPE!=REC_COMM_TYPE & FLOW=='top->other')		
+	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X communities that have most cases\n(in % of all communities)', y='proportion of transmissions to other communities,\namong all transmission starting in top X communities\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'com_waifm_from_top_to_other.pdf'), w=10, h=5)
+	#	plot topXcom flows top->other	
+	tmp	<- subset(df, STAT2=='com' & STAT=='joint' & TR_COMM_TYPE!=REC_COMM_TYPE)
+	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X communities that have most cases\n(in % of all communities)', y='proportion of transmissions\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'com_flows_from_top_to_other.pdf'), w=10, h=5)
+	
+	
+	#	plot topXinland waifm top->other
+	tmp	<- subset(df, STAT2=='inland' & STAT=='waifm' & TR_COMM_TYPE!=REC_COMM_TYPE & FLOW=='top->other')		
+	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X inland communities that have most cases\n(in % of all communities)', y='proportion of transmissions to other communities,\namong all transmission starting in top X communities\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'inland_waifm_from_top_to_other.pdf'), w=10, h=5)
+	#	plot topXinland flows top->other
+	tmp	<- subset(df, STAT2=='inland' & STAT=='joint' & TR_COMM_TYPE!=REC_COMM_TYPE)
+	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X inland communities that have most cases\n(in % of all communities)', y='proportion of transmissions\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'inland_flows_from_top_to_other.pdf'), w=10, h=5)
+	
+}
+
+RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	
+	infile					<- "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
+	load(file.path(indir, infile))
+	
+	#
+	#	all locations
+	comm.locs	<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT, COMM_TYPE)))
+	setnames(rtr2, c('TR_INMIGRATE_2YR','REC_INMIGRATE_2YR'), c('TR_INMIGRATE','REC_INMIGRATE'))
+	
+	#
+	#	define location from where inmigrants arrived 
+	rtr3	<- subset(rtr2, grepl('inmigrant',TR_INMIGRATE) & !grepl('external',TR_INMIGRATE))
+	#	update inmigrant with new resolved locations in inmigrant2
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData_v2.rda"
+	load(infile)
+	inmigrant	<- as.data.table(inmigrant)
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrants_withMissingGPS.csv"
+	inmigrant2	<- as.data.table(read.csv(infile))
+	inmigrant	<- merge(inmigrant, subset(inmigrant2, select=c('RCCS_studyid','visit','X')), by=c('RCCS_studyid','visit'), all.x=TRUE)
+	tmp			<- subset(inmigrant, !is.na(X), c(RCCS_studyid, visit, date, inmigrant))
+	inmigrant2	<- merge(inmigrant2, tmp, by=c('RCCS_studyid','visit'))
+	inmigrant	<- subset(inmigrant, is.na(X))
+	set(inmigrant, NULL, 'X', NULL)
+	set(inmigrant2, NULL, c('X','inmig_place_original','recode_city'), NULL)
+	inmigrant	<- rbind(inmigrant, inmigrant2)
+	#	prepare inmigrant -- identify inmigrants from fishing communities and from external
+	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub('DDIMO|DDIMU|DIMO|DIMU','DIMU',inmig_place)])
+	set(inmigrant, inmigrant[, which(grepl('MALEMBO',inmig_place))], 'inmig_place', 'MALEMBO')
+	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub("KASEMSERO","KASENSERO",inmig_place)])
+	set(inmigrant, inmigrant[, which(grepl('KASENSERO',inmig_place))], 'inmig_place', 'KASENSERO')
+	set(inmigrant, NULL, 'date', inmigrant[, hivc.db.Date2numeric(date)])	
+	#	define from_fishing and from_outside and from_inland
+	inmigrant[, INMIG_LOC:= 'inland' ]
+	set(inmigrant, inmigrant[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE',inmig_place))], 'INMIG_LOC','fisherfolk')
+	set(inmigrant, inmigrant[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
+	set(inmigrant, inmigrant[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
+	set(inmigrant, inmigrant[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')	
+	setnames(inmigrant, c('RCCS_studyid','date'), c('TR_RID','TR_VISIT_DATE'))	
+	rtr3	<- merge(unique(subset(rtr3, select=c(TR_RID, REC_RID, VISIT_FIRSTCONCPOS, DATE_FIRSTCONCPOS))), inmigrant, by='TR_RID', all.x=TRUE)
+	setnames(rtr3, c('inmig_lon','inmig_lat','INMIG_LOC'), c('TR_INMIG_LON','TR_INMIG_LAT','TR_INMIG_LOC'))
+	#	find inmigration event of transmitter that is at or before first time both were recorded infected
+	rtr3	<- subset(rtr3, DATE_FIRSTCONCPOS >= TR_VISIT_DATE)
+	tmp		<- rtr3[,  list(TR_VISIT_DATE=TR_VISIT_DATE[which.min(DATE_FIRSTCONCPOS-TR_VISIT_DATE)]), by=c('TR_RID','REC_RID','DATE_FIRSTCONCPOS')]
+	rtr3	<- merge(rtr3,tmp,by=c('TR_RID','REC_RID','DATE_FIRSTCONCPOS','TR_VISIT_DATE'))	
+	rtr3	<- subset(rtr3, select=c(TR_RID, REC_RID, VISIT_FIRSTCONCPOS, TR_INMIG_LON, TR_INMIG_LAT, TR_INMIG_LOC))
+	#	add to rtr2
+	rtr2	<- merge(rtr2,rtr3,by=c('TR_RID','REC_RID','VISIT_FIRSTCONCPOS'),all.x=TRUE)
+	
+	#
+	#	add coordinates to communities
+	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
+	setnames(tmp, c('COMM_NUM_A','LONG','LAT'), c('TR_COMM_NUM_A','TR_X','TR_Y'))
+	rtr2	<- merge(rtr2, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, c('TR_COMM_NUM_A','TR_X','TR_Y'), c('REC_COMM_NUM_A','REC_X','REC_Y'))
+	rtr2	<- merge(rtr2, tmp, by='REC_COMM_NUM_A')
+		
+	#
+	#	to plot flows from migrants, set up fake communities from migrant locations
+	#
+	#	set up dummy location in corner for inmigration from external 
+	#tmp		<- rtr2[, c(min(c(REC_X, TR_X)), max(c(REC_Y, TR_Y)))]
+	tmp		<- c(31.3,-0.34)
+	tmp2	<- rtr2[, which(grepl('external',TR_INMIGRATE))]
+	set(rtr2, tmp2, 'TR_INMIG_LON', tmp[1])
+	set(rtr2, tmp2, 'TR_INMIG_LAT', tmp[2])
+	#	set up dummy location in corner for inmigration from unknown
+	#tmp		<- rtr2[, c(max(c(REC_X, TR_X)), min(c(REC_Y, TR_Y)))]
+	tmp		<- c(32.0,-1.0)
+	tmp2	<- rtr2[, which(TR_INMIG_LOC=='unknown')]
+	set(rtr2, tmp2, 'TR_INMIG_LON', tmp[1])
+	set(rtr2, tmp2, 'TR_INMIG_LAT', tmp[2])
+	#	define fake community IDs
+	tmp		<- rtr2[, which(grepl('external',TR_INMIGRATE))]
+	set(rtr2, tmp, 'TR_INMIG_LOC', 'external')	
+	tmp		<- unique(subset(rtr2, !grepl('resident',TR_INMIGRATE), c(TR_INMIG_LON, TR_INMIG_LAT, TR_INMIG_LOC)))
+	tmp[, TR_COMM_NUM_A_MIG:= paste0(substr(TR_INMIG_LOC,1,1),'mig',seq_len(nrow(tmp)))]
+	rtr2	<- merge(rtr2, tmp, by=c('TR_INMIG_LON','TR_INMIG_LAT','TR_INMIG_LOC'), all.x=TRUE)
+	
+	#
+	#	change locations of transmitter if transmitter is inmigrant and flow is not between same areas
+	#
+	tmp		<- rtr2[, which(TR_INMIGRATE!='resident')]	
+	set(rtr2, tmp, 'TR_COMM_NUM_A', rtr2[tmp,TR_COMM_NUM_A_MIG])
+	set(rtr2, tmp, 'TR_X', rtr2[tmp,TR_INMIG_LON])
+	set(rtr2, tmp, 'TR_Y', rtr2[tmp,TR_INMIG_LAT])
+	
+	
+	#
+	#	plot number of observed transmission flows
+	#
+	
+	#	overall parameters for plotting
+	tr.edge.gap	<- 0
+	rec.edge.gap<- 0.06
+	node.size	<- 0.2
+	edge.size	<- 1
+	curvature	<- -0.2
+	label.size	<- 5
+	arrow		<- arrow(length=unit(0.03, "npc"), type="closed", angle=15)
+	arrow2		<- arrow(length=unit(0.02, "npc"), type="closed", angle=15)
+	curv.shift	<- 0.08
+	#
+	#	define flows
+	#
+	dc		<- rtr2[, list(FLOW=length(PAIRID)), by=c('TR_COMM_NUM_A','TR_INMIGRATE','REC_COMM_NUM_A','TR_X','TR_Y','REC_X','REC_Y')]
+	tmp		<- dc[, which(substr(TR_COMM_NUM_A,1,1)=='u')]
+	set(dc, tmp, 'TR_INMIGRATE', dc[tmp, gsub('inland|fisherfolk','unknownloc',TR_INMIGRATE)])
+	set(dc, dc[, which(TR_INMIGRATE=='resident' & substr(TR_COMM_NUM_A,1,1)=='f')], 'TR_INMIGRATE', 'resident_fish')
+	set(dc, dc[, which(TR_INMIGRATE=='resident' & substr(TR_COMM_NUM_A,1,1)!='f')], 'TR_INMIGRATE', 'resident_inland')
+	#	count flows
+	subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)=='f')[, sum(FLOW)]
+	subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(TR_COMM_NUM_A,1,1)!='e' & substr(TR_COMM_NUM_A,1,1)!='u' & substr(REC_COMM_NUM_A,1,1)!='f')[, sum(FLOW)]
+	subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)!='f')
+	subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(TR_COMM_NUM_A,1,1)!='e' & substr(TR_COMM_NUM_A,1,1)!='u' & substr(REC_COMM_NUM_A,1,1)=='f')
+	
+	#
+	#	define stuff for plotting curved flows
+	#	
+	#dc[, which(substr(TR_COMM_NUM_A,1,1)=='a' & substr(REC_COMM_NUM_A,1,1)=='a' & TR_INMIGRATE!='resident')]
+	set(dc, NULL, 'TR_COMM_NUM_A', dc[, as.character(TR_COMM_NUM_A)])
+	set(dc, NULL, 'REC_COMM_NUM_A', dc[, as.character(REC_COMM_NUM_A)])
+	dc[, EDGETEXT_X:= (TR_X+REC_X)/2]
+	dc[, EDGETEXT_Y:= (TR_Y+REC_Y)/2]
+	dc[, EDGE_LABEL:= FLOW ]
+	dc[, MX:= (REC_X - TR_X)]	
+	dc[, MY:= (REC_Y - TR_Y)]	
+	set(dc, NULL, 'TR_X_EDGE', dc[, TR_X + MX*tr.edge.gap])
+	set(dc, NULL, 'TR_Y_EDGE', dc[, TR_Y + MY*tr.edge.gap])
+	set(dc, NULL, 'REC_X_EDGE', dc[, REC_X - MX*rec.edge.gap])
+	set(dc, NULL, 'REC_Y_EDGE', dc[, REC_Y - MY*rec.edge.gap])		
+	dc[, TX:= -MY]
+	dc[, TY:= MX]
+	set(dc, NULL, 'EDGETEXT_X', dc[, EDGETEXT_X + TX*curv.shift])
+	set(dc, NULL, 'EDGETEXT_Y', dc[, EDGETEXT_Y + TY*curv.shift])
+	dc[, EDGE_LABEL2:= 0.5 + pmin(9,(EDGE_LABEL-1))/9*1.5]
+	#
+	#	flows inland -> fishing
+	#
+	ggmap(zm) +	
+			geom_point( data=subset(comm.locs, COMM_TYPE=='fisherfolk', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='firebrick1', size=4 ) +
+			geom_point( data=subset(comm.locs, COMM_TYPE=='inland', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='#66BD63', size=4 ) +
+			geom_point( data=unique(subset(dc, substr(REC_COMM_NUM_A,1,1)=='f' & grepl('inmigrant_from_inland',TR_INMIGRATE), c(TR_COMM_NUM_A, TR_X, TR_Y) )),
+						aes(x=TR_X, y=TR_Y), colour='#66BD63', size=4, pch=18) +
+			geom_curve(	data=subset(dc, !substr(TR_COMM_NUM_A,1,1)%in%c('f','e') & substr(REC_COMM_NUM_A,1,1)=='f' & FLOW>0), 
+					aes(x=TR_X_EDGE, xend=REC_X_EDGE, y=TR_Y_EDGE, yend=REC_Y_EDGE, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=curvature, arrow=arrow, lineend="butt", linejoin='mitre') +
+			#geom_text(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(REC_COMM_NUM_A,1,1)=='f' & FLOW>0), 
+			#		aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=EDGE_LABEL, colour=TR_INMIGRATE), 
+			#		size=label.size) +
+			coord_cartesian() +
+			scale_colour_manual(values=c('resident_inland'="#00441B", 'inmigrant_from_inland'="#00441B",'inmigrant_from_unknownloc'=NA, 'inmigrant_from_external'='deepskyblue1')) +			
+			#scale_size(breaks=1:10, range=c(0.5,2)) +
+			scale_size_identity() +
+			labs(x='', y='') +
+			theme(legend.position='bottom', legend.box = "vertical") + 
+			guides(size='none', colour='none') 
+	ggsave(file=paste0(outfile.base,'_flows_intofishing_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+	#
+	#	flows fishing -> inland
+	#		
+	ggmap(zm) +	
+			geom_point( data=subset(comm.locs, COMM_TYPE=='fisherfolk', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='firebrick1', size=4 ) +
+			geom_point( data=subset(comm.locs, COMM_TYPE=='inland', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='#66BD63', size=4 ) +
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)!='f' & FLOW>0), 
+					aes(x=TR_X_EDGE, xend=REC_X_EDGE, y=TR_Y_EDGE, yend=REC_Y_EDGE, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=curvature, arrow=arrow, lineend="butt", linejoin='mitre') +
+			coord_cartesian() +			
+			scale_size_identity() +
+			scale_colour_manual(values=c('resident_fish'="darkred", 'inmigrant_from_fisherfolk'="darkred",'inmigrant_from_unknownloc'='black', 'inmigrant_from_external'='deepskyblue1')) +
+			labs(x='', y='') +
+			theme(legend.position='bottom', legend.box = "vertical") + 
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_flows_fromfishing_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+	#
+	#	flows fishing -> fishing
+	#
+	ggmap(zm) +		
+			geom_point( data=subset(comm.locs, COMM_TYPE=='fisherfolk', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='firebrick1', size=4 ) +
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)%in%c('f','e') & substr(REC_COMM_NUM_A,1,1)=='f' & REC_COMM_NUM_A!=TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X_EDGE, xend=REC_X_EDGE, y=TR_Y_EDGE, yend=REC_Y_EDGE, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=curvature, arrow=arrow, lineend="butt", linejoin='mitre') +			
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)=='f' & REC_COMM_NUM_A==TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X+0.005, xend=REC_X+0.03, y=TR_Y-0.005, yend=REC_Y, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=1) +
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)=='f' & REC_COMM_NUM_A==TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X+0.03, xend=REC_X+0.005, y=TR_Y, yend=REC_Y+0.005, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=1, arrow=arrow2, lineend="butt", linejoin='mitre') +
+			coord_cartesian() +
+			scale_size_identity() +
+			scale_colour_manual(values=c('resident_inland'="#66BD63",'resident_fish'="darkred", 'inmigrant_from_inland'="#00441B",'inmigrant_from_fisherfolk'="darkred",'inmigrant_from_unknownloc'='black', 'inmigrant_from_external'='deepskyblue1')) +
+			labs(x='', y='') +
+			theme(legend.position='bottom', legend.box = "vertical") + 
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_flows_fishing_on_map.pdf'), w=7, h=7, useDingbats=FALSE)
+	#
+	#	flows inland -> inland
+	#	
+	ggmap(zm) +		
+			geom_point( data=subset(comm.locs, COMM_TYPE=='inland', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='#66BD63', size=4 ) +
+			geom_point( data=unique(subset(dc, substr(REC_COMM_NUM_A,1,1)!='f' & grepl('inmigrant_from_inland',TR_INMIGRATE), c(TR_COMM_NUM_A, TR_X, TR_Y) )),
+					aes(x=TR_X, y=TR_Y), colour='#66BD63', size=4, pch=18) +
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(REC_COMM_NUM_A,1,1)!='f' & REC_COMM_NUM_A!=TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X_EDGE, xend=REC_X_EDGE, y=TR_Y_EDGE, yend=REC_Y_EDGE, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=curvature, arrow=arrow, lineend="butt", linejoin='mitre') +			
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(REC_COMM_NUM_A,1,1)!='f' & REC_COMM_NUM_A==TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X+0.005, xend=REC_X+0.03, y=TR_Y-0.005, yend=REC_Y, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=1) +
+			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)!='f' & substr(REC_COMM_NUM_A,1,1)!='f' & REC_COMM_NUM_A==TR_COMM_NUM_A & FLOW>0), 
+					aes(x=TR_X+0.03, xend=REC_X+0.005, y=TR_Y, yend=REC_Y+0.005, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
+					curvature=1, arrow=arrow2, lineend="butt", linejoin='mitre') +
+			coord_cartesian() +
+			scale_size_identity() +
+			scale_colour_manual(values=c('resident_inland'="#00441B",'resident_fish'="firebrick1", 'inmigrant_from_inland'="#00441B",'inmigrant_from_fisherfolk'="darkred",'inmigrant_from_unknownloc'=NA, 'inmigrant_from_external'='deepskyblue1')) +
+			labs(x='', y='') +
+			theme(legend.position='bottom', legend.box = "vertical") + 
+			guides(size='none', colour='none')
+	ggsave(file=paste0(outfile.base,'_flows_inland_on_map.pdf'), w=7, h=7, useDingbats=FALSE)	
 }
 
 
@@ -5050,6 +5375,277 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	}
 }
 
+
+RakaiFull.phylogeography.181006.flows.topXInland<- function(infile.inference=NULL, opt=NULL)
+{
+	require(data.table)
+	
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	load(infile.inference)
+	 
+	#	load MCMC output
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"				
+	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	load(infile.inference)
+	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	
+	mcpi	<- as.data.table(mc$pars$PI)
+	mcpi[, IT:= seq.int(2, by=mc$sweep, length.out=nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
+		
+	ans		<- data.table(TR_COMM_TYPE=character(0), REC_COMM_TYPE=character(0), CL=numeric(0), CU=numeric(0), IL=numeric(0), IU=numeric(0), M=numeric(0), LABEL=character(0), LABEL2=character(0), STAT=character(0))
+	for(kk in 2:38)
+	{
+		#
+		#	define top X inland
+		com.top	<- paste0('top',kk,'inland')
+		dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+		dabs	<- dabs[order(COMM_TYPE, HIV_1516_YES), ]	
+		dabs[, COMM_TYPE2:= 'other']
+		set(dabs, (nrow(dabs)-kk+1):nrow(dabs), 'COMM_TYPE2', com.top)
+		
+		#
+		#	prepare data.table of proportions
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(dc)))
+		{
+			dc[, REC_COMM_TYPE:=NULL]
+			dc[, TR_COMM_TYPE:=NULL]
+		}			
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(mcpi)))
+		{
+			mcpi[, REC_COMM_TYPE:=NULL]
+			mcpi[, TR_COMM_TYPE:=NULL]
+		}			
+		tmp	<- subset(dabs, select=c(COMM_NUM_A, COMM_TYPE2))
+		setnames(tmp, c('COMM_NUM_A', 'COMM_TYPE2'), c('TR_COMM_NUM_A', 'TR_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='TR_COMM_NUM_A')
+		setnames(tmp, c('TR_COMM_NUM_A', 'TR_COMM_TYPE'), c('REC_COMM_NUM_A', 'REC_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='REC_COMM_NUM_A')
+		if(!any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
+		}			
+		if(any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_TYPE, TR_COMM_TYPE, COUNT_ID))
+		}					
+		mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
+		
+		#
+		#	calculate overall transmission flows fishing-inland
+		qs		<- c(0.025,0.25,0.5,0.75,0.975)
+		qsn		<- c('CL','IL','M','IU','CU')
+		
+		#
+		#	geography who infects whom matrix  between fisherfolk and others
+		#	adjusted P
+		z		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','IT')]
+		z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('REC_COMM_TYPE','TR_COMM_TYPE')]
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('joint-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	WAIFM
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{												
+					z		<- subset(mcpi, TR_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','IT')]
+					z		<- z[, list(REC_COMM_TYPE=REC_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]				
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='REC_COMM_TYPE']
+					z[, TR_COMM_TYPE:= group]
+					z
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, TR_COMM_TYPE, REC_COMM_TYPE)
+		z[, STAT:=paste0('waifm-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	sources
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{				
+					z		<- subset(mcpi , REC_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('TR_COMM_TYPE','IT')]
+					z		<- z[, list(TR_COMM_TYPE=TR_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='TR_COMM_TYPE']
+					z[, REC_COMM_TYPE:= group]
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('sources-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+	}
+	save(ans, file=paste0(outfile.base,'_topXinland_results.rda'))
+}
+
+
+RakaiFull.phylogeography.181006.flows.topXComm<- function(infile.inference=NULL, opt=NULL)
+{
+	require(data.table)
+	
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	load(infile.inference)
+	
+	#	load MCMC output
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"				
+	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	load(infile.inference)
+	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	
+	mcpi	<- as.data.table(mc$pars$PI)
+	mcpi[, IT:= seq.int(2, by=mc$sweep, length.out=nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
+	
+	ans		<- data.table(TR_COMM_TYPE=character(0), REC_COMM_TYPE=character(0), CL=numeric(0), CU=numeric(0), IL=numeric(0), IU=numeric(0), M=numeric(0), LABEL=character(0), LABEL2=character(0), STAT=character(0))
+	for(kk in 2:38)
+	{
+		#
+		#	define top X inland
+		com.top	<- paste0('top',kk,'com')
+		dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+		dabs	<- dabs[order(HIV_1516_YES), ]	
+		dabs[, COMM_TYPE2:= 'other']
+		set(dabs, (nrow(dabs)-kk+1):nrow(dabs), 'COMM_TYPE2', com.top)
+		
+		#
+		#	prepare data.table of proportions
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(dc)))
+		{
+			dc[, REC_COMM_TYPE:=NULL]
+			dc[, TR_COMM_TYPE:=NULL]
+		}			
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(mcpi)))
+		{
+			mcpi[, REC_COMM_TYPE:=NULL]
+			mcpi[, TR_COMM_TYPE:=NULL]
+		}			
+		tmp	<- subset(dabs, select=c(COMM_NUM_A, COMM_TYPE2))
+		setnames(tmp, c('COMM_NUM_A', 'COMM_TYPE2'), c('TR_COMM_NUM_A', 'TR_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='TR_COMM_NUM_A')
+		setnames(tmp, c('TR_COMM_NUM_A', 'TR_COMM_TYPE'), c('REC_COMM_NUM_A', 'REC_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='REC_COMM_NUM_A')
+		if(!any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
+		}			
+		if(any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_TYPE, TR_COMM_TYPE, COUNT_ID))
+		}					
+		mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
+		
+		#
+		#	calculate overall transmission flows fishing-inland
+		qs		<- c(0.025,0.25,0.5,0.75,0.975)
+		qsn		<- c('CL','IL','M','IU','CU')
+		
+		#
+		#	geography who infects whom matrix  between fisherfolk and others
+		#	adjusted P
+		z		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','IT')]
+		z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('REC_COMM_TYPE','TR_COMM_TYPE')]
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('joint-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	WAIFM
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{												
+					z		<- subset(mcpi, TR_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','IT')]
+					z		<- z[, list(REC_COMM_TYPE=REC_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]				
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='REC_COMM_TYPE']
+					z[, TR_COMM_TYPE:= group]
+					z
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, TR_COMM_TYPE, REC_COMM_TYPE)
+		z[, STAT:=paste0('waifm-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	sources
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{				
+					z		<- subset(mcpi , REC_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('TR_COMM_TYPE','IT')]
+					z		<- z[, list(TR_COMM_TYPE=TR_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='TR_COMM_TYPE']
+					z[, REC_COMM_TYPE:= group]
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('sources-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+	}
+	save(ans, file=paste0(outfile.base,'_topXcom_results.rda'))
+}
+
+
 RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile.inference=NULL, opt=NULL)
 {
 	require(data.table)	
@@ -5930,8 +6526,7 @@ RakaiFull.phylogeography.181006.table2<- function()
 
 RakaiFull.phylogeography.181006.flows.fishinland<- function()
 {
-	require(data.table)	
-	require(Hmisc)	
+	require(data.table)			
 	
 	if(is.null(infile.inference))
 	{
@@ -6402,6 +6997,128 @@ RakaiFull.phylogeography.181006.flows.netflows<- function(infile.inference=NULL)
 				guides(fill='none')
 		ggsave(file=paste0(outfile.base,'_flows_sinkfishinlandgender.pdf'), w=6, h=3)	
 	}	
+}
+
+RakaiFull.phylogeography.181006.countexample<- function()
+{
+	if(0)	#same flow ratio among all as among surveyed
+	{
+		dc	<- cbind(	c(10,	4,	4,	1,	2,	1, 	0),
+						c(3,	5,	5,	0,	0,	0, 	2),
+						c(3,	6,	10,	2,	1,	3, 	0),
+						c(4,	2,	1,	4,	3,	1, 	4),
+						c(1,	3,	1,	4,	2,	3, 	2),
+						c(2,	2,	1,	3,	4,	3, 	4),
+						c(3,	2,	2,	1,	2,	3, 	5)	)
+	}
+	if(1)	#same risk ratio
+	{
+		c(12, 11, 14, 11) * 11*0.2/0.8/3
+		c(18, 13, 19)*0.1/0.9/4
+		dc	<- cbind(	c(10,	4,	4,	18*0.1/0.9/4, 18*0.1/0.9/4,	18*0.1/0.9/4, 18*0.1/0.9/4),
+						c(3,	5,	5,	13*0.1/0.9/4, 13*0.1/0.9/4,	13*0.1/0.9/4, 13*0.1/0.9/4),
+						c(3,	6,	10,	19*0.1/0.9/4, 19*0.1/0.9/4,	19*0.1/0.9/4, 19*0.1/0.9/4),
+						c(1,	1,	1,	4,	3,	1, 	4),
+						c(11*0.2/0.8/3,	11*0.2/0.8/3,	11*0.2/0.8/3,	4,	2,	3, 	2),
+						c(14*0.2/0.8/3,	14*0.2/0.8/3, 	14*0.2/0.8/3,	3,	4,	3, 	4),
+						c(11*0.2/0.8/3,	11*0.2/0.8/3,	11*0.2/0.8/3,	1,	2,	3, 	5)	)
+	}
+	
+	colnames(dc)<- c(paste0('F-S-',1:3), paste0('I-S-',1:2), paste0('I-NS-',3:4) )  
+	rownames(dc)<- colnames(dc)		
+	dc	<- as.data.table(melt(dc, value.name='FLOW'))
+	setnames(dc, c('Var1','Var2'), c('TO','FROM'))
+	dc[, TO_A:= gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\1',TO)]
+	dc[, FROM_A:= gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\1',FROM)]
+	dc[, TO_S:= as.integer(gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\2',TO)=='S')]
+	dc[, FROM_S:= as.integer(gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\2',FROM)=='S')]
+	dc[, TO_ID:= as.integer(gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\3',TO))]
+	dc[, FROM_ID:= as.integer(gsub('([A-Z]+)-([A-Z]+)-([0-9]+)','\\3',FROM))]
+	
+	#	flow counts and prop by area
+	tmp	<- sum(dc$FLOW)
+	dca	<- dc[, list(FLOW=sum(FLOW), FLOW_PROP=sum(FLOW)/tmp), by=c('TO_A','FROM_A')]
+	
+	#	flow counts and prop by area among surveyed communities
+	tmp	<- dc[TO_S==1 & FROM_S==1,  sum(FLOW)]
+	dcs	<- dc[TO_S==1 & FROM_S==1, list(FLOW=sum(FLOW), FLOW_PROP=sum(FLOW)/tmp), by=c('TO_A','FROM_A')]
+	
+	#	flow ratios among all and among surveyed
+	tmp	<- sum(dca$FLOW)
+	dca[FROM_A=='I' & TO_A!=FROM_A, FLOW/tmp]  /  dca[FROM_A=='F' & TO_A!=FROM_A, FLOW/tmp]   
+	tmp	<- sum(dcs$FLOW)
+	dcs[FROM_A=='I' & TO_A!=FROM_A, FLOW/tmp]  /  dcs[FROM_A=='F' & TO_A!=FROM_A, FLOW/tmp]   
+	
+	#	flow differences among all and among surveyed
+	tmp	<- sum(dca$FLOW)
+	dca[FROM_A=='I' & TO_A!=FROM_A, FLOW/tmp]  -  dca[FROM_A=='F' & TO_A!=FROM_A, FLOW/tmp]   
+	tmp	<- sum(dcs$FLOW)
+	dcs[FROM_A=='I' & TO_A!=FROM_A, FLOW/tmp]  -  dcs[FROM_A=='F' & TO_A!=FROM_A, FLOW/tmp]   
+	
+	
+	#	risk ratio among all and among surveyed
+	tmp	<- dca[, list(FLOW_FROM_A=sum(FLOW)), by='FROM_A']
+	( dca[FROM_A=='I' & TO_A!=FROM_A, FLOW] / tmp[FROM_A=='I', FLOW_FROM_A] ) / 
+	( dca[FROM_A=='F' & TO_A!=FROM_A, FLOW] / tmp[FROM_A=='F', FLOW_FROM_A] )
+	
+	tmp	<- dcs[, list(FLOW_FROM_A=sum(FLOW)), by='FROM_A']
+	( dcs[FROM_A=='I' & TO_A!=FROM_A, FLOW] / tmp[FROM_A=='I', FLOW_FROM_A] ) / 
+	( dcs[FROM_A=='F' & TO_A!=FROM_A, FLOW] / tmp[FROM_A=='F', FLOW_FROM_A] )
+
+}
+
+RakaiFull.phylogeography.181006.sink.risk.ratio<- function()
+{
+	a	<- 139	#from fish, to same	
+	b	<- 25	#from inland, to other
+	c	<- 7	#from fish, to other
+	d	<- 93	#from inland, to same
+	
+	log.rr	<- log( b/(b+d) ) - log( c/(a+c))
+	tmp		<- 1.96*sqrt( (a/c) / (a+c) + (d/b) / (b+d) )
+	log.ci	<- log.rr+c(-1,1)*tmp
+	
+	exp(c(log.rr, log.ci))
+}
+
+RakaiFull.phylogeography.181006.flows.obs<- function()
+{
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	load(infile.inference)
+	
+	z	<- copy(rtr2)
+	#	reset to simple migration status
+	n.reinterpreted <- 0
+	setnames(z, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')
+	n.reinterpreted <- n.reinterpreted + length(tmp2)
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')	
+	n.reinterpreted <- n.reinterpreted + length(tmp2)
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')
+	n.reinterpreted <- n.reinterpreted + length(tmp2)
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')
+	n.reinterpreted <- n.reinterpreted + length(tmp2)
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	set(z, z[, which(TR_INMIGRATE=='resident')], 'TR_INMIGRATE', 'resident/outmigrant')					
+	
+	z[, table(TR_INMIGRATE, useNA='if')]
+	set(z, z[, which(TR_COMM_TYPE!='fisherfolk')], 'TR_COMM_TYPE', 'inland')
+	set(z, z[, which(REC_COMM_TYPE!='fisherfolk')], 'REC_COMM_TYPE', 'inland')
+	z[!grepl('unknown|external',TR_INMIGRATE), list(N=length(PAIRID)), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
+	z[grepl('unknown',TR_INMIGRATE), list(N=length(PAIRID)), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
+	z[grepl('external',TR_INMIGRATE), list(N=length(PAIRID)), by=c('TR_COMM_TYPE','REC_COMM_TYPE')]
 }
 
 RakaiFull.phylogeography.181006.flows.fishinlandmigrant<- function(infile.inference=NULL)
