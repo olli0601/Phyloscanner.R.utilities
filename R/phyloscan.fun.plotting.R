@@ -471,11 +471,7 @@ phsc.plot.transmission.network<- function(df, di, point.size=10, point.size.coup
 	tmp		<- df[, which(TYPE=='21')]
 	set(df, tmp, 'EDGETEXT_X', df[tmp, EDGETEXT_X - TX*curv.shift])
 	set(df, tmp, 'EDGETEXT_Y', df[tmp, EDGETEXT_Y - TY*curv.shift])
-	#
-	print(layout)
-	print(node.fill.values)
-	print(node.shape.values)
-	
+	#	
 	p		<- ggplot() +			
 			geom_point(data=layout, aes(x=X, y=Y, colour=NODE_FILL, pch=NODE_SHAPE), size=point.size) +
 			geom_segment(data=subset(df, EDGE_COL=='edge_col_1' & TYPE=='ambiguous' & KEFF>0), aes(x=ID1_X, xend=ID2_X, y=ID1_Y, yend=ID2_Y, size=edge.size*KEFF, colour=EDGE_COL), lineend="butt") +

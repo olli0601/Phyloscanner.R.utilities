@@ -6999,7 +6999,26 @@ RakaiFull.phylogeography.181006.flows.netflows<- function(infile.inference=NULL)
 	}	
 }
 
-RakaiFull.phylogeography.181006.countexample<- function()
+RakaiFull.phylogeography.181006.subdistricts<- function()
+{	
+	indir					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile					<- "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
+	load(file.path(indir, infile))
+	df	<- unique(subset(desm, select=COMM_NUM))
+	df	<- merge(df, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=c('107','16','776','51','4','24','1','22')), all=TRUE, by='COMM_NUM')
+	#set(df, NULL, 'COMM_NUM', df[,gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(COMM_NUM)))))])
+	tmp	<- df[, which(is.na(COMM_NUM2))]
+	set(df, tmp, 'COMM_NUM2', df[tmp, COMM_NUM])
+	set(df, NULL, 'COMM_NUM2', df[, as.integer(COMM_NUM2)])
+	
+	load("~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_subdistrict_data.rda")
+	tmp	<- as.data.table(community_id)
+	setnames(tmp, 'COMM_NUM', 'COMM_NUM2')
+	merge(df, tmp, by='COMM_NUM2', all=TRUE)
+}
+
+RakaiFull.phylogeography.181006.count.example<- function()
 {
 	if(0)	#same flow ratio among all as among surveyed
 	{

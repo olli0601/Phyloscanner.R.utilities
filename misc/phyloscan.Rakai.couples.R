@@ -14853,6 +14853,67 @@ RakaiFull.analyze.trmpairs.todi.171122.ff.distances<- function()
 	
 }
 	
+RakaiFull.analyze.trmpairs.femaleoutdegrees<- function()
+{
+	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
+	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
+	
+	confidence.cut		<- 0.6
+	load(infile)
+	
+
+	#	get igraph from all edges in the transmission network
+	#	count linkages regardless of direction
+	tmp		<- unique(subset(rtn, select=c(ID1, ID2)))			
+	dg		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	#	calculate degrees
+	dg		<- degree(dg)
+	dg		<- data.table(ID=names(dg), DEGREE=as.numeric(dg))
+	#	get gender	
+	tmp		<- unique(subset(rd, select=c(RID,SEX)))
+	setnames(tmp, 'RID', 'ID')
+	dg		<- merge(dg, tmp, by='ID')
+	#	sort by gender, degree
+	dg		<- dg[order(SEX,-DEGREE),]
+	dg		<- subset(dg, SEX=='F' & DEGREE>3)		# 41 females
+	
+	#	another option would be to select for each pair only one link, either 12 or 21, whichever most likely, and then repeat
+	#	this would allow you to define outdegrees rather than indegree+outdegree
+	
+	#
+	#	plot transmission networks with high degree females shown as triangles
+	#
+	idclus	<- rtn[ ID1%in%dg$ID | ID2%in%dg$ID, sort(unique(IDCLU)) ]	# 25 networks
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu	<- idclus[i]
+				di		<- unique(subset(rd, select=c(RID,SEX)))
+				setnames(di, 'RID', 'ID')
+				di		<- merge(di, subset(dg, select=c(ID,DEGREE)), by='ID', all.x=TRUE)
+				di[, HIGH_DEGREE:= as.character(as.integer(!is.na(DEGREE)))]				
+				df		<- subset(rtn, IDCLU==idclu)
+				set(df, NULL, c('ID1_SEX','ID2_SEX'), NULL)
+				p		<- phsc.plot.transmission.network(df, di, point.size=10, 
+						edge.gap=0.04, 
+						edge.size=0.4, 
+						curvature= -0.2, 
+						arrow=arrow(length=unit(0.04, "npc"), type="open"), 
+						curv.shift=0.06, 
+						label.size=3, 
+						node.label='ID', 			 
+						node.fill='SEX', 
+						node.shape='HIGH_DEGREE',
+						node.shape.values=c('0'=16, '1'=17), 
+						node.fill.values=c('F'='hotpink2', 'M'='steelblue2'),
+						threshold.linked=0.6)	
+				p	
+			})
+	pdf(file=paste0(outfile.base,'_transmission_networks_high_degree_females.pdf'), w=8, h=8)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+}
+
 RakaiFull.analyze.trmpairs.todi.171122.networks.stats<- function()
 {	
 	require(data.table)
