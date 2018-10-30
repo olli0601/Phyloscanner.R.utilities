@@ -1,5 +1,35 @@
 #' @export
 #' @import data.table
+#' @title Find bam and corresponding reference files 
+#' @description This function finds bam and corresponding reference files in a given directory,
+#' and groups them by a common sample ID as well as by an individual ID. 
+#' @param data.dir Full path of data directory 
+#' @param regex.person Regular expression with one set of round brackets, which identifies the person ID in the file name of bams and references
+#' @param regex.bam Regular expression that identifies bam files, with one set of round brackets that identifies the sample ID.
+#' @param regex.ref Regular expression that identifies ref files, with one set of round brackets that identifies the sample ID.
+#' @return data.table with rows 'IND' (individual identifier), 'SAMPLE' (sample identifier), 'BAM' (bam file), and 'REF' (reference file).
+phsc.find.bam.and.references<- function(data.dir, regex.person='^([A-Z0-9]+-[A-Z0-9]+)-.*$', regex.bam='^(.*)\\.bam$', regex.ref='^(.*)_ref\\.fasta$', verbose=1) 
+{	
+	ptyd		<- data.table(BAM=list.files(data.dir, pattern=regex.bam, full.names=TRUE, recursive=TRUE))
+	ptyd[, IND:= gsub(regex.person,'\\1',basename(BAM))]
+	ptyd[, SAMPLE:= gsub(regex.bam,'\\1',basename(BAM))]
+	tmp			<- data.table(REF=list.files(data.dir, pattern=regex.ref, full.names=TRUE, recursive=TRUE))
+	tmp[, IND:= gsub(regex.person,'\\1',basename(REF))]
+	tmp[, SAMPLE:= gsub(regex.ref,'\\1',basename(REF))]
+	ptyd		<- merge(ptyd, tmp, by=c('IND','SAMPLE'), all=TRUE)
+	if(verbose)	cat('\nFound data for individuals, n=', length(unique(ptyd$IND)), ', found bam files, n=', length(unique(ptyd$BAM)), ', found reference files, n=', length(unique(ptyd$REF)))
+	if(ptyd[,any(is.na(BAM))])
+		warning('\nCould not find bam file for all individuals, n=', ptyd[, length(which(is.na(BAM)))],'\nSamples with missing bam files are ignored. Please check.')	
+	if(ptyd[,any(is.na(REF))])
+		warning('\nCould not find reference file for all individuals, n=', ptyd[, length(which(is.na(REF)))],'\nSamples with missing reference files are ignored. Please check.')		
+	ptyd		<- subset(ptyd, !is.na(BAM) & !is.na(REF))
+	if(verbose)	cat('\nFound bam *and* reference files for individuals, n=', length(unique(ptyd$IND)) )
+	ptyd	
+}
+
+
+#' @export
+#' @import data.table
 #' @title Determine stage 1 phyloscanner runs
 #' @description This function groups individuals for phyloscanner analyses, so that phylogenetic linkage between every pair of individuals is assessed at least once.
 #'   Specifically, individuals are grouped into batches of specified size, and then, all possible pairs of batches are formed. 

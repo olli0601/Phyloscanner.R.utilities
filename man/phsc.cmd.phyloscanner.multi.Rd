@@ -4,8 +4,7 @@
 \alias{phsc.cmd.phyloscanner.multi}
 \title{Generate bash commands for multiple phyloscanner runs}
 \usage{
-phsc.cmd.phyloscanner.multi(pty.runs, pty.args, regex.ref = "_ref.fasta$",
-  postfix.sample.id = "\\\\.bam|_ref\\\\.fasta")
+phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 }
 \arguments{
 \item{pty.runs}{Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).}

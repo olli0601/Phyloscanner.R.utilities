@@ -79,6 +79,9 @@
     <li>
       <a href="../articles/Rakai.04.direction_of_transmission.html">Inferring the direction of transmission</a>
     </li>
+    <li>
+      <a href="../articles/Stage1.create.read.alignments.html">Stage 1 analysis: identify phylogenetically closely related individuals</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -108,8 +111,7 @@
     <p>This function generates bash commands for multiple phyloscanner runs, that can be called via 'system' in R, or written to file to run on a UNIX system.</p>
     
 
-    <pre class="usage"><span class='fu'>phsc.cmd.phyloscanner.multi</span>(<span class='no'>pty.runs</span>, <span class='no'>pty.args</span>, <span class='kw'>regex.ref</span> <span class='kw'>=</span> <span class='st'>"_ref.fasta$"</span>,
-  <span class='kw'>postfix.sample.id</span> <span class='kw'>=</span> <span class='st'>"\\.bam|_ref\\.fasta"</span>)</pre>
+    <pre class="usage"><span class='fu'>phsc.cmd.phyloscanner.multi</span>(<span class='no'>pty.runs</span>, <span class='no'>pty.args</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
     <table class="ref-arguments">
@@ -166,7 +168,7 @@
                                 <span class='kw'>duplicated.ratio.threshold</span><span class='kw'>=</span><span class='fl'>1</span>/<span class='fl'>200</span>,
                                 <span class='kw'>select</span><span class='kw'>=</span><span class='no'>pty.select</span>)
 <span class='co'>#	generate bash scripts</span>
-<span class='no'>pty.c</span>                           <span class='kw'>&lt;-</span> <span class='fu'>phsc.cmd.phyloscanner.multi</span>(<span class='no'>runs_rakai_couples</span>, <span class='no'>pty.args</span>)</div><div class='output co'>#&gt; <span class='error'>Error in set(pty.runs, NULL, "SAMPLE_ID", pty.runs[, gsub("\\.bam$", "",     SAMPLE_ID)]): object 'runs_rakai_couples' not found</span></div><div class='input'><span class='co'>#	print first bash script to screen</span>
+<span class='no'>pty.c</span>                           <span class='kw'>&lt;-</span> <span class='fu'>phsc.cmd.phyloscanner.multi</span>(<span class='no'>runs_rakai_couples</span>, <span class='no'>pty.args</span>)</div><div class='output co'>#&gt; <span class='error'>Error in is.data.frame(x): object 'runs_rakai_couples' not found</span></div><div class='input'><span class='co'>#	print first bash script to screen</span>
 <span class='no'>pty.c</span>[<span class='fl'>1</span>,<span class='fu'>cat</span>(<span class='no'>CMD</span>)]</div><div class='output co'>#&gt; <span class='error'>Error in eval(expr, envir, enclos): object 'pty.c' not found</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">

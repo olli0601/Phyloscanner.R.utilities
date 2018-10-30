@@ -71,40 +71,13 @@ phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args)
 #' @return Data.table with columns 'PTY_RUN' (run id) and 'CMD' (bash commands for that run). 
 #' @description This function generates bash commands for multiple phyloscanner runs, that can be called via 'system' in R, or written to file to run on a UNIX system.
 #' @example example/ex.cmd.phyloscanner.multi.R  
-phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args, regex.ref='_ref.fasta$', postfix.sample.id='\\.bam|_ref\\.fasta') 		
+phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args) 		
 {
-	#
-	#	associate BAM and REF files with each scheduled phylotype run
-	#	
-	set(pty.runs, NULL, 'SAMPLE_ID',  pty.runs[, gsub('\\.bam$','',SAMPLE_ID)])
-	#	get available Bam files
-	ptyd		<- data.table(FILE=list.files(pty.args[['data.dir']], full.names=TRUE))
-	ptyd[, TYPE:=NA_character_]
-	set(ptyd, ptyd[, which(grepl('.bam$',FILE))], 'TYPE', 'BAM')
-	#	get Reference files
-	#	if reference files that were used in assembly are not specified in pty.runs, search for SAMPLE_ID+'_ref.fasta'
-	if(!any(colnames(pty.runs)=='REFERENCE_ID'))
-	{		
-		set(ptyd, ptyd[, which(grepl(regex.ref,FILE))], 'TYPE', 'REF')		
-		ptyd		<- subset(ptyd, !is.na(TYPE))
-		ptyd[, SAMPLE_ID:= gsub(postfix.sample.id,'',basename(FILE))]
-		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')		
-	}
-	#	if reference files that were used in assembly are specified in pty.runs, use these
-	if(any(colnames(pty.runs)=='REFERENCE_ID'))
-	{
-		tmp			<- subset(ptyd, is.na(TYPE))
-		tmp[, REFERENCE_ID:= gsub('\\.bam','',basename(FILE))]
-		tmp			<- merge(subset(pty.runs, select=c(SAMPLE_ID, REFERENCE_ID)), subset(tmp, select=c(REFERENCE_ID, FILE)), by='REFERENCE_ID')
-		tmp[, TYPE:='REF']
-		tmp[, REFERENCE_ID:=NULL]
-		ptyd		<- subset(ptyd, !is.na(TYPE))
-		ptyd[, SAMPLE_ID:= gsub('\\.bam$','',basename(FILE))]
-		ptyd		<- rbind(ptyd, tmp)
-		ptyd		<- dcast.data.table(ptyd, SAMPLE_ID~TYPE, value.var='FILE')
-	}
-	#	merge
-	ptyd	<- merge(pty.runs, ptyd, by='SAMPLE_ID', all.x=1)	
+	stopifnot( any(colnames(pty.runs)=='PTY_RUN') )
+	stopifnot( any(colnames(pty.runs)=='SAMPLE_ID') )
+	stopifnot( any(colnames(pty.runs)=='BAM') )
+	stopifnot( any(colnames(pty.runs)=='REF') )	
+	ptyd	<- copy(pty.runs)		
 	if(!any(is.na(pty.args[['select']])))
 		ptyd<- subset(ptyd, PTY_RUN%in%pty.args[['select']])			
 	#	if background alignment is specified in pty.runs, use it
@@ -119,14 +92,11 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args, regex.ref='_ref.fast
 		set(ptyd, NULL, 'BACKGROUND_ID', NULL)
 		setnames(ptyd, 'FILE', 'BACKGROUND_ID')
 	}
-	if(ptyd[,any(is.na(BAM))])
-		warning('\nCould not find location of BAM files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(BAM)))],'\nMissing individuals are ignored. Please check.')	
-	if(ptyd[,any(is.na(REF))])
-		warning('\nCould not find location of reference files for all individuals in pty.runs, n=', ptyd[, length(which(is.na(REF)))],'\nMissing individuals are ignored. Please check.')	
 	setkey(ptyd, PTY_RUN)
-	#
+	#	add legacy arguments
+	pty.args['all.bootstrap.trees']	<- FALSE
+	pty.args['num.bootstraps']	<- 0		
 	#	write pty.run files and get pty command lines
-	#
 	pty.c		<- ptyd[, {
 				#	PTY_RUN<- z <- 1; BAM<- subset(ptyd, PTY_RUN==z)[, BAM]; REF<- subset(ptyd, PTY_RUN==z)[, REF]
 				#	SAMPLE_ID<- subset(ptyd, PTY_RUN==z)[, SAMPLE_ID]; RENAME_ID<- subset(ptyd, PTY_RUN==z)[, RENAME_ID]; BACKGROUND_ID<- subset(ptyd, PTY_RUN==z)[, BACKGROUND_ID]
