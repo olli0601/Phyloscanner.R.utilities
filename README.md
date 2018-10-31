@@ -25,7 +25,7 @@ You will then need
 ```r
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("Rsamtools","RBGL","ggtree"),dependencies=TRUE, build_vignettes=FALSE)
-devtools:::install_github("briatte/ggnet", dependencies=TRUE, build_vignettes=FALSE)
+devtools:::install_github("briatte/ggnet", dependencies=TRUE)
 ``` 
 This step may take up to 60 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
 
