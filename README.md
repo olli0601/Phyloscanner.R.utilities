@@ -76,6 +76,8 @@ Expected runtime: 10 minutes.
 
 Expected runtime: 10 minutes.
 
+## More stuff
+1. [Tutorial to generate read alignments for stage 1 analysis](articles/Stage1.create.read.alignments.html) .
 
 ## Testing
 The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611; and RAxML (8.2.9), 

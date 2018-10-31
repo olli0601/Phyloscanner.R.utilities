@@ -161,11 +161,13 @@ tmp[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</spa
 pty.runs &lt;-<span class="st"> </span><span class="kw">merge</span>(pty.runs, tmp, <span class="dt">by =</span> <span class="st">"PTY_RUN"</span>, <span class="dt">all.x =</span> <span class="dv">1</span>)
 pty.runs &lt;-<span class="st"> </span><span class="kw">subset</span>(pty.runs, <span class="kw">is.na</span>(FILE_FASTA))
 <span class="co"># search for bam files and references and merge with runs</span>
-<span class="kw">setkey</span>(pty.runs, PTY_RUN)
 pty.runs &lt;-<span class="st"> </span><span class="kw">subset</span>(pty.runs, <span class="dt">select =</span> <span class="kw">c</span>(PTY_RUN, IND))
 tmp &lt;-<span class="st"> </span><span class="kw">phsc.find.bam.and.references</span>(pty.args[[<span class="st">"data.dir"</span>]], <span class="dt">regex.person =</span> <span class="st">"^([A-Z0-9]+-[A-Z0-9]+)-.*$"</span>)
 pty.runs &lt;-<span class="st"> </span><span class="kw">merge</span>(pty.runs, tmp, <span class="dt">by =</span> <span class="st">"IND"</span>)
 <span class="co"># create UNIX bash scripts</span>
+pty.runs &lt;-<span class="st"> </span>pty.runs[, <span class="kw">list</span>(<span class="dt">BAM =</span> BAM, <span class="dt">REF =</span> REF, <span class="dt">SAMPLE =</span> SAMPLE, <span class="dt">RENAME_ID =</span> <span class="kw">paste0</span>(IND, 
+    <span class="st">"-fq"</span>, <span class="kw">seq_len</span>(<span class="kw">length</span>(BAM)))), by =<span class="st"> </span><span class="kw">c</span>(<span class="st">"PTY_RUN"</span>, <span class="st">"IND"</span>)]
+<span class="kw">setkey</span>(pty.runs, PTY_RUN)
 <span class="kw">setnames</span>(pty.runs, <span class="kw">c</span>(<span class="st">"IND"</span>, <span class="st">"SAMPLE"</span>), <span class="kw">c</span>(<span class="st">"UNIT_ID"</span>, <span class="st">"SAMPLE_ID"</span>))
 pty.c &lt;-<span class="st"> </span><span class="kw"><a href="../reference/phsc.cmd.phyloscanner.multi.html">phsc.cmd.phyloscanner.multi</a></span>(pty.runs, pty.args)
 pty.c[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(CASE_ID, <span class="kw">seq_len</span>(<span class="kw">nrow</span>(pty.c)))]</code></pre></div>
