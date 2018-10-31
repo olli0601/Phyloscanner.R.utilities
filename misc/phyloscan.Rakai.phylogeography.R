@@ -7000,7 +7000,10 @@ RakaiFull.phylogeography.181006.flows.netflows<- function(infile.inference=NULL)
 }
 
 RakaiFull.phylogeography.181006.predict.areaflows<- function()
-{		
+{	
+	require(data.table)	
+	require(Boom)	
+	
 	indir					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	infile.inference.data	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")		
 	infile.inference.mcmc	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda")
@@ -7109,6 +7112,7 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 	
 	# 	set up MCMC objects	
 	mc$n				<- 100
+	mc$sweep			<- 1L + dc[, max(AREA_ID)]
 	mc$pars$ETA			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)		#proportions
 	mc$pars$ETA_PRIOR	<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#prior for proportions
 	mc$pars$U			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#sampling probabilities (product)	
@@ -7116,7 +7120,7 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 	mc$pars$NU			<- NA_real_															#prior for N
 	mc$pars$TOTALA		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data	
 	mc$it.info			<- data.table(	IT= seq.int(1,mc$n),
-										SAMPLE_POSTERIOR= sample(nrow(mc$pars$PI), mc$n, replace=TRUE),
+										SAMPLE_POSTERIOR= rep(sample(nrow(mc$pars$PI), ceiling(mc$n/mc$sweep), replace=TRUE),each=mc$sweep)[c(1,1:(mc$n-1))],
 										PAR_ID= rep(NA_integer_, mc$n),
 										BLOCK= rep(NA_character_, mc$n),
 										MHRATIO= rep(NA_real_, mc$n),
@@ -7136,7 +7140,7 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 	setkey(dc, AREA_ID)
 	mc$verbose			<- 0L
 	mc$curr.it			<- 1L
-	mc$seed				<- 42L
+	mc$seed				<- 42L	
 	set(mc$it.info, mc$curr.it, 'BLOCK', 'INIT')
 	set(mc$it.info, mc$curr.it, 'PAR_ID', 0L)
 	set.seed( mc$seed )
@@ -7148,32 +7152,24 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 	#	augmented data: proposal draw under sampling probability
 	mc$pars$A[1,]		<- mc$pars$Z[mc$it.info[1, SAMPLE_POSTERIOR],]
 	mc$pars$A[1,]		<- mc$pars$A[1,] + rnbinom(ncol(mc$pars$A), mc$pars$A[1,], mc$pars$U[1,])
-	
-	
-	
-	
-	mc$it.info[1, SAMPLE_POSTERIOR]
-	mc$pars$Z[1,]		<- dc[, TR_OBS + rnbinom(nrow(dc), TR_OBS, mc$pars$S[1,])]	
-	#	prior nu: set Poisson rate to the expected augmented counts, under average sampling probability
-	mc$pars$NU			<- sum(dc$TR_OBS) / mean(dc$S)
+	#	prior nu: set Poisson rate to the expected augmented counts, under average survey probability
+	mc$pars$NU			<- mean(mc$pars$N[,1]) / mean(dc$S)
 	#	total count: that s just the sum of Z
-	mc$pars$N[1,]		<- sum(mc$pars$Z[1,])
+	mc$pars$TOTALA[1,]	<- sum(mc$pars$A[1,])
 	#	proportions: draw from full conditional
-	mc$pars$PI[1,]		<- rdirichlet(1, mc$pars$Z[1,] + mc$pars$LAMBDA[1,])			
+	mc$pars$ETA[1,]		<- rdirichlet(1, mc$pars$A[1,] + mc$pars$ETA_PRIOR[1,])			
 	#	store log likelihood
-	tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[1,], prob=mc$pars$S[1,], log=TRUE) ) +
-			dmultinom(mc$pars$Z[1,], size=mc$pars$N[1,], prob=mc$pars$PI[1,], log=TRUE)
+	tmp	<- sum( dbinom(mc$pars$Z[1,], size=mc$pars$A[1,], prob=mc$pars$U[1,], log=TRUE) ) +
+			dmultinom(mc$pars$A[1,], size=mc$pars$TOTALA[1,], prob=mc$pars$ETA[1,], log=TRUE)
 	set(mc$it.info, 1L, 'LOG_LKL', tmp)
 	# 	store log prior		
-	tmp	<- dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +
-			lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) +
-			mc$pars$S_DTL[,sum(TR_PART_LOGD) + sum(TR_SEQ_LOGD) + sum(REC_PART_LOGD) + sum(REC_SEQ_LOGD)]	
+	tmp	<- dpois(mc$pars$TOTALA[1,], lambda=mc$pars$NU, log=TRUE) +
+			lddirichlet_vector(mc$pars$ETA[1,], nu=mc$pars$ETA_PRIOR[1,])	
 	set(mc$it.info, 1L, 'LOG_PRIOR', tmp)
 	
 	#	
 	# run mcmc
 	options(warn=2)
-	mc$sweep			<- ncol(mc$pars$Z) + 1L
 	for(i in 1L:(mc$n-1L))
 	{
 		mc$curr.it		<- i		
@@ -7182,27 +7178,14 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 		# update S, Z, N for the source-recipient combination 'update.count'
 		if(update.count<mc$sweep)
 		{
-			#	propose  
-			S.prop					<- mc$pars$S[mc$curr.it,]
-			S_DTL.prop				<- copy(mc$pars$S_DTL)
-			tmp						<- dc[COUNT_ID==update.count, list(	TR_PART_P= rbeta(1L, TR_P_PART_ALPHA, TR_P_PART_BETA),
-							TR_SEQ_P= rbeta(1L, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA),
-							REC_PART_P= rbeta(1L, REC_P_PART_ALPHA, REC_P_PART_BETA),
-							REC_SEQ_P= rbeta(1L, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA)),			
-					by=c('COUNT_ID','TR_P_PART_ALPHA','TR_P_PART_BETA','REC_P_PART_ALPHA','REC_P_PART_BETA','TR_P_SEQ_ALPHA','TR_P_SEQ_BETA','REC_P_SEQ_ALPHA','REC_P_SEQ_BETA')]
-			tmp[, TR_PART_LOGD:= dbeta(TR_PART_P, TR_P_PART_ALPHA, TR_P_PART_BETA, log=TRUE)]
-			tmp[, TR_SEQ_LOGD:= dbeta(TR_SEQ_P, TR_P_SEQ_ALPHA, TR_P_SEQ_BETA, log=TRUE)]
-			tmp[, REC_PART_LOGD:= dbeta(REC_PART_P, REC_P_PART_ALPHA, REC_P_PART_BETA, log=TRUE)]
-			tmp[, REC_SEQ_LOGD:= dbeta(REC_SEQ_P, REC_P_SEQ_ALPHA, REC_P_SEQ_BETA, log=TRUE)]
-			S_DTL.prop				<- rbind(subset(S_DTL.prop, COUNT_ID!=update.count), tmp)
-			setkey(S_DTL.prop, COUNT_ID)
-			S.prop[update.count]	<- tmp[, TR_PART_P*TR_SEQ_P*REC_PART_P*REC_SEQ_P]
-			Z.prop					<- mc$pars$Z[mc$curr.it,]
-			Z.prop[update.count]	<- dc[COUNT_ID==update.count, TR_OBS + rnbinom(1, TR_OBS, S.prop)]
-			N.prop					<- sum(Z.prop)			
+			#	propose  			
+			A.prop					<- mc$pars$A[mc$curr.it,] 					
+			tmp						<- mc$pars$Z[mc$it.info[mc$curr.it, SAMPLE_POSTERIOR],update.count]
+			A.prop[update.count]	<- tmp + rnbinom(1, tmp, mc$pars$U[1,update.count])			
+			TOTALA.prop				<- sum(A.prop)			
 			#	calculate MH ratio
-			log.prop.ratio			<- sum(dnbinom(mc$pars$Z[mc$curr.it,update.count], size=dc$TR_OBS[update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) - 
-					sum(dnbinom(Z.prop[update.count], size=dc$TR_OBS[update.count], prob=S.prop[update.count], log=TRUE))
+			log.prop.ratio			<- sum(dnbinom(mc$pars$A[mc$curr.it,update.count], size=mc$pars$Z[mc$it.info[mc$curr.it, SAMPLE_POSTERIOR],update.count], prob=mc$pars$U[1,update.count], log=TRUE)) - 
+					sum(dnbinom(A.prop[update.count], size=dc$TR_OBS[update.count], prob=S.prop[update.count], log=TRUE))
 			log.fc					<- sum(dbinom(dc$TR_OBS[update.count], size=mc$pars$Z[mc$curr.it,update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) +
 					dmultinom(mc$pars$Z[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE) +
 					dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)

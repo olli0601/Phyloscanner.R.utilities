@@ -46,7 +46,7 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	#	define phyloscanner input args to generate read alignments
 	#
 	
-	pty.select			<- 1:2
+	pty.select			<- NA #1:2
 	pty.args			<- list(	prog.pty=prog.pty, 
 									prog.mafft='mafft',  
 									data.dir=data.dir, 
@@ -81,12 +81,13 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
 	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
 	pty.runs	<- subset(pty.runs, is.na(FILE_FASTA))
-	#	search for bam files and references and merge with runs
-	setkey(pty.runs, PTY_RUN)		
+	#	search for bam files and references and merge with runs	
 	pty.runs	<- subset(pty.runs, select=c(PTY_RUN, IND))	
 	tmp			<- phsc.find.bam.and.references(pty.args[['data.dir']], regex.person='^([A-Z0-9]+-[A-Z0-9]+)-.*$')	
 	pty.runs	<- merge(pty.runs, tmp, by='IND')
 	#	create UNIX bash scripts
+	pty.runs	<- pty.runs[, list(BAM=BAM, REF=REF, SAMPLE=SAMPLE, RENAME_ID=paste0(IND,'-fq',seq_len(length(BAM)))), by=c('PTY_RUN','IND')]
+	setkey(pty.runs, PTY_RUN)		
 	setnames(pty.runs, c('IND','SAMPLE'), c('UNIT_ID','SAMPLE_ID'))
 	pty.c		<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
 	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
