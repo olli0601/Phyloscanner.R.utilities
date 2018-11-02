@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Articles • Phyloscanner.R.utilities</title>
+<title>Generate bash commands to generate phylogenies with RAxML — raxml.cmd • Phyloscanner.R.utilities</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -37,7 +37,7 @@
   </head>
 
   <body>
-    <div class="container template-vignette-index">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -101,24 +101,54 @@
       
       </header>
 
-      <div class="page-header">
-  <h1>Articles <small>version&nbsp;0.7-1</small></h1>
-</div>
-
-<div class="row">
-  <div class="col-md-9">
-    <div class="section ">
-      <h3>All vignettes</h3>
-      <p class="section-desc"></p>
-
-      <ul>
-        <li><a href="Rakai.01.data_description.html">Data description</a></li>
-        <li><a href="Rakai.02.run_phyloscanner.html">Running *phyloscanner* in high-throughput on a population-based sample</a></li>
-        <li><a href="Rakai.03.reconstruct_transmission_networks.html">Reconstructing transmission networks</a></li>
-        <li><a href="Rakai.04.direction_of_transmission.html">Inferring the direction of transmission</a></li>
-        <li><a href="Stage1.create.read.alignments.html">Stage 1 analysis: identify phylogenetically closely related individuals</a></li>
-      </ul>
+      <div class="row">
+  <div class="col-md-9 contents">
+    <div class="page-header">
+    <h1>Generate bash commands to generate phylogenies with RAxML</h1>
     </div>
+
+    
+    <p>This function generates bash commands to generate one phylogeny with RAxML, that can be called via 'system' in R, or written to file to run on a UNIX system.</p>
+    
+
+    <pre class="usage"><span class='fu'>raxml.cmd</span>(<span class='no'>infile.fasta</span>, <span class='kw'>outfile</span> <span class='kw'>=</span> <span class='fu'>paste</span>(<span class='no'>infile.fasta</span>, <span class='st'>".newick"</span>, <span class='kw'>sep</span> <span class='kw'>=</span> <span class='st'>""</span>),
+  <span class='kw'>pr</span> <span class='kw'>=</span> <span class='st'>"raxmlHPC-SSE3"</span>, <span class='kw'>pr.args</span> <span class='kw'>=</span> <span class='st'>"-m GTRCAT --HKY85 -p 42"</span>)</pre>
+    
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a> Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>infile.fasta</th>
+      <td><p>Full path name to input fasta file.</p></td>
+    </tr>
+    <tr>
+      <th>outfile</th>
+      <td><p>Full path name to output file. All RAxML output other than the best tree will be zipped and returned as 'outfile.zip'.</p></td>
+    </tr>
+    <tr>
+      <th>pr</th>
+      <td><p>Full path name to RAXML program.</p></td>
+    </tr>
+    <tr>
+      <th>pr.args</th>
+      <td><p>RAXML arguments.</p></td>
+    </tr>
+    </table>
+    
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>Character string</p>
+    
+
+  </div>
+  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
+    <h2>Contents</h2>
+    <ul class="nav nav-pills nav-stacked">
+      <li><a href="#arguments">Arguments</a></li>
+      
+      <li><a href="#value">Value</a></li>
+          </ul>
+
   </div>
 </div>
 

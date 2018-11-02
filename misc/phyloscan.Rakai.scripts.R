@@ -134,8 +134,9 @@ pty.MRC.stage1.generate.read.alignments<- function()
 pty.MRC.stage1.generate.trees<- function()
 {
 	require(data.table)
-	#	set up working environment
 	require(Phyloscanner.R.utilities)
+	
+	#	set up working environment	
 	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
 	data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
 	prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
@@ -193,25 +194,25 @@ pty.MRC.stage1.generate.trees<- function()
 	cat(pbshead)
 	
 	#
-	#	create UNIX bash script, max 10,000 trees (re-start a few times)
+	#	create UNIX bash script to generate trees with RAxML
 	#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
 	raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
 	raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
+	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]
+	pty.c[1,cat(CMD)]
 	
-	
-	#	make raxml run
-	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]		
-	print(pty.c, n=1e3)
-	
+	#
 	#	make array job
-	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
-	tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
-	tmp		<- tmp[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load, hpc.array=pty.c[, max(CASE_ID)])
-	cmd		<- paste(cmd,tmp,sep='\n')
-	outfile	<- paste("mct",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-	cmd.hpccaller(work.dir, outfile, cmd)					
-	
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("trs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(work.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))	
 }
 
 

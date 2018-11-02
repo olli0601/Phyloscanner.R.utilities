@@ -100,9 +100,9 @@
 <a href="#setting-up-the-analysis" class="anchor"></a>Setting up the analysis</h2>
 <p>Let us define input and output directories for our analysis in R.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(Phyloscanner.R.utilities)
-HOME &lt;-<span class="st"> "/Users/Oliver/sandbox/DeepSeqProjects"</span>
-data.dir &lt;-<span class="st"> "/Users/Oliver/sandbox/DeepSeqProjects/MRCPopSample_data"</span>
-prog.pty &lt;-<span class="st"> "/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py"</span>
+HOME &lt;&lt;-<span class="st"> "/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live"</span>
+data.dir &lt;-<span class="st"> "/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC"</span>
+prog.pty &lt;-<span class="st"> "/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py"</span>
 in.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"MRCPopSample_phsc_stage1_input"</span>)
 work.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"MRCPopSample_phsc_work"</span>)
 out.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"MRCPopSample_phsc_stage1_output"</span>)
@@ -225,6 +225,98 @@ cmd &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st"
 <span class="kw">cat</span>(cmd)
 <span class="kw">cat</span>(<span class="kw">system</span>(cmd, <span class="dt">intern =</span> <span class="ot">TRUE</span>))</code></pre></div>
 </div>
+<div id="prepare-bash-scripts-to-reconstruct-deep-sequence-trees" class="section level2">
+<h2 class="hasAnchor">
+<a href="#prepare-bash-scripts-to-reconstruct-deep-sequence-trees" class="anchor"></a>Prepare bash scripts to reconstruct deep-sequence trees</h2>
+<p>As soon as the first read alignments are generated, we can plough ahead and reconstruct viral phylogenies. There is no need to wait until all alignments have been generated. Because we are considering highly overlapping genomic windows across the genome, we will reconstruct one tree per genomic window. The resulting trees across the genome capture not only uncertainty in tree reconstruction, but also differences in viral evolution across the genome, differences in read amplification and mapping, and uncertainty in alignment construction. This is why we prefer to reconstruct trees from overlapping windows, rather than bootstrap trees or samples of posterior tree distributions for a few genomic windows.</p>
+<p>We will add the trees to the directory in which the read alignments are, so let us re-set the input directory:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">in.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"MRCPopSample_phsc_stage1_output"</span>)</code></pre></div>
+<p>Next, we search for read alignments, and check that the corresponding trees have not yet been generated:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># search for read alignments</span>
+infiles &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">FI =</span> <span class="kw">list.files</span>(in.dir, <span class="dt">pattern =</span> <span class="st">"fasta$"</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>, 
+    <span class="dt">recursive =</span> <span class="ot">TRUE</span>))
+infiles[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(FO, <span class="kw">gsub</span>(<span class="st">"fasta$"</span>, <span class="st">"tree"</span>, FI))]
+infiles[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(PTY_RUN, <span class="kw">as.integer</span>(<span class="kw">gsub</span>(<span class="st">"^ptyr([0-9]+)_.*"</span>, <span class="st">"</span><span class="ch">\\</span><span class="st">1"</span>, <span class="kw">basename</span>(FI))))]
+infiles[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(W_FROM, <span class="kw">as.integer</span>(<span class="kw">gsub</span>(<span class="st">".*InWindow_([0-9]+)_.*"</span>, <span class="st">"</span><span class="ch">\\</span><span class="st">1"</span>, <span class="kw">basename</span>(FI))))]
+<span class="co"># check which (if any) trees have already been processed, and remove from</span>
+<span class="co"># TODO list</span>
+tmp &lt;-<span class="st"> </span><span class="kw">data.table</span>(<span class="dt">FT =</span> <span class="kw">list.files</span>(out.dir, <span class="dt">pattern =</span> <span class="st">"^ptyr.*tree$"</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>, 
+    <span class="dt">recursive =</span> <span class="ot">TRUE</span>))
+tmp[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(PTY_RUN, <span class="kw">as.integer</span>(<span class="kw">gsub</span>(<span class="st">"^ptyr([0-9]+)_.*"</span>, <span class="st">"</span><span class="ch">\\</span><span class="st">1"</span>, <span class="kw">basename</span>(FT))))]
+tmp[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(W_FROM, <span class="kw">as.integer</span>(<span class="kw">gsub</span>(<span class="st">".*InWindow_([0-9]+)_.*"</span>, <span class="st">"</span><span class="ch">\\</span><span class="st">1"</span>, <span class="kw">basename</span>(FT))))]
+infiles &lt;-<span class="st"> </span><span class="kw">merge</span>(infiles, tmp, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">"PTY_RUN"</span>, <span class="st">"W_FROM"</span>), <span class="dt">all.x =</span> <span class="dv">1</span>)
+infiles &lt;-<span class="st"> </span><span class="kw">subset</span>(infiles, <span class="kw">is.na</span>(FT))</code></pre></div>
+<p>The read alignments can differ substantially in size, so we expect that the time and memory requirements to generate phylogenies also differ. We will do the easy jobs first, and leave the really big phylogenies that we may want to reconstruct with multiple cpu cores and a lot of RAM until the very end. With this strategy in mind, we order the alignments by the number of reads in each, and associate a ‘CASE_ID’ to each alignment:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">tmp &lt;-<span class="st"> </span>infiles[, <span class="kw">list</span>(<span class="dt">N_TAXA =</span> <span class="kw">as.integer</span>(<span class="kw">system</span>(<span class="kw">paste0</span>(<span class="st">"grep -c </span><span class="ch">\"</span><span class="st">^&gt;</span><span class="ch">\"</span><span class="st"> "</span>, FI), 
+    <span class="dt">intern =</span> <span class="ot">TRUE</span>))), by =<span class="st"> </span><span class="kw">c</span>(<span class="st">"FI"</span>)]
+infiles &lt;-<span class="st"> </span><span class="kw">merge</span>(infiles, tmp, <span class="dt">by =</span> <span class="st">"FI"</span>)
+infiles &lt;-<span class="st"> </span>infiles[<span class="kw">order</span>(N_TAXA), ]
+infiles[, <span class="st">`</span><span class="dt">:=</span><span class="st">`</span>(CASE_ID, <span class="kw">seq_len</span>(<span class="kw">nrow</span>(infiles)))]
+<span class="kw">setkey</span>(infiles, CASE_ID)</code></pre></div>
+Let us take a look at the files to be processed for just one run (in our case, run 100):
+<p align="center">
+<img src="figures/Stage1.sortedbams.png" alt="Read alignments, sorted by size."></p>
+<p>The smallest alignment has 194 reads, which is the alignment of the genomic window that starts at position 4750 of the HXB2 reference genome. The largest alignment has 2377 reads, and corresponds to the genomic window that starts at position 1800 of the HXB2 reference genome.</p>
+<p>As before, we will generate UNIX <em>bash</em> scripts to reconstruct trees in parallel, and submit each job to a job scheduler of a high-performance computing system. This time though, we will start with the job specification because the RAxML command specification depends on the job specification. For small read alignments, a single processor will do. Keep in mind that for large alignments, you likely want to change the following job specification.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">infiles &lt;-<span class="st"> </span><span class="kw">subset</span>(infiles, CASE_ID &lt;=<span class="st"> </span><span class="dv">10000</span>)
+hpc.load &lt;-<span class="st"> "module load intel-suite/2015.1 mpi raxml/8.2.9"</span>  <span class="co"># make third party requirements available\t </span>
+hpc.select &lt;-<span class="st"> </span><span class="dv">1</span>  <span class="co"># number of nodes</span>
+hpc.nproc &lt;-<span class="st"> </span><span class="dv">1</span>  <span class="co"># number of processors on node</span>
+hpc.walltime &lt;-<span class="st"> </span><span class="dv">71</span>  <span class="co"># walltime</span>
+hpc.q &lt;-<span class="st"> </span><span class="ot">NA</span>  <span class="co"># PBS queue</span>
+hpc.mem &lt;-<span class="st"> "2gb"</span>  <span class="co"># RAM\t</span>
+hpc.array &lt;-<span class="st"> </span>infiles[, <span class="kw">max</span>(CASE_ID)]  <span class="co"># number of runs for job array\t</span>
+<span class="co"># define PBS header for job scheduler. this will depend on your job</span>
+<span class="co"># scheduler.</span>
+pbshead &lt;-<span class="st"> "#!/bin/sh"</span>
+tmp &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">"#PBS -l walltime="</span>, hpc.walltime, <span class="st">":59:00,pcput="</span>, hpc.walltime, 
+    <span class="st">":45:00"</span>, <span class="dt">sep =</span> <span class="st">""</span>)
+pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, tmp, <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)
+tmp &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">"#PBS -l select="</span>, hpc.select, <span class="st">":ncpus="</span>, hpc.nproc, <span class="st">":mem="</span>, hpc.mem, 
+    <span class="dt">sep =</span> <span class="st">""</span>)
+pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, tmp, <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)
+pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, <span class="st">"#PBS -j oe"</span>, <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)
+if (!<span class="kw">is.na</span>(hpc.array)) pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, <span class="st">"</span><span class="ch">\n</span><span class="st">#PBS -J 1-"</span>, hpc.array, 
+    <span class="dt">sep =</span> <span class="st">""</span>)
+if (!<span class="kw">is.na</span>(hpc.q)) pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, <span class="kw">paste</span>(<span class="st">"#PBS -q"</span>, hpc.q), <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)
+pbshead &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, hpc.load, <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)</code></pre></div>
+<p>Depending on the job spec, we define the RAxML command and RAxML arguments:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># raxml.pr &lt;- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')</span>
+<span class="co"># #on newer machines with AVX instructions</span>
+raxml.pr &lt;-<span class="st"> </span><span class="kw">ifelse</span>(hpc.nproc ==<span class="st"> </span><span class="dv">1</span>, <span class="st">"raxmlHPC-SSE3"</span>, <span class="st">"raxmlHPC-PTHREADS-SSE3"</span>)  <span class="co">#on older machines without AVX instructions</span>
+raxml.args &lt;-<span class="st"> </span><span class="kw">ifelse</span>(hpc.nproc ==<span class="st"> </span><span class="dv">1</span>, <span class="st">"-m GTRCAT --HKY85 -p 42 -o REF_B_K03455"</span>, 
+    <span class="kw">paste0</span>(<span class="st">"-m GTRCAT --HKY85 -T "</span>, hpc.nproc, <span class="st">" -p 42 -o REF_B_K03455"</span>))</code></pre></div>
+<p>Finally, we prepare the UNIX <em>bash</em> scripts to generate a maximum-likelihood deep-sequecen tree for each read alignment:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pty.c &lt;-<span class="st"> </span>infiles[, <span class="kw">list</span>(<span class="dt">CMD =</span> <span class="kw">raxml.cmd</span>(FI, <span class="dt">outfile =</span> FO, <span class="dt">pr =</span> raxml.pr, <span class="dt">pr.args =</span> raxml.args)), 
+    by =<span class="st"> </span><span class="kw">c</span>(<span class="st">"CASE_ID"</span>)]</code></pre></div>
+<p>Let us have a look at the commands in one script:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pty.c[<span class="dv">1</span>, <span class="kw">cat</span>(CMD)]</code></pre></div>
+<p align="center">
+<img src="figures/Stage1.RAxMLscript.png" alt="Unix bash script to construct one deep-sequence phylogeny."></p>
+<p>In about the middle of the script, we see a call to RAxML, great. As before, this is encapsulated by file management commands to ensure that the script is self-contained, and that the script operates on a local directory in case the data are stored on a central data storage system.</p>
+</div>
+<div id="run-bash-scripts-to-reconstruct-deep-sequence-trees" class="section level2">
+<h2 class="hasAnchor">
+<a href="#run-bash-scripts-to-reconstruct-deep-sequence-trees" class="anchor"></a>Run bash scripts to reconstruct deep-sequence trees</h2>
+<p>The final task is to submit the <em>bash</em> scripts to a job scheduler of a high-performance computing system:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># make array job</span>
+cmd &lt;-<span class="st"> </span>pty.c[, <span class="kw">list</span>(<span class="dt">CASE =</span> <span class="kw">paste0</span>(CASE_ID, <span class="st">")</span><span class="ch">\n</span><span class="st">"</span>, CMD, <span class="st">";;</span><span class="ch">\n</span><span class="st">"</span>)), by =<span class="st"> "CASE_ID"</span>]
+cmd &lt;-<span class="st"> </span>cmd[, <span class="kw">paste0</span>(<span class="st">"case $PBS_ARRAY_INDEX in</span><span class="ch">\n</span><span class="st">"</span>, <span class="kw">paste0</span>(CASE, <span class="dt">collapse =</span> <span class="st">""</span>), 
+    <span class="st">"esac"</span>)]
+cmd &lt;-<span class="st"> </span><span class="kw">paste</span>(pbshead, cmd, <span class="dt">sep =</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)
+<span class="co"># submit job</span>
+outfile &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">":"</span>, <span class="st">""</span>, <span class="kw">paste</span>(<span class="st">"trs"</span>, <span class="kw">paste</span>(<span class="kw">strsplit</span>(<span class="kw">date</span>(), <span class="dt">split =</span> <span class="st">" "</span>)[[<span class="dv">1</span>]], 
+    <span class="dt">collapse =</span> <span class="st">"_"</span>, <span class="dt">sep =</span> <span class="st">""</span>), <span class="st">"sh"</span>, <span class="dt">sep =</span> <span class="st">"."</span>))
+outfile &lt;-<span class="st"> </span><span class="kw">file.path</span>(work.dir, outfile)
+<span class="kw">cat</span>(cmd, <span class="dt">file =</span> outfile)
+cmd &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">"qsub"</span>, outfile)
+<span class="kw">cat</span>(cmd)
+<span class="kw">cat</span>(<span class="kw">system</span>(cmd, <span class="dt">intern =</span> <span class="ot">TRUE</span>))</code></pre></div>
+This time, the job array script is very large with up to 10,000 jobs. It should look similar to the following, which highlights jobs 312 and 313:
+<p align="center">
+<img src="figures/Stage1.RAxMLArrayscript.png" alt="Unix bash script to construct one deep-sequence phylogeny."></p>
+<p>Remember that we generate 10,000 trees for the smallest read alignments with one array job, so we need to repeat the above steps several times. The limit of 10,000 was chosen so that the job array file does not get too large. Also, once you get to really large read alignments, you will likely want to change to run RAxML with multiple cores and more RAM.</p>
+</div>
 </div>
   </div>
 
@@ -238,6 +330,8 @@ cmd &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st"
       <li><a href="#setting-up-phyloscanner-runs-to-test-the-phylogenetic-relationship-of-all-possible-pairs-of-individuals">Setting up <em>phyloscanner</em> runs to test the phylogenetic relationship of all possible pairs of individuals</a></li>
       <li><a href="#prepare-bash-scripts-to-generate-read-alignments">Prepare bash scripts to generate read alignments</a></li>
       <li><a href="#run-bash-scripts-to-generate-read-alignments">Run bash scripts to generate read alignments</a></li>
+      <li><a href="#prepare-bash-scripts-to-reconstruct-deep-sequence-trees">Prepare bash scripts to reconstruct deep-sequence trees</a></li>
+      <li><a href="#run-bash-scripts-to-reconstruct-deep-sequence-trees">Run bash scripts to reconstruct deep-sequence trees</a></li>
       </ul>
 </div>
       </div>

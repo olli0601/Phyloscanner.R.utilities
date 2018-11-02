@@ -25,9 +25,9 @@ sequences.
 Let us define input and output directories for our analysis in R.
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 require(Phyloscanner.R.utilities)
-HOME		<- '/Users/Oliver/sandbox/DeepSeqProjects'
-data.dir	<- '/Users/Oliver/sandbox/DeepSeqProjects/MRCPopSample_data'
-prog.pty	<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
+HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
+prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
 in.dir		<- file.path(HOME,'MRCPopSample_phsc_stage1_input')		
 work.dir	<- file.path(HOME,"MRCPopSample_phsc_work")
 out.dir		<- file.path(HOME,"MRCPopSample_phsc_stage1_output")	
@@ -203,3 +203,143 @@ cmd 		<- paste("qsub", outfile)
 cat(cmd)
 cat(system(cmd, intern= TRUE))	
 ```
+
+## Prepare bash scripts to reconstruct deep-sequence trees
+As soon as the first read alignments are generated, we can plough ahead and
+reconstruct viral phylogenies. There is no need to wait until all alignments
+have been generated. Because we are considering highly overlapping genomic
+windows across the genome, we will reconstruct one tree per genomic window. The
+resulting trees across the genome capture not only uncertainty in tree
+reconstruction, but also differences in viral evolution across the genome,
+differences in read amplification and mapping, and uncertainty in alignment
+construction. This is why we prefer to reconstruct trees from overlapping
+windows, rather than bootstrap trees or samples of posterior tree distributions
+for a few genomic windows.
+
+We will add the trees to the directory in which the read alignments are, so let
+us re-set the input directory:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage1_output')
+```
+
+Next, we search for read alignments, and check that the corresponding trees
+have not yet been generated:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+#	search for read alignments
+infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+infiles[, FO:= gsub('fasta$','tree',FI)]
+infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
+#	check which (if any) trees have already been processed, and remove from TODO list
+tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+infiles	<- subset(infiles, is.na(FT))	
+```
+
+The read alignments can differ substantially in size, so we expect that the
+time and memory requirements to generate phylogenies also differ. We will do
+the easy jobs first, and leave the really big phylogenies that we may want to
+reconstruct with multiple cpu cores and a lot of RAM until the very end.
+With this strategy in mind, we order the alignments by the number of reads
+in each, and associate a 'CASE_ID' to each alignment:   
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+tmp		<- infiles[, list(N_TAXA=as.integer(system(paste0('grep -c "^>" ', FI), intern=TRUE))), by=c('FI')]
+infiles	<- merge(infiles, tmp, by='FI')
+infiles	<- infiles[order(N_TAXA),]
+infiles[, CASE_ID:= seq_len(nrow(infiles))]
+setkey(infiles, CASE_ID)
+```
+
+Let us take a look at the files to be processed for just one run (in our case,
+run 100): 
+<p align="center"><img src="figures/Stage1.sortedbams.png" alt="Read alignments, sorted by size."/></p>
+
+The smallest alignment has 194 reads, which is the alignment of the genomic
+window that starts at position 4750 of the HXB2 reference genome. The largest
+alignment has 2377 reads, and corresponds to the genomic window that starts at
+position 1800 of the HXB2 reference genome.
+
+
+As before, we will generate UNIX *bash* scripts to reconstruct trees in
+parallel, and submit each job to a job scheduler of a high-performance
+computing system. This time though, we will start with the job specification
+because the RAxML command specification depends on the job specification. For
+small read alignments, a single processor will do. Keep in mind that for large
+alignments, you likely want to change the following job specification.
+
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE} 
+infiles				<- subset(infiles, CASE_ID<=1e4)
+hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
+hpc.select			<- 1						# number of nodes
+hpc.nproc			<- 1						# number of processors on node
+hpc.walltime		<- 71						# walltime
+hpc.q				<- NA						# PBS queue
+hpc.mem				<- "2gb" 					# RAM	
+hpc.array			<- infiles[, max(CASE_ID)]	# number of runs for job array	
+#	define PBS header for job scheduler. this will depend on your job scheduler.
+pbshead		<- "#!/bin/sh"
+tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+pbshead		<- paste(pbshead, tmp, sep = "\n")
+tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+pbshead 	<- paste(pbshead, tmp, sep = "\n")
+pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+if(!is.na(hpc.array))
+	pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+if(!is.na(hpc.q)) 
+	pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
+```
+
+Depending on the job spec, we define the RAxML command and RAxML arguments:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
+raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
+raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
+```
+
+Finally, we prepare the UNIX *bash* scripts to generate a maximum-likelihood
+deep-sequecen tree for each read alignment:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE} 
+pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]
+```
+
+Let us have a look at the commands in one script:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+pty.c[1,cat(CMD)]
+```
+<p align="center"><img src="figures/Stage1.RAxMLscript.png" alt="Unix bash script to construct one deep-sequence phylogeny."/></p>
+
+In about the middle of the script, we see a call to RAxML, great. As before,
+this is encapsulated by file management commands to ensure that the script is
+self-contained, and that the script operates on a local directory in case the
+data are stored on a central data storage system.
+
+## Run bash scripts to reconstruct deep-sequence trees
+The final task is to submit the *bash* scripts to a job scheduler of a
+high-performance computing system:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+#	make array job
+cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+cmd		<- paste(pbshead,cmd,sep='\n')	
+#	submit job
+outfile		<- gsub(':','',paste("trs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+outfile		<- file.path(work.dir, outfile)
+cat(cmd, file=outfile)
+cmd 		<- paste("qsub", outfile)
+cat(cmd)
+cat(system(cmd, intern= TRUE))	
+```
+
+This time, the job array script is very large with up to 10,000 jobs. It should
+look similar to the following, which highlights jobs 312 and 313:
+<p align="center"><img src="figures/Stage1.RAxMLArrayscript.png" alt="Unix bash script to construct one deep-sequence phylogeny."/></p>
+
+
+Remember that we generate 10,000 trees for the smallest read alignments
+with one array job, so we need to repeat the above steps several times. The
+limit of 10,000 was chosen so that the job array file does not get too large.
+Also, once you get to really large read alignments, you will likely want to
+change to run RAxML with multiple cores and more RAM.

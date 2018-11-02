@@ -15,7 +15,8 @@ Both *phyloscanner* and *Phyloscanner.R.utilities* are supported on *Linux* and 
 1. *phyloscanner* builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as *samtools* and *RAxML*. Please install these first; [instructions are available here for *Linux* and *MacOS*](https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh). If you have installation issues, [please report it here and we will get back to you](https://github.com/BDI-pathogens/phyloscanner/issues). This step may take up to 60 minutes. 
 2. *phyloscanner* and *Phyloscanner.R.utilities* depend on several *R* packages. We find it easiest to install them as follows. First run the following `install_github` command, and then install any packages that could not be installed manually (these packages not on CRAN and need to be installed from Bioconductor/ github) That is:    
 ```r
-devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
+require(devtools)
+install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
 ``` 
 On a fresh R build, installation will fail with
 ```text
@@ -25,7 +26,7 @@ You will then need
 ```r
 source("https://bioconductor.org/biocLite.R")
 biocLite(c("Rsamtools","RBGL","ggtree"),dependencies=TRUE, build_vignettes=FALSE)
-devtools:::install_github("briatte/ggnet", dependencies=TRUE)
+install_github("briatte/ggnet", dependencies=TRUE)
 ``` 
 This step may take up to 60 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues).
 
@@ -33,7 +34,7 @@ This step may take up to 60 minutes. If you have issues with installation/runnin
 1. [Download *phyloscanner* version 1.1.2](https://github.com/olli0601/Phyloscanner.R.utilities/tree/master/misc/phyloscanner_v1.1.2.tar.gz) and unzip to a directory of your choice.
 2. Install *Phyloscanner.R.utilities* in R:
 ```r
-devtools:::install_github("olli0601/Phyloscanner.R.utilities", dependencies=TRUE, build_vignettes=FALSE)
+install_github("olli0601/Phyloscanner.R.utilities", dependencies=FALSE, build_vignettes=FALSE)
 require(Phyloscanner.R.utilities)
 ``` 
 This step takes less than 5 minutes. If you have issues with installation/running of *Phyloscanner.R.utilities*, [please report it here and we will get back to you](https://github.com/olli0601/Phyloscanner.R.utilities/issues). 
@@ -77,7 +78,7 @@ Expected runtime: 10 minutes.
 Expected runtime: 10 minutes.
 
 ## More stuff
-1. [Tutorial to generate read alignments for stage 1 analysis](articles/Stage1.create.read.alignments.html) .
+1. [Tutorial to identify phylogenetically closely related individuals (stage 1 analysis)](articles/Stage1.create.read.alignments.html) .
 
 ## Testing
 The software has been run and tested on MacOS X 10.10, 10.11, 10.12 (Yosemite, El Capitan, Sierra) and CentOS Linux release 7.3.1611; and RAxML (8.2.9), 

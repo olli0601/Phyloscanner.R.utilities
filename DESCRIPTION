@@ -1,5 +1,5 @@
 Package: Phyloscanner.R.utilities
-Version: 0.7-0
+Version: 0.7-1
 Date: 2018/10/31
 Title: 
 Authors@R: c(person("Oliver", "Ratmann", role = c("aut", "cre"), email = "oliver.ratmann@imperial.ac.uk"),

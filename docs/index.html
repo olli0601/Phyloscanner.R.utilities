@@ -109,13 +109,14 @@
 <em>phyloscanner</em> builds on standard tools for deep-sequence data analysis and phylogeny reconstruction, such as <em>samtools</em> and <em>RAxML</em>. Please install these first; <a href="https://github.com/BDI-pathogens/phyloscanner/blob/master/InfoAndInputs/InstallationNotesForMakingTrees.sh">instructions are available here for <em>Linux</em> and <em>MacOS</em></a>. If you have installation issues, <a href="https://github.com/BDI-pathogens/phyloscanner/issues">please report it here and we will get back to you</a>. This step may take up to 60 minutes.</li>
 <li>
 <p><em>phyloscanner</em> and <em>Phyloscanner.R.utilities</em> depend on several <em>R</em> packages. We find it easiest to install them as follows. First run the following <code>install_github</code> command, and then install any packages that could not be installed manually (these packages not on CRAN and need to be installed from Bioconductor/ github) That is:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">devtools:::<span class="kw">install_github</span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(devtools)
+<span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/install_github">install_github</a></span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)</code></pre></div>
 <p>On a fresh R build, installation will fail with</p>
 <pre class="text"><code>ERROR: dependencies ‘ggtree’, ‘ggnet’, ‘Rsamtools’, ‘RBGL’ are not available</code></pre>
 <p>You will then need</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">source</span>(<span class="st">"https://bioconductor.org/biocLite.R"</span>)
 <span class="kw">biocLite</span>(<span class="kw">c</span>(<span class="st">"Rsamtools"</span>,<span class="st">"RBGL"</span>,<span class="st">"ggtree"</span>),<span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
-devtools:::<span class="kw">install_github</span>(<span class="st">"briatte/ggnet"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>)</code></pre></div>
+<span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/install_github">install_github</a></span>(<span class="st">"briatte/ggnet"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>)</code></pre></div>
 <p>This step may take up to 60 minutes. If you have issues with installation/running of <em>Phyloscanner.R.utilities</em>, <a href="https://github.com/olli0601/Phyloscanner.R.utilities/issues">please report it here and we will get back to you</a>.</p>
 </li>
 </ol>
@@ -128,7 +129,7 @@ devtools:::<span class="kw">install_github</span>(<span class="st">"briatte/ggne
 <a href="https://github.com/olli0601/Phyloscanner.R.utilities/tree/master/misc/phyloscanner_v1.1.2.tar.gz">Download <em>phyloscanner</em> version 1.1.2</a> and unzip to a directory of your choice.</li>
 <li>
 <p>Install <em>Phyloscanner.R.utilities</em> in R:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">devtools:::<span class="kw">install_github</span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">TRUE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/install_github">install_github</a></span>(<span class="st">"olli0601/Phyloscanner.R.utilities"</span>, <span class="dt">dependencies=</span><span class="ot">FALSE</span>, <span class="dt">build_vignettes=</span><span class="ot">FALSE</span>)
 <span class="kw">require</span>(Phyloscanner.R.utilities)</code></pre></div>
 <p>This step takes less than 5 minutes. If you have issues with installation/running of <em>Phyloscanner.R.utilities</em>, <a href="https://github.com/olli0601/Phyloscanner.R.utilities/issues">please report it here and we will get back to you</a>.</p>
 </li>
@@ -174,7 +175,7 @@ devtools:::<span class="kw">install_github</span>(<span class="st">"briatte/ggne
 <a href="#more-stuff" class="anchor"></a>More stuff</h2>
 <ol>
 <li>
-<a href="articles/Stage1.create.read.alignments.html">Tutorial to generate read alignments for stage 1 analysis</a> .</li>
+<a href="articles/Stage1.create.read.alignments.html">Tutorial to identify phylogenetically closely related individuals (stage 1 analysis)</a> .</li>
 </ol>
 </div>
 <div id="testing" class="section level2">
