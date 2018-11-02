@@ -104,12 +104,13 @@
 <h2 class="hasAnchor">
 <a href="#setting-up-the-analysis" class="anchor"></a>Setting up the analysis</h2>
 <p>We resume analysis from <a href="Rakai.03.reconstruct_transmission_networks.html">the previous tutorial</a>, and start by loading the pairs of individuals between whom linkage could not be excluded, and the transmission networks that could be inferred amongst them:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "~/sandbox/DeepSeqProjects"</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "/Users/Oliver/sandbox/DeepSeqProjects"</span>
 indir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_analysis"</span>)
 infile.pairs &lt;-<span class="st"> </span><span class="kw">file.path</span>(indir, <span class="st">"phsc_analysis_of_dataset_S1_allpairs.rda"</span>)
 infile.networks &lt;-<span class="st"> </span><span class="kw">file.path</span>(indir, <span class="st">"phsc_analysis_of_dataset_S1_allnetworks.rda"</span>)
 <span class="kw">load</span>(infile.pairs)  <span class="co"># loads rtp, rplkl, rpw</span>
 <span class="kw">load</span>(infile.networks)  <span class="co"># loads rtn, rtnn</span></code></pre></div>
+<p>Do make sure that the directory names above do not start with “~”, because the names are not expanded in the scripts below. White space, or characters like ‘-’ are OK.</p>
 </div>
 <div id="classify-phylogenetic-linkages" class="section level2">
 <h2 class="hasAnchor">

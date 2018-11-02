@@ -1,8 +1,8 @@
 project.dual<- function()
 {	
-	CODE.HOME	<<- "/work/or105/libs/Phyloscanner.R.utilities"
-	HOME		<<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
-	HOME		<<- '/work/or105/MUNICH'
+	CODE.HOME	<<- "/rds/general/user/or105/home/libs/Phyloscanner.R.utilities"
+	HOME		<<- '/rds/general/user/or105/home/WORK/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA'
+	HOME		<<- '/rds/general/user/or105/home/WORK/MUNICH'
 	#HOME		<<- "~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA"
 	#project.readlength.count.bam.150218()
 	#project.readlength.count.bam.171208()

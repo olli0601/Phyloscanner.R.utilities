@@ -101,17 +101,18 @@
 <a href="#setting-up-the-analysis" class="anchor"></a>Setting up the analysis</h2>
 <p><a href="Rakai.02.run_phyloscanner.html">In the previous tutorial</a>, we generated a large number of files, including <code>ptyrX_pairwise_relationships.rda</code>. We will need only these files to reconstruct HIV-1 transmission networks.</p>
 <p>To be safe, it might be a good idea to copy them into a new directory. I copied them to the following analysis directory, and all further output will be stored in the same directory:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "~/sandbox/DeepSeqProjects"</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">HOME &lt;-<span class="st"> "/Users/Oliver/sandbox/DeepSeqProjects"</span>
 indir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_analysis"</span>)
 outdir &lt;-<span class="st"> </span>indir
 outfile.base &lt;-<span class="st"> </span><span class="kw">file.path</span>(outdir, <span class="st">"phsc_analysis_of_dataset_S1"</span>)
 neff.cut &lt;-<span class="st"> </span><span class="dv">3</span>
 conf.cut &lt;-<span class="st"> </span><span class="fl">0.6</span></code></pre></div>
+<p>Do make sure that the directory names above do not start with “~”, because the names are not expanded in the scripts below. White space, or characters like ‘-’ are OK.</p>
 </div>
-<div id="find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="section level2">
+<div id="find-all-pairs-of-individuals-between-whom-linkage-cannot-be" class="section level2">
 <h2 class="hasAnchor">
-<a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded" class="anchor"></a>Find all pairs of individuals between whom linkage cannot be excluded</h2>
-<p>The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.02.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments:</p>
+<a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be" class="anchor"></a>Find all pairs of individuals between whom linkage cannot be</h2>
+<p>excluded The following code snippet processes all pairwise phylogenetic relationships that were reconstructed with <em>phyloscanner</em> <a href="Rakai.02.run_phyloscanner.html">in the previous tutorial</a>, and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments:</p>
 <ol style="list-style-type: decimal">
 <li>
 <code>batch.regex</code> identifies the batch number from the file names of <em>phyloscanner</em> output;</li>
@@ -238,7 +239,7 @@ p2 &lt;-<span class="st"> </span><span class="kw"><a href="../reference/phsc.plo
       <ul class="nav nav-pills nav-stacked">
 <li><a href="#introduction">Introduction</a></li>
       <li><a href="#setting-up-the-analysis">Setting up the analysis</a></li>
-      <li><a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be-excluded">Find all pairs of individuals between whom linkage cannot be excluded</a></li>
+      <li><a href="#find-all-pairs-of-individuals-between-whom-linkage-cannot-be">Find all pairs of individuals between whom linkage cannot be</a></li>
       <li><a href="#phyloscanner-statistics-for-each-window"><em>phyloscanner</em> statistics for each window</a></li>
       <li><a href="#relationship-counts-for-each-pair">Relationship counts for each pair</a></li>
       <li><a href="#reconstructing-transmission-networks-among-individuals-between-whom-phylogenetic-linkage-cannot-be-excluded">Reconstructing transmission networks among individuals between whom phylogenetic linkage cannot be excluded</a></li>

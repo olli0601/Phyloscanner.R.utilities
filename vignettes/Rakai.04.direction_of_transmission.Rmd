@@ -34,13 +34,16 @@ tutorial](Rakai.03.reconstruct_transmission_networks.html), and start by loading
 the pairs of individuals between whom linkage could not be excluded, and the
 transmission networks that could be inferred amongst them:
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
-HOME			<- '~/sandbox/DeepSeqProjects'
+HOME			<- '/Users/Oliver/sandbox/DeepSeqProjects'
 indir			<- file.path(HOME, 'RakaiPopSample_phyloscanner_analysis')
 infile.pairs	<- file.path(indir,'phsc_analysis_of_dataset_S1_allpairs.rda')
 infile.networks	<- file.path(indir,'phsc_analysis_of_dataset_S1_allnetworks.rda')
 load( infile.pairs )	# loads rtp, rplkl, rpw
 load( infile.networks )	# loads rtn, rtnn
 ```
+Do make sure that the directory names above do not start with "~", because 
+the names are not expanded in the scripts below. White space, or characters like
+'-' are OK.
 
 ## Classify phylogenetic linkages
 The data.table `rtnn` contains all information needed to classify linkages.

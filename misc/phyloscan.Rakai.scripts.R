@@ -131,6 +131,89 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	cat(system(cmd, intern= TRUE))		
 }
 
+pty.MRC.stage1.generate.trees<- function()
+{
+	require(data.table)
+	#	set up working environment
+	require(Phyloscanner.R.utilities)
+	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+	data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
+	prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+	#HOME			<<- '~/sandbox/DeepSeqProjects'
+	#data.dir		<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'
+	#prog.pty		<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'	
+	in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage1_output')		
+	work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+	out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage1_output")	
+		
+	
+	#
+	#	generate trees	
+	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+	infiles[, FO:= gsub('fasta$','tree',FI)]
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
+	#	check which (if any) trees have already been processed, and remove from TODO list
+	tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+	infiles	<- subset(infiles, is.na(FT))	
+	setkey(infiles, PTY_RUN, W_FROM)			
+	#	determine number of taxa per fasta file, and sort alignments by size
+	#	so that trees with smallest size are generated first
+	tmp		<- infiles[, list(N_TAXA=as.integer(system(paste0('grep -c "^>" ', FI), intern=TRUE))), by=c('FI')]
+	infiles	<- merge(infiles, tmp, by='FI')
+	infiles	<- infiles[order(N_TAXA),]
+	infiles[, CASE_ID:= seq_len(nrow(infiles))]
+	
+	#
+	#	define pbs header, max 10,000 trees (re-start a few times)
+	#	create header first because RAXML call depends on single-core / multi-core
+	infiles	<- subset(infiles, CASE_ID<=1e4)
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 71						# walltime
+	hpc.q				<- NA						# PBS queue
+	hpc.mem				<- "2gb" 					# RAM	
+	hpc.array			<- infiles[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#
+	#	create UNIX bash script, max 10,000 trees (re-start a few times)
+	#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
+	raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
+	raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
+	
+	
+	#	make raxml run
+	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]		
+	print(pty.c, n=1e3)
+	
+	#	make array job
+	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+	tmp		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	tmp		<- tmp[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+	cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load, hpc.array=pty.c[, max(CASE_ID)])
+	cmd		<- paste(cmd,tmp,sep='\n')
+	outfile	<- paste("mct",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+	cmd.hpccaller(work.dir, outfile, cmd)					
+	
+}
+
 
 pty.2.infer.phylo.relationships.on.stage2.trees<- function() 
 {

@@ -65,6 +65,41 @@ phsc.cmd.bam.calculate.read.distribution <- function(pty.runs, pty.args)
 }	
 
 #' @export
+#' @title Generate bash commands to generate phylogenies with RAxML  
+#' @description This function generates bash commands to generate one phylogeny with RAxML, that can be called via 'system' in R, or written to file to run on a UNIX system.
+#' @param infile.fasta Full path name to input fasta file.
+#' @param outfile Full path name to output file. All RAxML output other than the best tree will be zipped and returned as 'outfile.zip'.
+#' @param pr Full path name to RAXML program.
+#' @param pr.args RAXML arguments. 
+#' @return	Character string
+raxml.cmd<- function(infile.fasta, outfile=paste(infile.fasta,'.newick',sep=''), pr='raxmlHPC-SSE3', pr.args='-m GTRCAT --HKY85 -p 42')
+{		
+	cmd				<- paste("#######################################################
+# start: RAXML
+#######################################################\n",sep='')												
+	cmd				<- paste(cmd,"CWD=$(pwd)\n",sep='')
+	cmd				<- paste(cmd,"echo $CWD\n",sep='')	
+	tmpdir.prefix	<- paste('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+	tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+	tmp.in			<- basename(infile.fasta)
+	tmp.out			<- basename(outfile)	
+	cmd				<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+	cmd				<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
+	cmd				<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
+	cmd				<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,' -n ', tmp.out,'\n', sep='')
+	cmd				<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
+	cmd				<- paste(cmd, 'mv RAxML_bestTree.',basename(outfile),' "',outfile,'"\n',sep='')
+	cmd				<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
+	cmd				<- paste(cmd, 'mv ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
+	cmd				<- paste(cmd,'cd $CWD\n', sep='')
+	cmd				<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
+	cmd				<- paste(cmd, "#######################################################
+# end: RAXML
+#######################################################\n",sep='')
+	cmd
+}
+
+#' @export
 #' @title Generate bash commands for multiple phyloscanner runs
 #' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
 #' @param pty.args List of phyloscanner input variables. See examples.

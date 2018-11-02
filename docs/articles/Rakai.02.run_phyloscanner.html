@@ -113,14 +113,14 @@
 </ol>
 <p>Next, open R and define the base directories for your project:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(Phyloscanner.R.utilities)
-HOME &lt;-<span class="st"> "~/sandbox/DeepSeqProjects"</span>
+HOME &lt;-<span class="st"> "/Users/Oliver/sandbox/DeepSeqProjects"</span>
 in.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_deepseqtrees"</span>)
 out.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_out"</span>)
 work.dir &lt;-<span class="st"> </span><span class="kw">file.path</span>(HOME, <span class="st">"RakaiPopSample_phyloscanner_work"</span>)
 prog.pty &lt;-<span class="st"> "/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py"</span>
 <span class="kw">dir.create</span>(out.dir, <span class="dt">showWarnings =</span> <span class="ot">FALSE</span>)
 <span class="kw">dir.create</span>(work.dir, <span class="dt">showWarnings =</span> <span class="ot">FALSE</span>)</code></pre></div>
-<p>Here, <code>prog.pty</code> is the full path to the <em>phyloscanner</em> program <em>phyloscanner_make_trees.py</em> and <code>work.dir</code> is the name of temporary directory.</p>
+<p>Here, <code>prog.pty</code> is the full path to the <em>phyloscanner</em> program <em>phyloscanner_make_trees.py</em> and <code>work.dir</code> is the name of temporary directory. Do make sure that the directory names above do not start with “~”, because the names are not expanded in the scripts below. White space, or characters like ‘-’ are OK.</p>
 </div>
 <div id="prepare-bash-scripts-to-run-phyloscanner" class="section level2">
 <h2 class="hasAnchor">

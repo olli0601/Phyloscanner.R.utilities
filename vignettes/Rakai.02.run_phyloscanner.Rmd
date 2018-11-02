@@ -56,7 +56,7 @@ The new directory should contain files that look as follows:
 Next, open R and define the base directories for your project: 
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 require(Phyloscanner.R.utilities)
-HOME		<- '~/sandbox/DeepSeqProjects'								
+HOME		<- '/Users/Oliver/sandbox/DeepSeqProjects'								
 in.dir		<- file.path(HOME,'RakaiPopSample_deepseqtrees')	
 out.dir		<- file.path(HOME,"RakaiPopSample_phyloscanner_out")
 work.dir	<- file.path(HOME,"RakaiPopSample_phyloscanner_work")				
@@ -66,7 +66,8 @@ dir.create(work.dir, showWarnings=FALSE)
 ```
 Here, `prog.pty` is the full path to the *phyloscanner*
 program *phyloscanner_make_trees.py* and `work.dir` is the name of temporary
-directory.
+directory. Do make sure that the directory names above do not start with "~", because 
+the names are not expanded in the scripts below. White space, or characters like '-' are OK.
 
 ## Prepare bash scripts to run phyloscanner
 The next step is to define the input arguments to *phyloscanner*. Please see the

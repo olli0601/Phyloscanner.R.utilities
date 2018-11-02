@@ -25,8 +25,8 @@ sequences.
 Let us define input and output directories for our analysis in R.
 ```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
 require(Phyloscanner.R.utilities)
-HOME		<- '~/sandbox/DeepSeqProjects'
-data.dir	<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'
+HOME		<- '/Users/Oliver/sandbox/DeepSeqProjects'
+data.dir	<- '/Users/Oliver/sandbox/DeepSeqProjects/MRCPopSample_data'
 prog.pty	<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'
 in.dir		<- file.path(HOME,'MRCPopSample_phsc_stage1_input')		
 work.dir	<- file.path(HOME,"MRCPopSample_phsc_work")
@@ -37,7 +37,8 @@ dir.create(work.dir, showWarnings=FALSE)
 ```
 Here, `prog.pty` is the full path to the *phyloscanner*
 program *phyloscanner_make_trees.py* and `work.dir` is the name of a temporary
-directory.
+directory. Do make sure that the directory names above do not start with "~", because 
+the names are not expanded in the scripts below. White space, or characters like '-' are OK.
 
 ## Setting up *phyloscanner* runs to test the phylogenetic relationship of all possible pairs of individuals
 Next, we define a large number of *phyloscanner* runs to test the phylogenetic
