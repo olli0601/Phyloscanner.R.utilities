@@ -5284,14 +5284,14 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infiles		<- c("RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+		infiles		<- c("RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
 						, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
 						)
 		for(ii in seq_along(infiles))
@@ -6379,29 +6379,53 @@ RakaiFull.phylogeography.180928.gender.mobility.core.inference.old<- function()
 	save(zm, rtpdm, rtr2, ds, dc, mc, file=paste0(outfile.base,'core_inference_SNPIZ_mcmcEachCount.rda'))
 }
 
-RakaiFull.phylogeography.181006.mcmc.assess<- function(infile.inference=NULL)
+RakaiFull.phylogeography.181006.mcmc.assess<- function(infile.inference=NULL, thin.extra=1)
 {
 	require(coda)
 	if(is.null(infile.inference))
 	{
 		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda"
+		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_predict_mcmc_11101.rda"
 	}			
-	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	outfile.base		<- gsub('.rda$','',infile.inference)
 	load(infile.inference)
-	
-	#	thin MCMC output
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
-	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
-	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
-	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
-	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
-	gc()
-	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
-	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
-	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
-	colnames(mc$pars$N)	<- 'N'
-	#	convert to coda
-	mcc			<- mcmc( cbind( mc$pars$N, mc$pars$Z, mc$pars$PI, mc$pars$S) )
+	#	thin.extra=20
+	if(!any(names(mc$pars)=='ETA'))
+	{
+		#	thin MCMC output
+		tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep*thin.extra)
+		mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+		mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+		mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+		mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+		gc()
+		colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+		colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+		colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+		colnames(mc$pars$N)	<- 'N'
+		#	convert to coda
+		mcc			<- mcmc( cbind( mc$pars$N, mc$pars$Z, mc$pars$PI, mc$pars$S) )		
+	}
+	if(any(names(mc$pars)=='ETA'))
+	{
+		#	thin MCMC output
+		mc$it.info2[, IT2:= seq_len(nrow(mc$it.info2))]
+		tmp				<- subset(mc$it.info2, BLOCK!='INIT' & PAR_ID%%mc$sweep==0)		
+		tmp				<- tmp[,IT2]
+		mc$pars$Z2		<- mc$pars$Z2[tmp,,drop=FALSE]
+		mc$pars$N2		<- mc$pars$N2[tmp,,drop=FALSE]
+		mc$pars$A		<- mc$pars$A[tmp,,drop=FALSE]
+		mc$pars$ETA		<- mc$pars$ETA[tmp,,drop=FALSE]
+		mc$pars$TOTALA	<- mc$pars$TOTALA[tmp,,drop=FALSE]
+		gc()
+		colnames(mc$pars$Z2)	<- paste0('Z2-',1:ncol(mc$pars$Z2))
+		colnames(mc$pars$N2)	<- paste0('N2-',1:ncol(mc$pars$N2))
+		colnames(mc$pars$ETA)	<- paste0('ETA-',1:ncol(mc$pars$ETA))
+		colnames(mc$pars$A)		<- paste0('A-',1:ncol(mc$pars$A))
+		colnames(mc$pars$TOTALA)<- 'TOTALA'
+		#	convert to coda
+		mcc			<- mcmc( cbind( mc$pars$Z2, mc$pars$N2, mc$pars$ETA, mc$pars$A, mc$pars$TOTALA) )		
+	}
 	mcc.eff		<- effectiveSize(mcc)
 	#	plot trace and autocorrelations for variable with worst 6 effective sizes
 	tmp			<- mcc.eff[mcc.eff>0] 
@@ -6999,7 +7023,7 @@ RakaiFull.phylogeography.181006.flows.netflows<- function(infile.inference=NULL)
 	}	
 }
 
-RakaiFull.phylogeography.181006.predict.areaflows<- function()
+RakaiFull.phylogeography.181006.predict.areaflows.old1<- function()
 {	
 	require(data.table)	
 	require(Boom)	
@@ -7298,6 +7322,314 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 		tmp	<- mc$it.info[tmp, LOG_LKL + LOG_PRIOR]
 		set(mc$it.info2, mc$curr.it, 'LOG_POSTERIOR', tmp)
 	}	
+	save(zm, rtpdm, rtr2, df, da, dc, mc, file=paste0(outfile.base,'_core_predict_mcmc_',paste0(opt, collapse=''),'.rda'))
+}
+
+RakaiFull.phylogeography.181006.predict.areaflows<- function()
+{	
+	require(data.table)	
+	require(Boom)	
+	
+	indir					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference.data	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")	
+	infile.inference.mcmc	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda")
+	infile.subdistricts		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_subdistrict_data.rda"
+	outfile.base			<- gsub('.rda$','',gsub('_core_inference_mcmc_[0-1]+','',infile.inference.mcmc))	
+	opt						<- ifelse(grepl('.*_([0-1]+)\\.rda',infile.inference.mcmc),gsub('.*_([0-1]+)\\.rda','\\1',infile.inference.mcmc),'') 
+	
+	#	load info on communities	
+	load(infile.inference.data)
+	
+	#
+	# 	prepare data on subdistricts
+	#	
+	
+	#	calculate eligible in RCCS communities
+	df	<- desm[, list(COMM_ELIGIBLE=sum(PART_EVER+PART_NEVER)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+	df	<- merge(df, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=c('107','16','776','51','4','24','1','22')), all=TRUE, by='COMM_NUM')	
+	tmp	<- df[, which(is.na(COMM_NUM2))]
+	set(df, tmp, 'COMM_NUM2', df[tmp, COMM_NUM])
+	set(df, NULL, 'COMM_NUM2', df[, as.integer(COMM_NUM2)])	
+	#	associate subdistrict names to communities	
+	load(infile.subdistricts)
+	tmp	<- as.data.table(community_id)
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))
+	df	<- merge(df, tmp, by='COMM_NUM2', all=TRUE)
+	#	handle missing subdistrict names
+	set(df, df[, which(COMM_NUM2==36)], 'SUBDISTRICT', 'Kakuuto')
+	set(df, df[, which(COMM_NUM2==401)], 'SUBDISTRICT', 'Kitumba')	#probably not right
+	set(df, df[, which(COMM_NUM2==55)], 'SUBDISTRICT', 'Kitumba')	#same as 401
+	set(df, df[, which(COMM_NUM2==776)], 'SUBDISTRICT', 'Kakuuto')
+	set(df, df[, which(COMM_NUM2==51)], 'SUBDISTRICT', 'Kakuuto')
+	#	define subdistrict type as discussed with Kate
+	tmp	<- df[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))), by=c('SUBDISTRICT')]	
+	df	<- merge(tmp, df, by='SUBDISTRICT' )
+	#	add further info on subdistricts
+	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_popsize), SUBDISTRICT_POP=as.numeric(subdistrict_popsize)), by='SUBDISTRICT')
+	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_hivprev), SUBDISTRICT_HIV_PREV=as.numeric(subdistrict_hivprev)), by='SUBDISTRICT')
+	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_hivcase), SUBDISTRICT_HIV_CASE=as.numeric(subdistrict_hivcase)), by='SUBDISTRICT')
+	
+	#
+	#	define population surveyed by area
+	da	<- df[, list(SUBDISTRICT_POP=SUBDISTRICT_POP[1], POP_RCCS_YES=sum(COMM_ELIGIBLE), POP_RCCS_NO=SUBDISTRICT_POP[1]-sum(COMM_ELIGIBLE)), by=c('SUBDISTRICT','AREA')]
+	da	<- da[, list(POP_RCCS_YES=sum(POP_RCCS_YES), POP_RCCS_NO=round(sum(POP_RCCS_NO))), by=c('AREA')]
+	
+	#
+	#	prepare sampling from posterior predictive: aggregate samples from posterior density to area of subdistricts
+	#
+	load(infile.inference.mcmc)	
+	#	thin MCMC output (aggressively)
+	mc.thin		<- mc$sweep*5
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc.thin)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	mc$it.info	<- mc$it.info[tmp,]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	# 	aggregate random variables to subdistrict_type by using stick-breaking property
+	dc		<- subset(dc, select=c(TR_COMM_NUM_A, REC_COMM_NUM_A, COUNT_ID))
+	tmp		<- unique(subset(df, select=c(COMM_NUM_A, AREA)))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')	
+	tmp		<- unique(subset(dc, select=c(TR_AREA, REC_AREA)))
+	setkey(tmp, TR_AREA, REC_AREA)
+	tmp[, AREA_ID:= seq_len(nrow(tmp))]
+	dc		<- merge(dc, tmp, by=c('TR_AREA','REC_AREA'))	
+	mcpi	<- as.data.table(cbind(mc$pars$PI, mc$pars$Z))
+	mcpi[, IT:= seq_len(nrow(mcpi))]	
+	mcpi	<- melt(mcpi, id.vars='IT')	
+	set(mcpi, NULL, 'VAR', mcpi[, gsub('^([A-Z]+)-([0-9]+)$','\\1',variable)])	
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(gsub('^([A-Z]+)-([0-9]+)$','\\2',variable))])
+	mcpi	<- merge(mcpi, dc, by='COUNT_ID')
+	mcpi	<- mcpi[, list(value=sum(value)), by=c('AREA_ID','VAR','TR_AREA','REC_AREA','IT')]
+	dc		<- unique(subset(dc, select=c(AREA_ID, TR_AREA, REC_AREA)))
+	tmp		<- copy(da)
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='TR_AREA')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	dc		<- merge(dc, tmp, by='REC_AREA')	
+	dc[, S:= 	TR_POP_RCCS_YES/(TR_POP_RCCS_YES+TR_POP_RCCS_NO) * 
+					REC_POP_RCCS_YES/(REC_POP_RCCS_YES+REC_POP_RCCS_NO)]	
+	#
+	#	populate mc$pars with aggregated values
+	tmp		<- as.matrix(dcast.data.table(subset(mcpi, VAR=='Z'), IT~AREA_ID, value.var='value'))
+	tmp		<- tmp[,-which(colnames(tmp)=='IT')]
+	colnames(tmp)	<- NULL	
+	mc$pars$Z	<- tmp
+	tmp		<- as.matrix(dcast.data.table(subset(mcpi, VAR=='PI'), IT~AREA_ID, value.var='value'))
+	tmp		<- tmp[,-which(colnames(tmp)=='IT')]
+	colnames(tmp)	<- NULL	
+	mc$pars$PI		<- tmp
+	mc$pars$S		<- NULL
+	mc$pars$NU		<- NULL
+	mc$pars$LAMBDA	<- NULL
+	gc()
+	
+	#
+	#	setup MCMC skeleton
+	#	
+
+	mc$sweep			<- 1L + dc[, max(AREA_ID)]
+	mc$seed				<- 42L	
+	mc$n				<- 0
+	mc$pars$ETA			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)		#proportions
+	mc$pars$ETA_PRIOR	<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#prior for proportions
+	mc$pars$U			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#sampling probabilities (product)	
+	mc$pars$A			<- matrix(NA_integer_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)  #augmented data (area level)
+	mc$pars$TOTALA		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data (area level)
+	mc$pars$NU			<- NA_real_															#prior for N
+	mc$pars$Z2			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)		#resample of augmented data (RCCS level) 
+	mc$pars$N2			<- matrix(NA_real_, ncol= 1, nrow=mc$n)		#resample of total number of counts on augmented data (RCCS level)
+	mc$it.info2			<- data.table(	IT= rep(NA_integer_, mc$n),
+			SAMPLE_POSTERIOR= rep(NA_integer_, mc$n),
+			PAR_ID= rep(NA_integer_, mc$n),
+			BLOCK= rep(NA_character_, mc$n),
+			MHRATIO= rep(NA_real_, mc$n),
+			ACCEPT=rep(NA_integer_, mc$n), 
+			LOG_PRED_LKL=rep(NA_real_, mc$n),
+			LOG_PRED_PRIOR=rep(NA_real_, mc$n),
+			LOG_POSTERIOR=rep(NA_real_, mc$n))
+	mc.skeleton			<- copy(mc)
+	
+	set.seed( mc.skeleton$seed )
+	#
+	#	setup new MCMC to sample from posterior predictive distribution, each new MCMC corresponds to a sample from the posterior
+	#
+	for(ii in 1:1000)
+	{
+		# 	set up MCMC objects		
+		mc$sweep			<- 1L + dc[, max(AREA_ID)]
+		mc$n				<- mc$sweep * 30
+		mc$pars$ETA			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)		#proportions
+		mc$pars$ETA_PRIOR	<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#prior for proportions
+		mc$pars$U			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=1)		#sampling probabilities (product)	
+		mc$pars$A			<- matrix(NA_integer_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)  #augmented data (area level)
+		mc$pars$TOTALA		<- matrix(NA_integer_, ncol=1, nrow=mc$n)							#total number of counts on augmented data (area level)
+		mc$pars$NU			<- NA_real_															#prior for N
+		mc$pars$Z2			<- matrix(NA_real_, ncol=length(unique(dc$AREA_ID)), nrow=mc$n)		#resample of augmented data (RCCS level) 
+		mc$pars$N2			<- matrix(NA_real_, ncol=1, nrow=mc$n)		#resample of total number of counts on augmented data (RCCS level)
+		mc$it.info2			<- data.table(	IT= seq.int(1,mc$n),
+				SAMPLE_POSTERIOR= rep(NA_integer_, mc$n),
+				PAR_ID= rep(NA_integer_, mc$n),
+				BLOCK= rep(NA_character_, mc$n),
+				MHRATIO= rep(NA_real_, mc$n),
+				ACCEPT=rep(NA_integer_, mc$n), 
+				LOG_PRED_LKL=rep(NA_real_, mc$n),
+				LOG_PRED_PRIOR=rep(NA_real_, mc$n),
+				LOG_POSTERIOR=rep(NA_real_, mc$n))
+		
+		#
+		# define helper functions
+		lddirichlet_vector	<- function(x, nu){
+			ans	<- sum((nu - 1) * log(x)) + sum(lgamma(nu)) - lgamma(sum(nu))
+			stopifnot(is.finite(ans))
+			ans
+		}
+		
+		# initialise MCMC
+		setkey(dc, AREA_ID)
+		mc$verbose			<- 0L
+		mc$curr.it			<- 1L
+		mc$seed				<- 42L	
+		set(mc$it.info2, mc$curr.it, 'BLOCK', 'INIT')
+		set(mc$it.info2, mc$curr.it, 'PAR_ID', 0L)		
+		#	prior lambda: use the Berger objective prior with minimal loss compared to marginal Beta reference prior
+		#	(https://projecteuclid.org/euclid.ba/1422556416)	
+		mc$pars$ETA_PRIOR[1,]	<- 0.8/nrow(dc)
+		# 	sampling (proportion surveyed in area): set to fixed value
+		mc$pars$U[1,]		<- dc$S
+		#	resample Z,N from posterior
+		set(mc$it.info2, mc$curr.it,'SAMPLE_POSTERIOR', sample(nrow(mc$pars$Z), 1))
+		mc$pars$Z2[1,]		<- mc$pars$Z[mc$it.info2[1, SAMPLE_POSTERIOR],]
+		mc$pars$N2[1,]		<- sum(mc$pars$Z2[1,])
+		#	augmented data: proposal draw under sampling probability	
+		mc$pars$A[1,]		<- mc$pars$Z2[1,] + rnbinom(ncol(mc$pars$A), mc$pars$Z2[1,], mc$pars$U[1,])
+		#	prior nu: set Poisson rate to the expected augmented counts, under average survey probability
+		mc$pars$NU			<- mean(mc$pars$N[,1]) / mean(dc$S)
+		#	total count: that s just the sum of Z
+		mc$pars$TOTALA[1,]	<- sum(mc$pars$A[1,])
+		#	proportions: draw from full conditional
+		mc$pars$ETA[1,]		<- rdirichlet(1, mc$pars$A[1,] + mc$pars$ETA_PRIOR[1,])			
+		#	store log of predictive likelihood
+		tmp	<- sum( dbinom(mc$pars$Z2[1,], size=mc$pars$A[1,], prob=mc$pars$U[1,], log=TRUE) ) +
+				dmultinom(mc$pars$A[1,], size=mc$pars$TOTALA[1,], prob=mc$pars$ETA[1,], log=TRUE)
+		set(mc$it.info2, 1L, 'LOG_PRED_LKL', tmp)
+		# 	store log of predictive prior		
+		tmp	<- dpois(mc$pars$TOTALA[1,], lambda=mc$pars$NU, log=TRUE) +
+				lddirichlet_vector(mc$pars$ETA[1,], nu=mc$pars$ETA_PRIOR[1,])	
+		set(mc$it.info2, 1L, 'LOG_PRED_PRIOR', tmp)
+		# 	store log posterior of Z2, N2
+		tmp	<- mc$it.info2[1,SAMPLE_POSTERIOR]
+		tmp	<- mc$it.info[tmp, LOG_LKL + LOG_PRIOR]
+		set(mc$it.info2, 1L, 'LOG_POSTERIOR', tmp)
+		#	
+		# run mcmc
+		options(warn=2)
+		for(i in 1L:(mc$n-1L))
+		{
+			mc$curr.it		<- i		
+			# determine source-recipient combination that will be updated in this iteration
+			update.count	<- (i-1L) %% mc$sweep + 1L		
+			# update A, TOTAL_A given ETA, Z2, N2, U for the source-recipient combination 'update.count'
+			if(update.count<=(mc$sweep-1L))
+			{
+				#	propose  			
+				A.prop					<- mc$pars$A[mc$curr.it,] 	
+				A.prop[update.count]	<- mc$pars$Z2[mc$curr.it,update.count] + rnbinom(1, mc$pars$Z2[mc$curr.it,update.count], mc$pars$U[1,update.count])			
+				TOTALA.prop				<- sum(A.prop)			
+				#	calculate MH ratio
+				log.prop.ratio			<- sum(dnbinom(mc$pars$A[mc$curr.it,update.count], size=mc$pars$Z2[mc$curr.it,update.count], prob=mc$pars$U[1,update.count], log=TRUE)) - 
+						sum(dnbinom(A.prop[update.count], size=mc$pars$Z2[mc$curr.it,update.count], prob=mc$pars$U[1,update.count], log=TRUE))
+				log.fc					<- sum(dbinom(mc$pars$Z2[mc$curr.it,update.count], size=mc$pars$A[mc$curr.it,update.count], prob=mc$pars$U[1,update.count], log=TRUE)) +
+						dmultinom(mc$pars$A[mc$curr.it,], prob=mc$pars$ETA[mc$curr.it,], log=TRUE) +
+						dpois(mc$pars$TOTALA[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)
+				log.fc.prop				<- sum(dbinom(mc$pars$Z2[mc$curr.it,update.count], size=A.prop[update.count], prob=mc$pars$U[1,update.count], log=TRUE)) +
+						dmultinom(A.prop, prob=mc$pars$ETA[mc$curr.it,], log=TRUE) +
+						dpois(TOTALA.prop, lambda=mc$pars$NU, log=TRUE)
+				log.mh.ratio			<- log.fc.prop - log.fc + log.prop.ratio
+				mh.ratio				<- min(1,exp(log.mh.ratio))	
+				#	update
+				mc$curr.it				<- mc$curr.it+1L
+				set(mc$it.info2, mc$curr.it, 'BLOCK', 'A-TOTALA')
+				set(mc$it.info2, mc$curr.it, 'PAR_ID', update.count)
+				set(mc$it.info2, mc$curr.it, 'MHRATIO', mh.ratio)
+				set(mc$it.info2, mc$curr.it, 'ACCEPT', as.integer(runif(1) < mh.ratio))
+				mc$pars$ETA[mc$curr.it,]	<- mc$pars$ETA[mc$curr.it-1L,]
+				mc$pars$Z2[mc$curr.it,]		<- mc$pars$Z2[mc$curr.it-1L,]
+				mc$pars$N2[mc$curr.it,]		<- mc$pars$N2[mc$curr.it-1L,]
+				set(mc$it.info2, mc$curr.it,'SAMPLE_POSTERIOR', mc$it.info2[mc$curr.it-1L,SAMPLE_POSTERIOR])
+				if(mc$verbose & mc$it.info2[mc$curr.it, ACCEPT])
+				{
+					print(paste0('it ',mc$curr.it,' ACCEPT A-TOTALA block ',update.count))
+				}
+				if(mc$it.info2[mc$curr.it, ACCEPT])
+				{
+					mc$pars$A[mc$curr.it,]		<- A.prop
+					mc$pars$TOTALA[mc$curr.it,]	<- TOTALA.prop				
+				}
+				if(mc$it.info2[mc$curr.it, !ACCEPT])
+				{
+					mc$pars$A[mc$curr.it,]		<- mc$pars$A[mc$curr.it-1L,]
+					mc$pars$TOTALA[mc$curr.it,]	<- mc$pars$TOTALA[mc$curr.it-1L,]				
+				}	
+			}
+			# update ETA given A, TOTAL_A, Z2, N2, U
+			if(update.count==mc$sweep)
+			{
+				#	propose from the full conditional 
+				ETA.prop				<- rdirichlet(1L, nu= mc$pars$A[mc$curr.it,]+mc$pars$ETA_PRIOR[1,])
+				#	always accept
+				#	update
+				mc$curr.it				<- mc$curr.it+1L
+				set(mc$it.info2, mc$curr.it, 'BLOCK', 'ETA')
+				set(mc$it.info2, mc$curr.it, 'PAR_ID', update.count)
+				set(mc$it.info2, mc$curr.it, 'MHRATIO', 1L)
+				set(mc$it.info2, mc$curr.it, 'ACCEPT', 1L)	
+				mc$pars$Z2[mc$curr.it,]		<- mc$pars$Z2[mc$curr.it-1L,]
+				mc$pars$N2[mc$curr.it,]		<- mc$pars$N2[mc$curr.it-1L,]			
+				mc$pars$A[mc$curr.it,]		<- mc$pars$A[mc$curr.it-1L,]
+				mc$pars$TOTALA[mc$curr.it,]	<- mc$pars$TOTALA[mc$curr.it-1L,]
+				set(mc$it.info2, mc$curr.it,'SAMPLE_POSTERIOR', mc$it.info2[mc$curr.it-1L,SAMPLE_POSTERIOR])
+				mc$pars$ETA[mc$curr.it,]	<- ETA.prop			
+			}			
+			# store log of predictive likelihood
+			tmp	<- sum( dbinom(mc$pars$Z2[mc$curr.it,], size=mc$pars$A[mc$curr.it,], prob=mc$pars$U[1,], log=TRUE) ) +
+					dmultinom(mc$pars$A[mc$curr.it,], size=mc$pars$TOTALA[mc$curr.it,], prob=mc$pars$ETA[mc$curr.it,], log=TRUE)
+			set(mc$it.info2, mc$curr.it, 'LOG_PRED_LKL', tmp)
+			# store log of predictive prior	
+			tmp	<- dpois(mc$pars$TOTALA[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +
+					lddirichlet_vector(mc$pars$ETA[1,], nu=mc$pars$ETA_PRIOR[1,])			
+			set(mc$it.info2, mc$curr.it, 'LOG_PRED_PRIOR', tmp)
+			# 	store log of posterior of Z2, N2
+			tmp	<- mc$it.info2[mc$curr.it,SAMPLE_POSTERIOR]
+			tmp	<- mc$it.info[tmp, LOG_LKL + LOG_PRIOR]
+			set(mc$it.info2, mc$curr.it, 'LOG_POSTERIOR', tmp)
+		}	
+		
+		#
+		#	copy from current mc to mc.skeleton
+		#
+		mc.skeleton$n				<- mc.skeleton$n + mc$n
+		mc.skeleton$pars$ETA		<- rbind(mc.skeleton$pars$ETA, mc$pars$ETA)
+		mc.skeleton$pars$A			<- rbind(mc.skeleton$pars$A, mc$pars$A)
+		mc.skeleton$pars$TOTALA		<- rbind(mc.skeleton$pars$TOTALA, mc$pars$TOTALA)
+		mc.skeleton$pars$Z2			<- rbind(mc.skeleton$pars$Z2, mc$pars$Z2)
+		mc.skeleton$pars$N2			<- rbind(mc.skeleton$pars$N2, mc$pars$N2)
+		mc.skeleton$pars$ETA_PRIOR	<- mc$pars$ETA_PRIOR
+		mc.skeleton$pars$U			<- mc$pars$U
+		mc.skeleton$pars$NU			<- mc$pars$NU
+		mc.skeleton$it.info2		<- rbind(mc.skeleton$it.info2, mc$it.info2)		
+	}
+	
+	mc	<- mc.skeleton
+
 	save(zm, rtpdm, rtr2, df, da, dc, mc, file=paste0(outfile.base,'_core_predict_mcmc_',paste0(opt, collapse=''),'.rda'))
 }
 
