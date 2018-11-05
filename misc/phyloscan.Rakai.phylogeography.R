@@ -2299,25 +2299,26 @@ RakaiFull.phylogeography.181006.figure.top.comms<- function()
 	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_topXinland_results.rda"
 	load(infile)
 	df		<- rbind(df, ans)
+	infile			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_topXinlandsubdistrict_results.rda"
+	load(infile)
+	df		<- rbind(df, ans)
 	
 	
 	#	clean up	
 	df[, STAT2:= gsub('([a-z0-9]+)-([a-z0-9]+)','\\2',STAT)]
 	df[, STAT:= gsub('([a-z0-9]+)-([a-z0-9]+)','\\1',STAT)]
-	df[, TOP:= as.numeric(gsub('([a-z]+)([0-9]+)([a-z]+)','\\2',STAT2))]	
-	df	<- subset(df, (grepl('inland',STAT2) & TOP<39-6) | grepl('com',STAT2))
-	tmp	<- df[, which(grepl('inland',STAT2))]
-	set(df, tmp, 'TOP', df[tmp, TOP/36])
-	tmp	<- df[, which(grepl('com',STAT2))]
-	set(df, tmp, 'TOP', df[tmp, TOP/40])		
+	df[, TOP:= as.numeric(gsub('([a-z]+)([0-9]+)([a-z]+)','\\2',STAT2))]
 	df[, STAT2:= gsub('([a-z]+)([0-9]+)([a-z]+)','\\3',STAT2)]
-	set(df, NULL, 'TR_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland','',TR_COMM_TYPE)])
-	set(df, NULL, 'REC_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland','',REC_COMM_TYPE)])
+	set(df, NULL, 'TR_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland|[0-9]+inlandsubdistrict','',TR_COMM_TYPE)])
+	set(df, NULL, 'REC_COMM_TYPE', df[, gsub('[0-9]+com|[0-9]+inland|[0-9]+inlandsubdistrict','',REC_COMM_TYPE)])
 	df[, FLOW:= paste0(TR_COMM_TYPE,'->',REC_COMM_TYPE)]
+	#	define top X percentage from top X number
+	tmp		<- df[, list(TOP_P=TOP/max(TOP), TOP=TOP, FLOW=FLOW, STAT=STAT), by='STAT2']
+	df		<- merge(df, tmp, by=c('STAT2','STAT','FLOW','TOP'))
 	
 	#	plot topXcom waifm top->other
 	tmp	<- subset(df, STAT2=='com' & STAT=='waifm' & TR_COMM_TYPE!=REC_COMM_TYPE & FLOW=='top->other')		
-	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
 			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
 			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
 			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
@@ -2326,7 +2327,7 @@ RakaiFull.phylogeography.181006.figure.top.comms<- function()
 	ggsave(paste0(outfile.base,'com_waifm_from_top_to_other.pdf'), w=10, h=5)
 	#	plot topXcom flows top->other	
 	tmp	<- subset(df, STAT2=='com' & STAT=='joint' & TR_COMM_TYPE!=REC_COMM_TYPE)
-	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
 			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
 			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
 			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
@@ -2337,7 +2338,7 @@ RakaiFull.phylogeography.181006.figure.top.comms<- function()
 	
 	#	plot topXinland waifm top->other
 	tmp	<- subset(df, STAT2=='inland' & STAT=='waifm' & TR_COMM_TYPE!=REC_COMM_TYPE & FLOW=='top->other')		
-	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
 			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
 			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
 			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
@@ -2346,13 +2347,32 @@ RakaiFull.phylogeography.181006.figure.top.comms<- function()
 	ggsave(paste0(outfile.base,'inland_waifm_from_top_to_other.pdf'), w=10, h=5)
 	#	plot topXinland flows top->other
 	tmp	<- subset(df, STAT2=='inland' & STAT=='joint' & TR_COMM_TYPE!=REC_COMM_TYPE)
-	ggplot(tmp, aes(x=TOP, fill=FLOW)) + 
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
 			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
 			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
 			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
 			labs(x='\ntop X inland communities that have most cases\n(in % of all communities)', y='proportion of transmissions\n') +
 			theme_bw()
 	ggsave(paste0(outfile.base,'inland_flows_from_top_to_other.pdf'), w=10, h=5)
+	
+	#	plot topXinlandsubdistrict waifm top->other
+	tmp	<- subset(df, STAT2=='inlandsubdistrict' & STAT=='waifm' & TR_COMM_TYPE!=REC_COMM_TYPE & FLOW=='top->other')		
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X communities in inland subdistricts that have most cases\n(in % of all communities)', y='proportion of transmissions to other communities,\namong all transmission starting in top X communities\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'inlandsubdistrict_waifm_from_top_to_other.pdf'), w=10, h=5)
+	#	plot topXinlandsubdistrict flows top->other
+	tmp	<- subset(df, STAT2=='inlandsubdistrict' & STAT=='joint' & TR_COMM_TYPE!=REC_COMM_TYPE)
+	ggplot(tmp, aes(x=TOP_P, fill=FLOW)) + 
+			geom_boxplot(aes(ymin=CL, lower=IL, middle=M, upper=IU, ymax=CU), stat='identity') + 
+			scale_x_continuous(labels=scales:::percent, breaks=seq(0.1, 0.9, 0.1)) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0)) +
+			labs(x='\ntop X communities in inland subdistricts  that have most cases\n(in % of all communities)', y='proportion of transmissions\n') +
+			theme_bw()
+	ggsave(paste0(outfile.base,'inlandsubdistrict_flows_from_top_to_other.pdf'), w=10, h=5)
 	
 }
 
@@ -5409,7 +5429,7 @@ RakaiFull.phylogeography.181006.flows.topXInland<- function(infile.inference=NUL
 	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
 		
 	ans		<- data.table(TR_COMM_TYPE=character(0), REC_COMM_TYPE=character(0), CL=numeric(0), CU=numeric(0), IL=numeric(0), IU=numeric(0), M=numeric(0), LABEL=character(0), LABEL2=character(0), STAT=character(0))
-	for(kk in 2:38)
+	for(kk in 2:35)
 	{
 		#
 		#	define top X inland
@@ -5645,6 +5665,168 @@ RakaiFull.phylogeography.181006.flows.topXComm<- function(infile.inference=NULL,
 	save(ans, file=paste0(outfile.base,'_topXcom_results.rda'))
 }
 
+
+RakaiFull.phylogeography.181006.flows.topXSubdistrict<- function(infile.inference=NULL, opt=NULL)
+{
+	require(data.table)
+	
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	load(infile.inference)
+	
+	
+	#	load info on sub-districts
+	load(infile.subdistricts)
+	tmp	<- as.data.table(community_id)
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))		
+	tmp	<- merge(tmp, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=as.integer(c('107','16','776','51','4','24','1','22'))), all=TRUE, by='COMM_NUM2')
+	set(tmp, tmp[, which(is.na(COMM_NUM))], 'COMM_NUM', tmp[is.na(COMM_NUM), as.character(COMM_NUM2)])
+	tmp	<- unique(subset(tmp, select=c(COMM_NUM, SUBDISTRICT)))
+	#	merge with desm
+	desm<- merge(desm, tmp, by='COMM_NUM',all.x=TRUE)
+	#	handle missing subdistrict names
+	set(desm, desm[, which(COMM_NUM=='36')], 'SUBDISTRICT', 'Kakuuto')
+	set(desm, desm[, which(COMM_NUM=='401')], 'SUBDISTRICT', 'Kitumba')	#probably not right
+	set(desm, desm[, which(COMM_NUM=='55')], 'SUBDISTRICT', 'Kitumba')	#same as 401	
+	set(desm, desm[, which(COMM_NUM=='51m')], 'SUBDISTRICT', 'Kakuuto')
+	stopifnot( !nrow(subset(desm, is.na(SUBDISTRICT))) )	
+	#	define subdistrict type as discussed with Kate
+	tmp	<- desm[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))), by=c('SUBDISTRICT')]
+	desm<- merge(desm, tmp, by='SUBDISTRICT')
+	#	add further info on subdistricts
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_popsize), SUBDISTRICT_POP=as.numeric(subdistrict_popsize)), by='SUBDISTRICT')
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivprev), SUBDISTRICT_HIV_PREV=as.numeric(subdistrict_hivprev)), by='SUBDISTRICT')
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivcase), SUBDISTRICT_HIV_CASE=as.numeric(subdistrict_hivcase)), by='SUBDISTRICT')
+	#	order communities by subdistrict case counts	
+	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','AREA','SUBDISTRICT','SUBDISTRICT_POP','SUBDISTRICT_HIV_PREV','SUBDISTRICT_HIV_CASE')]
+	dabs	<- dabs[order(AREA, SUBDISTRICT_HIV_CASE), ]
+	dabs[, COMM_NUM2:= rev(seq_len(nrow(dabs)))]
+	#	define top inland communities
+	kks		<- dabs[AREA=='inland', list(COMM_NUM2=max(COMM_NUM2)), by=c('SUBDISTRICT')][, sort(COMM_NUM2)]
+	
+	#	
+	#	load MCMC output
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"				
+	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
+	load(infile.inference)	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	#	make data.table
+	mcpi	<- as.data.table(mc$pars$PI)
+	mcpi[, IT:= seq.int(2, by=mc$sweep, length.out=nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
+	
+	ans		<- data.table(TR_COMM_TYPE=character(0), REC_COMM_TYPE=character(0), CL=numeric(0), CU=numeric(0), IL=numeric(0), IU=numeric(0), M=numeric(0), LABEL=character(0), LABEL2=character(0), STAT=character(0))
+	for(kk in kks)
+	{
+		#
+		#	define top X inland
+		com.top	<- paste0('top',kk,'inlandsubdistrict')
+		dabs[, COMM_TYPE2:= 'other']
+		set(dabs, dabs[, which(COMM_NUM2<=kk)], 'COMM_TYPE2', com.top)
+		
+		#
+		#	prepare data.table of proportions
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(dc)))
+		{
+			dc[, REC_COMM_TYPE:=NULL]
+			dc[, TR_COMM_TYPE:=NULL]
+		}			
+		if(any(c('REC_COMM_TYPE', 'TR_COMM_TYPE')%in%colnames(mcpi)))
+		{
+			mcpi[, REC_COMM_TYPE:=NULL]
+			mcpi[, TR_COMM_TYPE:=NULL]
+		}			
+		tmp	<- subset(dabs, select=c(COMM_NUM_A, COMM_TYPE2))
+		setnames(tmp, c('COMM_NUM_A', 'COMM_TYPE2'), c('TR_COMM_NUM_A', 'TR_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='TR_COMM_NUM_A')
+		setnames(tmp, c('TR_COMM_NUM_A', 'TR_COMM_TYPE'), c('REC_COMM_NUM_A', 'REC_COMM_TYPE'))
+		dc	<- merge(dc, tmp, by='REC_COMM_NUM_A')
+		if(!any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
+		}			
+		if(any('REC_SEX'==colnames(mcpi)))
+		{
+			tmp		<- subset(dc, select=c(REC_COMM_TYPE, TR_COMM_TYPE, COUNT_ID))
+		}					
+		mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
+		
+		#
+		#	calculate overall transmission flows fishing-inland
+		qs		<- c(0.025,0.25,0.5,0.75,0.975)
+		qsn		<- c('CL','IL','M','IU','CU')
+		
+		#
+		#	geography who infects whom matrix  between fisherfolk and others
+		#	adjusted P
+		z		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','TR_COMM_TYPE','IT')]
+		z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('REC_COMM_TYPE','TR_COMM_TYPE')]
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('joint-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	WAIFM
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{												
+					z		<- subset(mcpi, TR_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('REC_COMM_TYPE','IT')]
+					z		<- z[, list(REC_COMM_TYPE=REC_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]				
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='REC_COMM_TYPE']
+					z[, TR_COMM_TYPE:= group]
+					z
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, TR_COMM_TYPE, REC_COMM_TYPE)
+		z[, STAT:=paste0('waifm-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+		
+		#
+		#	sources
+		#
+		groups	<- mcpi[, unique(c(TR_COMM_TYPE, REC_COMM_TYPE))]
+		z		<- lapply(groups, function(group)
+				{				
+					z		<- subset(mcpi , REC_COMM_TYPE==group)
+					z		<- z[, list(PI=sum(PI)), by=c('TR_COMM_TYPE','IT')]
+					z		<- z[, list(TR_COMM_TYPE=TR_COMM_TYPE, PI=PI/sum(PI)), by=c('IT')]
+					z		<- z[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by='TR_COMM_TYPE']
+					z[, REC_COMM_TYPE:= group]
+				})
+		z		<- do.call('rbind',z)
+		z		<- dcast.data.table(z, TR_COMM_TYPE+REC_COMM_TYPE~P, value.var='Q')
+		z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+		z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+		setkey(z, REC_COMM_TYPE, TR_COMM_TYPE)
+		z[, STAT:=paste0('sources-',com.top)]
+		z[, DUMMY:= seq_len(nrow(z))]
+		ans		<- rbind(ans,z,fill=TRUE)	
+	}
+	save(ans, file=paste0(outfile.base,'_topXinlandsubdistrict_results.rda'))
+}
 
 RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile.inference=NULL, opt=NULL)
 {
@@ -6408,9 +6590,9 @@ RakaiFull.phylogeography.181006.mcmc.assess<- function(infile.inference=NULL, th
 	}
 	if(any(names(mc$pars)=='ETA'))
 	{
-		#	thin MCMC output
+		#	thin MCMC output, discard 2/3 of each MCMC as burn-in
 		mc$it.info2[, IT2:= seq_len(nrow(mc$it.info2))]
-		tmp				<- subset(mc$it.info2, BLOCK!='INIT' & PAR_ID%%mc$sweep==0)		
+		tmp				<- subset(mc$it.info2, BLOCK!='INIT' & PAR_ID%%mc$sweep==0 & IT> 150/3*2)		
 		tmp				<- tmp[,IT2]
 		mc$pars$Z2		<- mc$pars$Z2[tmp,,drop=FALSE]
 		mc$pars$N2		<- mc$pars$N2[tmp,,drop=FALSE]

@@ -90,7 +90,7 @@ raxml.cmd<- function(infile.fasta, outfile=paste(infile.fasta,'.newick',sep=''),
 	cmd				<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
 	cmd				<- paste(cmd, 'mv RAxML_bestTree.',basename(outfile),' "',outfile,'"\n',sep='')
 	cmd				<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
-	cmd				<- paste(cmd, 'mv ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
+	cmd				<- paste(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
 	cmd				<- paste(cmd,'cd $CWD\n', sep='')
 	cmd				<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
 	cmd				<- paste(cmd, "#######################################################
@@ -261,7 +261,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 		out.dir2<- file.path(out.dir,paste0(run.id,'_trees'))
 		cmd		<- paste(cmd,'\nmkdir -p ',out.dir2)		
 	}
-	cmd		<- paste(cmd, '\nmv ',run.id,'* "',out.dir2,'"\n',sep='')	
+	cmd		<- paste(cmd, '\ncp ',run.id,'* "',out.dir2,'"\n',sep='')	
 	#	zip up everything else
 	tmp		<- ''
 	if(length(window.coord)==2)
@@ -269,7 +269,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 	if(is.null(mem.save) || is.na(mem.save) || mem.save==0)
 	{
 		cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
-		cmd		<- paste(cmd, 'mv ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
+		cmd		<- paste(cmd, 'cp ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
 	}
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
@@ -308,11 +308,11 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	cmd		<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), collapse='\n',sep='')
 	#	move all files starting with current run ID
 	run.id	<- gsub('_patients.txt','',basename(file.patient))
-	cmd		<- paste(cmd, '\nmv ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
+	cmd		<- paste(cmd, '\ncp ',run.id,'* "',pty.args$out.dir,'"\n',sep='')	
 	#	zip up everything else	
 	tmp	<- paste(run.id,'_otherstuff.zip',sep='')
 	cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTj ',tmp,' "$file"\ndone\n',sep='')
-	cmd		<- paste(cmd, 'mv ',tmp,' "',pty.args$out.dir,'"\n',sep='')
+	cmd		<- paste(cmd, 'cp ',tmp,' "',pty.args$out.dir,'"\n',sep='')
 	#	clean up
 	cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')		
 	cmd
