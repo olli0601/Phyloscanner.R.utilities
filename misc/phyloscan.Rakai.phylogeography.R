@@ -748,7 +748,175 @@ RakaiFull.phylogeography.170421<- function()
 	
 }
 
-RakaiFull.phylogeography.181006.samplinglocations<- function()
+RakaiFull.phylogeography.181006.figure.topXInlandlocations<- function(infile.inference=NULL, opt=NULL)
+{
+	require(data.table)
+	
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	outfile.base		<- gsub('_data_with_inmigrants.rda','',infile.inference)
+	load(infile.inference)
+		
+	#
+	#	define top X
+	com.top	<- paste0('top',kk,'inland')
+	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+	dabs	<- dabs[order(COMM_TYPE, HIV_1516_YES), ]
+	dabs[, COM_NUM2:= rev(seq_len(nrow(dabs)))]
+	dabs[, TOP_P:= COM_NUM2/35]
+	
+	#	plot top 25%
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='')
+	ggsave(file=paste0(outfile.base,'_top25PCinland_locations.pdf'), h=7, w=7)
+	
+	
+	tmp	<- unique(subset(dabs, TOP_P<0.26, COMM_NUM_A))
+	setnames(tmp, 'COMM_NUM_A', 'TR_COMM_NUM_A')
+	tmp2<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, 'TR_COMM_NUM_A', 'REC_COMM_NUM_A')
+	merge(subset(rtr2, TR_COMM_NUM_A==REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')
+	tmp<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')	
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=tmp2, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='') +
+			coord_cartesian()
+	ggsave(file=paste0(outfile.base,'_top25PCinland_outflows.pdf'), h=7, w=7)
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=tmp, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='') +
+			coord_cartesian()
+	ggsave(file=paste0(outfile.base,'_top25PCinland_inflows.pdf'), h=7, w=7)
+	
+	
+	#	plot top 40%
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.41))), shape=21, size=6, alpha=1, colour='black') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='')
+	ggsave(file=paste0(outfile.base,'_top40PCinland_locations.pdf'), h=7, w=7)
+	
+	
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')	
+	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"
+	load(infile.inference)
+	#	add long lat to rtr2
+	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
+	rtr2	<- merge(rtr2, tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
+	rtr2	<- merge(rtr2, tmp, by='REC_COMM_NUM_A')
+	
+	#	thin MCMC output
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	gc()
+	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
+	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
+	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
+	colnames(mc$pars$N)	<- 'N'
+	#	prepare data.table of proportions
+	dc[, REC_COMM_TYPE:= as.character(factor(substr(REC_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
+	dc[, TR_COMM_TYPE:= as.character(factor(substr(TR_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
+	mcpi	<- as.data.table(mc$pars$PI)
+	mcpi[, IT:= seq.int(2, by=100, length.out=nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
+	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
+	tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
+	mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
+	mcpi[, SAME_REC_COMM:= factor(REC_COMM_NUM_A==TR_COMM_NUM_A, levels=c(TRUE,FALSE), labels=c('SAME_COMM_Y','SAME_COMM_N'))]
+	
+	#	we want: more in than out!
+	df		<- mcpi[, list(PI=sum(PI)), by=c('TR_COMM_NUM_A','TR_COMM_TYPE','SAME_REC_COMM','IT')]
+	setnames(df, c('TR_COMM_NUM_A','TR_COMM_TYPE'), c('COMM_NUM_A','COMM_TYPE'))
+	df		<- dcast.data.table(df, COMM_NUM_A+COMM_TYPE+IT~SAME_REC_COMM, value.var='PI')
+	set(df, df[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
+	set(df, df[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
+	setnames(df, 'SAME_COMM_N', 'FLOW_OUT')
+	df[, SAME_COMM_Y:=NULL]	
+	tmp		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_NUM_A','REC_COMM_TYPE','SAME_REC_COMM','IT')]
+	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('COMM_NUM_A','COMM_TYPE'))
+	tmp		<- dcast.data.table(tmp, COMM_NUM_A+COMM_TYPE+IT~SAME_REC_COMM, value.var='PI')
+	set(tmp, tmp[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
+	set(tmp, tmp[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
+	setnames(tmp, 'SAME_COMM_N', 'FLOW_IN')
+	tmp[, SAME_COMM_Y:=NULL]	
+	df		<- merge(df, tmp, by=c('COMM_NUM_A','COMM_TYPE','IT'), all=TRUE)
+	set(df, df[, which(is.na(FLOW_IN))], 'FLOW_IN', 0)
+	set(df, df[, which(is.na(FLOW_OUT))], 'FLOW_OUT', 0)
+	set(df, NULL, 'RATIO_OUT_IN', df[, FLOW_OUT/FLOW_IN])
+	set(df, df[, which(is.nan(RATIO_OUT_IN))], 'RATIO_OUT_IN', 1)
+	df		<- df[, list(P=qsn, Q=unname(quantile(RATIO_OUT_IN, p=qs))), by=c('COMM_TYPE','COMM_NUM_A')]
+	df		<- dcast.data.table(df, COMM_TYPE+COMM_NUM_A~P, value.var='Q')
+	dabs	<- merge(dabs, subset(df, select=c(COMM_NUM_A, CL, IL, M)), by='COMM_NUM_A', all.x=TRUE)
+		
+	#	plot IL>1
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='')
+	ggsave(file=paste0(outfile.base,'_topSourceComm_locations.pdf'), h=7, w=7)		
+	#	plot transmissions from IL>1
+	tmp	<- unique(subset(dabs, IL>1, COMM_NUM_A))
+	setnames(tmp, 'COMM_NUM_A', 'TR_COMM_NUM_A')
+	tmp2<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='TR_COMM_NUM_A')
+	setnames(tmp, 'TR_COMM_NUM_A', 'REC_COMM_NUM_A')
+	merge(subset(rtr2, TR_COMM_NUM_A==REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')
+	tmp<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')	
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=tmp2, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='') +
+			coord_cartesian()
+	ggsave(file=paste0(outfile.base,'_topSourceComm_outflows.pdf'), h=7, w=7)
+	ggmap(zm) +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=tmp, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
+			guides(fill='none') +
+			labs(x='', y='') +
+			coord_cartesian()
+	ggsave(file=paste0(outfile.base,'_topSourceComm_inflows.pdf'), h=7, w=7)
+	
+			
+	
+	#
+	#	calculate overall transmission flows fishing-inland	
+	df		<- mcpi[, list(PI=sum(PI)), by=c('TR_COMM_NUM_A','TR_COMM_TYPE','SAME_REC_COMM','IT')]
+	df		<- dcast.data.table(df, TR_COMM_TYPE+TR_COMM_NUM_A+IT~SAME_REC_COMM, value.var='PI')
+	set(df, df[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
+	set(df, df[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
+	df[, SAME_COMM_Y_WAIFM:= SAME_COMM_Y/(SAME_COMM_Y+SAME_COMM_N)]
+	df[, SAME_COMM_N_WAIFM:= SAME_COMM_N/(SAME_COMM_Y+SAME_COMM_N)]
+	df		<- melt(df, id.vars=c('TR_COMM_TYPE','TR_COMM_NUM_A','IT'), value.name='PI')
+	df		<- df[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('TR_COMM_TYPE','TR_COMM_NUM_A','variable')]
+	df		<- dcast.data.table(df, TR_COMM_TYPE+TR_COMM_NUM_A+variable~P, value.var='Q')
+	df[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	df[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	
+	rtr2
+}
+
+RakaiFull.phylogeography.181006.figure.samplinglocations<- function()
 {
 	require(data.table)
 	require(scales)
@@ -2474,6 +2642,8 @@ RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
 	set(rtr2, tmp, 'TR_X', rtr2[tmp,TR_INMIG_LON])
 	set(rtr2, tmp, 'TR_Y', rtr2[tmp,TR_INMIG_LAT])
 	
+	rtr3	<- copy(rtr2)
+	save(rtr3, file=file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_rtr2_adjusted_for_inmigrants.rda"))
 	
 	#
 	#	plot number of observed transmission flows
@@ -5530,6 +5700,49 @@ RakaiFull.phylogeography.181006.flows.topXInland<- function(infile.inference=NUL
 	save(ans, file=paste0(outfile.base,'_topXinland_results.rda'))
 }
 
+
+RakaiFull.phylogeography.181006.flows.massaction<- function(infile.inference=NULL, opt=NULL)
+{
+	require(data.table)
+	
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	load(infile.inference)
+	
+	#	rough calculation of infected and susceptible
+	dma	<- desm[, list(ELIG=sum(PART_EVER+PART_NEVER), HIV_P=sum(HIV_1516_YES)/sum(HIV_1516_YES+HIV_1516_NO)), by=c('COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+	dma[, INF:= round(ELIG*HIV_P)]
+	dma[, SU:= round(ELIG*(1-HIV_P))]
+	
+	#	make cross
+	tmp	<- as.data.table(expand.grid(TR_COMM_NUM_A=dma$COMM_NUM_A, REC_COMM_NUM_A=dma$COMM_NUM_A))
+	setnames(dma, colnames(dma), paste0('TR_',colnames(dma)))
+	tmp	<- merge(tmp, dma, by='TR_COMM_NUM_A')
+	setnames(dma, colnames(dma), gsub('TR_','REC_',colnames(dma)))
+	tmp	<- merge(tmp, dma, by='REC_COMM_NUM_A')
+	dma	<- copy(tmp)
+	
+	#	calculate distances
+	require(geosphere)
+	tmp	<- dma[, list(DIST_KM= 1e-3*distGeo(c(TR_LONG,TR_LAT),c(REC_LONG,REC_LAT))), by= c('TR_COMM_NUM_A','REC_COMM_NUM_A')]
+	dma	<- merge(dma, tmp, by=c('TR_COMM_NUM_A','REC_COMM_NUM_A'))
+	
+	#	calculate I*S and 10km -> decrease at factor of 2
+	tmp	<- 10 / log(2)
+	dma[, IS:= REC_SU*TR_INF]
+	dma[, IS_GR10:= REC_SU*TR_INF/exp(DIST_KM/tmp)]
+	tmp	<- 3 / log(2)
+	dma[, IS_GR3:= REC_SU*TR_INF/exp(DIST_KM/tmp)]
+	
+	#	calculate flow matrix
+	dma	<- melt(dma, id.vars=c('TR_COMM_NUM_A','REC_COMM_NUM_A','TR_COMM_TYPE','REC_COMM_TYPE'), measure.vars=c('IS','IS_GR3','IS_GR10'))
+	dma	<- dma[, list(value=sum(value)), by=c('TR_COMM_TYPE','REC_COMM_TYPE','variable')]
+	dma	<- merge(dma, dma[, list(TOTAL=sum(value)), by='variable'], by='variable')
+	dma[, FLOW_PROP:= value/TOTAL]
+	
+	
+}
 
 RakaiFull.phylogeography.181006.flows.topXComm<- function(infile.inference=NULL, opt=NULL)
 {

@@ -165,19 +165,21 @@ pty.MRC.stage1.generate.trees<- function()
 	#	so that trees with smallest size are generated first
 	tmp		<- infiles[, list(N_TAXA=as.integer(system(paste0('grep -c "^>" ', FI), intern=TRUE))), by=c('FI')]
 	infiles	<- merge(infiles, tmp, by='FI')
-	infiles	<- infiles[order(N_TAXA),]
-	infiles[, CASE_ID:= seq_len(nrow(infiles))]
+	infiles	<- infiles[order(N_TAXA),]	
 	
 	#
 	#	define pbs header, max 10,000 trees (re-start a few times)
 	#	create header first because RAXML call depends on single-core / multi-core
-	infiles	<- subset(infiles, CASE_ID<=1e4)
+	infiles	<- subset(infiles, PTY_RUN%in%c(4:19) & CASE_ID<=1e4)
+	infiles[, CASE_ID:= seq_len(nrow(infiles))]
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
 	hpc.walltime		<- 71						# walltime
 	hpc.q				<- NA						# PBS queue
-	hpc.mem				<- "2gb" 					# RAM	
+	hpc.mem				<- "2gb" 					# RAM
+	hpc.q				<- "pqeelab"				# PBS queue
+	hpc.mem				<- "6gb" 					# RAM	
 	hpc.array			<- infiles[, max(CASE_ID)]	# number of runs for job array	
 	#	define PBS header for job scheduler. this will depend on your job scheduler.
 	pbshead		<- "#!/bin/sh"
@@ -195,8 +197,8 @@ pty.MRC.stage1.generate.trees<- function()
 	
 	#
 	#	create UNIX bash script to generate trees with RAxML
-	#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
-	raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
+	raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
+	#raxml.pr	<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
 	raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
 	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]
 	pty.c[1,cat(CMD)]
