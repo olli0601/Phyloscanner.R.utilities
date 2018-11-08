@@ -750,6 +750,7 @@ RakaiFull.phylogeography.170421<- function()
 
 RakaiFull.phylogeography.181006.figure.topXInlandlocations<- function(infile.inference=NULL, opt=NULL)
 {
+	require(geosphere)
 	require(data.table)
 	
 	#	load desm
@@ -759,12 +760,12 @@ RakaiFull.phylogeography.181006.figure.topXInlandlocations<- function(infile.inf
 	load(infile.inference)
 		
 	#
-	#	define top X
-	com.top	<- paste0('top',kk,'inland')
-	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
-	dabs	<- dabs[order(COMM_TYPE, HIV_1516_YES), ]
+	#	define top X	
+	dabs		<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+	dabs		<- dabs[order(COMM_TYPE, HIV_1516_YES), ]
 	dabs[, COM_NUM2:= rev(seq_len(nrow(dabs)))]
 	dabs[, TOP_P:= COM_NUM2/35]
+	ctx			<- subset(dabs, TOP_P<0.26)
 	
 	#	plot top 25%
 	ggmap(zm) +
@@ -774,146 +775,189 @@ RakaiFull.phylogeography.181006.figure.topXInlandlocations<- function(infile.inf
 			labs(x='', y='')
 	ggsave(file=paste0(outfile.base,'_top25PCinland_locations.pdf'), h=7, w=7)
 	
+	#	fix inmigrants with unknown long / lat
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_COMM_NUM_A_MIG', 'umig6')
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_INMIGRATE_2YR', 'inmigrant_from_unknown')
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_LAT_MIG', -1)
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_LON_MIG', 32)
 	
-	tmp	<- unique(subset(dabs, TOP_P<0.26, COMM_NUM_A))
-	setnames(tmp, 'COMM_NUM_A', 'TR_COMM_NUM_A')
-	tmp2<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='TR_COMM_NUM_A')
-	setnames(tmp, 'TR_COMM_NUM_A', 'REC_COMM_NUM_A')
-	merge(subset(rtr2, TR_COMM_NUM_A==REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')
-	tmp<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')	
+	
+	#	define minimum distance to any top x community
+	tmp	<- subset(rtr3, grepl('inmigrant', TR_INMIGRATE_2YR) & !grepl('external|unknown', TR_INMIGRATE_2YR))
+	tmp2<- tmp[, {
+					z<- distGeo(c(TR_LON_MIG, TR_LAT_MIG), cbind( ctx$LONG, ctx$LAT ))					
+					list(	TOPX_CLOSEST= ctx$COMM_NUM[which.min(z)],
+							TOPX_CLOSEST_A= ctx$COMM_NUM_A[which.min(z)],
+							TOPX_DIST= 1e-3 * min(z))				
+				}, by='PAIRID']
+	tmp	<- merge(tmp, tmp2, by='PAIRID')
+	
+	subset(tmp, TR_COMM_NUM_A_MIG=='thd')
+	#	define inmigrant_from_topx and inmigrant_from_other
+	set(tmp, tmp[, which(TOPX_DIST>2)], c('TOPX_CLOSEST','TOPX_CLOSEST_A'), NA_character_)
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_INMIGRATE_2YR', 'inmigrant_from_topx')
+	set(tmp, tmp[, which(is.na(TOPX_CLOSEST))], 'TR_INMIGRATE_2YR', 'inmigrant_from_other')
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_COMM_NUM_A_MIG', tmp[!is.na(TOPX_CLOSEST), TOPX_CLOSEST_A])
+	tmp2	<- subset(ctx, select=c(COMM_NUM_A, LONG, LAT))
+	setnames(tmp2, c('COMM_NUM_A','LONG','LAT'), c('TOPX_CLOSEST_A','TR_LON_MIG2','TR_LAT_MIG2'))
+	tmp		<- merge(tmp, tmp2, by='TOPX_CLOSEST_A', all.x=TRUE)
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_LON_MIG', tmp[!is.na(TOPX_CLOSEST), TR_LON_MIG2])
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_LAT_MIG', tmp[!is.na(TOPX_CLOSEST), TR_LAT_MIG2])
+	set(tmp, NULL, c('TOPX_CLOSEST','TOPX_CLOSEST_A','TOPX_DIST','TR_LON_MIG2','TR_LAT_MIG2'), NULL)
+	rtr3	<- rbind(subset(rtr3, !( grepl('inmigrant', TR_INMIGRATE_2YR) & !grepl('external|unknown', TR_INMIGRATE_2YR) )), tmp)
+	
+	
+	setnames(rtr3, 
+			c('TR_COMM_NUM_A_MIG','TR_COMM_NUM_A','TR_INMIGRATE_2YR','TR_LON_MIG','TR_LAT_MIG','REC_LONG','REC_LAT'), 
+			c('TR_COMM_NUM_A','TR_COMM_NUM_A_ORIG','TR_INMIGRATE','TR_X','TR_Y','REC_X','REC_Y'))	
+		
+	
+	dabs.out	<- subset(rtr3, (TR_COMM_NUM_A%in%ctx$COMM_NUM_A & !REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='resident') | 
+								(!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & !REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='inmigrant_from_topx')
+							)	
+	dabs.within	<- subset(rtr3, (TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='resident') |
+								(!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='inmigrant_from_topx')
+							) 
+	dabs.in		<- subset(rtr3, (!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE!='inmigrant_from_topx') | 
+								(TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE!='inmigrant_from_topx' & TR_INMIGRATE!='resident')
+							)	
+	
 	ggmap(zm) +
 			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
-			geom_curve(data=tmp2, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
-			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
-			guides(fill='none') +
-			labs(x='', y='') +
-			coord_cartesian()
-	ggsave(file=paste0(outfile.base,'_top25PCinland_outflows.pdf'), h=7, w=7)
-	ggmap(zm) +
-			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
-			geom_curve(data=tmp, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			geom_point(data=subset(dabs.in, !grepl('external|unknown|resident',TR_INMIGRATE)), aes(x=TR_X, y=TR_Y), pch=18, size=4, alpha=1, colour='#66BD63') +			
+			geom_curve(data=subset(dabs.in, !grepl('external|unknown|inmigrant_from_topx',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			geom_curve(data=subset(dabs.in, grepl('external',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='deepskyblue1') +
+			geom_curve(data=subset(dabs.in, grepl('unknown',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='black') +
 			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
 			guides(fill='none') +
 			labs(x='', y='') +
 			coord_cartesian()
 	ggsave(file=paste0(outfile.base,'_top25PCinland_inflows.pdf'), h=7, w=7)
-	
-	
-	#	plot top 40%
 	ggmap(zm) +
-			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.41))), shape=21, size=6, alpha=1, colour='black') +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=dabs.out, aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
 			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
 			guides(fill='none') +
-			labs(x='', y='')
-	ggsave(file=paste0(outfile.base,'_top40PCinland_locations.pdf'), h=7, w=7)
+			labs(x='', y='') +
+			coord_cartesian()
+	ggsave(file=paste0(outfile.base,'_top25PCinland_outflows.pdf'), h=7, w=7)
+}
+
+RakaiFull.phylogeography.181006.figure.topXSubdistrict<- function(infile.inference=NULL, opt=NULL)
+{
+	require(geosphere)
+	require(data.table)
 	
-	
-	qs		<- c(0.025,0.25,0.5,0.75,0.975)
-	qsn		<- c('CL','IL','M','IU','CU')	
-	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"
+	#	load desm
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	outfile.base		<- gsub('_data_with_inmigrants.rda','',infile.inference)
 	load(infile.inference)
-	#	add long lat to rtr2
-	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
-	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
-	rtr2	<- merge(rtr2, tmp, by='TR_COMM_NUM_A')
-	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
-	rtr2	<- merge(rtr2, tmp, by='REC_COMM_NUM_A')
 	
-	#	thin MCMC output
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
-	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
-	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
-	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
-	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
-	gc()
-	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
-	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
-	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
-	colnames(mc$pars$N)	<- 'N'
-	#	prepare data.table of proportions
-	dc[, REC_COMM_TYPE:= as.character(factor(substr(REC_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
-	dc[, TR_COMM_TYPE:= as.character(factor(substr(TR_COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))]
-	mcpi	<- as.data.table(mc$pars$PI)
-	mcpi[, IT:= seq.int(2, by=100, length.out=nrow(mcpi))]
-	mcpi	<- melt(mcpi, id.vars='IT', variable.name='COUNT_ID', value.name='PI')
-	set(mcpi, NULL, 'COUNT_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',COUNT_ID)])
-	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(COUNT_ID)])
-	tmp		<- subset(dc, select=c(REC_COMM_NUM_A, REC_SEX, REC_COMM_TYPE, TR_COMM_NUM_A, TR_SEX, TR_COMM_TYPE, TR_OBS, COUNT_ID))
-	mcpi	<- merge(tmp, mcpi, by='COUNT_ID')
-	mcpi[, SAME_REC_COMM:= factor(REC_COMM_NUM_A==TR_COMM_NUM_A, levels=c(TRUE,FALSE), labels=c('SAME_COMM_Y','SAME_COMM_N'))]
+	#	define top X by sub-district
+	#	load info on sub-districts
+	infile.subdistricts		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_subdistrict_data.rda"
+	load(infile.subdistricts)
+	tmp	<- as.data.table(community_id)
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))		
+	tmp	<- merge(tmp, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=as.integer(c('107','16','776','51','4','24','1','22'))), all=TRUE, by='COMM_NUM2')
+	set(tmp, tmp[, which(is.na(COMM_NUM))], 'COMM_NUM', tmp[is.na(COMM_NUM), as.character(COMM_NUM2)])
+	tmp	<- unique(subset(tmp, select=c(COMM_NUM, SUBDISTRICT)))
+	#	merge with desm
+	desm<- merge(desm, tmp, by='COMM_NUM',all.x=TRUE)
+	#	handle missing subdistrict names
+	set(desm, desm[, which(COMM_NUM=='36')], 'SUBDISTRICT', 'Kakuuto')
+	set(desm, desm[, which(COMM_NUM=='401')], 'SUBDISTRICT', 'Kitumba')	#probably not right
+	set(desm, desm[, which(COMM_NUM=='55')], 'SUBDISTRICT', 'Kitumba')	#same as 401	
+	set(desm, desm[, which(COMM_NUM=='51m')], 'SUBDISTRICT', 'Kakuuto')
+	stopifnot( !nrow(subset(desm, is.na(SUBDISTRICT))) )	
+	#	define subdistrict type as discussed with Kate
+	tmp	<- desm[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))), by=c('SUBDISTRICT')]
+	desm<- merge(desm, tmp, by='SUBDISTRICT')
+	#	add further info on subdistricts
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_popsize), SUBDISTRICT_POP=as.numeric(subdistrict_popsize)), by='SUBDISTRICT')
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivprev), SUBDISTRICT_HIV_PREV=as.numeric(subdistrict_hivprev)), by='SUBDISTRICT')
+	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivcase), SUBDISTRICT_HIV_CASE=as.numeric(subdistrict_hivcase)), by='SUBDISTRICT')
+	#	order communities by subdistrict case counts	
+	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','AREA','SUBDISTRICT','SUBDISTRICT_POP','SUBDISTRICT_HIV_PREV','SUBDISTRICT_HIV_CASE')]
+	dabs	<- dabs[order(AREA, SUBDISTRICT_HIV_CASE), ]
+	dabs[, COMM_NUM2:= rev(seq_len(nrow(dabs)))]
+	dabs[, TOP_P:= COMM_NUM2/35]
+	ctx			<- subset(dabs, TOP_P<0.26)
 	
-	#	we want: more in than out!
-	df		<- mcpi[, list(PI=sum(PI)), by=c('TR_COMM_NUM_A','TR_COMM_TYPE','SAME_REC_COMM','IT')]
-	setnames(df, c('TR_COMM_NUM_A','TR_COMM_TYPE'), c('COMM_NUM_A','COMM_TYPE'))
-	df		<- dcast.data.table(df, COMM_NUM_A+COMM_TYPE+IT~SAME_REC_COMM, value.var='PI')
-	set(df, df[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
-	set(df, df[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
-	setnames(df, 'SAME_COMM_N', 'FLOW_OUT')
-	df[, SAME_COMM_Y:=NULL]	
-	tmp		<- mcpi[, list(PI=sum(PI)), by=c('REC_COMM_NUM_A','REC_COMM_TYPE','SAME_REC_COMM','IT')]
-	setnames(tmp, c('REC_COMM_NUM_A','REC_COMM_TYPE'), c('COMM_NUM_A','COMM_TYPE'))
-	tmp		<- dcast.data.table(tmp, COMM_NUM_A+COMM_TYPE+IT~SAME_REC_COMM, value.var='PI')
-	set(tmp, tmp[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
-	set(tmp, tmp[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
-	setnames(tmp, 'SAME_COMM_N', 'FLOW_IN')
-	tmp[, SAME_COMM_Y:=NULL]	
-	df		<- merge(df, tmp, by=c('COMM_NUM_A','COMM_TYPE','IT'), all=TRUE)
-	set(df, df[, which(is.na(FLOW_IN))], 'FLOW_IN', 0)
-	set(df, df[, which(is.na(FLOW_OUT))], 'FLOW_OUT', 0)
-	set(df, NULL, 'RATIO_OUT_IN', df[, FLOW_OUT/FLOW_IN])
-	set(df, df[, which(is.nan(RATIO_OUT_IN))], 'RATIO_OUT_IN', 1)
-	df		<- df[, list(P=qsn, Q=unname(quantile(RATIO_OUT_IN, p=qs))), by=c('COMM_TYPE','COMM_NUM_A')]
-	df		<- dcast.data.table(df, COMM_TYPE+COMM_NUM_A~P, value.var='Q')
-	dabs	<- merge(dabs, subset(df, select=c(COMM_NUM_A, CL, IL, M)), by='COMM_NUM_A', all.x=TRUE)
-		
-	#	plot IL>1
+	#	plot top 25%
 	ggmap(zm) +
-			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +
 			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
 			guides(fill='none') +
 			labs(x='', y='')
-	ggsave(file=paste0(outfile.base,'_topSourceComm_locations.pdf'), h=7, w=7)		
-	#	plot transmissions from IL>1
-	tmp	<- unique(subset(dabs, IL>1, COMM_NUM_A))
-	setnames(tmp, 'COMM_NUM_A', 'TR_COMM_NUM_A')
-	tmp2<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='TR_COMM_NUM_A')
-	setnames(tmp, 'TR_COMM_NUM_A', 'REC_COMM_NUM_A')
-	merge(subset(rtr2, TR_COMM_NUM_A==REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')
-	tmp<- merge(subset(rtr2, TR_COMM_NUM_A!=REC_COMM_NUM_A), tmp, by='REC_COMM_NUM_A')	
+	ggsave(file=paste0(outfile.base,'_top25PCinlandsubdistrict_locations.pdf'), h=7, w=7)
+	
+	#	fix inmigrants with unknown long / lat
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_COMM_NUM_A_MIG', 'umig6')
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_INMIGRATE_2YR', 'inmigrant_from_unknown')
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_LAT_MIG', -1)
+	set(rtr3, rtr3[, which(is.na(TR_LON_MIG))], 'TR_LON_MIG', 32)
+	
+	
+	#	define minimum distance to any top x community
+	tmp	<- subset(rtr3, grepl('inmigrant', TR_INMIGRATE_2YR) & !grepl('external|unknown', TR_INMIGRATE_2YR))
+	tmp2<- tmp[, {
+				z<- distGeo(c(TR_LON_MIG, TR_LAT_MIG), cbind( ctx$LONG, ctx$LAT ))					
+				list(	TOPX_CLOSEST= ctx$COMM_NUM[which.min(z)],
+						TOPX_CLOSEST_A= ctx$COMM_NUM_A[which.min(z)],
+						TOPX_DIST= 1e-3 * min(z))				
+			}, by='PAIRID']
+	tmp	<- merge(tmp, tmp2, by='PAIRID')
+	
+	#	define inmigrant_from_topx and inmigrant_from_other
+	set(tmp, tmp[, which(TOPX_DIST>2)], c('TOPX_CLOSEST','TOPX_CLOSEST_A'), NA_character_)
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_INMIGRATE_2YR', 'inmigrant_from_topx')
+	set(tmp, tmp[, which(is.na(TOPX_CLOSEST))], 'TR_INMIGRATE_2YR', 'inmigrant_from_other')
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_COMM_NUM_A_MIG', tmp[!is.na(TOPX_CLOSEST), TOPX_CLOSEST_A])
+	tmp2	<- subset(ctx, select=c(COMM_NUM_A, LONG, LAT))
+	setnames(tmp2, c('COMM_NUM_A','LONG','LAT'), c('TOPX_CLOSEST_A','TR_LON_MIG2','TR_LAT_MIG2'))
+	tmp		<- merge(tmp, tmp2, by='TOPX_CLOSEST_A', all.x=TRUE)
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_LON_MIG', tmp[!is.na(TOPX_CLOSEST), TR_LON_MIG2])
+	set(tmp, tmp[, which(!is.na(TOPX_CLOSEST))], 'TR_LAT_MIG', tmp[!is.na(TOPX_CLOSEST), TR_LAT_MIG2])
+	set(tmp, NULL, c('TOPX_CLOSEST','TOPX_CLOSEST_A','TOPX_DIST','TR_LON_MIG2','TR_LAT_MIG2'), NULL)
+	rtr3	<- rbind(subset(rtr3, !( grepl('inmigrant', TR_INMIGRATE_2YR) & !grepl('external|unknown', TR_INMIGRATE_2YR) )), tmp)
+	
+	
+	setnames(rtr3, 
+			c('TR_COMM_NUM_A_MIG','TR_COMM_NUM_A','TR_INMIGRATE_2YR','TR_LON_MIG','TR_LAT_MIG','REC_LONG','REC_LAT'), 
+			c('TR_COMM_NUM_A','TR_COMM_NUM_A_ORIG','TR_INMIGRATE','TR_X','TR_Y','REC_X','REC_Y'))	
+	
+	
+	dabs.out	<- subset(rtr3, (TR_COMM_NUM_A%in%ctx$COMM_NUM_A & !REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='resident') | 
+								(!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & !REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='inmigrant_from_topx')
+						)	
+	dabs.within	<- subset(rtr3, (TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='resident') |
+								(!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE=='inmigrant_from_topx')
+						) 
+	dabs.in		<- subset(rtr3, (!TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE!='inmigrant_from_topx') | 
+								(TR_COMM_NUM_A%in%ctx$COMM_NUM_A & REC_COMM_NUM_A%in%ctx$COMM_NUM_A & TR_INMIGRATE!='inmigrant_from_topx' & TR_INMIGRATE!='resident')
+						)	
+	
 	ggmap(zm) +
-			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +			
-			geom_curve(data=tmp2, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_point(data=subset(dabs.in, !grepl('external|unknown|resident',TR_INMIGRATE)), aes(x=TR_X, y=TR_Y), pch=18, size=4, alpha=1, colour='#66BD63') +			
+			geom_curve(data=subset(dabs.in, !grepl('external|unknown|inmigrant_from_topx',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			geom_curve(data=subset(dabs.in, grepl('external',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='deepskyblue1') +
+			geom_curve(data=subset(dabs.in, grepl('unknown',TR_INMIGRATE)), aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='black') +
 			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
 			guides(fill='none') +
 			labs(x='', y='') +
 			coord_cartesian()
-	ggsave(file=paste0(outfile.base,'_topSourceComm_outflows.pdf'), h=7, w=7)
+	ggsave(file=paste0(outfile.base,'_top25PCinlandsubdistrict_inflows.pdf'), h=7, w=7)
 	ggmap(zm) +
-			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(IL>1))), shape=21, size=6, alpha=1, colour='black') +			
-			geom_curve(data=tmp, aes(x=TR_LONG, xend=REC_LONG, y=TR_LAT, yend=REC_LAT), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#66BD63') +
+			geom_point(data=dabs, aes(x=LONG, y=LAT, fill=as.character(as.integer(TOP_P<0.26))), shape=21, size=6, alpha=1, colour='black') +			
+			geom_curve(data=dabs.out, aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), curvature=-0.2, arrow=arrow(length=unit(0.02, "npc"), type="closed", angle=15), lineend="butt", colour='#FF3030') +
 			scale_fill_manual(values=c('1'='#FF3030','0'='#66BD63')) +
 			guides(fill='none') +
 			labs(x='', y='') +
 			coord_cartesian()
-	ggsave(file=paste0(outfile.base,'_topSourceComm_inflows.pdf'), h=7, w=7)
-	
-			
-	
-	#
-	#	calculate overall transmission flows fishing-inland	
-	df		<- mcpi[, list(PI=sum(PI)), by=c('TR_COMM_NUM_A','TR_COMM_TYPE','SAME_REC_COMM','IT')]
-	df		<- dcast.data.table(df, TR_COMM_TYPE+TR_COMM_NUM_A+IT~SAME_REC_COMM, value.var='PI')
-	set(df, df[, which(is.na(SAME_COMM_Y))], 'SAME_COMM_Y', 0)
-	set(df, df[, which(is.na(SAME_COMM_N))], 'SAME_COMM_N', 0)
-	df[, SAME_COMM_Y_WAIFM:= SAME_COMM_Y/(SAME_COMM_Y+SAME_COMM_N)]
-	df[, SAME_COMM_N_WAIFM:= SAME_COMM_N/(SAME_COMM_Y+SAME_COMM_N)]
-	df		<- melt(df, id.vars=c('TR_COMM_TYPE','TR_COMM_NUM_A','IT'), value.name='PI')
-	df		<- df[, list(P=qsn, Q=unname(quantile(PI, p=qs))), by=c('TR_COMM_TYPE','TR_COMM_NUM_A','variable')]
-	df		<- dcast.data.table(df, TR_COMM_TYPE+TR_COMM_NUM_A+variable~P, value.var='Q')
-	df[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
-	df[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
-	
-	rtr2
+	ggsave(file=paste0(outfile.base,'_top25PCinlandsubdistrict_outflows.pdf'), h=7, w=7)
 }
 
 RakaiFull.phylogeography.181006.figure.samplinglocations<- function()
@@ -1675,13 +1719,6 @@ RakaiFull.phylogeography.181006.data.eligibility.participation.sequenced<- funct
 	de[, AGE_AT_MID_C:= cut(AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE)]
 	stopifnot( nrow(subset(de, is.na(AGE_AT_MID_C)))==0 )
 	
-	
-	#
-	#	get map
-	#
-	style	<- "feature:road|color:0x17202A&style=feature:water|color:0x2874A6&style=feature:administrative|visibility=off"
-	zm		<- get_googlemap(c(lon=31.65, lat=-0.66), scale=2, size=c(550,550), zoom=10, maptype="road", style=style)
-	
 	#
 	#	prepare inmigrant -- identify inmigrants from fishing communities and from external
 	#
@@ -1734,15 +1771,14 @@ RakaiFull.phylogeography.181006.data.eligibility.participation.sequenced<- funct
 	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub("KASEMSERO","KASENSERO",inmig_place)])
 	set(inmigrant, inmigrant[, which(grepl('KASENSERO',inmig_place))], 'inmig_place', 'KASENSERO')
 	set(inmigrant2, inmigrant2[, which(grepl('MALEMBO',inmig_place))], 'inmig_place', 'MALEMBO')
-	
 	#	define from_fishing and from_outside and from_inland
 	inmigrant[, INMIG_LOC:= 'inland' ]
-	set(inmigrant, inmigrant[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE',inmig_place))], 'INMIG_LOC','fisherfolk')
+	set(inmigrant, inmigrant[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE|KYABASIMBA',inmig_place))], 'INMIG_LOC','fisherfolk')
 	set(inmigrant, inmigrant[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
 	set(inmigrant, inmigrant[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
 	set(inmigrant, inmigrant[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')	
 	inmigrant2[, INMIG_LOC:= 'inland' ]
-	set(inmigrant2, inmigrant2[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE',inmig_place))], 'INMIG_LOC','fisherfolk')
+	set(inmigrant2, inmigrant2[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE|KYABASIMBA',inmig_place))], 'INMIG_LOC','fisherfolk')
 	set(inmigrant2, inmigrant2[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
 	set(inmigrant2, inmigrant2[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
 	set(inmigrant2, inmigrant2[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')
@@ -1757,10 +1793,10 @@ RakaiFull.phylogeography.181006.data.eligibility.participation.sequenced<- funct
 	set(inmigrant, tmp, 'INMIG_LOC', inmigrant[tmp, INMIG_LOC2])	
 	inmigrant[, table(INMIG_LOC)]
 	#	  external fisherfolk     inland    unknown 
-	#	   763         41       1577        373 
-	inmigrant	<- subset(inmigrant, select=c(RCCS_studyid, date, INMIG_LOC))	
-	inmigrant[, date:= hivc.db.Date2numeric(date)]	
-	setnames(inmigrant, colnames(inmigrant), gsub('DATE','INMIGRATE_DATE',gsub('RCCS_STUDYID','RID',toupper(colnames(inmigrant)))))
+	#	   763         41       1577        373
+	inmigrant[, INMIGRATE_DATE:= hivc.db.Date2numeric(date)]	
+	set(inmigrant, NULL, c('date','inmigrant','INMIG_LOC2'), NULL)
+	setnames(inmigrant, colnames(inmigrant), gsub('RCCS_STUDYID','RID',toupper(colnames(inmigrant))))		
 	#
 	#	inmigrants done
 	#
@@ -1769,17 +1805,18 @@ RakaiFull.phylogeography.181006.data.eligibility.participation.sequenced<- funct
 	#
 	#	add inmigrants to eligibility / participation
 	#
-	inmigrant	<- merge(inmigrant, de, by='RID', all.x=TRUE)
+	di			<- subset(inmigrant, select=c(RID, INMIGRATE_DATE, INMIG_LOC))
+	di			<- merge(di, de, by='RID', all.x=TRUE)
 	#	ignore inmigrants not seen in 15-16
-	inmigrant	<- subset(inmigrant, !is.na(STATUS))
+	di			<- subset(di, !is.na(STATUS))
 	#	only inmigration date closest to first visit and before the first visit
-	tmp			<- inmigrant[, list(FIRSTVISITDATE=min(DATE)), by='RID']
-	inmigrant	<- merge(inmigrant, tmp, by='RID')	
-	tmp			<- inmigrant[INMIGRATE_DATE<=FIRSTVISITDATE, list(INMIGRATE_DATE= INMIGRATE_DATE[which.min(FIRSTVISITDATE-INMIGRATE_DATE)]), by='RID']
-	inmigrant	<- merge(inmigrant, tmp, by=c('RID','INMIGRATE_DATE'))
-	inmigrant	<- unique(inmigrant, by=c('RID','VISIT'))
+	tmp			<- di[, list(FIRSTVISITDATE=min(DATE)), by='RID']
+	di			<- merge(di, tmp, by='RID')	
+	tmp			<- di[INMIGRATE_DATE<=FIRSTVISITDATE, list(INMIGRATE_DATE= INMIGRATE_DATE[which.min(FIRSTVISITDATE-INMIGRATE_DATE)]), by='RID']
+	di			<- merge(di, tmp, by=c('RID','INMIGRATE_DATE'))
+	di			<- unique(di, by=c('RID','VISIT'))
 	#	select those inmigrated in the last 2 years
-	tmp			<- subset(inmigrant, (FIRSTVISITDATE-INMIGRATE_DATE)<=2, c(RID, INMIG_LOC))
+	tmp			<- subset(di, (FIRSTVISITDATE-INMIGRATE_DATE)<=2, c(RID, INMIG_LOC))
 	setnames(tmp, 'INMIG_LOC', 'INMIG_2YRS_LOC')
 	tmp[, INMIG_2YRS:=1]
 	de			<- merge(de, tmp, by='RID', all.x=TRUE)
@@ -1856,7 +1893,7 @@ RakaiFull.phylogeography.181006.data.eligibility.participation.sequenced<- funct
 	rds[, sum(DEEP_SEQ_EVER)]	
 	# 	2700 (among those in rd who are not too old and did not die before 2010)	
 
-	save(des, desa, desm, rds, de, rd, inmigrant, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda')
+	save(des, desa, desm, rds, de, rd, di, inmigrant, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda')
 }
 
 RakaiFull.phylogeography.180322.table1<- function()
@@ -2556,94 +2593,18 @@ RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
 	require(Hmisc)
 	require(gtools)	#rdirichlet
 	
+	indir					<-  "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	infile					<- "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
 	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
 	load(file.path(indir, infile))
 	
+	setnames(rtr3, 
+			c('TR_COMM_NUM_A_MIG','TR_COMM_NUM_A','TR_INMIGRATE_2YR','TR_LON_MIG','TR_LAT_MIG','REC_LONG','REC_LAT'), 
+			c('TR_COMM_NUM_A','TR_COMM_NUM_A_ORIG','TR_INMIGRATE','TR_X','TR_Y','REC_X','REC_Y'))	
+	
 	#
 	#	all locations
 	comm.locs	<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT, COMM_TYPE)))
-	setnames(rtr2, c('TR_INMIGRATE_2YR','REC_INMIGRATE_2YR'), c('TR_INMIGRATE','REC_INMIGRATE'))
-	
-	#
-	#	define location from where inmigrants arrived 
-	rtr3	<- subset(rtr2, grepl('inmigrant',TR_INMIGRATE) & !grepl('external',TR_INMIGRATE))
-	#	update inmigrant with new resolved locations in inmigrant2
-	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData_v2.rda"
-	load(infile)
-	inmigrant	<- as.data.table(inmigrant)
-	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrants_withMissingGPS.csv"
-	inmigrant2	<- as.data.table(read.csv(infile))
-	inmigrant	<- merge(inmigrant, subset(inmigrant2, select=c('RCCS_studyid','visit','X')), by=c('RCCS_studyid','visit'), all.x=TRUE)
-	tmp			<- subset(inmigrant, !is.na(X), c(RCCS_studyid, visit, date, inmigrant))
-	inmigrant2	<- merge(inmigrant2, tmp, by=c('RCCS_studyid','visit'))
-	inmigrant	<- subset(inmigrant, is.na(X))
-	set(inmigrant, NULL, 'X', NULL)
-	set(inmigrant2, NULL, c('X','inmig_place_original','recode_city'), NULL)
-	inmigrant	<- rbind(inmigrant, inmigrant2)
-	#	prepare inmigrant -- identify inmigrants from fishing communities and from external
-	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub('DDIMO|DDIMU|DIMO|DIMU','DIMU',inmig_place)])
-	set(inmigrant, inmigrant[, which(grepl('MALEMBO',inmig_place))], 'inmig_place', 'MALEMBO')
-	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub("KASEMSERO","KASENSERO",inmig_place)])
-	set(inmigrant, inmigrant[, which(grepl('KASENSERO',inmig_place))], 'inmig_place', 'KASENSERO')
-	set(inmigrant, NULL, 'date', inmigrant[, hivc.db.Date2numeric(date)])	
-	#	define from_fishing and from_outside and from_inland
-	inmigrant[, INMIG_LOC:= 'inland' ]
-	set(inmigrant, inmigrant[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE',inmig_place))], 'INMIG_LOC','fisherfolk')
-	set(inmigrant, inmigrant[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
-	set(inmigrant, inmigrant[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
-	set(inmigrant, inmigrant[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')	
-	setnames(inmigrant, c('RCCS_studyid','date'), c('TR_RID','TR_VISIT_DATE'))	
-	rtr3	<- merge(unique(subset(rtr3, select=c(TR_RID, REC_RID, VISIT_FIRSTCONCPOS, DATE_FIRSTCONCPOS))), inmigrant, by='TR_RID', all.x=TRUE)
-	setnames(rtr3, c('inmig_lon','inmig_lat','INMIG_LOC'), c('TR_INMIG_LON','TR_INMIG_LAT','TR_INMIG_LOC'))
-	#	find inmigration event of transmitter that is at or before first time both were recorded infected
-	rtr3	<- subset(rtr3, DATE_FIRSTCONCPOS >= TR_VISIT_DATE)
-	tmp		<- rtr3[,  list(TR_VISIT_DATE=TR_VISIT_DATE[which.min(DATE_FIRSTCONCPOS-TR_VISIT_DATE)]), by=c('TR_RID','REC_RID','DATE_FIRSTCONCPOS')]
-	rtr3	<- merge(rtr3,tmp,by=c('TR_RID','REC_RID','DATE_FIRSTCONCPOS','TR_VISIT_DATE'))	
-	rtr3	<- subset(rtr3, select=c(TR_RID, REC_RID, VISIT_FIRSTCONCPOS, TR_INMIG_LON, TR_INMIG_LAT, TR_INMIG_LOC))
-	#	add to rtr2
-	rtr2	<- merge(rtr2,rtr3,by=c('TR_RID','REC_RID','VISIT_FIRSTCONCPOS'),all.x=TRUE)
-	
-	#
-	#	add coordinates to communities
-	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
-	setnames(tmp, c('COMM_NUM_A','LONG','LAT'), c('TR_COMM_NUM_A','TR_X','TR_Y'))
-	rtr2	<- merge(rtr2, tmp, by='TR_COMM_NUM_A')
-	setnames(tmp, c('TR_COMM_NUM_A','TR_X','TR_Y'), c('REC_COMM_NUM_A','REC_X','REC_Y'))
-	rtr2	<- merge(rtr2, tmp, by='REC_COMM_NUM_A')
-		
-	#
-	#	to plot flows from migrants, set up fake communities from migrant locations
-	#
-	#	set up dummy location in corner for inmigration from external 
-	#tmp		<- rtr2[, c(min(c(REC_X, TR_X)), max(c(REC_Y, TR_Y)))]
-	tmp		<- c(31.3,-0.34)
-	tmp2	<- rtr2[, which(grepl('external',TR_INMIGRATE))]
-	set(rtr2, tmp2, 'TR_INMIG_LON', tmp[1])
-	set(rtr2, tmp2, 'TR_INMIG_LAT', tmp[2])
-	#	set up dummy location in corner for inmigration from unknown
-	#tmp		<- rtr2[, c(max(c(REC_X, TR_X)), min(c(REC_Y, TR_Y)))]
-	tmp		<- c(32.0,-1.0)
-	tmp2	<- rtr2[, which(TR_INMIG_LOC=='unknown')]
-	set(rtr2, tmp2, 'TR_INMIG_LON', tmp[1])
-	set(rtr2, tmp2, 'TR_INMIG_LAT', tmp[2])
-	#	define fake community IDs
-	tmp		<- rtr2[, which(grepl('external',TR_INMIGRATE))]
-	set(rtr2, tmp, 'TR_INMIG_LOC', 'external')	
-	tmp		<- unique(subset(rtr2, !grepl('resident',TR_INMIGRATE), c(TR_INMIG_LON, TR_INMIG_LAT, TR_INMIG_LOC)))
-	tmp[, TR_COMM_NUM_A_MIG:= paste0(substr(TR_INMIG_LOC,1,1),'mig',seq_len(nrow(tmp)))]
-	rtr2	<- merge(rtr2, tmp, by=c('TR_INMIG_LON','TR_INMIG_LAT','TR_INMIG_LOC'), all.x=TRUE)
-	
-	#
-	#	change locations of transmitter if transmitter is inmigrant and flow is not between same areas
-	#
-	tmp		<- rtr2[, which(TR_INMIGRATE!='resident')]	
-	set(rtr2, tmp, 'TR_COMM_NUM_A', rtr2[tmp,TR_COMM_NUM_A_MIG])
-	set(rtr2, tmp, 'TR_X', rtr2[tmp,TR_INMIG_LON])
-	set(rtr2, tmp, 'TR_Y', rtr2[tmp,TR_INMIG_LAT])
-	
-	rtr3	<- copy(rtr2)
-	save(rtr3, file=file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_rtr2_adjusted_for_inmigrants.rda"))
 	
 	#
 	#	plot number of observed transmission flows
@@ -2662,7 +2623,7 @@ RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
 	#
 	#	define flows
 	#
-	dc		<- rtr2[, list(FLOW=length(PAIRID)), by=c('TR_COMM_NUM_A','TR_INMIGRATE','REC_COMM_NUM_A','TR_X','TR_Y','REC_X','REC_Y')]
+	dc		<- rtr3[, list(FLOW=length(PAIRID)), by=c('TR_COMM_NUM_A','TR_INMIGRATE','REC_COMM_NUM_A','TR_X','TR_Y','REC_X','REC_Y')]
 	tmp		<- dc[, which(substr(TR_COMM_NUM_A,1,1)=='u')]
 	set(dc, tmp, 'TR_INMIGRATE', dc[tmp, gsub('inland|fisherfolk','unknownloc',TR_INMIGRATE)])
 	set(dc, dc[, which(TR_INMIGRATE=='resident' & substr(TR_COMM_NUM_A,1,1)=='f')], 'TR_INMIGRATE', 'resident_fish')
@@ -2721,6 +2682,9 @@ RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
 	ggmap(zm) +	
 			geom_point( data=subset(comm.locs, COMM_TYPE=='fisherfolk', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='firebrick1', size=4 ) +
 			geom_point( data=subset(comm.locs, COMM_TYPE=='inland', c(LONG, LAT)), aes(x=LONG, y=LAT), colour='#66BD63', size=4 ) +
+			geom_point( data=unique(subset(dc, substr(REC_COMM_NUM_A,1,1)!='f' & grepl('inmigrant_from_fisherfolk',TR_INMIGRATE), c(TR_COMM_NUM_A, TR_X, TR_Y) )),
+					aes(x=TR_X, y=TR_Y), colour='firebrick1', size=4, pch=18) +
+			
 			geom_curve(	data=subset(dc, substr(TR_COMM_NUM_A,1,1)=='f' & substr(REC_COMM_NUM_A,1,1)!='f' & FLOW>0), 
 					aes(x=TR_X_EDGE, xend=REC_X_EDGE, y=TR_Y_EDGE, yend=REC_Y_EDGE, colour=TR_INMIGRATE, size=EDGE_LABEL2), 
 					curvature=curvature, arrow=arrow, lineend="butt", linejoin='mitre') +
@@ -5312,18 +5276,15 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	
 	infile.counts		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda"
 	infile.anymisedcom	<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
+	infile.map			<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_googlemap.rda'
 	if(is.null(infile.inference))
 	{
 		infile.inference<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"		
 	}
 	outfile.base		<- gsub('171122|170704','181006',gsub('_withmetadata.rda','',infile.inference))
 	
-	
-	#
 	#	get map
-	#
-	style	<- "feature:road|color:0x17202A&style=feature:water|color:0x2874A6&style=feature:administrative|visibility=off"
-	zm		<- get_googlemap(c(lon=31.65, lat=-0.66), scale=2, size=c(550,550), zoom=10, maptype="road", style=style)
+	load(infile.map)
 	
 	
 	#
@@ -5397,15 +5358,20 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	tmp[, FEMALE_INMIGRATE_1YR:= as.character(as.integer(FEMALE_TIME_INMIGRATED<=1))]
 	tmp[, FEMALE_INMIGRATE_2YR:= as.character(as.integer(FEMALE_TIME_INMIGRATED<=2))]	
 	tmp[, FEMALE_INMIGRATE_3YR:= as.character(as.integer(FEMALE_TIME_INMIGRATED<=3))]
-	tmp		<- subset(tmp, select=c(PAIRID, DATE_FIRSTCONCPOS, MALE_INMIG_LOC, MALE_INMIGRATE_1YR, MALE_INMIGRATE_2YR, MALE_INMIGRATE_3YR, FEMALE_INMIG_LOC, FEMALE_INMIGRATE_1YR, FEMALE_INMIGRATE_2YR, FEMALE_INMIGRATE_3YR))
+	#	define migration admin
+	tmp[, MALE_INMIGRATE_ADMIN:= paste(gsub(' ','_',MALE_INMIG_ADMIN0), gsub(' ','_',MALE_INMIG_ADMIN1), gsub(' ','_',MALE_INMIG_ADMIN2), gsub(' ','_',MALE_INMIG_ADMIN3), gsub(' ','_',MALE_INMIG_ADMIN4))]
+	tmp[, FEMALE_INMIGRATE_ADMIN:= paste(gsub(' ','_',FEMALE_INMIG_ADMIN0), gsub(' ','_',FEMALE_INMIG_ADMIN1), gsub(' ','_',FEMALE_INMIG_ADMIN2), gsub(' ','_',FEMALE_INMIG_ADMIN3), gsub(' ','_',FEMALE_INMIG_ADMIN4))]
+	tmp		<- subset(tmp, select=c(PAIRID, DATE_FIRSTCONCPOS, 
+										MALE_INMIG_LOC, MALE_INMIGRATE_1YR, MALE_INMIGRATE_2YR, MALE_INMIGRATE_3YR, MALE_INMIG_LON, MALE_INMIG_LAT, MALE_INMIGRATE_ADMIN,
+										FEMALE_INMIG_LOC, FEMALE_INMIGRATE_1YR, FEMALE_INMIGRATE_2YR, FEMALE_INMIGRATE_3YR, FEMALE_INMIG_LON, FEMALE_INMIG_LAT, FEMALE_INMIGRATE_ADMIN))
 	#	make compound variable
-	tmp		<- melt(tmp, id.vars=c('PAIRID','DATE_FIRSTCONCPOS','MALE_INMIG_LOC','FEMALE_INMIG_LOC'))
+	tmp		<- melt(tmp, id.vars=c('PAIRID','DATE_FIRSTCONCPOS','MALE_INMIG_LOC','MALE_INMIG_LON','MALE_INMIG_LAT','MALE_INMIGRATE_ADMIN','FEMALE_INMIG_LOC','FEMALE_INMIG_LON','FEMALE_INMIG_LAT','FEMALE_INMIGRATE_ADMIN'))
 	set(tmp, tmp[, which(value=='0')], 'value', 'resident')
 	tmp2	<- tmp[, which(value=='1' & grepl('^FEMALE_',variable))]
 	set(tmp, tmp2, 'value', tmp[tmp2, paste0('inmigrant_from_',FEMALE_INMIG_LOC)])
 	tmp2	<- tmp[, which(value=='1' & grepl('^MALE_',variable))]
 	set(tmp, tmp2, 'value', tmp[tmp2, paste0('inmigrant_from_',MALE_INMIG_LOC)])
-	tmp		<- dcast.data.table(tmp, PAIRID+DATE_FIRSTCONCPOS~variable, value.var='value')	
+	tmp		<- dcast.data.table(tmp, PAIRID+DATE_FIRSTCONCPOS+MALE_INMIG_LOC+MALE_INMIG_LON+MALE_INMIG_LAT+MALE_INMIGRATE_ADMIN+FEMALE_INMIG_LOC+FEMALE_INMIG_LON+FEMALE_INMIG_LAT+FEMALE_INMIGRATE_ADMIN~variable, value.var='value')	
 	#	tmp[, table(MALE_INMIGRATE_2YR,  MALE_INMIGRATE_3YR)]
 	#	only one more migration event when we allow for 3 years
 	#	ignore this
@@ -5417,6 +5383,15 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	#inmigrant_from_inland                         3                         0                     7                      2       14
 	#inmigrant_from_unknown                        0                         0                     1                      0        8
 	#resident                                     22                         4                    33                      6      174
+
+	#
+	#	add coordinates to communities
+	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
+	setnames(tmp, c('COMM_NUM_A','LONG','LAT'), c('MALE_COMM_NUM_A','MALE_LONG','MALE_LAT'))
+	rtpdm	<- merge(rtpdm, tmp, by='MALE_COMM_NUM_A')
+	setnames(tmp, c('MALE_COMM_NUM_A','MALE_LONG','MALE_LAT'), c('FEMALE_COMM_NUM_A','FEMALE_LONG','FEMALE_LAT'))
+	rtpdm	<- merge(rtpdm, tmp, by='FEMALE_COMM_NUM_A')
+
 
 	#
 	#	cast MALE FEMALE to TRM REC
@@ -5432,8 +5407,33 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	rtr2[, table(TR_INMIGRATE_2YR)]
 	#	5 transmitters with unknown origin
 
+	
+	rtr3	<- copy(rtr2)	
+	#	set up dummy location for inmigration from external 
+	tmp		<- c(31.3,-0.34)
+	tmp2	<- rtr3[, which(grepl('external',TR_INMIGRATE_2YR))]
+	set(rtr3, tmp2, 'TR_INMIG_LON', tmp[1])
+	set(rtr3, tmp2, 'TR_INMIG_LAT', tmp[2])
+	#	set up dummy location in corner for inmigration from unknown	
+	tmp		<- c(32.0,-1.0)
+	tmp2	<- rtr3[, which(grepl('unknown',TR_INMIG_LOC))]	
+	set(rtr3, tmp2, 'TR_INMIG_LON', tmp[1])
+	set(rtr3, tmp2, 'TR_INMIG_LAT', tmp[2])
+	#	define fake community IDs
+	tmp		<- unique(subset(rtr3, !grepl('resident',TR_INMIGRATE_2YR), c(TR_INMIG_LON, TR_INMIG_LAT, TR_INMIG_LOC)))
+	tmp[, TR_COMM_NUM_A_MIG:= paste0(substr(TR_INMIG_LOC,1,1),'mig',seq_len(nrow(tmp)))]
+	rtr3	<- merge(rtr3, tmp, by=c('TR_INMIG_LON','TR_INMIG_LAT','TR_INMIG_LOC'), all.x=TRUE)
+	tmp		<- rtr3[, which(grepl('resident',TR_INMIGRATE_2YR))]
+	set(rtr3, tmp, 'TR_COMM_NUM_A_MIG', rtr3[tmp,TR_COMM_NUM_A])
+	#	change locations of transmitter if transmitter is inmigrant and flow is not between same areas
+	rtr3[, TR_LON_MIG:= TR_LONG]
+	rtr3[, TR_LAT_MIG:= TR_LAT]	
+	tmp		<- rtr3[, which(TR_INMIGRATE_2YR!='resident')]	
+	set(rtr3, tmp, 'TR_LON_MIG', rtr3[tmp,TR_INMIG_LON])
+	set(rtr3, tmp, 'TR_LAT_MIG', rtr3[tmp,TR_INMIG_LAT])
+		
 	#	save
-	save(rtpdm, rtr2, zm, desm, file=paste0(outfile.base,'_phylogeography_data_with_inmigrants.rda'))
+	save(rtpdm, rtr2, rtr3, zm, desm, file=paste0(outfile.base,'_phylogeography_data_with_inmigrants.rda'))
 }
 
 RakaiFull.phylogeography.181006.flows.wrapper<- function()
