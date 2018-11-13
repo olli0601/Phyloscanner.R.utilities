@@ -6344,7 +6344,7 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 				sum(dbeta(mc$pars$S[mc$curr.it,], dc[, S_ALPHA], dc[, S_BETA], log=TRUE))
 		set(mc$it.info, mc$curr.it, 'LOG_PRIOR', tmp)		
 	}		
-	save(zm, rtpdm, rtr2, ds, dc, mc, file=paste0(outfile.base,'core_inference_mcmc_',paste0(opt, collapse=''),'.rda'))
+	save(zm, rtpdm, rtr2, dc, mc, file=paste0(outfile.base,'core_inference_mcmc_',paste0(opt, collapse=''),'.rda'))
 }
 
 
