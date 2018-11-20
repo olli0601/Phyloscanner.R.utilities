@@ -174,8 +174,10 @@ pty.MRC.stage1.generate.trees<- function()
 	#		30 runs are roughly 10,000 trees
 	#		every time you set up a new job array, select the next 30 runs.   
 	#		For example, the job array will be 151:180
-	infiles	<- subset(infiles, PTY_RUN%in%c(191:230))
-	infiles[, CASE_ID:= seq_len(nrow(infiles))]
+	infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
+	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/10)]
+	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
@@ -218,7 +220,8 @@ pty.MRC.stage1.generate.trees<- function()
 	#	create UNIX bash script to generate trees with RAxML
 	#	
 	raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
-	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID')]
+	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID','CASE_ID2')]
+	pty.c	<- pty.c[, list(CMD=paste(CMD, collapse='\n')), by='CASE_ID']
 	pty.c[1,cat(CMD)]
 	
 	#

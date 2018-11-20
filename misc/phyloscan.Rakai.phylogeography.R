@@ -5259,11 +5259,9 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	require(data.table)
 	require(scales)
 	require(ggplot2)
-	require(ggmap)
 	require(grid)
 	require(gridExtra)
 	require(RColorBrewer)
-	require(Hmisc)	
 		
 	hivc.db.Date2numeric<- function( x )
 	{

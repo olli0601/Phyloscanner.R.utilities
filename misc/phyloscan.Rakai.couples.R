@@ -14860,26 +14860,60 @@ RakaiFull.analyze.trmpairs.femaleoutdegrees<- function()
 	
 	confidence.cut		<- 0.6
 	load(infile)
-	
 
-	#	get igraph from all edges in the transmission network
-	#	count linkages regardless of direction
-	tmp		<- unique(subset(rtn, select=c(ID1, ID2)))			
-	dg		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
-	#	calculate degrees
-	dg		<- degree(dg)
-	dg		<- data.table(ID=names(dg), DEGREE=as.numeric(dg))
-	#	get gender	
-	tmp		<- unique(subset(rd, select=c(RID,SEX)))
-	setnames(tmp, 'RID', 'ID')
-	dg		<- merge(dg, tmp, by='ID')
-	#	sort by gender, degree
-	dg		<- dg[order(SEX,-DEGREE),]
-	dg		<- subset(dg, SEX=='F' & DEGREE>3)		# 41 females
-	
-	#	another option would be to select for each pair only one link, either 12 or 21, whichever most likely, and then repeat
-	#	this would allow you to define outdegrees rather than indegree+outdegree
-	
+	#
+	#	calculate females with high out degree
+	#
+	if(1)
+	{
+		outfile	<- paste0(outfile.base,'_transmission_networks_high_out_degree_females.csv')
+		#	of all edges in the transmission network, keep 
+		#	the more likely direction
+		rtm	<- rtn[, list(TYPE= TYPE[ which.max(KEFF) ]), by=c('ID1','ID2','PTY_RUN','ID1_SEX','ID2_SEX')]
+		rtm	<- subset(rtm, !grepl('disconnected',TYPE))
+		tmp	<- subset(rtm, TYPE=='ambiguous')
+		set(tmp, NULL, 'TYPE', '12')
+		rtm	<- rbind(rtm, tmp)
+		set(tmp, NULL, 'TYPE', '21')
+		rtm	<- rbind(rtm, tmp)
+		rtm	<- subset(rtm, TYPE!='ambiguous')
+		tmp	<- subset(rtm, TYPE=='21')
+		setnames(tmp, c('ID1','ID2','ID1_SEX','ID2_SEX'), c('ID2','ID1','ID2_SEX','ID1_SEX'))
+		set(tmp, NULL, 'TYPE', '12')
+		rtm	<- rbind(subset(rtm, TYPE=='12'), tmp)
+		dg	<- rtm[, list(OUT_DEGREE=length(ID2)), by=c('ID1','ID1_SEX')]
+		dg	<- dg[order(ID1_SEX,-OUT_DEGREE),]
+		dg	<- subset(dg, ID1_SEX=='F' & OUT_DEGREE>1)	
+		setnames(dg, c('ID1','ID1_SEX','OUT_DEGREE'), c('ID','SEX','DEGREE'))
+		# 30 females
+	}
+	#
+	#	calculate females with high in+out degree
+	#
+	if(0)
+	{
+		outfile	<- paste0(outfile.base,'_transmission_networks_high_degree_females.csv')
+		#	get igraph from all edges in the transmission network
+		#	count linkages regardless of direction
+		tmp		<- unique(subset(rtn, select=c(ID1, ID2)))			
+		dg		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+		#	calculate degrees
+		dg		<- degree(dg)
+		dg		<- data.table(ID=names(dg), DEGREE=as.numeric(dg))
+		#	get gender	
+		tmp		<- unique(subset(rd, select=c(RID,SEX)))
+		setnames(tmp, 'RID', 'ID')
+		dg		<- merge(dg, tmp, by='ID')
+		#	sort by gender, degree
+		dg		<- dg[order(SEX,-DEGREE),]
+		dg		<- subset(dg, SEX=='F' & DEGREE>3)		
+		# 41 females		
+	}
+	#
+	#	write to csv file
+	#
+	write.csv(dg, row.names=FALSE, file=outfile)	
+
 	#
 	#	plot transmission networks with high degree females shown as triangles
 	#
@@ -14908,7 +14942,7 @@ RakaiFull.analyze.trmpairs.femaleoutdegrees<- function()
 						threshold.linked=0.6)	
 				p	
 			})
-	pdf(file=paste0(outfile.base,'_transmission_networks_high_degree_females.pdf'), w=8, h=8)
+	pdf(file=gsub('csv','pdf',outfile), w=8, h=8)
 	for(i in seq_along(pns))	
 		print(pns[[i]])
 	dev.off()	
@@ -19627,6 +19661,28 @@ RakaiFull.analyze.couples.todi.171122.distance.histogram.stage1.mostfrequent<- f
 	ggsave(file=paste0(outfile.base,'distances_consPatristic_filled_topmostfreq_part2_b.pdf'), w=5, h=4)
 }
 
+RakaiFull.analyze.couples.todi.171122.data.prep.for.Edward<- function()
+{	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	infile			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/171119/todi_couples_171122_cl25_d50_prior23_min30_withmetadata.rda'		
+	outfile.base	<- gsub('withmetadata.rda','',infile)		
+	load(infile)
+	# 
+	windows	<- subset(rpw, GROUP%in%c('TYPE_ADJ_NETWORK_SCORES','TYPE_BASIC'))
+	counts	<- subset(rplkl, GROUP=='TYPE_ADJ_NETWORK_SCORES')
+	set(counts, NULL, c('N_TYPE','PAR_PRIOR','POSTERIOR_ALPHA','POSTERIOR_BETA'), NULL)
+	couples	<- subset(rca, !grepl('insufficient',SELECT))
+	set(couples, NULL, c('MX_KEFF_MF','MX_KEFF_FM','POSTERIOR_SCORE_LINKED_MECN','NETWORK_SCORE_FM','NETWORK_SCORE_MF'), NULL)
+	save(couples, windows, counts, rd, rh, ra, file=paste0(outfile.base,'_for_Edward.rda'))
+	
+}
 
 RakaiFull.analyze.couples.todi.171122.distance.histogram.couples<- function()
 {	
