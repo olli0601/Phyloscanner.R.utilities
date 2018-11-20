@@ -5472,9 +5472,9 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infiles		<- c("RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
+		infiles		<- c(#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+						"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
