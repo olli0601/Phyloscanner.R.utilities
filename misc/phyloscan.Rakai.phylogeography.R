@@ -5472,21 +5472,21 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infiles		<- c(#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+		#infiles		<- c(#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
 						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-						"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
-						, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
-						)
-		for(ii in seq_along(infiles))
-		{
-			infile.inference	<- file.path(indir, infiles[[ii]])
-			RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
-		}
+						#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+						#, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+		#				)
+		#for(ii in seq_along(infiles))
+		#{
+		#	infile.inference	<- file.path(indir, infiles[[ii]])
+		#	RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
+		#}
 		#
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 0
@@ -5494,7 +5494,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infile.inference	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
 		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 1
@@ -5502,15 +5502,16 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infile.inference	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
-		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
+		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
+		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)
+		stop()
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 0
 		opt$adjust.participation.bias		<- 0
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infile.inference	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
 		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 1
@@ -5518,7 +5519,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 0
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infile.inference	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
 		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 1
@@ -5526,7 +5527,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 1
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		infile.inference	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
 		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
 	}
 		
@@ -5561,6 +5562,12 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 			#RakaiFull.phylogeography.181006.flows.netflows(infile.inference)
 		}
 	}
+	
+	#
+	#	predict flows between subdistrict areas
+	#
+	infile.mcmc	<- NA
+	RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.mcmc, mc.thin=5)
 }
 
 
@@ -6038,6 +6045,29 @@ RakaiFull.phylogeography.181006.flows.topXSubdistrict<- function(infile.inferenc
 	}
 	save(ans, file=paste0(outfile.base,'_topXinlandsubdistrict_results.rda'))
 }
+
+RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc<- function(infile.mcmc, mc.thin=NA)
+{
+	require(data.table)
+	load(infile.inference.mcmc)	
+	
+	#indir							<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"		
+	#infile.inference.mcmc			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda")
+	
+	#	thin MCMC output (aggressively)
+	if(is.na(mc.thin))
+		mc.thin	<- 5
+	mc.thin		<- mc$sweep*mc.thin
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc.thin)
+	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+	mc$it.info	<- mc$it.info[tmp,]
+	gc()	
+	save(zm, rtpdm, rtr2, dc, mc, file=gsub('\\.rda',paste0('_thinned',mc.thin,'sweep.rda'),infile.inference.mcmc))
+}
+
 
 RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile.inference=NULL, opt=NULL)
 {
@@ -7718,17 +7748,21 @@ RakaiFull.phylogeography.181006.predict.areaflows.old1<- function()
 	save(zm, rtpdm, rtr2, df, da, dc, mc, file=paste0(outfile.base,'_core_predict_mcmc_',paste0(opt, collapse=''),'.rda'))
 }
 
-RakaiFull.phylogeography.181006.predict.areaflows<- function()
+RakaiFull.phylogeography.181006.predict.areaflows<- function(indir=NA, infile.inference.data=NA, infile.inference.mcmc.thinned=NA, infile.subdistricts=NA)
 {	
 	require(data.table)	
 	require(Boom)	
 	
-	indir					<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
-	infile.inference.data	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")	
-	infile.inference.mcmc	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda")
-	infile.subdistricts		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_subdistrict_data.rda"
-	outfile.base			<- gsub('.rda$','',gsub('_core_inference_mcmc_[0-1]+','',infile.inference.mcmc))	
-	opt						<- ifelse(grepl('.*_([0-1]+)\\.rda',infile.inference.mcmc),gsub('.*_([0-1]+)\\.rda','\\1',infile.inference.mcmc),'') 
+	if(is.na(indir))
+		indir							<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	if(is.na(infile.inference.data))
+		infile.inference.data			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	if(is.na(infile.inference.mcmc.thinned))
+		infile.inference.mcmc.thinned	<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101_thinned5sweep.rda")
+	if(is.na(infile.subdistricts))
+		infile.subdistricts				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
+	outfile.base						<- gsub('.rda$','',gsub('_core_inference_mcmc_[0-1]+_thinned[0-9]+sweep','',infile.inference.mcmc.thinned))	
+	opt									<- ifelse(grepl('.*_([0-1]+)_thinned[0-9]+sweep\\.rda',infile.inference.mcmc.thinned),gsub('.*_([0-1]+)_thinned[0-9]+sweep\\.rda','\\1',infile.inference.mcmc.thinned),'') 
 	
 	#	load info on communities	
 	load(infile.inference.data)
@@ -7738,76 +7772,72 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function()
 	#	
 	
 	#	calculate eligible in RCCS communities
-	df	<- desm[, list(COMM_ELIGIBLE=sum(PART_EVER+PART_NEVER)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT')]
+	df	<- desm[, list(COMM_ELIGIBLE=sum(PART_EVER+PART_NEVER)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','SEX')]
 	df	<- merge(df, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=c('107','16','776','51','4','24','1','22')), all=TRUE, by='COMM_NUM')	
 	tmp	<- df[, which(is.na(COMM_NUM2))]
 	set(df, tmp, 'COMM_NUM2', df[tmp, COMM_NUM])
 	set(df, NULL, 'COMM_NUM2', df[, as.integer(COMM_NUM2)])	
 	#	associate subdistrict names to communities	
 	load(infile.subdistricts)
-	tmp	<- as.data.table(community_id)
+	tmp	<- subset(as.data.table(comgps2), select=c(COMM_NUM, loc))
 	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))
+	set(tmp, NULL, 'COMM_NUM2', tmp[, as.integer(as.character(COMM_NUM2))])
 	df	<- merge(df, tmp, by='COMM_NUM2', all=TRUE)
-	#	handle missing subdistrict names
-	set(df, df[, which(COMM_NUM2==36)], 'SUBDISTRICT', 'Kakuuto')
-	set(df, df[, which(COMM_NUM2==401)], 'SUBDISTRICT', 'Kitumba')	#probably not right
-	set(df, df[, which(COMM_NUM2==55)], 'SUBDISTRICT', 'Kitumba')	#same as 401
-	set(df, df[, which(COMM_NUM2==776)], 'SUBDISTRICT', 'Kakuuto')
-	set(df, df[, which(COMM_NUM2==51)], 'SUBDISTRICT', 'Kakuuto')
+	stopifnot( !any(is.na(df[,SUBDISTRICT])))
 	#	define subdistrict type as discussed with Kate
 	tmp	<- df[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))), by=c('SUBDISTRICT')]	
 	df	<- merge(tmp, df, by='SUBDISTRICT' )
+	# 	dcast
+	#df	<- dcast.data.table(df, SUBDISTRICT+AREA+COMM_NUM2+COMM_NUM+COMM_NUM_A +COMM_TYPE+LONG+LAT~SEX, value.var='COMM_ELIGIBLE')
+	#setnames(df, c('F','M'), c('COMM_ELIGIBLE_FEMALE','COMM_ELIGIBLE_MALE'))
+	#df[, COMM_ELIGIBLE:= COMM_ELIGIBLE_FEMALE+COMM_ELIGIBLE_MALE]
 	#	add further info on subdistricts
-	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_popsize), SUBDISTRICT_POP=as.numeric(subdistrict_popsize)), by='SUBDISTRICT')
-	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_hivprev), SUBDISTRICT_HIV_PREV=as.numeric(subdistrict_hivprev)), by='SUBDISTRICT')
-	df	<- merge(df, data.table(SUBDISTRICT=names(subdistrict_hivcase), SUBDISTRICT_HIV_CASE=as.numeric(subdistrict_hivcase)), by='SUBDISTRICT')
-	
+	tmp	<- as.data.table(subdis.data)
+	setnames(tmp, colnames(tmp), toupper(gsub('_count','_popcount',gsub('\\.','_',gsub('subdis.name','SUBDISTRICT',colnames(tmp))))))
+	set(tmp, NULL, c('SURVEY_HIVPREV','SURVEY_MALE_HIVPREV','SURVEY_FEMALE_HIVPREV','MAP_POPCOUNT','MAP_HIVCOUNT','MAP_HIVPREV'), NULL)
+	set(tmp, NULL, 'SUBDISTRICT', tmp[, gsub('Bbaali','Bbaale',SUBDISTRICT)])
+	tmp	<- melt(tmp, id.vars='SUBDISTRICT', value.name='MAP_POPCOUNT', variable.name='SEX')
+	set(tmp, NULL, 'SEX', tmp[, substr(gsub('MAP_([A-Z]+)_POPCOUNT','\\1',SEX),1,1)])
+	df	<- merge(df, tmp, by=c('SUBDISTRICT','SEX'), all.x=TRUE)
+		
 	#
 	#	define population surveyed by area
-	da	<- df[, list(SUBDISTRICT_POP=SUBDISTRICT_POP[1], POP_RCCS_YES=sum(COMM_ELIGIBLE), POP_RCCS_NO=SUBDISTRICT_POP[1]-sum(COMM_ELIGIBLE)), by=c('SUBDISTRICT','AREA')]
-	da	<- da[, list(POP_RCCS_YES=sum(POP_RCCS_YES), POP_RCCS_NO=round(sum(POP_RCCS_NO))), by=c('AREA')]
+	da	<- df[, list(	SUBDISTRICT_POP=MAP_POPCOUNT[1], POP_RCCS_YES=sum(COMM_ELIGIBLE), POP_RCCS_NO=MAP_POPCOUNT[1]-sum(COMM_ELIGIBLE)	), by=c('SUBDISTRICT','AREA','SEX')]
+	da	<- da[, lapply(.SD, sum, na.rm=TRUE), by=c('AREA','SEX'), .SDcols=c("POP_RCCS_YES","POP_RCCS_NO") ] 
+	
 	
 	#
 	#	prepare sampling from posterior predictive: aggregate samples from posterior density to area of subdistricts
 	#
-	load(infile.inference.mcmc)	
-	#	thin MCMC output (aggressively)
-	mc.thin		<- mc$sweep*5
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc.thin)
-	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
-	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
-	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
-	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
-	mc$it.info	<- mc$it.info[tmp,]
-	gc()
+	load(infile.inference.mcmc.thinned)
 	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
 	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
 	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
 	colnames(mc$pars$N)	<- 'N'
 	# 	aggregate random variables to subdistrict_type by using stick-breaking property
-	dc		<- subset(dc, select=c(TR_COMM_NUM_A, REC_COMM_NUM_A, COUNT_ID))
+	dc		<- subset(dc, select=c(TR_COMM_NUM_A, REC_COMM_NUM_A, TR_SEX, REC_SEX, COUNT_ID))
 	tmp		<- unique(subset(df, select=c(COMM_NUM_A, AREA)))
 	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
 	dc		<- merge(dc, tmp, by='TR_COMM_NUM_A')
 	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
 	dc		<- merge(dc, tmp, by='REC_COMM_NUM_A')	
-	tmp		<- unique(subset(dc, select=c(TR_AREA, REC_AREA)))
-	setkey(tmp, TR_AREA, REC_AREA)
+	tmp		<- unique(subset(dc, select=c(TR_AREA, REC_AREA, TR_SEX, REC_SEX)))
+	setkey(tmp, TR_AREA, REC_AREA, TR_SEX, REC_SEX)
 	tmp[, AREA_ID:= seq_len(nrow(tmp))]
-	dc		<- merge(dc, tmp, by=c('TR_AREA','REC_AREA'))	
+	dc		<- merge(dc, tmp, by=c('TR_AREA','REC_AREA','TR_SEX','REC_SEX'))	
 	mcpi	<- as.data.table(cbind(mc$pars$PI, mc$pars$Z))
 	mcpi[, IT:= seq_len(nrow(mcpi))]	
 	mcpi	<- melt(mcpi, id.vars='IT')	
 	set(mcpi, NULL, 'VAR', mcpi[, gsub('^([A-Z]+)-([0-9]+)$','\\1',variable)])	
 	set(mcpi, NULL, 'COUNT_ID', mcpi[, as.integer(gsub('^([A-Z]+)-([0-9]+)$','\\2',variable))])
 	mcpi	<- merge(mcpi, dc, by='COUNT_ID')
-	mcpi	<- mcpi[, list(value=sum(value)), by=c('AREA_ID','VAR','TR_AREA','REC_AREA','IT')]
-	dc		<- unique(subset(dc, select=c(AREA_ID, TR_AREA, REC_AREA)))
+	mcpi	<- mcpi[, list(value=sum(value)), by=c('AREA_ID','VAR','TR_AREA','REC_AREA','TR_SEX','REC_SEX','IT')]
+	dc		<- unique(subset(dc, select=c(AREA_ID, TR_AREA, REC_AREA, TR_SEX, REC_SEX)))
 	tmp		<- copy(da)
 	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))
-	dc		<- merge(dc, tmp, by='TR_AREA')
+	dc		<- merge(dc, tmp, by=c('TR_AREA','TR_SEX'))
 	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))
-	dc		<- merge(dc, tmp, by='REC_AREA')	
+	dc		<- merge(dc, tmp, by=c('REC_AREA','REC_SEX'))	
 	dc[, S:= 	TR_POP_RCCS_YES/(TR_POP_RCCS_YES+TR_POP_RCCS_NO) * 
 					REC_POP_RCCS_YES/(REC_POP_RCCS_YES+REC_POP_RCCS_NO)]	
 	#
