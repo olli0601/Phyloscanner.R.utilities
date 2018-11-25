@@ -5472,21 +5472,20 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$exclude.onART.from.denominator	<- 1
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-		#infiles		<- c(#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-						#"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
-						#, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
-						#, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
-		#				)
-		#for(ii in seq_along(infiles))
-		#{
-		#	infile.inference	<- file.path(indir, infiles[[ii]])
-		#	RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
-		#}
+		infiles		<- c( "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
+						)
+		for(ii in seq_along(infiles))
+		{
+			infile.inference	<- file.path(indir, infiles[[ii]])
+			RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
+		}
 		#
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 0
@@ -5503,8 +5502,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
 		infile.inference	<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
-		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)
-		stop()
+		RakaiFull.phylogeography.181006.gender.mobility.core.inference(infile.inference=infile.inference, opt=opt)		
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 0
 		opt$adjust.participation.bias		<- 0
@@ -5896,30 +5894,34 @@ RakaiFull.phylogeography.181006.flows.topXSubdistrict<- function(infile.inferenc
 	
 	#	load info on sub-districts
 	load(infile.subdistricts)
-	tmp	<- as.data.table(community_id)
-	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))		
+	tmp	<- subset(as.data.table(comgps2), select=c(COMM_NUM, loc))
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))
+	set(tmp, NULL, 'COMM_NUM2', tmp[, as.integer(as.character(COMM_NUM2))])
 	tmp	<- merge(tmp, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=as.integer(c('107','16','776','51','4','24','1','22'))), all=TRUE, by='COMM_NUM2')
 	set(tmp, tmp[, which(is.na(COMM_NUM))], 'COMM_NUM', tmp[is.na(COMM_NUM), as.character(COMM_NUM2)])
 	tmp	<- unique(subset(tmp, select=c(COMM_NUM, SUBDISTRICT)))
 	#	merge with desm
 	desm<- merge(desm, tmp, by='COMM_NUM',all.x=TRUE)
-	#	handle missing subdistrict names
-	set(desm, desm[, which(COMM_NUM=='36')], 'SUBDISTRICT', 'Kakuuto')
-	set(desm, desm[, which(COMM_NUM=='401')], 'SUBDISTRICT', 'Kitumba')	#probably not right
-	set(desm, desm[, which(COMM_NUM=='55')], 'SUBDISTRICT', 'Kitumba')	#same as 401	
-	set(desm, desm[, which(COMM_NUM=='51m')], 'SUBDISTRICT', 'Kakuuto')
 	stopifnot( !nrow(subset(desm, is.na(SUBDISTRICT))) )	
 	#	define subdistrict type as discussed with Kate
 	tmp	<- desm[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))), by=c('SUBDISTRICT')]
 	desm<- merge(desm, tmp, by='SUBDISTRICT')
+	
+	#
 	#	add further info on subdistricts
-	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_popsize), SUBDISTRICT_POP=as.numeric(subdistrict_popsize)), by='SUBDISTRICT')
-	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivprev), SUBDISTRICT_HIV_PREV=as.numeric(subdistrict_hivprev)), by='SUBDISTRICT')
-	desm<- merge(desm, data.table(SUBDISTRICT=names(subdistrict_hivcase), SUBDISTRICT_HIV_CASE=as.numeric(subdistrict_hivcase)), by='SUBDISTRICT')
+	tmp	<- as.data.table(subdis.data)
+	setnames(tmp, colnames(tmp), toupper(gsub('_count','_popcount',gsub('\\.','_',gsub('subdis.name','SUBDISTRICT',colnames(tmp))))))
+	set(tmp, NULL, c('SURVEY_HIVPREV','SURVEY_MALE_HIVPREV','SURVEY_FEMALE_HIVPREV','MAP_MALE_POPCOUNT','MAP_FEMALE_POPCOUNT'), NULL)
+	set(tmp, NULL, 'SUBDISTRICT', tmp[, gsub('Bbaali','Bbaale',SUBDISTRICT)])
+	desm<- merge(desm, tmp, by='SUBDISTRICT')
+	
+	
 	#	order communities by subdistrict case counts	
-	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','AREA','SUBDISTRICT','SUBDISTRICT_POP','SUBDISTRICT_HIV_PREV','SUBDISTRICT_HIV_CASE')]
-	dabs	<- dabs[order(AREA, SUBDISTRICT_HIV_CASE), ]
+	dabs	<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','AREA','SUBDISTRICT','MAP_POPCOUNT','MAP_HIVCOUNT','MAP_HIVPREV')]
+	dabs	<- dabs[order(AREA, MAP_HIVCOUNT), ]
 	dabs[, COMM_NUM2:= rev(seq_len(nrow(dabs)))]
+	save(dabs, file="~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_topXSubdistricts.rda")
+	
 	#	define top inland communities
 	kks		<- dabs[AREA=='inland', list(COMM_NUM2=max(COMM_NUM2)), by=c('SUBDISTRICT')][, sort(COMM_NUM2)]
 	
@@ -6231,10 +6233,12 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	
 	# calculate mean sampling probability
 	dc[, S:=   S_ALPHA/(S_ALPHA+S_BETA)]	
+	set(dc, dc[, which(S_MU==1 & S_SD==0)], 'S', 1)
 	
 	# set up mcmc objects
 	mc				<- list()
-	mc$n			<- 1e7
+	mc$n			<- 1e4
+	mc$sampling.on	<- dc[, !all(S_MU==1 & S_SD==0)]
 	mc$pars			<- list() 	
 	mc$pars$LAMBDA	<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=1)		#prior for proportions
 	mc$pars$S		<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=mc$n)	#sampling probabilities (product)
@@ -6270,7 +6274,7 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	#	(https://projecteuclid.org/euclid.ba/1422556416)	
 	mc$pars$LAMBDA[1,]	<- 0.8/nrow(dc)
 	# 	sampling: set to draw from prior
-	tmp					<- dc[, list(S= rbeta(1L, S_ALPHA, S_BETA)), by=c('COUNT_ID')]	
+	tmp					<- dc[, list(S=ifelse(S_MU==1 & S_SD==0, 1, rbeta(1L, S_ALPHA, S_BETA))), by=c('COUNT_ID')]	
 	setkey(tmp, COUNT_ID)			
 	mc$pars$S[1,]		<- tmp$S
 	#	augmented data: proposal draw under sampling probability
@@ -6285,10 +6289,14 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	tmp	<- sum( dbinom(dc$TR_OBS, size=mc$pars$Z[1,], prob=mc$pars$S[1,], log=TRUE) ) +
 			dmultinom(mc$pars$Z[1,], size=mc$pars$N[1,], prob=mc$pars$PI[1,], log=TRUE)
 	set(mc$it.info, 1L, 'LOG_LKL', tmp)
-	# 	store log prior		
-	tmp	<- dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +
-			lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) +
-			sum( dbeta( mc$pars$S[1,], dc[, S_ALPHA], dc[, S_BETA], log=TRUE ) )	
+	# 	store log prior	
+	tmp	<- lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) 	
+	if(mc$sampling.on)
+	{
+		tmp	<- tmp + 
+				dpois(mc$pars$N[1,], lambda=mc$pars$NU, log=TRUE) +				
+				sum( dbeta( mc$pars$S[1,], dc[, S_ALPHA], dc[, S_BETA], log=TRUE ) )			
+	}
 	set(mc$it.info, 1L, 'LOG_PRIOR', tmp)
 	
 	#	
@@ -6301,17 +6309,17 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 		# determine source-recipient combination that will be updated in this iteration
 		update.count	<- (i-1L) %% mc$sweep + 1L
 		# update S, Z, N for the source-recipient combination 'update.count'
-		if(update.count<mc$sweep)
+		if(mc$sampling.on & update.count<mc$sweep)
 		{
 			#	propose  
 			S.prop					<- mc$pars$S[mc$curr.it,]
-			S.prop[update.count]	<- dc[COUNT_ID==update.count, rbeta(1L, S_ALPHA, S_BETA)]		
+			S.prop[update.count]	<- dc[COUNT_ID==update.count, ifelse(S_MU==1 & S_SD==0, 1, rbeta(1L, S_ALPHA, S_BETA))]		
 			Z.prop					<- mc$pars$Z[mc$curr.it,]
 			Z.prop[update.count]	<- dc[COUNT_ID==update.count, TR_OBS + rnbinom(1, TR_OBS, S.prop[update.count])]
 			N.prop					<- sum(Z.prop)
 			#	calculate MH ratio
-			log.prop.ratio			<- sum(dnbinom(mc$pars$Z[mc$curr.it,update.count], size=dc$TR_OBS[update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) - 
-										sum(dnbinom(Z.prop[update.count], size=dc$TR_OBS[update.count], prob=S.prop[update.count], log=TRUE))
+			log.prop.ratio			<- sum(dnbinom(mc$pars$Z[mc$curr.it,update.count]-dc$TR_OBS[update.count], size=dc$TR_OBS[update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) - 
+										sum(dnbinom(Z.prop[update.count]-dc$TR_OBS[update.count], size=dc$TR_OBS[update.count], prob=S.prop[update.count], log=TRUE))
 			log.fc					<- sum(dbinom(dc$TR_OBS[update.count], size=mc$pars$Z[mc$curr.it,update.count], prob=mc$pars$S[mc$curr.it,update.count], log=TRUE)) +
 										dmultinom(mc$pars$Z[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE) +
 										dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE)
@@ -6345,7 +6353,7 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 			}	
 		}
 		# update PI
-		if(update.count==mc$sweep)
+		if(!mc$sampling.on | update.count==mc$sweep)
 		{
 			#	propose 
 			PI.prop					<- rdirichlet(1L, nu= mc$pars$Z[mc$curr.it,]+mc$pars$LAMBDA[1,])
@@ -6367,9 +6375,13 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 				dmultinom(mc$pars$Z[mc$curr.it,], size=mc$pars$N[mc$curr.it,], prob=mc$pars$PI[mc$curr.it,], log=TRUE)
 		set(mc$it.info, mc$curr.it, 'LOG_LKL', tmp)
 		# store log prior	
-		tmp	<- dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +
-				lddirichlet_vector(mc$pars$PI[1,], nu=mc$pars$LAMBDA[1,]) +
-				sum(dbeta(mc$pars$S[mc$curr.it,], dc[, S_ALPHA], dc[, S_BETA], log=TRUE))
+		tmp	<- lddirichlet_vector(mc$pars$PI[mc$curr.it,], nu=mc$pars$LAMBDA[1,])
+		if(mc$sampling.on)
+		{
+			tmp	<- tmp +
+					dpois(mc$pars$N[mc$curr.it,], lambda=mc$pars$NU, log=TRUE) +					
+					sum(dbeta(mc$pars$S[mc$curr.it,], dc[, S_ALPHA], dc[, S_BETA], log=TRUE))			
+		}	
 		set(mc$it.info, mc$curr.it, 'LOG_PRIOR', tmp)		
 	}		
 	save(zm, rtpdm, rtr2, dc, mc, file=paste0(outfile.base,'core_inference_mcmc_',paste0(opt, collapse=''),'.rda'))
