@@ -6237,7 +6237,7 @@ RakaiFull.phylogeography.181006.gender.mobility.core.inference<- function(infile
 	
 	# set up mcmc objects
 	mc				<- list()
-	mc$n			<- 1e4
+	mc$n			<- 1e7
 	mc$sampling.on	<- dc[, !all(S_MU==1 & S_SD==0)]
 	mc$pars			<- list() 	
 	mc$pars$LAMBDA	<- matrix(NA_real_, ncol=length(unique(dc$COUNT_ID)), nrow=1)		#prior for proportions
