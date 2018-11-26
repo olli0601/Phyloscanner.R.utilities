@@ -5462,7 +5462,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	#
 	#	core inference
 	#
-	if(1)
+	if(0)
 	{
 		indir		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'
 		indir		<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'
@@ -5564,8 +5564,20 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	#
 	#	predict flows between subdistrict areas
 	#
-	infile.mcmc	<- NA
-	RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.mcmc, mc.thin=5)
+	if(1)
+	{
+		indir							<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+		indir							<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'		
+		infile.mcmc						<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101_thinned5sweep.rda")
+		mc.thin							<- 5
+		infile.inference.mcmc.thinned	<- gsub('\\.rda',paste0('_thinned',mc.thin,'sweep.rda'),infile.inference.mcmc)		
+		RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.mcmc, mc.thin=mc.thin)
+		
+		infile.inference.data			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")						
+		infile.subdistricts				<- file.path(indir, "Subdistrict_Data_fromMapsAndSurvey.rda")		
+		RakaiFull.phylogeography.181006.predict.areaflows(indir=indir, infile.inference.data=infile.inference.data, infile.inference.mcmc.thinned=infile.inference.mcmc.thinned, infile.subdistricts=infile.subdistricts)						
+	}
+	
 }
 
 
@@ -5889,6 +5901,7 @@ RakaiFull.phylogeography.181006.flows.topXSubdistrict<- function(infile.inferenc
 	#	load desm
 	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	infile.subdistricts	<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
 	load(infile.inference)
 	
 	
@@ -7897,7 +7910,7 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function(indir=NA, infile.in
 	#
 	#	setup new MCMC to sample from posterior predictive distribution, each new MCMC corresponds to a sample from the posterior
 	#
-	for(ii in 1:1000)
+	for(ii in 1:10000)
 	{
 		# 	set up MCMC objects		
 		mc$sweep			<- 1L + dc[, max(AREA_ID)]
