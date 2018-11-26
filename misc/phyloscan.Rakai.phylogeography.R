@@ -5568,11 +5568,11 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	{
 		indir							<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 		indir							<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'		
-		infile.inference.mcmc			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101_thinned5sweep.rda")
-		mc.thin							<- 5
-		infile.inference.mcmc.thinned	<- gsub('\\.rda',paste0('_thinned',mc.thin,'sweep.rda'),infile.inference.mcmc)		
-		RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.mcmc, mc.thin=mc.thin)
+		infile.inference.mcmc			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda")
+		mc.thin							<- 5		
+		RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.inference.mcmc, mc.thin=mc.thin)
 		
+		infile.inference.mcmc.thinned	<- gsub('\\.rda',paste0('_thinned',mc.thin,'sweep.rda'),infile.inference.mcmc)
 		infile.inference.data			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")						
 		infile.subdistricts				<- file.path(indir, "Subdistrict_Data_fromMapsAndSurvey.rda")		
 		RakaiFull.phylogeography.181006.predict.areaflows(indir=indir, infile.inference.data=infile.inference.data, infile.inference.mcmc.thinned=infile.inference.mcmc.thinned, infile.subdistricts=infile.subdistricts)						

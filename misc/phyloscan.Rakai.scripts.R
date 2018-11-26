@@ -175,10 +175,10 @@ pty.MRC.stage1.generate.trees<- function()
 	#		every time you set up a new job array, select the next 30 runs.   
 	#		For example, the job array will be 151:180
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
-	infiles	<- subset(infiles, PTY_RUN%in%c(700:950))
+	infiles	<- subset(infiles, PTY_RUN%in%c(951:1350))
 	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
 	#infiles[, CASE_ID:= ceiling(CASE_ID2/10)]
-	infiles[, CASE_ID:= ceiling(CASE_ID2/6)]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/5)]
 	
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
