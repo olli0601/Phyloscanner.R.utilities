@@ -6061,7 +6061,7 @@ RakaiFull.phylogeography.181006.flows.topXSubdistrict<- function(infile.inferenc
 	save(ans, file=paste0(outfile.base,'_topXinlandsubdistrict_results.rda'))
 }
 
-RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc<- function(infile.mcmc, mc.thin=NA)
+RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc<- function(infile.inference.mcmc, mc.thin=NA)
 {
 	require(data.table)
 	load(infile.inference.mcmc)	
