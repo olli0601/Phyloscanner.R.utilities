@@ -5568,7 +5568,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	{
 		indir							<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 		indir							<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'		
-		infile.inference.mcmc			<- file.path(indir, "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc_11101.rda")
+		infile.inference.mcmc			<- file.path(indir, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_core_inference_mcmc_11101.rda")
 		mc.thin							<- 5		
 		RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc(infile.inference.mcmc, mc.thin=mc.thin)
 		
