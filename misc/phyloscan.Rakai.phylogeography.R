@@ -2590,11 +2590,11 @@ RakaiFull.phylogeography.181006.figure.flows.on.map<- function()
 	require(grid)
 	require(gridExtra)
 	require(RColorBrewer)
-	require(Hmisc)
 	require(gtools)	#rdirichlet
 	
 	indir					<-  "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	infile					<- "todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	infile					<- "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
 	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
 	load(file.path(indir, infile))
 	
@@ -6072,8 +6072,7 @@ RakaiFull.phylogeography.181006.gender.mobility.thin.mcmc<- function(infile.infe
 	#	thin MCMC output (aggressively)
 	if(is.na(mc.thin))
 		mc.thin	<- 5
-	mc.thin		<- mc$sweep*mc.thin
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc.thin)
+	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep*mc.thin)
 	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
 	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
 	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
@@ -6972,28 +6971,191 @@ RakaiFull.phylogeography.181006.table2<- function()
 	require(data.table)
 	indir	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'
 	
-	#	collect data for overall and by migration status
-	infile	<- 'todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_11110_flows_fishinlandmigration.rda'
-	outfile.base	<- file.path(indir, gsub('flows_fishinlandmigration.rda','',infile))
-	load(file.path(indir,infile))
-	df		<- copy(ans)
-	df[, ANALYSIS:= as.character(factor(grepl('2',STAT), levels=c(TRUE,FALSE), labels=c('overall','by migration status')))]
-	set(df, NULL, 'STAT', df[,gsub('waifm2','waifm',gsub('joint2','joint',STAT))])
-	#	collect data by gender
-	infile	<- 'todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_mcmc_11110_fishing_inland_results.rda'
-	load(file.path(indir,infile))
-	ans[, ANALYSIS:= 'by gender']
+	#	collect observed counts by gender
+	infile	<- file.path(indir,"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")		
+	load(infile)
+	z	<- copy(rtr3)
+	set(z, NULL, 'REC_COMM_TYPE', z[, as.character(factor(REC_COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))])
+	set(z, NULL, 'TR_COMM_TYPE', z[, as.character(factor(substr(TR_COMM_NUM_A_MIG,1,1), levels=c('f','a','t','i','e','u'), labels=c('fisherfolk','inland','inland2','inland3','external','unknown')))]) 
+	set(z, z[, which(grepl('inland',TR_COMM_TYPE))],'TR_COMM_TYPE','inland')				
+	#	count by gender
+	z	<- z[, list(N=length(PAIRID), STAT='joint', ANALYSIS='count by gender'), by=c('TR_COMM_TYPE','REC_COMM_TYPE','TR_SEX','REC_SEX')]
+	z[, M:= N/sum(N)]
+	z[, LABEL2:= paste0(N,' (',round(100*M, d=1),'%)')]
+	setnames(z, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR','REC'))
+	df		<- copy(z)
+	#	count overall
+	z	<- z[, list(N=sum(N), STAT='joint', ANALYSIS='count overall'), by=c('TR','REC')]	
+	z[, M:= N/sum(N)]
+	z[, LABEL2:= paste0(N,' (',round(100*M, d=1),'%)')]
+	df		<- rbind(df, z, fill=TRUE)
+	
+	setnames(rtr2, c('TR_INMIGRATE_2YR','REC_INMIGRATE_2YR'), c('TR_INMIGRATE','REC_INMIGRATE'))	
+	z	<- copy(rtr2)
+	set(z, NULL, 'TR_COMM_TYPE', z[, as.character(factor(TR_COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))])
+	set(z, NULL, 'REC_COMM_TYPE', z[, as.character(factor(REC_COMM_TYPE=='fisherfolk', levels=c(TRUE,FALSE), labels=c('fisherfolk','inland')))])
+	#	reset to simple migration status
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')
+	set(z, z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')], 'TR_INMIGRATE', 'resident')
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='inland' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')	
+	tmp2	<- z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_inland')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'inland')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')
+	tmp2	<- z[, which(TR_COMM_TYPE=='inland' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')]
+	set(z, tmp2, 'TR_COMM_TYPE', 'fisherfolk')
+	set(z, tmp2, 'TR_INMIGRATE', 'resident/outmigrant')		
+	set(z, z[, which(TR_COMM_TYPE=='fisherfolk' & REC_COMM_TYPE=='fisherfolk' & TR_INMIGRATE=='inmigrant_from_fisherfolk')], 'TR_INMIGRATE', 'resident')
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_external')], 'TR_COMM_TYPE', 'external')
+	set(z, z[, which(TR_INMIGRATE=='resident')], 'TR_INMIGRATE', 'resident/outmigrant')	
+	set(z, z[, which(TR_INMIGRATE=='inmigrant_from_unknown')], 'TR_COMM_TYPE', 'unknown')
+	
+		
+	#	collect inference results for overall and by migration status
+	infile	<- 'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_mcmc_11101_thinned1sweep_flows_fishinlandmigration.rda'
+	outfile.base	<- file.path(indir, gsub('thinned1sweep_flows_fishinlandmigration.rda','',infile))
+	load(file.path(indir,infile))	
+	ans[, ANALYSIS:= as.character(factor(grepl('2',STAT), levels=c(TRUE,FALSE), labels=c('inference overall','inference by migration status')))]
+	set(ans, NULL, 'STAT', ans[,gsub('waifm2','waifm',gsub('joint2','joint',STAT))])
+	setnames(ans, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR','REC'))
 	df		<- rbind(df, ans, fill=TRUE)
-	df		<- subset(df, !grepl('sources',STAT))
-	#	make pretty	
-	set(df, NULL, 'ANALYSIS', df[, factor(ANALYSIS, levels=c('overall','by gender','by migration status'))])
-	set(df, NULL, 'TR_COMM_TYPE', df[, factor(TR_COMM_TYPE, levels=c('fisherfolk','inland','external'))])
-	set(df, NULL, 'REC_COMM_TYPE', df[, factor(REC_COMM_TYPE, levels=c('fisherfolk','inland'))])
-	set(df, NULL, 'TR_INMIGRATE', df[, factor(TR_INMIGRATE, levels=c('resident/outmigrant','resident','outmigrant','inmigrant_from_external'))])	 
-	#df	<- subset(df, !(TR_COMM_TYPE=='external' & STAT=='joint2'))
-	df	<- dcast.data.table(df, ANALYSIS+TR_COMM_TYPE+TR_SEX+TR_INMIGRATE+REC_COMM_TYPE+REC_SEX~STAT, value.var='LABEL2')
-	setkey(df, ANALYSIS, TR_COMM_TYPE, TR_SEX, TR_INMIGRATE, REC_COMM_TYPE)
-	write.csv(df, row.names=FALSE, file=paste0(outfile.base, 'table_jointwaifm_by_overall_gender_migration.csv'))	
+	
+	#	collect inference results by gender
+	infile	<- 'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_mcmc_11101_thinned1sweep_fishing_inland_gender_results.rda'
+	load(file.path(indir,infile))
+	ans[, ANALYSIS:= 'inference by gender']
+	setnames(ans, c('TR_COMM_TYPE','REC_COMM_TYPE'), c('TR','REC'))
+	df		<- rbind(df, ans, fill=TRUE)
+	
+	#	collect prediction results for overall
+	infile	<- 'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_mcmc_11101_fishing_inland_predict.rda'
+	load(file.path(indir,infile))
+	ans[, ANALYSIS:= 'prediction overall']
+	setnames(ans, c('TR_AREA','REC_AREA'), c('TR','REC'))
+	df		<- rbind(df, ans, fill=TRUE)
+	
+	#	collect prediction results by gender
+	infile	<- 'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_mcmc_11101_fishing_inland_gender_predict.rda'
+	load(file.path(indir,infile))
+	ans[, ANALYSIS:= 'prediction by gender']
+	setnames(ans, c('TR_AREA','REC_AREA'), c('TR','REC'))
+	df		<- rbind(df, ans, fill=TRUE)
+	
+	#	make pretty		
+	set(df, NULL, 'TR', df[, factor(TR, levels=c('fisherfolk','inland','external','unknown'))])
+	set(df, NULL, 'REC', df[, factor(REC, levels=c('fisherfolk','inland'))])
+	
+	#	select for main table
+	df2	<- subset(df, grepl('overall',ANALYSIS) & STAT=='joint')
+	df2	<- dcast.data.table(df2, TR+REC~ANALYSIS, value.var='LABEL2')
+	write.csv(df2, row.names=FALSE, file=paste0(outfile.base, 'table_joint_by_overall.csv'))
+	
+	#	select for supp table by gender
+	df2	<- subset(df, grepl('gender',ANALYSIS) & STAT=='joint')
+	df2	<- dcast.data.table(df2, TR_SEX+TR+REC_SEX+REC~ANALYSIS, value.var='LABEL2')
+	write.csv(df2, row.names=FALSE, file=paste0(outfile.base, 'table_joint_by_gender.csv'))
+}
+
+
+RakaiFull.phylogeography.181006.flows.fishinland.predict<- function(infile.predict=NULL)
+{
+	require(data.table)		
+	if(is.null(infile.predict))
+	{
+		infile.predict	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_core_predict_mcmc_11101.rda"
+	}			
+	outfile.base		<- gsub('.rda$','',gsub('_core_predict','',infile.predict))
+	load(infile.predict)
+	
+	#	thin MCMC output
+	burn.in	<- mc$it.info2[, max(IT)/2]
+	tmp		<- mc$it.info2[, which(BLOCK=='ETA' & IT>burn.in)]
+	tmp		<- tmp[ seq.int(1, length(tmp), by=3) ]
+	mc$pars$A				<- mc$pars$A[tmp,,drop=FALSE]
+	mc$pars$TOTALA			<- mc$pars$TOTALA[tmp,,drop=FALSE]
+	mc$pars$ETA				<- mc$pars$ETA[tmp,,drop=FALSE]
+	mc$pars$Z2				<- mc$pars$Z2[tmp,,drop=FALSE]
+	mc$pars$N2				<- mc$pars$N2[tmp,,drop=FALSE]
+	mc$it.info2				<- mc$it.info2[tmp,] 
+	gc()
+	colnames(mc$pars$ETA)	<- paste0('ETA-',1:ncol(mc$pars$ETA))
+	
+	#
+	#	prepare data.table of proportions
+	mcpi	<- as.data.table(mc$pars$ETA)
+	mcpi[, IT:= seq_len(nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='AREA_ID', value.name='ETA')
+	set(mcpi, NULL, 'AREA_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',AREA_ID)])
+	set(mcpi, NULL, 'AREA_ID', mcpi[, as.integer(AREA_ID)])
+	tmp		<- subset(dc, select=c(REC_AREA, REC_SEX, TR_AREA, TR_SEX, AREA_ID))
+	mcpi	<- merge(tmp, mcpi, by='AREA_ID')
+	
+	#
+	#	calculate overall transmission flows fishing-inland
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	adjusted P
+	z		<- mcpi[, list(ETA=sum(ETA)), by=c('REC_AREA','TR_AREA','IT')]
+	z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by=c('REC_AREA','TR_AREA')]
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_AREA, TR_AREA)
+	z[, STAT:='joint']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- copy(z)	
+	
+	#
+	#	WAIFM
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{												
+				z		<- subset(mcpi, TR_AREA==group)
+				z		<- z[, list(ETA=sum(ETA)), by=c('REC_AREA','IT')]
+				z		<- z[, list(REC_AREA=REC_AREA, ETA=ETA/sum(ETA)), by=c('IT')]				
+				z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by='REC_AREA']
+				z[, TR_AREA:= group]
+				z
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_AREA, REC_AREA)
+	z[, STAT:='waifm']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	
+	#
+	#	sources
+	#
+	groups	<- c('inland','fisherfolk')
+	z		<- lapply(groups, function(group)
+			{				
+				z		<- subset(mcpi , REC_AREA==group)
+				z		<- z[, list(ETA=sum(ETA)), by=c('TR_AREA','IT')]
+				z		<- z[, list(TR_AREA=TR_AREA, ETA=ETA/sum(ETA)), by=c('IT')]
+				z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by='TR_AREA']
+				z[, REC_AREA:= group]
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_AREA, TR_AREA)
+	z[, STAT:='sources']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	
+	save(ans, file=paste0(outfile.base,'_fishing_inland_predict.rda'))
 }
 
 RakaiFull.phylogeography.181006.flows.fishinland<- function()
@@ -7102,18 +7264,21 @@ RakaiFull.phylogeography.181006.flows.fishinlandgender<- function(infile.inferen
 	
 	if(is.null(infile.inference))
 	{
-		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"
+		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_core_inference_mcmc_11101_thinned1sweep.rda"
 	}			
 	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
 	load(infile.inference)
 	
 	#	thin MCMC output
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
-	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
-	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
-	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
-	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
-	gc()
+	if(!grepl('thinned',infile.inference))
+	{
+		tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+		mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+		mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+		mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+		mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+		gc()		
+	}
 	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
 	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
 	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))
@@ -7167,8 +7332,7 @@ RakaiFull.phylogeography.181006.flows.fishinlandgender<- function(infile.inferen
 	setkey(z, TR_COMM_TYPE, REC_COMM_TYPE, TR_SEX, REC_SEX )
 	z[, STAT:='joint']
 	z[, DUMMY:= seq_len(nrow(z))]
-	ans		<- copy(z)	
-	z		<- NULL	
+	ans		<- copy(z)		
 	gc()
 	
 	#
@@ -7213,7 +7377,6 @@ RakaiFull.phylogeography.181006.flows.fishinlandgender<- function(infile.inferen
 	z[, STAT:='waifm']
 	z[, DUMMY:= seq_len(nrow(z))]
 	ans		<- rbind(ans,z)	
-	z		<- NULL	
 	gc()
 	
 	#
@@ -7256,11 +7419,120 @@ RakaiFull.phylogeography.181006.flows.fishinlandgender<- function(infile.inferen
 	setkey(z, REC_COMM_TYPE, REC_SEX, TR_COMM_TYPE, TR_SEX)
 	z[, STAT:='sources']
 	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)		
+	gc()
+		
+	save(ans, file=paste0(outfile.base,'_fishing_inland_gender_results.rda'))
+}
+
+RakaiFull.phylogeography.181006.flows.fishinlandgender.predict<- function(infile.predict=NULL)
+{	
+	require(data.table)	
+	require(Hmisc)	
+	
+	if(is.null(infile.predict))
+	{
+		infile.predict	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_core_predict_mcmc_11101.rda"
+	}			
+	outfile.base		<- gsub('.rda$','',gsub('_core_predict','',infile.predict))
+	load(infile.predict)
+	
+	#	thin MCMC output
+	burn.in	<- mc$it.info2[, max(IT)/2]
+	tmp		<- mc$it.info2[, which(BLOCK=='ETA' & IT>burn.in)]
+	tmp		<- tmp[ seq.int(1, length(tmp), by=3) ]
+	mc$pars$A				<- mc$pars$A[tmp,,drop=FALSE]
+	mc$pars$TOTALA			<- mc$pars$TOTALA[tmp,,drop=FALSE]
+	mc$pars$ETA				<- mc$pars$ETA[tmp,,drop=FALSE]
+	mc$pars$Z2				<- mc$pars$Z2[tmp,,drop=FALSE]
+	mc$pars$N2				<- mc$pars$N2[tmp,,drop=FALSE]
+	mc$it.info2				<- mc$it.info2[tmp,] 
+	gc()
+	colnames(mc$pars$ETA)	<- paste0('ETA-',1:ncol(mc$pars$ETA))
+	
+	#
+	#	prepare data.table of proportions
+	mcpi	<- as.data.table(mc$pars$ETA)
+	mcpi[, IT:= seq_len(nrow(mcpi))]
+	mcpi	<- melt(mcpi, id.vars='IT', variable.name='AREA_ID', value.name='ETA')
+	set(mcpi, NULL, 'AREA_ID', mcpi[, gsub('([A-Z]+)-([0-9]+)','\\2',AREA_ID)])
+	set(mcpi, NULL, 'AREA_ID', mcpi[, as.integer(AREA_ID)])
+	tmp		<- subset(dc, select=c(REC_AREA, REC_SEX, TR_AREA, TR_SEX, AREA_ID))
+	mcpi	<- merge(tmp, mcpi, by='AREA_ID')
+	
+	#
+	#	calculate overall transmission flows fishing-inland
+	qs		<- c(0.025,0.25,0.5,0.75,0.975)
+	qsn		<- c('CL','IL','M','IU','CU')
+	
+	#
+	#	geography who infects whom matrix  between fisherfolk and others
+	#	adjusted P
+	z		<- copy(mcpi)	
+	z		<- z[, list(ETA=sum(ETA)), by=c('REC_AREA','TR_AREA','TR_SEX','REC_SEX','IT')]
+	z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by=c('TR_AREA','TR_SEX','REC_AREA','REC_SEX')]
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA+TR_SEX+REC_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_AREA, REC_AREA, TR_SEX, REC_SEX )
+	z[, STAT:='joint']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- copy(z)	
+	z		<- NULL	
+	gc()
+	
+	#
+	#	WAIFM
+	#
+	groups	<- data.table(TR_AREA=c('inland','inland','fisherfolk','fisherfolk'), TR_SEX=c('M','F','M','F'))
+	z		<- lapply(1:nrow(groups), function(ii)
+			{												
+				z		<- copy(mcpi)
+				z		<- subset(z, TR_AREA==groups$TR_AREA[ii] & TR_SEX==groups$TR_SEX[ii])
+				z		<- z[, list(ETA=sum(ETA)), by=c('REC_AREA','REC_SEX','IT')]
+				z		<- z[, list(REC_AREA=REC_AREA, REC_SEX=REC_SEX, ETA=ETA/sum(ETA)), by=c('IT')]				
+				z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by=c('REC_AREA','REC_SEX')]
+				z[, TR_AREA:= groups$TR_AREA[ii] ]
+				z[, TR_SEX:= groups$TR_SEX[ii] ]
+				z
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA+TR_SEX+REC_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_AREA, TR_SEX, REC_AREA, REC_SEX)
+	z[, STAT:='waifm']
+	z[, DUMMY:= seq_len(nrow(z))]
 	ans		<- rbind(ans,z)	
 	z		<- NULL	
 	gc()
-		
-	save(ans, file=paste0(outfile.base,'_fishing_inland_results.rda'))
+	
+	#
+	#	sources
+	#
+	groups	<- data.table(REC_AREA=c('inland','inland','fisherfolk','fisherfolk'), REC_SEX=c('M','F','M','F'))
+	z		<- lapply(1:nrow(groups), function(ii)
+			{		
+				z		<- copy(mcpi)
+				z		<- subset(z, REC_AREA==groups$REC_AREA[ii] & REC_SEX==groups$REC_SEX[ii])
+				z		<- z[, list(ETA=sum(ETA)), by=c('TR_AREA','TR_SEX','IT')]
+				z		<- z[, list(TR_AREA=TR_AREA, TR_SEX=TR_SEX, ETA=ETA/sum(ETA)), by=c('IT')]
+				z		<- z[, list(P=qsn, Q=unname(quantile(ETA, p=qs))), by=c('TR_AREA','TR_SEX')]
+				z[, REC_AREA:= groups$REC_AREA[ii] ]
+				z[, REC_SEX:= groups$REC_SEX[ii] ]
+			})
+	z		<- do.call('rbind',z)
+	z		<- dcast.data.table(z, TR_AREA+REC_AREA+TR_SEX+REC_SEX~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_AREA, REC_SEX, TR_AREA, TR_SEX)
+	z[, STAT:='sources']
+	z[, DUMMY:= seq_len(nrow(z))]
+	ans		<- rbind(ans,z)	
+	z		<- NULL	
+	gc()
+	
+	save(ans, file=paste0(outfile.base,'_fishing_inland_gender_predict.rda'))
 }
 
 RakaiFull.phylogeography.181006.flows.netflows<- function(infile.inference=NULL)
@@ -8210,18 +8482,21 @@ RakaiFull.phylogeography.181006.flows.fishinlandmigrant<- function(infile.infere
 		
 	if(is.null(infile.inference))
 	{
-		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_core_inference_mcmc.rda"
+		infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_core_inference_mcmc_11101_thinned1sweep.rda"
 	}			
 	outfile.base		<- gsub('.rda$','',gsub('_core_inference','',infile.inference))
 	load(infile.inference)
 	
 	#	thin MCMC output
-	tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
-	mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
-	mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
-	mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
-	mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
-	gc()
+	if(!grepl('thinned',infile.inference))
+	{
+		tmp			<- seq.int(2, nrow(mc$pars$Z), mc$sweep)
+		mc$pars$S	<- mc$pars$S[tmp,,drop=FALSE]
+		mc$pars$Z	<- mc$pars$Z[tmp,,drop=FALSE]
+		mc$pars$PI	<- mc$pars$PI[tmp,,drop=FALSE]
+		mc$pars$N	<- mc$pars$N[tmp,,drop=FALSE]
+		gc()		
+	}	
 	colnames(mc$pars$S)	<- paste0('S-',1:ncol(mc$pars$S))
 	colnames(mc$pars$Z)	<- paste0('Z-',1:ncol(mc$pars$Z))
 	colnames(mc$pars$PI)<- paste0('PI-',1:ncol(mc$pars$PI))

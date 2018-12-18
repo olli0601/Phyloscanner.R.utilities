@@ -18373,6 +18373,16 @@ RakaiFull.analyze.trmpairs.todi.171122.anonymise<- function()
 	
 }
 
+RakaiFull.analyze.trmpairs.todi.171122.Bayes.calc<- function()
+{
+	pL1l0	<- 0.0002
+	pL1l1	<- 1-1e-10
+	pl1		<- 1e-3
+	pl0		<- 1-pl1
+	
+	pL1l0*pl0 / (pL1l0*pl0 + pL1l1*pl1)
+}
+
 RakaiFull.analyze.trmpairs.todi.171122.proportion.couples<- function()
 {
 	require(data.table)
