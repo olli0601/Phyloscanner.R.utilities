@@ -79,4 +79,102 @@ vl.get.data.round17<- function()
 	save(ds, file=file.path(prjdir,'data/merged_round17_vl_gps.rda'))
 }
 
+make.map.190129	<- function()
+{
+	require(data.table)
+	require(rgdal)
+	require(rgeos)
+	library(raster)
+	
+	# load data
+	infile	<- '~/Box Sync/OR_Work/2018/2018_RakaiViralLoad/data/merged_round17_vl_gps.rda'
+	load(infile)
+		
+	#convert the data into a data table
+	dt<- as.data.table(ds)
+	dt<- dt[,.(RCCS_STUDYID, SEX, AGEYRS, HIV_STATUS, LATITUDE_JITTER, LONGITUDE_JITTER, VL_COPIES, VL_UNDETECTABLE)]
+	#set the NA VL to 0
+	dt[is.na(VL_COPIES), VL_COPIES:=0]
+	dt[,VL_DETECTABLE := as.numeric(VL_COPIES>=1000)]
+	dt[,RCCS_STUDYID2:= seq_len(nrow(dt)) ]
+		
+	#################################################### load in maps
+	# Load in Uganda Shape files 
+	uganda1<-raster::getData('GADM',country="UGA",level=1)# Admin unit 1
+	uganda3<- raster::getData('GADM', country='UGA', level=3)
+	rakai1<-subset(uganda1, NAME_1=="Rakai")
+	rakai3<- subset(uganda3, NAME_1=="Rakai")
+	masaka1<-subset(uganda1, NAME_1=="Masaka")
+	# Create a smaller Rakai for plotting (not current Rakai region no longer includes kabula subdistrict 3)
+	#minirak<-rakai3[which(rakai3$NAME_2!="Kabula" | rakai3$NAME_3=="Lyantonde Tc" | rakai3$NAME_3=="Lyantonde"),]
+	minirak<-rakai3[which(rakai3$NAME_2!="Kabula" | rakai3$NAME_3=="Lyantonde Tc"),]
+	
+	####################################################### Convert the data to meters
+	#set the coordinates of the data
+	coordinates(dt)<- ~ LONGITUDE_JITTER+LATITUDE_JITTER
+	#set coordinate system to match uganda files
+	proj4string(dt) <- proj4string(uganda1)
+	
+	#convert to m in order to build a 30x30m grid
+	newcrs <- CRS("+proj=robin +datum=WGS84")
+	dtnew<- spTransform(dt, newcrs)
+	rakai1trans<- spTransform(rakai1, newcrs)
+	miniraktrans<- spTransform(minirak, newcrs)
+	masaka1trans<- spTransform(masaka1, newcrs)
+	
+	###################################################### Build Grid
+	#Combine rakai1trans and masaka1trans
+	outline<- union(rakai1trans, masaka1trans)
+	#find the extent of the data
+	exnew<- extent(dtnew)
+	#extent of the maps
+	exmap<- extent(outline)
+	
+	#chose extent to cover all the data and rakai district
+	
+	#With a 30m grid, I think the same individuals are usually entering calculations for a large number of grid points
+	#Do we really need a 30m grid? Why not 100m?
+
+	grid<- raster(xmn=min(exnew[1], exmap[1]), xmx= exnew[2], ymn=exmap[3], ymx=exnew[4], res=100 )
+	grid[]<- 1:ncell(grid)
+	
+	# set the coordinate reference system to match
+	proj4string(grid)<- proj4string(dtnew) 
+	
+	#restrict grid to map
+	gridmask<- mask(grid, outline)
+	
+	#plot(gridmask)
+	
+	#consider the grid points in a data frame
+	id<- as.data.table(1:ncell(gridmask))
+	setnames(id, "V1", "ID")
+	griddf<- as.data.table(SpatialPoints(grid))
+	griddf<- data.table(id, griddf)
+	setnames(griddf, gsub('y','LAT_GRID',gsub('x','LONG_GRID',colnames(griddf))))
+	
+	bw			<- 3000
+	#require(mvtnorm)
+	#dmvnorm( c(3.84,0) )	# ~ 9.996634e-05 
+	threshold	<- bw*3.84 	# cut if density is < 1e-4
+	threshold	<- threshold*threshold	# square the threshold, to avoid sqrt calculations in loop 		
+	
+	tmp			<- griddf[1:1e4,]
+	anst<- system.time({
+		ans	<- tmp[, {
+					z1	<- LONG_GRID - dtnew@coords[,'LONGITUDE_JITTER']
+					z2	<- LAT_GRID - dtnew@coords[,'LATITUDE_JITTER']
+					z1	<- z1*z1 + z2*z2 		# square distance
+					z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
+					# to avoid very large output data, calculate directly all smooths here
+					z1	<- sqrt(z1[z2])			# sqrt on few entries					
+					w	<- dnorm(z1, mu=0, sd=bw)
+					# code assumes @coords and @data has same order. 
+					list( 	HIV_STATUS_MEAN=mean( dtnew@data$HIV_STATUS[z2] ),				#no weighting by distance
+							HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w),	#Gaussian kernel
+							)
+				}, by=c('ID','LONG_GRID','LAT_GRID')]
+	})
+}
+
 

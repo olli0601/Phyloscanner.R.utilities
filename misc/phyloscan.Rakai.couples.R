@@ -1848,6 +1848,86 @@ RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.170811<- function()
 	save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)	
 }
 
+RakaiFull.NatComm.query.ARTnaive<- function()
+{
+	#
+	#	load couples to search for in phyloscanner output
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/couples/Couples_PANGEA_HIV_n4562_Imperial_v170505_info.rda")
+	#
+	#	load sequence data
+	load("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/circumcision/RCCS_SeqInfo_170505.rda")
+	setnames(rs, 'SAMPLE_DATE', 'SEQ_DATE')
+	#
+	#	load demographic info on all individuals
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rh		<- tmp$rh
+	rd		<- tmp$rd
+	#rn		<- tmp$rn
+	ra		<- tmp$ra
+	#set(rn, NULL, 'RID', rn[, as.character(RID)])
+	#rn		<- merge(rn, subset(rd, select=c(RID, FIRSTPOSVIS, FIRSTPOSDATE)), by='RID', all.x=1)
+	#tmp		<- rn[, which(is.na(FIRSTPOSDATE) & !is.na(RECENTVLDATE) & TIMESINCEVL==0)]	#this is dodgy
+	#set(rn, tmp, 'FIRSTPOSDATE', rn[tmp, RECENTVLDATE])		
+	#rd		<- rbind(rd, rn, use.names=TRUE, fill=TRUE)	#do not consider individuals in the neuro study that are not part of RCCS
+	set(rd, NULL, c('PID','SID'), NULL)
+	set(rd, NULL, 'SEX', rd[, as.character(SEX)])
+	set(rd, NULL, 'RECENTVL', rd[, as.numeric(gsub('< 150','1',gsub('> ','',gsub('BD','',gsub(',','',as.character(RECENTVL))))))])
+	set(rd, NULL, 'CAUSE_OF_DEATH', rd[, as.character(CAUSE_OF_DEATH)])
+	#	fixup rd: 
+	#	remove HIV reverters without sequence
+	rd		<- subset(rd, !RID%in%c("C117824","C119303","E118889","K067249"))
+	#	fixup complex serology
+	set(rd, rd[, which(RID=='B106184')], 'FIRSTPOSDATE', rd[which(RID=='B106184'),DATE])
+	set(rd, rd[, which(RID=='B106184')], c('LASTNEGVIS','LASTNEGDATE'), NA_real_)
+	set(rd, rd[, which(RID=='B106184')], c('HIVPREV'), 1)
+	set(rd, rd[, which(RID=='A008742')], 'FIRSTPOSDATE', rd[which(RID=='A008742'),DATE])
+	set(rd, rd[, which(RID=='A008742')], c('HIVPREV'), 1)
+	#	fixup rd: 
+	#	missing first pos date
+	rd		<- subset(rd, RID!='A038432')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='H013226')	#has missing firstposdate and not in PANGEA anyway
+	rd		<- subset(rd, RID!='K008173')	#has missing firstposdate and not in PANGEA anyway
+	stopifnot(!nrow(subset(rd, is.na(FIRSTPOSDATE))))	
+	#	fixup rd: 
+	#	there are duplicate RID entries with missing FIRSTPOSDATE, and ambiguous ARVSTARTDATE; or inconsistent across VISIT entries
+	#	missing FIRSTPOSDATE -> delete
+	#	ambiguous ARVSTARTDATE -> keep earliest	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	tmp[, DUMMY:=seq_len(nrow(tmp))]
+	tmp		<- merge(tmp, tmp[, {
+						ans	<- is.na(FIRSTPOSDATE)	
+						if(any(!is.na(ARVSTARTDATE)))
+							ans[!is.na(ARVSTARTDATE) & ARVSTARTDATE!=min(ARVSTARTDATE, na.rm=TRUE)]	<- TRUE
+						if(any(!is.na(FIRSTPOSVIS)))
+							ans[is.na(FIRSTPOSVIS) | (!is.na(FIRSTPOSVIS) & FIRSTPOSVIS!=min(FIRSTPOSVIS, na.rm=TRUE))]	<- TRUE							
+						list(DUMMY=DUMMY, DELETE=ans)		
+					}, by=c('RID')], by=c('RID','DUMMY'))
+	tmp		<- subset(tmp, !DELETE)
+	set(tmp, NULL,c('DUMMY','DELETE'), NULL)
+	set(rd, NULL, c('BIRTHDATE','LASTNEGDATE','FIRSTPOSVIS','FIRSTPOSDATE','ARVSTARTDATE','EST_DATEDIED'), NULL)
+	rd		<- merge(rd, tmp, by='RID')	
+	tmp		<- unique(subset(rd, select=c(RID, BIRTHDATE, LASTNEGDATE, FIRSTPOSVIS, FIRSTPOSDATE, ARVSTARTDATE, EST_DATEDIED)))
+	stopifnot(!nrow(merge(subset(tmp[, length(BIRTHDATE), by='RID'], V1>1), tmp, by='RID')))	
+	
+	# keep first and last sequence sampling date
+	tmp	<- subset(rs, RCCS_SHIP_BATCH!='neuro')
+	tmp	<- tmp[, list(SEQ_DATE_FIRST=min(SEQ_DATE), SEQ_DATE_LAST=max(SEQ_DATE), VISIT=VISIT[which.min(SEQ_DATE)]), by='RID']		
+	rds	<- merge(rd, tmp, by=c('RID','VISIT'))
+	
+	stopifnot(nrow(subset(rds, SEQ_DATE_FIRST!=DATE & SEQ_DATE_LAST!=DATE))==0)	
+	rds	<- subset(rds, SEQ_DATE_FIRST==DATE)
+	
+	subset(rds, SELFREPORTART==1) 
+	# --> this gives 246 entries, some of them clearly have ART start date before sampling date, and no measured VL
+
+	subset(rds, SELFREPORTART==0 & EVERSELFREPORTART==1) # 1340
+	subset(rds, SELFREPORTART==0 & EVERSELFREPORTART==1 & FIRSTSELFREPORTART<SEQ_DATE_FIRST) # 30
+	subset(rds, SELFREPORTART==0 & EVERSELFREPORTART==1 & FIRSTSELFREPORTART<SEQ_DATE_FIRST & RECENTVLDATE<SEQ_DATE_FIRST)
+	subset(rds, SELFREPORTART==0 & EVERSELFREPORTART==1 & FIRSTSELFREPORTART<SEQ_DATE_FIRST & RECENTVLDATE<SEQ_DATE_FIRST & RECENTVL<1000) #12
+	
+	subset(rd, select=c(RID, SEQ_DATE_FIRST, SEQ_DATE_LAST, PANGEA, ))
+}
+
 RakaiFull.preprocess.trmpairs.todi.phyloscanneroutput.171119<- function()
 {
 	require(data.table)	
@@ -20874,6 +20954,15 @@ RakaiFull.analyze.couples.todi.171122.illustrate.prior<- function()
 	require(RColorBrewer)
 	require(Hmisc)
 	outfile.base	<- '~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/figure_'
+	
+	
+	n<- 25	#29 #35	
+	df	<- data.table(C=seq(0.55,0.75,0.001))
+	df[, P:= pbeta(0.5,n*C+1,n-n*C+1,lower.tail=FALSE)]
+	
+	df[P>0.8,][1,]
+	df[P>0.95,][1,]
+	
 	
 	df	<- data.table(N=seq(1,30,1), LINKED=0.6*seq(1,30,1), UNLINKED=0.4*seq(1,30,1))
 	df	<- melt(df, id.vars='N', value.name='K')
