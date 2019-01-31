@@ -168,10 +168,10 @@ make.map.190129	<- function()
 					z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
 					# to avoid very large output data, calculate directly all smooths here
 					z1	<- sqrt(z1[z2])			# sqrt on few entries					
-					w	<- dnorm(z1, mu=0, sd=bw)
+					w	<- dnorm(z1, mean=0, sd=bw)
 					# code assumes @coords and @data has same order. 
 					list( 	HIV_STATUS_MEAN=mean( dtnew@data$HIV_STATUS[z2] ),				#no weighting by distance
-							HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w),	#Gaussian kernel
+							HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w)		#Gaussian kernel
 							)
 				}, by=c('ID','LONG_GRID','LAT_GRID')]
 	})
