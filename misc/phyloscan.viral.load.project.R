@@ -85,6 +85,7 @@ make.map.190129	<- function()
 	require(rgdal)
 	require(rgeos)
 	library(raster)
+	require(RColorBrewer) #Map colours
 	
 	# load data
 	infile	<- '~/Box Sync/OR_Work/2018/2018_RakaiViralLoad/data/merged_round17_vl_gps.rda'
@@ -136,14 +137,13 @@ make.map.190129	<- function()
 	#Do we really need a 30m grid? Why not 100m?
 
 	grid<- raster(xmn=min(exnew[1], exmap[1]), xmx= exnew[2], ymn=exmap[3], ymx=exnew[4], res=100 )
-	grid[]<- 1:ncell(grid)
+	#grid[]<- 1:ncell(grid) #No longer needed
 	
 	# set the coordinate reference system to match
 	proj4string(grid)<- proj4string(dtnew) 
 	
 	#restrict grid to map
-	gridmask<- mask(grid, outline)
-	
+	#gridmask<- mask(grid, outline) #Restrict the map after
 	#plot(gridmask)
 	
 	#consider the grid points in a data frame
@@ -171,10 +171,26 @@ make.map.190129	<- function()
 					w	<- dnorm(z1, mean=0, sd=bw)
 					# code assumes @coords and @data has same order. 
 					list( 	HIV_STATUS_MEAN=mean( dtnew@data$HIV_STATUS[z2] ),				#no weighting by distance
-							HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w)		#Gaussian kernel
-							)
+						HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w)		#Gaussian kernel
+						VL_COPIES_KERNEL_GEOMMEAN = exp(sum(w*log(dtnew@data$VL_COPIES[z2]+1))/sum(w))-1, #Geometric Mean Kernel
+                                                VL_DETECTABLE_KERNEL = sum( dtnew@data$VL_DETECTABLE[z2]*w)/sum(w) #Detectable Prevelance
+      	)
 				}, by=c('ID','LONG_GRID','LAT_GRID')]
 	})
+	 grid[]<- ans[, VL_DETECTABLE_KERNEL]
+  	gridmask<- mask(grid, outline)
+  	#Breaks chosen by looking at data - need refining
+  	plot(gridmask, breaks = c(0, 0.025, 0.05, 0.075, 0.1, 0.5), 
+       		col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  	plot(outline, add=TRUE)
+  	par(xpd=TRUE)
+  	legend("right", legend=c("0-2.5","2.5-5","5-7.5","7.5-10", ">10"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevelence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
+  	grid[]<- ans[, VL_COPIES_KERNEL_GEOMMEAN]
+  	gridmask<- mask(grid, outline)
+  	plot(gridmask, breaks = c(0, 0.8, 1.5, 2.5, 3, 145), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  	plot(outline, add=TRUE)
+  	par(xpd=TRUE)
+  	legend("right", legend=c("0-0.8","0.8-1.5","1.5-2.5","2.5-3", ">3"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
 }
 
 
