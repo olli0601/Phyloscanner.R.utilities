@@ -164,14 +164,19 @@ make.map.190129	<- function()
 		ans	<- tmp[, {
 					z1	<- LONG_GRID - dtnew@coords[,'LONGITUDE_JITTER']
 					z2	<- LAT_GRID - dtnew@coords[,'LATITUDE_JITTER']
-					z1	<- z1*z1 + z2*z2 		# square distance
-					z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
-					# to avoid very large output data, calculate directly all smooths here
-					z1	<- sqrt(z1[z2])			# sqrt on few entries					
-					w	<- dnorm(z1, mean=0, sd=bw)
+					z3 <-  z1*z1 + z2*z2
+					z4 <- which(z3<threshold)
+					z <- cbind(matrix(z1[z4],ncol=1),matrix(z2[z4],ncol=1))
+					w <- dmvn(z,mu=c(0,0),bw^2*diag(2))
+					z2 <- z4
+					# z1	<- z1*z1 + z2*z2 		# square distance
+					# z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
+					# # to avoid very large output data, calculate directly all smooths here
+					# z1	<- sqrt(z1[z2])			# sqrt on few entries					
+					# w	<- dnorm(z1, mean=0, sd=bw)
 					# code assumes @coords and @data has same order. 
 					list( 	HIV_STATUS_MEAN=mean( dtnew@data$HIV_STATUS[z2] ),				#no weighting by distance
-						HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w)		#Gaussian kernel
+						HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w),		#Gaussian kernel
 						VL_COPIES_KERNEL_GEOMMEAN = exp(sum(w*log(dtnew@data$VL_COPIES[z2]+1))/sum(w))-1, #Geometric Mean Kernel
                                                 VL_DETECTABLE_KERNEL = sum( dtnew@data$VL_DETECTABLE[z2]*w)/sum(w) #Detectable Prevelance
       	)
