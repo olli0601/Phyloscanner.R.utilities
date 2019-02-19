@@ -154,26 +154,34 @@ make.map.190129	<- function()
 	setnames(griddf, gsub('y','LAT_GRID',gsub('x','LONG_GRID',colnames(griddf))))
 	
 	bw			<- 3000
+	bw2			<- bw*bw
 	#require(mvtnorm)
 	#dmvnorm( c(3.84,0) )	# ~ 9.996634e-05 
 	threshold	<- bw*3.84 	# cut if density is < 1e-4
 	threshold	<- threshold*threshold	# square the threshold, to avoid sqrt calculations in loop 		
+	norm.const	<- 1/(2*pi*bw2)
 	
 	tmp			<- griddf[1:1e4,]
 	anst<- system.time({
 		ans	<- tmp[, {
 					z1	<- LONG_GRID - dtnew@coords[,'LONGITUDE_JITTER']
 					z2	<- LAT_GRID - dtnew@coords[,'LATITUDE_JITTER']
-					z3 <-  z1*z1 + z2*z2
-					z4 <- which(z3<threshold)
-					z <- cbind(matrix(z1[z4],ncol=1),matrix(z2[z4],ncol=1))
-					w <- dmvn(z,mu=c(0,0),bw^2*diag(2))
-					z2 <- z4
+					z1	<- z1*z1 + z2*z2 		# square distance
+					z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
+					w	<- norm.const*exp(-0.5*z1/bw2)	#now with correct normalising constant
+					#	Xiayue
+					#z3 <-  z1*z1 + z2*z2
+					#z4 <- which(z3<threshold)
+					#z <- cbind(matrix(z1[z4],ncol=1),matrix(z2[z4],ncol=1))
+					#OR: the source code in Boom seems quite slow, with Cholesky decomposition etc. DIY faster?
+					#w <- dmvn(z,mu=c(0,0),bw^2*diag(2))	
+					#z2 <- z4
+					#	olli
 					# z1	<- z1*z1 + z2*z2 		# square distance
 					# z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
 					# # to avoid very large output data, calculate directly all smooths here
 					# z1	<- sqrt(z1[z2])			# sqrt on few entries					
-					# w	<- dnorm(z1, mean=0, sd=bw)
+					# w	<- dnorm(z1, mean=0, sd=bw) # OR: I agree the normalising constant is not right
 					# code assumes @coords and @data has same order. 
 					list( 	HIV_STATUS_MEAN=mean( dtnew@data$HIV_STATUS[z2] ),				#no weighting by distance
 						HIV_STATUS_KERNEL=sum( dtnew@data$HIV_STATUS[z2]*w )/sum(w),		#Gaussian kernel

@@ -1075,6 +1075,16 @@ RakaiFull.phylogeography.181006.figure.samplinglocations<- function()
 	
 }
 
+
+RakaiFull.phylogeography.180618.osm<- function()
+{
+	library(maps)
+	library(mapdata)
+	pdf('~/Dropbox (SPH Imperial College)/2017_phyloscanner_validation/figure_2_africa.pdf', w=8, h=8)
+	map("worldLores", xlim=c(-25,50), ylim=c(-35,40), col='gray80', fill=TRUE)
+	dev.off()	
+}	
+	
 RakaiFull.phylogeography.180618.samplinglocations<- function()
 {	
 	library(ggplot2)
@@ -1089,6 +1099,9 @@ RakaiFull.phylogeography.180618.samplinglocations<- function()
 	require(Hmisc)
 	require(gtools)	#rdirichlet
 	
+	style	<- "feature:road|color:0x17202A&style=feature:water|color:0x677996&style=feature:landscape.natural|color:0xedecda&style=feature:administrative|visibility=off"
+	zm		<- get_openstreetmap(c(lon=31.65, lat=-0.66), scale=2, size=c(550,550), zoom=10, maptype="road", style=style)
+	ggmap(zm)
 	#
 	#	get map
 	#
