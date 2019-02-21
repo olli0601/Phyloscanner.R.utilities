@@ -147,7 +147,7 @@ make.map.190129	<- function()
 	#plot(gridmask)
 	
 	#consider the grid points in a data frame
-	id<- as.data.table(1:ncell(gridmask))
+	id<- as.data.table(1:ncell(grid))
 	setnames(id, "V1", "ID")
 	griddf<- as.data.table(SpatialPoints(grid))
 	griddf<- data.table(id, griddf)
@@ -161,14 +161,15 @@ make.map.190129	<- function()
 	threshold	<- threshold*threshold	# square the threshold, to avoid sqrt calculations in loop 		
 	norm.const	<- 1/(2*pi*bw2)
 	
-	tmp			<- griddf[1:1e4,]
+	tmp			<- griddf#[1:1e4,]
+	#  dtnew<- dtnew[(dtnew$HIV_STATUS==1),]
 	anst<- system.time({
 		ans	<- tmp[, {
 					z1	<- LONG_GRID - dtnew@coords[,'LONGITUDE_JITTER']
 					z2	<- LAT_GRID - dtnew@coords[,'LATITUDE_JITTER']
 					z1	<- z1*z1 + z2*z2 		# square distance
 					z2	<- which(z1<threshold)	# avoid sqrt on 2e4 entries
-					w	<- norm.const*exp(-0.5*z1/bw2)	#now with correct normalising constant
+					w	<- norm.const*exp(-0.5*z1[z2]/bw2)	#now with correct normalising constant
 					#	Xiayue
 					#z3 <-  z1*z1 + z2*z2
 					#z4 <- which(z3<threshold)
@@ -190,20 +191,83 @@ make.map.190129	<- function()
       	)
 				}, by=c('ID','LONG_GRID','LAT_GRID')]
 	})
-	 grid[]<- ans[, VL_DETECTABLE_KERNEL]
-  	gridmask<- mask(grid, outline)
-  	#Breaks chosen by looking at data - need refining
-  	plot(gridmask, breaks = c(0, 0.025, 0.05, 0.075, 0.1, 0.5), 
-       		col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
-  	plot(outline, add=TRUE)
-  	par(xpd=TRUE)
-  	legend("right", legend=c("0-2.5","2.5-5","5-7.5","7.5-10", ">10"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevelence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
-  	grid[]<- ans[, VL_COPIES_KERNEL_GEOMMEAN]
-  	gridmask<- mask(grid, outline)
-  	plot(gridmask, breaks = c(0, 0.8, 1.5, 2.5, 3, 145), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
-  	plot(outline, add=TRUE)
-  	par(xpd=TRUE)
-  	legend("right", legend=c("0-0.8","0.8-1.5","1.5-2.5","2.5-3", ">3"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
 }
+
+Tanser.Maps.Whole.Population <- function(mapdata){
+  grid[]<- mapdata[, VL_DETECTABLE_KERNEL]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 0.07, 0.12,0.15,0.18, 1), 
+       col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-7","7.1-12","12.1-15","15.1-18", ">18"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevalence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
+  grid[]<- mapdata[, VL_COPIES_KERNEL_GEOMMEAN]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 1,5,7,10,145), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-1","2-5","6-7","8-10", ">10"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
+}
+
+Adjusted.Maps.Whole.Population<- function(mapdata){
+  grid[]<- mapdata[, VL_DETECTABLE_KERNEL]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 0.025, 0.052, 0.075, 0.1, 0.5), 
+       col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-2.5","2.5-5.2","5.2-7.5","7.5-10", ">10"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevalence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
+  grid[]<- mapdata[, VL_COPIES_KERNEL_GEOMMEAN]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 0.8, 1.5, 2.5, 3, 145), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-0.8","0.8-1.5","1.5-2.5","2.5-3", ">3"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
+  # grid[]<- mapdata[,VL_MEDIAN]
+  # gridmask<- mask(grid, outline)
+  # plot(gridmask, breaks=c(0, 0.4, 1.1, 18000), col=c("lightgrey", "darkgrey", "red"), legend=FALSE,axes=FALSE, box=FALSE)
+  # plot(outline, add=TRUE)
+  # par(xpd=TRUE)
+  # legend("right", legend=c("0", "1", ">1"),fill=c("lightgrey", "darkgrey", "red"),horiz = FALSE, inset=-0.175, title= "Median VL \n (Copies/ml)",  cex=0.8, box.lty = 0)
+}
+
+Tanser.Maps.HIV.Positive <- function(mapdata){
+  grid[]<- mapdata[, VL_DETECTABLE_KERNEL]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 0.6, 0.68,0.72,0.79, 1), 
+       col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-60","60.1-68","68.1-72","72.1-79", ">79"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevalence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
+  grid[]<- mapdata[, VL_COPIES_KERNEL_GEOMMEAN]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 4000,8000,12000,16000,17000), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-4000","4001-8000","8001-12,000","12,001-16,000", ">16,000"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
+}
+
+Adjusted.Maps.HIV.Positive<- function(mapdata){
+  grid[]<- mapdata[, VL_DETECTABLE_KERNEL]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 0.15, 0.22, 0.3, 0.4, 1), 
+       col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-15","15.1-22","22.1-30","30.1-40", ">40"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Prevelence of \n Detectable \n Viremia (%)",  cex=0.8, box.lty = 0)
+  grid[]<- mapdata[, VL_COPIES_KERNEL_GEOMMEAN]
+  gridmask<- mask(grid, outline)
+  plot(gridmask, breaks = c(0, 20, 30, 45, 100, 35200), col=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)] ,  axes=FALSE, box=FALSE, ylim= c(exmap[3],-6000), legend=FALSE)
+  plot(outline, add=TRUE)
+  par(xpd=TRUE)
+  legend("right", legend=c("0-20","20.1-30","30.1-45","45.1-100", ">100"),fill=brewer.pal(11, "RdYlGn")[c(10,9,5,4,3)],horiz = FALSE, inset=-0.175, title= "Geometric Mean \n VL (Copies/ml)",  cex=0.8, box.lty = 0)
+  # grid[]<- mapdata[,VL_MEDIAN]
+  # gridmask<- mask(grid, outline)
+  # plot(gridmask, breaks=c(0, 1, 4000, 186000), col=c("lightgrey", "darkgrey", "red"), legend=FALSE,axes=FALSE, box=FALSE)
+  # plot(outline, add=TRUE)
+  # par(xpd=TRUE)
+  # legend("right", legend=c("1", "2-4000", ">4000"),fill=c("lightgrey", "darkgrey", "red"),horiz = FALSE, inset=-0.175, title= "Median VL \n (Copies/ml)",  cex=0.8, box.lty = 0)
+}
+
 
 
