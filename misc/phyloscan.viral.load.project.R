@@ -98,6 +98,7 @@ make.map.190129	<- function()
 	dt[is.na(VL_COPIES), VL_COPIES:=0]
 	dt[,VL_DETECTABLE := as.numeric(VL_COPIES>=1000)]
 	dt[,RCCS_STUDYID2:= seq_len(nrow(dt)) ]
+	dt[,ONE_COUNT:=1]
 		
 	#################################################### load in maps
 	# Load in Uganda Shape files 
