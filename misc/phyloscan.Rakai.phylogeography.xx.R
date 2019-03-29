@@ -431,6 +431,7 @@ Rakai190327.RCCStransmissionflows.inference.age3model<- function(infile.inferenc
 	if(is.null(infile.inference))
 	{
 		indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+		indir				<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
 		infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
 	}	
 	indir					<- dirname(infile.inference)	
