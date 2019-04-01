@@ -75,7 +75,7 @@ Rakai190327.participitation.differences.betabinomialmodel3<- function()
 				)
 	
 	# extract samples for unique strata levels
-	nprior		<- 500
+	nprior		<- 1e3
 	fit.e		<- extract(fit.par)
 	set.seed(42)
 	tmp			<- sample(length(fit.e$a), nprior)
@@ -282,7 +282,7 @@ Rakai190327.sequencing.differences.binomialmodel1<- function()
 				)	
 	
 	# extract samples for unique strata levels
-	nprior		<- 500
+	nprior		<- 1e3
 	fit.e		<- extract(fit.seq)
 	set.seed(42)
 	tmp			<- sample(length(fit.e$a), nprior)
@@ -529,6 +529,14 @@ Rakai190327.RCCStransmissionflows.inference.age3model<- function(infile.inferenc
 	#	diagnostics
 	load(control$outfile)
 	
+	#	acceptance rate per target parameter
+	da	<- subset(mc$it.info, !is.na(PAR_ID) & PAR_ID>0)[, list(ACC_RATE=mean(ACCEPT)), by='PAR_ID']
+	setnames(da, 'PAR_ID', 'UPDATE_ID')
+	tmp	<- mc$dl[, list(N_TRM_CAT_PAIRS=length(TRM_CAT_PAIR_ID)), by='UPDATE_ID']
+	da	<- merge(da, tmp, by='UPDATE_ID')
+	ggplot(da, aes(x=N_TRM_CAT_PAIRS, y=ACC_RATE)) + geom_point()	
+	
+	
 	#	acceptance rate per site
 	da	<- subset(mc$it.info, !is.na(PAR_ID) & PAR_ID>0)[, list(ACC_RATE=mean(ACCEPT)), by='PAR_ID']
 	setnames(da, 'PAR_ID', 'UPDATE_ID')
@@ -536,13 +544,6 @@ Rakai190327.RCCStransmissionflows.inference.age3model<- function(infile.inferenc
 	da	<- merge(da, tmp, by='UPDATE_ID')
 	ggplot(da, aes(x=N_TRM_CAT_PAIRS, y=ACC_RATE)) + geom_point()
 	
-	#	traces
-	tmp	<- mc$pars$PI
-	colnames(tmp)<- paste0('PI-', 1:ncol(tmp))
-	p	<- mcmc_trace(tmp, pars=colnames(tmp), facet_args = list(ncol = 1))
-	pdf(file=paste0(outfile.base,'samodel_marginaltraces.pdf'), w=7, h=300)
-	p
-	dev.off()
 	
 	#	effective sample size on target parameter
 	require(coda)
