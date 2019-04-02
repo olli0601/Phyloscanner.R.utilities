@@ -79,6 +79,47 @@ vl.get.data.round17<- function()
 	save(ds, file=file.path(prjdir,'data/merged_round17_vl_gps.rda'))
 }
 
+prop.dectectable.viraemia<- function()
+{
+	require(data.table)
+	require(rgdal)
+	require(rgeos)
+	library(raster)
+	require(RColorBrewer) #Map colours
+	
+	# load data
+	infile	<- '~/Box Sync/OR_Work/2018/2018_RakaiViralLoad/data/merged_round17_vl_gps.rda'
+	load(infile)
+	
+	tmp		<- ds[, list(		HIV_POS= length(which(HIV_STATUS==1)), 
+					HIV_NEG= length(which(HIV_STATUS==0)),  
+					HIV_PREV= length(which(HIV_STATUS==1))/length(HIV_STATUS)
+					), by='COMM_NUM']
+			
+	thr	<- 1e3		
+	tmp2	<- subset(ds, HIV_STATUS==1)[, list(		VL_D= length(which(VL_COPIES>thr)), 
+					VL_U= length(which(VL_COPIES<=thr)),  
+					VL_DP= length(which(VL_COPIES>thr))/length(VL_COPIES)
+			), by='COMM_NUM']
+	tmp	<- merge(tmp, tmp2, by='COMM_NUM')
+	tmp[, POP_VL_DP:= HIV_PREV*VL_DP]
+	ggplot(tmp, aes(y=COMM_NUM, x=POP_VL_DP)) + geom_point()
+	
+	tmp3	<- subset(ds, HIV_STATUS==1 & COMM_NUM==38)
+	ggplot(tmp3, aes(x=VL_COPIES)) + geom_histogram() + facet_grid(~ARVMED)
+	
+	tmp3	<- subset(ds, HIV_STATUS==1 & COMM_NUM==38 & ARVMED==2)
+	tmp3[, VL_COPIES_C:= cut(VL_COPIES, breaks=c(0,1,10,100,1000,1e4,1e5,1e6,1e7,1e10), right=FALSE)]
+	tmp3[, table(VL_COPIES_C)]
+	
+	tmp3	<- subset(ds, HIV_STATUS==1 & COMM_NUM==38 & ARVMED==1)
+	tmp3[, VL_COPIES_C:= cut(VL_COPIES, breaks=c(0,1,10,100,1000,1e4,1e5,1e6,1e7,1e10), right=FALSE)]
+	tmp3[, table(VL_COPIES_C)]
+	
+	tmp3	<- subset(ds, HIV_STATUS==1 & COMM_NUM==38)
+	tmp3[, table(VL_COPIES>1)]
+}
+
 make.map.190129	<- function()
 {
 	require(data.table)

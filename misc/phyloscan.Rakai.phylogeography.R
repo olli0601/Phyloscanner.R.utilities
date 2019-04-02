@@ -8606,6 +8606,151 @@ RakaiFull.phylogeography.181006.sink.risk.ratio<- function()
 	exp(c(log.rr, log.ci))
 }
 
+RakaiFull.phylogeography.190327.determine.sampling.categories.required<- function()
+{
+	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	infiles	<- c(	"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda")
+	
+	ans<- character(0)
+	for(i in seq_along(infiles))
+	{
+		cat('\nProcessing',i)
+		
+		load(file.path(indir,infiles[i]))
+		
+		rtr	<- subset(rtr3, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+						'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE_1YR','TR_INMIGRATE_2YR',
+						'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
+						'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE_1YR','REC_INMIGRATE_2YR'))	
+		# add age 
+		rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
+		rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
+		# impute age
+		tmp	<- which(is.na(rtr$TR_AGE_AT_MID))
+		set(rtr, tmp, 'TR_AGE_AT_MID', mean(rtr$TR_AGE_AT_MID[which(!is.na(rtr$TR_AGE_AT_MID))]) )
+		tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
+		set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
+		# fixup from latest surveillance data
+		#de[RID=="C036808",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+		#rtr[TR_RID=="C036808",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
+		set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
+		#de[RID=="D069722",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+		#rtr[TR_RID=="D069722",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
+		set(rtr, rtr[,which(TR_RID=="D069722")], 'TR_INMIGRANT', 0L)
+		#de[RID=="G036802",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+		#rtr[REC_RID=="G036802",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
+		set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
+		#de[RID=="H103745",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+		#rtr[REC_RID=="H103745",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
+		set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
+		set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
+		#	stratify age
+		rtr[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+		rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+		stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
+		stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )
+				
+		# inmigrant status
+		setnames(rtr, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_2YR', 'REC_INMIGRATE')
+		rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
+		rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+		set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
+		
+		#	build category to match with sampling data tables 
+		rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+		rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_NUM_A,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+		
+		
+		ans	<- sort(unique(c(ans, rtr$REC_SAMPLING_CATEGORY, rtr$TR_SAMPLING_CATEGORY)))
+	}
+	
+}
+
+RakaiFull.phylogeography.190327.flows.obs<- function()
+{
+	require(data.table)	
+	
+	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"	
+	infile.inference	<- file.path(indir,"todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda")
+	
+	outfile.base			<- gsub('data_with_inmigrants.rda','',infile.inference)
+	load(infile.inference)
+	
+	#
+	#	prepare data on observed transmission flows
+	#
+	
+	#	subset to variables needed, using RTR3
+	rtr	<- subset(rtr3, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+					'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE_1YR','TR_INMIGRATE_2YR',
+					'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
+					'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE_1YR','REC_INMIGRATE_2YR'))
+	
+	# add age 
+	rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
+	rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
+	# impute age
+	tmp	<- which(is.na(rtr$TR_AGE_AT_MID))
+	set(rtr, tmp, 'TR_AGE_AT_MID', mean(rtr$TR_AGE_AT_MID[which(!is.na(rtr$TR_AGE_AT_MID))]) )
+	tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
+	set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
+	# fixup from latest surveillance data
+	#de[RID=="C036808",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+	#rtr[TR_RID=="C036808",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
+	set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
+	#de[RID=="D069722",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+	#rtr[TR_RID=="D069722",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
+	set(rtr, rtr[,which(TR_RID=="D069722")], 'TR_INMIGRANT', 0L)
+	#de[RID=="G036802",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+	#rtr[REC_RID=="G036802",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
+	set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
+	#de[RID=="H103745",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
+	#rtr[REC_RID=="H103745",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
+	set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
+	set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
+	#	stratify age
+	rtr[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
+	stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )
+	
+	
+	# inmigrant status
+	setnames(rtr, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
+	setnames(rtr, 'REC_INMIGRATE_2YR', 'REC_INMIGRATE')
+	rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
+	rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+	set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
+	
+	#	set TR_TRM_CATEGORY
+	rtr[, TR_TRM_CATEGORY:='inland']
+	set(rtr, rtr[, which(substr(TR_COMM_NUM_A_MIG,1,1)=='f')], 'TR_TRM_CATEGORY', 'fishing')
+	set(rtr, rtr[, which(substr(TR_COMM_NUM_A_MIG,1,1)=='e')], 'TR_TRM_CATEGORY', 'external')
+	set(rtr, rtr[, which(substr(TR_COMM_NUM_A_MIG,1,1)=='u')], 'TR_TRM_CATEGORY', 'unknown origin')
+	rtr[, REC_TRM_CATEGORY:='inland']
+	set(rtr, rtr[, which(substr(REC_COMM_NUM_A,1,1)=='f')], 'REC_TRM_CATEGORY', 'fishing')
+	
+	
+	rtr[, list(TRM_OBS=length(PAIRID)), by=c('TR_TRM_CATEGORY','REC_TRM_CATEGORY')]
+	
+	tmp	<- rtr[, list(TRM_OBS=length(PAIRID), P=length(PAIRID)/nrow(rtr), LABEL= paste0(length(PAIRID),' (', round(100*length(PAIRID)/nrow(rtr),d=1), '%)' )), by=c('TR_TRM_CATEGORY','TR_SEX','REC_TRM_CATEGORY','REC_SEX')]
+	set(tmp, NULL, 'TR_TRM_CATEGORY', tmp[, factor(TR_TRM_CATEGORY, levels=c('fishing','inland','external','unknown origin'))])
+	set(tmp, NULL, 'REC_TRM_CATEGORY', tmp[, factor(REC_TRM_CATEGORY, levels=c('fishing','inland','external','unknown origin'))])
+	set(tmp, NULL, 'TR_SEX', tmp[, factor(TR_SEX, levels=c('M','F'))])
+	setkey(tmp, TR_SEX, TR_TRM_CATEGORY, REC_TRM_CATEGORY)
+	
+	outfile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_obstrms.csv"
+	write.csv(tmp, file=outfile)
+}
+
 RakaiFull.phylogeography.181006.flows.obs<- function()
 {
 	indir				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"

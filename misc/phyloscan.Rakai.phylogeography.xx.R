@@ -76,22 +76,67 @@ Rakai190327.participitation.differences.betabinomialmodel3<- function()
 	
 	# extract samples for unique strata levels
 	nprior		<- 1e3
+	dps			<- data.table(CATEGORY=c("aam:F:15-24:0", "aam:F:25-34:1", "aam:M:25-34:1", "abj:F:15-24:1", "abj:F:25-34:0", "abj:M:25-34:0", "abm:F:15-24:1", "abm:F:25-34:1", "abm:F:35+:0", 
+					"abm:M:25-34:0", "abm:M:25-34:1", "abm:M:35+:0", "abo:F:25-34:0", "abo:F:25-34:1", "abo:M:25-34:0", "abo:M:35+:0", "adi:F:15-24:0", "adi:F:15-24:1", "adi:F:25-34:0", 
+					"adi:F:25-34:1", "adi:F:35+:0", "adi:M:15-24:1", "adi:M:25-34:0", "adi:M:25-34:1", "adi:M:35+:0", "adi:M:35+:1", "aev:F:15-24:0", "aev:F:25-34:0", "aev:F:25-34:1", 
+					"aev:F:35+:0", "aev:M:15-24:0", "aev:M:15-24:1", "aev:M:25-34:0", "afr:F:15-24:0", "afr:F:25-34:0", "afr:F:35+:0", "afr:M:25-34:0", "agf:F:15-24:0", "agf:F:15-24:1", 
+					"agf:F:25-34:0", "agf:F:35+:0", "agf:M:15-24:0", "agf:M:25-34:0", "agf:M:35+:0", "agv:F:15-24:0", "agv:F:25-34:0", "agv:F:25-34:1", "agv:M:25-34:0", "agv:M:25-34:1", 
+					"agw:F:15-24:0", "agw:F:15-24:1", "agw:F:25-34:0", "agw:F:25-34:1", "agw:F:35+:1", "agw:M:25-34:0", "agw:M:35+:0", "ait:F:25-34:1", "ait:F:35+:0", "ait:M:25-34:1", 
+					"akh:F:15-24:0", "akh:F:25-34:0", "akh:F:25-34:1", "akh:F:35+:1", "akh:M:15-24:0", "akh:M:25-34:0", "akh:M:35+:0", "akh:M:35+:1", "ald:F:25-34:0", "ald:F:25-34:1", 
+					"ald:F:35+:0", "ald:M:25-34:0", "ald:M:25-34:1", "ald:M:35+:0", "ald:M:35+:1", "alr:F:15-24:0", "alr:F:15-24:1", "alr:F:25-34:0", "alr:F:35+:0", "alr:M:25-34:0", 
+					"alr:M:25-34:1", "alr:M:35+:0", "amf:F:25-34:0", "amf:F:25-34:1", "amf:F:35+:0", "amf:F:35+:1", "amf:M:15-24:0", 
+					"amf:M:25-34:0", "amf:M:35+:0", "aop:F:15-24:0", "aop:F:25-34:1", "aop:M:15-24:0", "aqi:F:35+:0", "aqj:F:15-24:0", "aqj:F:15-24:1", "aqj:F:25-34:0", 
+					"aqj:F:25-34:1", "aqj:M:15-24:0", "aqj:M:25-34:0", "aqj:M:35+:0", "aqj:M:35+:1", "asm:F:15-24:0", "asm:F:15-24:1", "asm:F:25-34:0", "asm:F:35+:0", "asm:F:35+:1", 
+					"asm:M:15-24:1", "asm:M:25-34:0", "asm:M:25-34:1", "asm:M:35+:0", "aur:F:15-24:1", "aur:F:25-34:0", "aur:F:25-34:1", "aur:M:25-34:1", "ave:F:15-24:1", "ave:F:25-34:0", 
+					"ave:F:25-34:1", "ave:F:35+:0", "ave:M:15-24:0", "ave:M:25-34:0", "ave:M:35+:0", "avl:F:15-24:0", "avl:F:25-34:0", "avl:F:35+:0", "avl:M:25-34:0", "avl:M:35+:0", "awa:F:15-24:0", 
+					"awa:F:15-24:1", "awa:F:25-34:0", "awa:M:25-34:0", "awa:M:25-34:1", "awa:M:35+:0", "awr:F:25-34:1", "awr:M:15-24:0", "awr:M:25-34:0", "awr:M:35+:0", "awr:M:35+:1", "axn:F:15-24:1", 
+					"fno:F:15-24:0", "fno:F:15-24:1", "fno:F:25-34:0", "fno:F:25-34:1", "fno:F:35+:0", "fno:M:15-24:0", "fno:M:25-34:0", "fno:M:25-34:1", "fno:M:35+:0", "fno:M:35+:1", "fpt:F:15-24:0", 
+					"fpt:F:15-24:1", "fpt:F:25-34:0", "fpt:F:25-34:1", "fpt:F:35+:0", "fpt:F:35+:1", "fpt:M:15-24:0", "fpt:M:15-24:1", "fpt:M:25-34:0", "fpt:M:25-34:1", "fpt:M:35+:0", "fpt:M:35+:1", 
+					"fus:F:15-24:0", "fus:F:15-24:1", "fus:F:25-34:0", "fus:F:25-34:1", "fus:F:35+:0", "fus:F:35+:1", "fus:M:15-24:0", "fus:M:15-24:1", "fus:M:25-34:0", "fus:M:25-34:1", "fus:M:35+:0", 
+					"fus:M:35+:1", "fwd:F:15-24:0", "fwd:F:15-24:1", "fwd:F:25-34:0", "fwd:F:25-34:1", "fwd:F:35+:0", "fwd:F:35+:1", "fwd:M:15-24:0", "fwd:M:15-24:1", "fwd:M:25-34:0", "fwd:M:25-34:1", 
+					"fwd:M:35+:0", "fwd:M:35+:1", "thd:F:15-24:0", "thd:F:25-34:0", "thd:F:25-34:1", "thd:F:35+:0", "thd:M:25-34:0", "thd:M:35+:0", "thd:M:35+:1", "tpq:F:15-24:1", "tpq:F:25-34:0", 
+					"tpq:M:15-24:0", "tpq:M:25-34:0", "tpq:M:25-34:1", "tpq:M:35+:0", "ttp:F:25-34:0", "ttp:F:35+:1", "ttp:M:35+:0", "twr:F:15-24:0", "twr:F:15-24:1", "twr:F:25-34:0", "twr:F:25-34:1", 
+					"twr:F:35+:0", "twr:M:15-24:1", "twr:M:25-34:0", "twr:M:25-34:1", "twr:M:35+:0"))
+	dps[, COMM_NUM_A:= dps[, gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\1',CATEGORY)]]
+	dps[, SEX:= dps[,gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\2',CATEGORY)]]
+	dps[, AGE_AT_MID_C:= dps[, gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\3',CATEGORY)]]
+	dps[, INMIGRANT:= dps[, as.integer(gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\4',CATEGORY))]]	
+	dps[, AGE_YOUNG:= as.integer(AGE_AT_MID_C=='15-24')]
+	dps[, AGE_MID:= as.integer(AGE_AT_MID_C=='25-34')]
+	dps[, MALE:= as.integer(SEX=='M')]
+	dps[, COMM_TYPE_F:= as.integer(substr(COMM_NUM_A,1,1)=='f')]
+	dps[, COMM_TYPE_T:= as.integer(substr(COMM_NUM_A,1,1)=='t')]
+	dps			<- merge(dps, unique(subset(dp, select=c(COMM_NUM_A,COMM_NUM_B))), by='COMM_NUM_A')
+	
 	fit.e		<- extract(fit.par)
 	set.seed(42)
 	tmp			<- sample(length(fit.e$a), nprior)
-	dps			<- dp[,	
+	dps			<- dps[,	
 			{
 				z<- with(fit.e, a + comm[,COMM_NUM_B] + male * MALE + 
 								trading*COMM_TYPE_T  + fishing*COMM_TYPE_F +
 								inmigrant*INMIGRANT + inmigrant_young*INMIGRANT*AGE_YOUNG +
 								male_young*AGE_YOUNG*MALE + female_young*AGE_YOUNG*(1-MALE) + midage*AGE_MID)
-				list(SAMPLE=1:nprior, ETA=as.numeric(z[tmp]), DISPERSION=as.numeric(fit.e$dispersion[tmp]))
+				list(SAMPLE=1:nprior, ETA=as.numeric(z[tmp]))
 			},	
-			by=c('CATEGORY','TRIAL','SUC')]
+			by=c('CATEGORY')]
 	dps[, P:= exp(ETA)/(1+exp(ETA))]
-	dps[, LP:= dbbinom(SUC, TRIAL, alpha= P*DISPERSION, beta= (1-P)*DISPERSION, log=TRUE)]	
-	set(dps, NULL, c('TRIAL','SUC','ETA','DISPERSION'), NULL)
-		
+	#	fit kernel density to prior samples with Gourierous and Monfort, 2006 macrobetakernel bounded density estimator, and then estimate log density
+	#tmp	<- subset(dps, CATEGORY=='aam:F:15-24:0')	
+	#tmp2<- bde(tmp$P, dataPointsCache=tmp$P, b=0.001, estimator='betakernel', lower.limit=0, upper.limit=1, options=list(modified=FALSE, normalization='densitywise', mbc='none', c=0.5))
+	#tmp3<- data.table(DX=seq(0,1,0.001), DY=density(tmp2, seq(0,1,0.001)))
+	#tmp4<- data.table(DX=tmp$P, DY=density(tmp2, tmp$P))
+	#ggplot(tmp) + geom_histogram(aes(x=P, y=stat(density)), bins=50) +
+	#		geom_line(data=tmp3, aes(x=DX, y=DY)) +
+	#		geom_point(data=tmp4, aes(x=DX, y=DY), colour='red') +
+	#		coord_cartesian(xlim=c(0,1))
+	require(bde)
+	tmp	<- dps[, {
+				bdest<- bde(P, dataPointsCache=sort(P), b=0.001, estimator='betakernel', lower.limit=0, upper.limit=1, options=list(modified=FALSE, normalization='densitywise', mbc='none', c=0.5))
+				list(SAMPLE=SAMPLE, LP=log(density(bdest, P)))
+			}, by='CATEGORY']
+	dps	<- merge(dps, tmp, by=c('CATEGORY','SAMPLE'))
+	set(dps, NULL, c('ETA'), NULL)		
 	save(dp, dps, fit.par, file=paste0(outfile.base,'190327_participation_model_samples.rda'))
 }
 Rakai190327.participitation.differences.betabinomialmodel4<- function()
@@ -283,23 +328,61 @@ Rakai190327.sequencing.differences.binomialmodel1<- function()
 	
 	# extract samples for unique strata levels
 	nprior		<- 1e3
+	dss			<- data.table(CATEGORY=c("aam:F:15-24:0", "aam:F:25-34:1", "aam:M:25-34:1", "abj:F:15-24:1", "abj:F:25-34:0", "abj:M:25-34:0", "abm:F:15-24:1", "abm:F:25-34:1", "abm:F:35+:0", 
+					"abm:M:25-34:0", "abm:M:25-34:1", "abm:M:35+:0", "abo:F:25-34:0", "abo:F:25-34:1", "abo:M:25-34:0", "abo:M:35+:0", "adi:F:15-24:0", "adi:F:15-24:1", "adi:F:25-34:0", 
+					"adi:F:25-34:1", "adi:F:35+:0", "adi:M:15-24:1", "adi:M:25-34:0", "adi:M:25-34:1", "adi:M:35+:0", "adi:M:35+:1", "aev:F:15-24:0", "aev:F:25-34:0", "aev:F:25-34:1", 
+					"aev:F:35+:0", "aev:M:15-24:0", "aev:M:15-24:1", "aev:M:25-34:0", "afr:F:15-24:0", "afr:F:25-34:0", "afr:F:35+:0", "afr:M:25-34:0", "agf:F:15-24:0", "agf:F:15-24:1", 
+					"agf:F:25-34:0", "agf:F:35+:0", "agf:M:15-24:0", "agf:M:25-34:0", "agf:M:35+:0", "agv:F:15-24:0", "agv:F:25-34:0", "agv:F:25-34:1", "agv:M:25-34:0", "agv:M:25-34:1", 
+					"agw:F:15-24:0", "agw:F:15-24:1", "agw:F:25-34:0", "agw:F:25-34:1", "agw:F:35+:1", "agw:M:25-34:0", "agw:M:35+:0", "ait:F:25-34:1", "ait:F:35+:0", "ait:M:25-34:1", 
+					"akh:F:15-24:0", "akh:F:25-34:0", "akh:F:25-34:1", "akh:F:35+:1", "akh:M:15-24:0", "akh:M:25-34:0", "akh:M:35+:0", "akh:M:35+:1", "ald:F:25-34:0", "ald:F:25-34:1", 
+					"ald:F:35+:0", "ald:M:25-34:0", "ald:M:25-34:1", "ald:M:35+:0", "ald:M:35+:1", "alr:F:15-24:0", "alr:F:15-24:1", "alr:F:25-34:0", "alr:F:35+:0", "alr:M:25-34:0", 
+					"alr:M:25-34:1", "alr:M:35+:0", "amf:F:25-34:0", "amf:F:25-34:1", "amf:F:35+:0", "amf:F:35+:1", "amf:M:15-24:0", 
+					"amf:M:25-34:0", "amf:M:35+:0", "aop:F:15-24:0", "aop:F:25-34:1", "aop:M:15-24:0", "aqi:F:35+:0", "aqj:F:15-24:0", "aqj:F:15-24:1", "aqj:F:25-34:0", 
+					"aqj:F:25-34:1", "aqj:M:15-24:0", "aqj:M:25-34:0", "aqj:M:35+:0", "aqj:M:35+:1", "asm:F:15-24:0", "asm:F:15-24:1", "asm:F:25-34:0", "asm:F:35+:0", "asm:F:35+:1", 
+					"asm:M:15-24:1", "asm:M:25-34:0", "asm:M:25-34:1", "asm:M:35+:0", "aur:F:15-24:1", "aur:F:25-34:0", "aur:F:25-34:1", "aur:M:25-34:1", "ave:F:15-24:1", "ave:F:25-34:0", 
+					"ave:F:25-34:1", "ave:F:35+:0", "ave:M:15-24:0", "ave:M:25-34:0", "ave:M:35+:0", "avl:F:15-24:0", "avl:F:25-34:0", "avl:F:35+:0", "avl:M:25-34:0", "avl:M:35+:0", "awa:F:15-24:0", 
+					"awa:F:15-24:1", "awa:F:25-34:0", "awa:M:25-34:0", "awa:M:25-34:1", "awa:M:35+:0", "awr:F:25-34:1", "awr:M:15-24:0", "awr:M:25-34:0", "awr:M:35+:0", "awr:M:35+:1", "axn:F:15-24:1", 
+					"fno:F:15-24:0", "fno:F:15-24:1", "fno:F:25-34:0", "fno:F:25-34:1", "fno:F:35+:0", "fno:M:15-24:0", "fno:M:25-34:0", "fno:M:25-34:1", "fno:M:35+:0", "fno:M:35+:1", "fpt:F:15-24:0", 
+					"fpt:F:15-24:1", "fpt:F:25-34:0", "fpt:F:25-34:1", "fpt:F:35+:0", "fpt:F:35+:1", "fpt:M:15-24:0", "fpt:M:15-24:1", "fpt:M:25-34:0", "fpt:M:25-34:1", "fpt:M:35+:0", "fpt:M:35+:1", 
+					"fus:F:15-24:0", "fus:F:15-24:1", "fus:F:25-34:0", "fus:F:25-34:1", "fus:F:35+:0", "fus:F:35+:1", "fus:M:15-24:0", "fus:M:15-24:1", "fus:M:25-34:0", "fus:M:25-34:1", "fus:M:35+:0", 
+					"fus:M:35+:1", "fwd:F:15-24:0", "fwd:F:15-24:1", "fwd:F:25-34:0", "fwd:F:25-34:1", "fwd:F:35+:0", "fwd:F:35+:1", "fwd:M:15-24:0", "fwd:M:15-24:1", "fwd:M:25-34:0", "fwd:M:25-34:1", 
+					"fwd:M:35+:0", "fwd:M:35+:1", "thd:F:15-24:0", "thd:F:25-34:0", "thd:F:25-34:1", "thd:F:35+:0", "thd:M:25-34:0", "thd:M:35+:0", "thd:M:35+:1", "tpq:F:15-24:1", "tpq:F:25-34:0", 
+					"tpq:M:15-24:0", "tpq:M:25-34:0", "tpq:M:25-34:1", "tpq:M:35+:0", "ttp:F:25-34:0", "ttp:F:35+:1", "ttp:M:35+:0", "twr:F:15-24:0", "twr:F:15-24:1", "twr:F:25-34:0", "twr:F:25-34:1", 
+					"twr:F:35+:0", "twr:M:15-24:1", "twr:M:25-34:0", "twr:M:25-34:1", "twr:M:35+:0"))
+	dss[, COMM_NUM_A:= dss[, gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\1',CATEGORY)]]
+	dss[, SEX:= dss[,gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\2',CATEGORY)]]
+	dss[, AGE_AT_MID_C:= dss[, gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\3',CATEGORY)]]
+	dss[, INMIGRANT:= dss[, as.integer(gsub('^(.+)\\:(.)\\:(.+)\\:(.)$','\\4',CATEGORY))]]	
+	dss[, AGE_YOUNG:= as.integer(AGE_AT_MID_C=='15-24')]
+	dss[, AGE_MID:= as.integer(AGE_AT_MID_C=='25-34')]
+	dss[, MALE:= as.integer(SEX=='M')]
+	dss[, COMM_TYPE_F:= as.integer(substr(COMM_NUM_A,1,1)=='f')]
+	dss[, COMM_TYPE_T:= as.integer(substr(COMM_NUM_A,1,1)=='t')]
+	dss			<- merge(dss, unique(subset(ds, select=c(COMM_NUM_A,COMM_NUM_B))), by='COMM_NUM_A')
+	
 	fit.e		<- extract(fit.seq)
 	set.seed(42)
 	tmp			<- sample(length(fit.e$a), nprior)
-	dss			<- ds[,	
+	dss			<- dss[,	
 			{
 				z<- with(fit.e, a + comm[,COMM_NUM_B] + male * MALE + 
 								trading*COMM_TYPE_T  + fishing*COMM_TYPE_F +
 								inmigrant*INMIGRANT + age_young*AGE_YOUNG + age_mid*AGE_MID)
 				list(SAMPLE=1:nprior, ETA=as.numeric(z[tmp]))
 			},	
-			by=c('CATEGORY','TRIAL','SUC')]
+			by=c('CATEGORY')]
 	dss[, P:= exp(ETA)/(1+exp(ETA))]
-	dss[, LP:= dbinom(SUC, TRIAL, prob=P, log=TRUE)]	
-	set(dss, NULL, c('TRIAL','SUC','ETA'), NULL)
-	
+	#	fit kernel density to prior samples with Gourierous and Monfort, 2006 macrobetakernel bounded density estimator, and then estimate log density
+	require(bde)
+	tmp	<- dss[, {
+				bdest<- bde(P, dataPointsCache=sort(P), b=0.001, estimator='betakernel', lower.limit=0, upper.limit=1, options=list(modified=FALSE, normalization='densitywise', mbc='none', c=0.5))
+				list(SAMPLE=SAMPLE, LP=log(density(bdest, P)))
+			}, by='CATEGORY']
+	dss	<- merge(dss, tmp, by=c('CATEGORY','SAMPLE'))
+	set(dss, NULL, c('ETA'), NULL)		
 	save(ds, dss, fit.seq, file=paste0(outfile.base,'190327_sequencing_model_samples.rda'))
 }
+
 Rakai190327.sequencing.differences.binomialmodel2<- function()
 {
 	require(data.table)
@@ -414,10 +497,6 @@ Rakai190327.RCCStransmissionflows.inference.age3model<- function(infile.inferenc
 {
 	require(data.table)	
 	require(TransSubpopulation)
-	#require(Boom)	
-	#require(gtools)	
-	
-	#logistic<- function(x) 1/(1+exp(-x))
 	
 	if(is.null(opt))
 	{
@@ -522,40 +601,139 @@ Rakai190327.RCCStransmissionflows.inference.age3model<- function(infile.inferenc
 	setnames(dprior, 'CATEGORY', 'SAMPLING_CATEGORY')
 	
 	#	run MCMC
-	control	<- list(seed=42, mcmc.n=238000*100, verbose=0, outfile=paste0(outfile.base,"SAMCMCv190327_mcmc.rda"))
+	control	<- list(	seed=42, 
+						mcmc.n=238000*100, 
+						verbose=0, 
+						outfile=paste0(outfile.base,"samcmc190327_nsweep1e5_opt",paste0(opt, collapse=''),".rda"))
 	source.attribution.mcmc(dobs, dprior, control=control)
 	stop()
 	
-	#	diagnostics
-	load(control$outfile)
+	#	run diagnostics
+	mcmc.file	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/190327_SAMCMCv190327_mcmc.rda"
+	mcmc.file	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_samcmc190327_nsweep1e5_opt11101.rda'
+	control		<- list(	burnin.p=0.05, 
+							regex_pars='*', 
+							credibility.interval=0.95, 
+							pdf.plot.all.parameters=FALSE, 
+							pdf.plot.n.worst.case.parameters=10, 
+							pdf.height.per.par=1.2, 
+							outfile.base=gsub('\\.rda','',mcmc.file))
+	source.attribution.mcmc.diagnostics(mcmc.file, control=control)
 	
-	#	acceptance rate per target parameter
-	da	<- subset(mc$it.info, !is.na(PAR_ID) & PAR_ID>0)[, list(ACC_RATE=mean(ACCEPT)), by='PAR_ID']
-	setnames(da, 'PAR_ID', 'UPDATE_ID')
-	tmp	<- mc$dl[, list(N_TRM_CAT_PAIRS=length(TRM_CAT_PAIR_ID)), by='UPDATE_ID']
-	da	<- merge(da, tmp, by='UPDATE_ID')
-	ggplot(da, aes(x=N_TRM_CAT_PAIRS, y=ACC_RATE)) + geom_point()	
+	#	aggregate MCMC output to fish<->inland
+	daggregateTo<- subset(dobs, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
+	daggregateTo[, TR_TARGETCAT:= gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$TR_TRM_CATEGORY,1,1))))]
+	daggregateTo[, REC_TARGETCAT:= gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$REC_TRM_CATEGORY,1,1))))]
+	set(daggregateTo, NULL, c('TR_TRM_CATEGORY','REC_TRM_CATEGORY'), NULL)	
+	control		<- list(	burnin.p=0.05, 
+							thin=NA_integer_, 
+							regex_pars='*', 
+							outfile=gsub('\\.rda','_aggregatedFishInland.csv',mcmc.file))
+	source.attribution.mcmc.aggregateToTarget(mcmc.file, daggregateTo, control=control)
+	
+	#	aggregate MCMC output to fish<->inland by gender
+	daggregateTo<- subset(dobs, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
+	daggregateTo[, TR_TARGETCAT:= paste0(	gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$TR_TRM_CATEGORY,1,1)))),
+											':',
+											gsub('^[a-z]+:([FM]):.*','\\1',daggregateTo$TR_TRM_CATEGORY))]
+	daggregateTo[, REC_TARGETCAT:= paste0(	gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$REC_TRM_CATEGORY,1,1)))),
+											':',
+											gsub('^[a-z]+:([FM]):.*','\\1',daggregateTo$REC_TRM_CATEGORY))]
+	set(daggregateTo, NULL, c('TR_TRM_CATEGORY','REC_TRM_CATEGORY'), NULL)	
+	control		<- list(	burnin.p=0.05, 
+							thin=NA_integer_, 
+							regex_pars='*', 
+							outfile=gsub('\\.rda','_aggregatedFishInlandByGender.csv',mcmc.file))
+	source.attribution.mcmc.aggregateToTarget(mcmc.file, daggregateTo, control=control)
 	
 	
-	#	acceptance rate per site
-	da	<- subset(mc$it.info, !is.na(PAR_ID) & PAR_ID>0)[, list(ACC_RATE=mean(ACCEPT)), by='PAR_ID']
-	setnames(da, 'PAR_ID', 'UPDATE_ID')
-	tmp	<- mc$dl[, list(N_TRM_CAT_PAIRS=length(TRM_CAT_PAIR_ID)), by='UPDATE_ID']
-	da	<- merge(da, tmp, by='UPDATE_ID')
-	ggplot(da, aes(x=N_TRM_CAT_PAIRS, y=ACC_RATE)) + geom_point()
+	#	calculate flows sources WAIFM flow_ratio overall
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_samcmc190327_nsweep1e5_opt11101_aggregatedFishInland.csv"	
+	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
+							flowratios= list( c('inland/fishing', 'inland fishing', 'fishing inland')),
+							outfile=gsub('\\.csv','_flowsetc.csv',infile))
+	Rakai190327.getKeyQuantitiesFromAggregatedMCMC(infile, control)
 	
 	
-	#	effective sample size on target parameter
-	require(coda)
-	tmp	<- mcmc(mc$pars$PI)
-	de	<- data.table(PI= 1:ncol(tmp), NEFF=as.numeric(effectiveSize(tmp)))
-	ggplot(de, aes(x=PI, y=NEFF)) + geom_point()	
-	
-	p   <- mcmc_trace(po, pars=colnames(po), facet_args = list(ncol = 1)) 
-	pdf(file=paste0(outfile.base,'190327_participation_model_marginaltraces.pdf'), w=7, h=100)
-	p
-	dev.off()
+	#	calculate flows sources WAIFM flow_ratio by gender
+	infile		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_samcmc190327_nsweep1e5_opt11101_aggregatedFishInlandByGender.csv"	
+	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
+							flowratios= list( c('inland:M/fishing:M', 'inland:M fishing:F', 'fishing:M inland:F'), c('inland:F/fishing:F', 'inland:F fishing:M', 'fishing:F inland:M')),
+							outfile=gsub('\\.csv','_flowsetc.csv',infile))
+	Rakai190327.getKeyQuantitiesFromAggregatedMCMC(infile, control)
+						
 }
+
+Rakai190327.getKeyQuantitiesFromAggregatedMCMC<- function(infile, control)
+{
+	cat('\nReading aggregated MCMC output...')
+	pars		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	pars		<- subset(pars, VARIABLE=='PI')
+	
+	cat('\nComputing flows...')
+	#	calculate flows
+	z		<- pars[, list(P=names(control$quantiles), Q=unname(quantile(VALUE, p=control$quantiles))), by=c('TR_TARGETCAT','REC_TARGETCAT')]
+	z		<- dcast.data.table(z, TR_TARGETCAT+REC_TARGETCAT~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_TARGETCAT, REC_TARGETCAT )
+	z[, STAT:='flows']
+	ans		<- copy(z)		
+	gc()
+	
+	cat('\nComputing WAIFM...')
+	#	calculate WAIFM	
+	z		<- pars[, list(REC_TARGETCAT=REC_TARGETCAT, VALUE=VALUE/sum(VALUE)), by=c('TR_TARGETCAT','SAMPLE')]
+	z		<- z[, list(P=names(control$quantiles), Q=unname(quantile(VALUE, p=control$quantiles))), by=c('TR_TARGETCAT','REC_TARGETCAT')]
+	z		<- dcast.data.table(z, TR_TARGETCAT+REC_TARGETCAT~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, TR_TARGETCAT, REC_TARGETCAT )
+	z[, STAT:='waifm']
+	ans		<- rbind(ans,z)	
+	gc()
+	
+	cat('\nComputing sources...')
+	#	calculate sources
+	z		<- pars[, list(TR_TARGETCAT=TR_TARGETCAT, VALUE=VALUE/sum(VALUE)), by=c('REC_TARGETCAT','SAMPLE')]
+	z		<- z[, list(P=names(control$quantiles), Q=unname(quantile(VALUE, p=control$quantiles))), by=c('TR_TARGETCAT','REC_TARGETCAT')]
+	z		<- dcast.data.table(z, TR_TARGETCAT+REC_TARGETCAT~P, value.var='Q')
+	z[, LABEL:= paste0(round(M*100, d=1), '%\n[',round(CL*100,d=1),'% - ',round(CU*100,d=1),'%]')]
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	setkey(z, REC_TARGETCAT, TR_TARGETCAT )
+	z[, STAT:='sources']
+	ans		<- rbind(ans,z)	
+	gc()
+	
+	if(length(control$flowratios)>0)
+	{
+		cat('\nComputing flow ratios...')
+		#	calculate transmission flow ratios	
+		z		<- copy(pars)
+		z[, FLOW:=paste0(TR_TARGETCAT,' ',REC_TARGETCAT)]
+		z		<- dcast.data.table(z, SAMPLE~FLOW, value.var='VALUE')	
+		set(z, NULL, colnames(z)[!colnames(z)%in%c('SAMPLE',unlist(control$flowratios))], NULL)
+		for(ii in seq_along(control$flowratios))
+		{
+			if(!all(c(control$flowratios[[ii]][2],control$flowratios[[ii]][3])%in%colnames(z)))
+				stop('column names in control$flowratios are not in MCMC output')
+			set(z, NULL, control$flowratios[[ii]][1], z[[ control$flowratios[[ii]][2] ]] /  z[[ control$flowratios[[ii]][3] ]])
+			set(z, NULL, c(control$flowratios[[ii]][2],control$flowratios[[ii]][3]), NULL)
+		}
+		z		<- melt(z, id.vars='SAMPLE', value.name='VALUE', variable.name='FLOWRATIO_CAT')
+		z		<- z[, list(P=names(control$quantiles), Q=unname(quantile(VALUE, p=control$quantiles))), by=c('FLOWRATIO_CAT')]
+		z		<- dcast.data.table(z, FLOWRATIO_CAT~P, value.var='Q')
+		z[, LABEL:= paste0(round(M, d=2), '\n[',round(CL,d=2),' - ',round(CU,d=2),']')]
+		z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
+		z[, STAT:='flow_ratio']
+		ans		<- rbind(ans,z, fill=TRUE)	
+		gc()		
+	}
+	
+	cat('\nWriting output to',control$outfile)
+	write.csv(ans, row.names=FALSE,file=control$outfile)
+}
+
 Rakai190327.RCCStransmissionflows.inference.age6model<- function(infile.inference=NULL, opt=NULL)
 {
 	require(data.table)	
