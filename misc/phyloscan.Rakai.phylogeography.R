@@ -8865,7 +8865,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 					' -s "',file.path(indir,infile.sequencing.prior.samples),'"',
 					' -o ', paste(opts[[ii]],collapse=''))
 			#	add PBS header
-			tmp	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=1, hpc.load=1)			
+			tmp	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")			
 			cmd	<- paste(tmp,cmd,sep='\n')
 			cat(cmd)	
 			#	qsub
