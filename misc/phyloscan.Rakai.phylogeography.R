@@ -8752,7 +8752,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		#	vary some phyloscanner options
 		#
 		indir		<- '/Users/Oliver/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'
-		#indir		<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'
+		indir		<- '/rds/general/user/or105/home/WORK/Gates_2014/Rakai'
 		opt									<- list()
 		opt$adjust.sequencing.bias			<- 1
 		opt$adjust.participation.bias		<- 1
