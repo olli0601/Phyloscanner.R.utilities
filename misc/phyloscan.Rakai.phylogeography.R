@@ -8771,7 +8771,8 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
-						)						
+						)	
+		infiles		<- c()
 		for(ii in seq_along(infiles))
 		{
 			#	main command
@@ -8851,6 +8852,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
 		opts[[8]]	<- opt
 		
+		opts		<- list(opts[[1]], opts[[2]], opts[[4]])
 		infile.participation.prior.samples	<- "190327_participation_model_samples.rda"
 		infile.sequencing.prior.samples		<- "190327_sequencing_model_samples.rda"		
 		infile								<- "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
