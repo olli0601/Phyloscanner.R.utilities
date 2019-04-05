@@ -8569,6 +8569,278 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function(indir=NA, infile.in
 	save(zm, rtpdm, rtr2, df, da, dc, mc, file=paste0(outfile.base,'_core_predict_mcmc_',paste0(opt, collapse=''),'.rda'))
 }
 
+RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.data=NULL, infile.inference.mcmc=NULL, infile.subdistricts=NULL)
+{	
+	require(data.table)	
+	require(gtools)	
+	
+			
+	if(is.null(infile.inference.data))	
+		infile.inference.data			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	if(is.null(infile.inference.mcmc))
+		infile.inference.mcmc			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_samcmc190327_nsweep1e4_opt11101.rda"
+	if(is.null(infile.subdistricts))		
+		infile.subdistricts				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
+	
+	outfile.base						<- gsub('.rda$','',infile.inference.mcmc)
+	tmp									<- gsub('.*_opt([0-9]+).*','\\1',outfile.base)
+	#tmp									<- "112401"
+	opt									<- list()
+	opt$adjust.sequencing.bias			<- as.integer(substr(tmp,1,1))
+	opt$adjust.participation.bias		<- as.integer(substr(tmp,2,2))
+	opt$migration.def.code				<- substr(tmp,3,4)
+	opt$set.missing.migloc.to.inland	<- as.integer(substr(tmp,5,5))
+	opt$set.missing.migloc.to.fishing	<- as.integer(substr(tmp,6,6))
+	
+	cat('\ninfile.inference=',infile.inference.data)
+	cat('\ninfile.inference.mcmc=',infile.inference.mcmc)
+	cat('\ninfile.subdistricts=',infile.subdistricts)
+	cat('\nopt=',unlist(opt))			
+	
+	#
+	#	prepare data on observed transmission flows
+	#
+	load(infile.inference.data)
+	rtr	<- copy(rtr3)
+	if(opt$migration.def.code=='06')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_05YR, REC_INMIGRATE_05YR, TR_COMM_NUM_A_MIG_05YR')
+		setnames(rtr, 'TR_INMIGRATE_05YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_05YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_05YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='12')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_1YR, REC_INMIGRATE_1YR, TR_COMM_NUM_A_MIG_1YR')
+		setnames(rtr, 'TR_INMIGRATE_1YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_1YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_1YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='24')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_2YR, REC_INMIGRATE_2YR, TR_COMM_NUM_A_MIG_2YR')
+		setnames(rtr, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_2YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_2YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='36')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_3YR, REC_INMIGRATE_3YR, TR_COMM_NUM_A_MIG_3YR')
+		setnames(rtr, 'TR_INMIGRATE_3YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_3YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_3YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='48')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_4YR, REC_INMIGRATE_4YR, TR_COMM_NUM_A_MIG_4YR')
+		setnames(rtr, 'TR_INMIGRATE_4YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_4YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_4YR', 'TR_COMM_NUM_A_MIG')
+	}	
+	rtr	<- subset(rtr, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+					'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE',
+					'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
+					'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE'))	
+	# inmigrant status
+	rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
+	rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+	set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
+	#	set unknown origin to either fishing or inland
+	tmp	<- rtr[, which(TR_INMIGRATE=='inmigrant_from_unknown')]
+	if(opt$set.missing.migloc.to.inland)
+	{
+		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_inland')
+		set(rtr, tmp, 'TR_COMM_NUM_A_MIG', 'imig')
+	}		
+	if(opt$set.missing.migloc.to.fishing)
+	{
+		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_fisherfolk')
+		set(rtr, tmp, 'TR_COMM_NUM_A_MIG', 'fmig')
+	}
+	# add age 
+	rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
+	rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
+	# impute age
+	tmp	<- which(is.na(rtr$TR_AGE_AT_MID))
+	set(rtr, tmp, 'TR_AGE_AT_MID', mean(rtr$TR_AGE_AT_MID[which(!is.na(rtr$TR_AGE_AT_MID))]) )
+	tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
+	set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
+	# fixup from latest surveillance data
+	set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
+	set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
+	set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
+	set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
+	#	stratify age
+	rtr[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
+	stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )	
+	#	build category to match with sampling data tables 
+	rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_NUM_A,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	#	build transmission flow category 
+	rtr[, REC_TRM_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_TRM_CATEGORY:= paste0(TR_COMM_NUM_A_MIG,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	#	calculate observed number of transmissions
+	dobsRCCS	<- rtr[, list( TRM_OBS=length(unique(PAIRID))), by=c('TR_TRM_CATEGORY','REC_TRM_CATEGORY','TR_SAMPLING_CATEGORY','REC_SAMPLING_CATEGORY')]
+	setkey(dobsRCCS, TR_TRM_CATEGORY, REC_TRM_CATEGORY )	
+	dobsRCCS[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobsRCCS))]
+	
+	
+	#
+	# 	prepare data on subdistricts
+	#		
+	#	calculate eligible in RCCS communities
+	dsubdis	<- desm[, list(COMM_ELIGIBLE=sum(PART_EVER+PART_NEVER)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','SEX')]
+	dsubdis	<- merge(dsubdis, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=c('107','16','776','51','4','24','1','22')), all=TRUE, by='COMM_NUM')	
+	tmp		<- dsubdis[, which(is.na(COMM_NUM2))]
+	set(dsubdis, tmp, 'COMM_NUM2', dsubdis[tmp, COMM_NUM])
+	set(dsubdis, NULL, 'COMM_NUM2', dsubdis[, as.integer(COMM_NUM2)])	
+	#	associate subdistrict names to communities	
+	load(infile.subdistricts)
+	tmp		<- subset(as.data.table(comgps2), select=c(COMM_NUM, loc))
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))
+	set(tmp, NULL, 'COMM_NUM2', tmp[, as.integer(as.character(COMM_NUM2))])
+	dsubdis	<- merge(dsubdis, tmp, by='COMM_NUM2', all=TRUE)
+	stopifnot( !any(is.na(dsubdis[,SUBDISTRICT])))
+	#	define subdistrict type as discussed with Kate
+	tmp		<- dsubdis[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fishing','inland')))), by=c('SUBDISTRICT')]	
+	dsubdis	<- merge(tmp, dsubdis, by='SUBDISTRICT' )
+	#	add further info on subdistricts
+	tmp		<- as.data.table(subdis.data)
+	setnames(tmp, colnames(tmp), toupper(gsub('_count','_popcount',gsub('\\.','_',gsub('subdis.name','SUBDISTRICT',colnames(tmp))))))
+	set(tmp, NULL, c('SURVEY_HIVPREV','SURVEY_MALE_HIVPREV','SURVEY_FEMALE_HIVPREV','MAP_POPCOUNT','MAP_HIVCOUNT','MAP_HIVPREV'), NULL)
+	set(tmp, NULL, 'SUBDISTRICT', tmp[, gsub('Bbaali','Bbaale',SUBDISTRICT)])
+	tmp		<- melt(tmp, id.vars='SUBDISTRICT', value.name='MAP_POPCOUNT', variable.name='SEX')
+	set(tmp, NULL, 'SEX', tmp[, substr(gsub('MAP_([A-Z]+)_POPCOUNT','\\1',SEX),1,1)])
+	dsubdis	<- merge(dsubdis, tmp, by=c('SUBDISTRICT','SEX'), all.x=TRUE)
+	#	define population surveyed by area
+	dprior	<- dsubdis[, list(	SUBDISTRICT_POP=MAP_POPCOUNT[1], POP_RCCS_YES=sum(COMM_ELIGIBLE), POP_RCCS_NO=MAP_POPCOUNT[1]-sum(COMM_ELIGIBLE)	), by=c('SUBDISTRICT','AREA','SEX')]
+	dprior	<- dprior[, lapply(.SD, sum, na.rm=TRUE), by=c('AREA','SEX'), .SDcols=c("POP_RCCS_YES","POP_RCCS_NO") ] 
+	dprior[, SAMPLING_CATEGORY:=paste0(AREA,':',SEX)]
+	dprior[, P:= POP_RCCS_YES/(POP_RCCS_YES+POP_RCCS_NO)]
+	dprior[, LP:= 0]
+	dprior[, SAMPLE:= 1L]
+	set(dprior, NULL, c('AREA','SEX','POP_RCCS_YES','POP_RCCS_NO'), NULL)
+	
+	#
+	#	aggregate MCMC samples to area of subdistricts
+	#	
+	daggregateTo				<- subset(dobsRCCS, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
+	daggregateTo[, TR_DUMMY:= gsub('^([a-z]+):([FM]):.*','\\1:\\2',daggregateTo$TR_TRM_CATEGORY)]
+	daggregateTo[, REC_DUMMY:= gsub('^([a-z]+):([FM]):.*','\\1:\\2',daggregateTo$REC_TRM_CATEGORY)]
+	tmp							<- unique(subset(dsubdis, select=c(AREA, SEX, COMM_NUM_A)))
+	tmp							<- rbind(tmp, data.table(AREA='external', SEX=c('F','M'), COMM_NUM_A='emig'), data.table(AREA='inland', SEX=c('F','M'), COMM_NUM_A='imig'), data.table(AREA='fishing', SEX=c('F','M'), COMM_NUM_A='fmig'))
+	tmp[, DUMMY:= paste0(COMM_NUM_A,':',SEX)] 
+	tmp[, TARGETCAT:= paste0(AREA,':',SEX)]
+	tmp							<- subset(tmp, select=c(DUMMY,TARGETCAT))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))	
+	if( length( daggregateTo$TR_DUMMY[ !daggregateTo$TR_DUMMY%in%tmp$TR_DUMMY ] )>0 )
+		stop('Fatal error in aggregating MCMC transmitter categories to subdistrict areas')
+	daggregateTo				<- merge(daggregateTo,tmp,by='TR_DUMMY')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))	
+	if( length( daggregateTo$REC_DUMMY[ !daggregateTo$REC_DUMMY%in%tmp$REC_DUMMY ] )>0 )
+		stop('Fatal error in aggregating MCMC recipient categories to subdistrict areas')	
+	daggregateTo				<- merge(daggregateTo, tmp, by='REC_DUMMY')
+	set(daggregateTo, NULL, c('REC_DUMMY','TR_DUMMY','TR_TRM_CATEGORY','REC_TRM_CATEGORY'), NULL)	
+	control	<- list(	burnin.p=0.05, 
+						thin=NA_integer_, 
+						regex_pars='*')
+	mca		<- source.attribution.mcmc.aggregateToTarget(infile.inference.mcmc, daggregateTo, control=control)
+	mca		<- subset(mca, !grepl('external',TR_TARGETCAT))
+	setnames(mca, c('TR_TARGETCAT','REC_TARGETCAT'), c('TR_TRM_CAT','REC_TRM_CAT'))
+	dobs	<- unique(subset(mca, select=c(TR_TRM_CAT, REC_TRM_CAT)))
+	setkey(dobs, TR_TRM_CAT, REC_TRM_CAT)
+	dobs[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobs))]	
+	mca		<- merge(dobs, mca, by=c('TR_TRM_CAT','REC_TRM_CAT'))
+	dobs[, TR_SAMPLING_CATEGORY:= TR_TRM_CAT]
+	dobs[, REC_SAMPLING_CATEGORY:= REC_TRM_CAT]
+	
+	#
+	#	run MCMC
+	#
+	set.seed(42)
+	pp.n			<- 1e4
+	pp.burnin		<- 0.9
+	pp.sweeps		<- 1e2
+	mc				<- list()
+	mc[['pars']]	<- list()
+	mc$pars$Z_RCCS	<- matrix(NA, nrow=pp.n, ncol=nrow(dobs))
+	mc[['pp']]		<- vector('list',pp.n)
+	for(i in 1:pp.n)
+	{
+		#
+		# 	sample Z among RCCS communities, and add to dobs as 'TRM_OBS'
+		#
+		dobs[, TRM_OBS:=NULL]
+		tmp					<- subset(mca, VARIABLE=='Z' & SAMPLE==sample(max(mca$SAMPLE), 1))
+		setnames(tmp, 'VALUE', 'TRM_OBS')
+		tmp					<- subset(tmp, select=c(TRM_CAT_PAIR_ID, TRM_OBS))
+		dobs				<- merge(dobs, tmp, by='TRM_CAT_PAIR_ID')
+		cat('\nIteration', i,'\nSetting Z among RCCS communities to', dobs$TRM_OBS)
+		mc$pars$Z_RCCS[i,]	<- dobs$TRM_OBS
+		#
+		#	run MCMC and return
+		#
+		control			<- list( mcmc.n=9*pp.sweeps, verbose=0 )
+		mc[['pp']][[i]]	<- source.attribution.mcmc(dobs, dprior, control=control)
+		mc[['pp']][[i]][['it.info']][, PP_IT:= i]
+	}
+	#	collect variables and save
+	for(x in c('XI','XI_LP','S','S_LP','Z','PI','N'))
+		mc$pars[[x]]	<- do.call(rbind, lapply(seq_len(pp.n), function(i) mc[['pp']][[i]][['pars']][[x]][seq.int(pp.sweeps*pp.burnin+1, pp.sweeps),,drop=FALSE]) )
+	mc$it.info	<- do.call(rbind, lapply(seq_len(pp.n), function(i) mc[['pp']][[i]][['it.info']][seq.int(9*pp.sweeps*pp.burnin+1, 9*pp.sweeps),] ) )		
+	mc$dl		<- mc[['pp']][[1]][['dl']] 
+	mc$dlt		<- mc[['pp']][[1]][['dlt']] 
+	mc$dlu		<- mc[['pp']][[1]][['dlu']]
+	mc$time		<- sum(sapply(seq_len(pp.n), function(i) mc[['pp']][[i]][['time']] ))
+	mc[['pp']]	<- NULL
+	str(mc[[1]])
+	gc()	
+	mcmc.file	<- paste0(outfile.base,'_prAreas.rda')
+	save(mc, dobsRCCS, dprior, dsubdis, daggregateTo, file=mcmc.file)
+	
+	#	MCMC diagnostics
+	control		<- list(	burnin.p=0, 
+			regex_pars='PI', 
+			credibility.interval=0.95, 
+			pdf.plot.all.parameters=TRUE, 
+			pdf.plot.n.worst.case.parameters=0, 
+			pdf.height.per.par=1.2, 
+			outfile.base=gsub('\\.rda','',mcmc.file))
+	source.attribution.mcmc.diagnostics(mcmc.file, control=control)	
+	
+	# 	make data.table in long format and calculate key quantities
+	colnames(mc$pars[['PI']])	<- paste0('PI-',seq_len(ncol(mc$pars[['PI']])))
+	pars	<- as.data.table(mc$pars[['PI']])
+	pars[, SAMPLE:= seq_len(nrow(pars))]
+	pars	<- melt(pars, id.vars='SAMPLE')
+	pars[, VARIABLE:= pars[, gsub('([A-Z]+)-([0-9]+)','\\1',variable)]]
+	pars[, TRM_CAT_PAIR_ID:= pars[, as.integer(gsub('([A-Z]+)-([0-9]+)','\\2',variable))]]
+	tmp		<- subset(dobs, select=c(TRM_CAT_PAIR_ID, TR_TRM_CAT, REC_TRM_CAT))
+	setnames(tmp, c('TR_TRM_CAT','REC_TRM_CAT'), c('TR_TARGETCAT','REC_TARGETCAT'))
+	pars	<- merge(pars, tmp, by='TRM_CAT_PAIR_ID')
+	set(pars, NULL, c('TRM_CAT_PAIR_ID','variable'), NULL)
+	setnames(pars, colnames(pars), toupper(colnames(pars)))
+	write.csv(pars, row.names=FALSE, file=gsub('\\.rda','PI.csv',mcmc.file))		
+	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
+			flowratios= list( c('inland:M/fishing:M', 'inland:M fishing:F', 'fishing:M inland:F'), c('inland:F/fishing:F', 'inland:F fishing:M', 'fishing:F inland:M')),
+			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','PI.csv',mcmc.file)))
+	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','PI.csv',mcmc.file), control)
+	
+	
+	#	aggregate to fish<->inland
+	setnames(pars, c('TR_TARGETCAT','REC_TARGETCAT'), c('TR_TRM_CAT','REC_TRM_CAT'))
+	pars[, TR_TARGETCAT:= gsub('^([a-z]+)\\:([MF])$','\\1',TR_TRM_CAT)]
+	pars[, REC_TARGETCAT:= gsub('^([a-z]+)\\:([MF])$','\\1',REC_TRM_CAT)]
+	pars	<- pars[, list(VALUE=sum(VALUE)), by=c('TR_TARGETCAT','REC_TARGETCAT','VARIABLE','SAMPLE')]
+	write.csv(pars, row.names=FALSE, file=gsub('\\.rda','PI2.csv',mcmc.file))
+	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
+			flowratios= list( c('inland/fishing', 'inland fishing', 'fishing inland')),
+			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','PI2.csv',mcmc.file)))
+	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','PI2.csv',mcmc.file), control)	
+}
+
 RakaiFull.phylogeography.181006.example.count<- function()
 {
 	if(0)	#same flow ratio among all as among surveyed
