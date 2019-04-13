@@ -5267,7 +5267,7 @@ mcmc.n.z.pi.joint.low.acceptance.rate<- function(zm, rtpdm, rtr2, ds, dc, outfil
 	}
 }
 
-RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference=NULL)
+RakaiFull.phylogeography.190327.gender.mobility.data<- function(infile.inference=NULL)
 {
 	require(data.table)
 	require(scales)
@@ -5285,14 +5285,14 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 		x	
 	}
 	
-	infile.counts		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda"
+	infile.counts		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/190327_sampling_by_gender_age.rda"
 	infile.anymisedcom	<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
 	infile.map			<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_googlemap.rda'
 	if(is.null(infile.inference))
 	{
-		infile.inference<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"		
+		infile.inference<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_withmetadata.rda"		
 	}
-	outfile.base		<- gsub('171122|170704','181006',gsub('_withmetadata.rda','',infile.inference))
+	outfile.base		<- gsub('171122|170704','190327',gsub('_withmetadata.rda','',infile.inference))
 	
 	#	get map
 	load(infile.map)
@@ -5387,13 +5387,8 @@ RakaiFull.phylogeography.181006.gender.mobility.data<- function(infile.inference
 	set(tmp, tmp2, 'value', tmp[tmp2, paste0('inmigrant_from_',MALE_INMIG_LOC)])
 	tmp		<- dcast.data.table(tmp, PAIRID+DATE_FIRSTCONCPOS+MALE_INMIG_LOC+MALE_INMIG_LON+MALE_INMIG_LAT+MALE_INMIGRATE_ADMIN+FEMALE_INMIG_LOC+FEMALE_INMIG_LON+FEMALE_INMIG_LAT+FEMALE_INMIGRATE_ADMIN~variable, value.var='value')	
 	rtpdm		<- merge(rtpdm, tmp, by=c('PAIRID'))
-	rtpdm[, table(MALE_INMIGRATE_2YR, FEMALE_INMIGRATE_2YR)]
-	#MALE_INMIGRATE_2YR        inmigrant_from_external inmigrant_from_fisherfolk inmigrant_from_inland inmigrant_from_unknown resident
-	#inmigrant_from_external                       5                         0                     5                      0        9
-	#inmigrant_from_inland                         3                         0                     7                      2       14
-	#inmigrant_from_unknown                        0                         0                     1                      0        8
-	#resident                                     22                         4                    33                      6      174
-
+	#rtpdm[, table(MALE_INMIGRATE_2YR, FEMALE_INMIGRATE_2YR)]
+	
 	#
 	#	add coordinates to communities
 	tmp		<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT)))
@@ -5500,8 +5495,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 	#
 	if(0)
 	{
-		infiles		<- c("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
-				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_withmetadata.rda"
+		infiles		<- c("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min20_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min50_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_withmetadata.rda"
@@ -5513,7 +5507,7 @@ RakaiFull.phylogeography.181006.flows.wrapper<- function()
 		for(ii in seq_along(infiles))
 		{
 			infile.inference	<- infiles[[ii]]
-			RakaiFull.phylogeography.181006.gender.mobility.data(infile.inference)		
+			RakaiFull.phylogeography.190327.gender.mobility.data(infile.inference)		
 		}
 	}
 	
@@ -8569,16 +8563,16 @@ RakaiFull.phylogeography.181006.predict.areaflows<- function(indir=NA, infile.in
 	save(zm, rtpdm, rtr2, df, da, dc, mc, file=paste0(outfile.base,'_core_predict_mcmc_',paste0(opt, collapse=''),'.rda'))
 }
 
-RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.data=NULL, infile.inference.mcmc=NULL, infile.subdistricts=NULL)
-{	
+RakaiFull.phylogeography.190327.predict.areaflows.debug<- function()
+{
 	require(data.table)	
 	require(gtools)	
 	
-			
+	
 	if(is.null(infile.inference.data))	
 		infile.inference.data			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
 	if(is.null(infile.inference.mcmc))
-		infile.inference.mcmc			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_samcmc190327_nsweep1e4_opt11101.rda"
+		infile.inference.mcmc			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda"
 	if(is.null(infile.subdistricts))		
 		infile.subdistricts				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
 	
@@ -8724,6 +8718,605 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	set(dprior, NULL, c('AREA','SEX','POP_RCCS_YES','POP_RCCS_NO'), NULL)
 	
 	#
+	#	make csv table for supplement
+	if(0)
+	{
+		df	<- unique(subset(dsubdis, select=c(AREA, SUBDISTRICT, SEX, COMM_NUM_A, COMM_ELIGIBLE, MAP_POPCOUNT)))	
+		df	<- df[, list(MAP_POPCOUNT=round(MAP_POPCOUNT[1]), RCCS_ELIGIBLE=sum(COMM_ELIGIBLE), RCCS_ELIGIBLE_P=sum(COMM_ELIGIBLE)/MAP_POPCOUNT[1], N_COMM=length(unique(COMM_NUM_A))), by=c('AREA','SUBDISTRICT','SEX')]
+		setkey(df, AREA, SUBDISTRICT, SEX )
+		df[, RCCS_LABEL:= paste0(RCCS_ELIGIBLE,' (',round(RCCS_ELIGIBLE_P*100,d=1),'%)')]
+		write.csv( subset(df, select=c(AREA, SUBDISTRICT, SEX, MAP_POPCOUNT, N_COMM, RCCS_LABEL)), row.names=FALSE, file=gsub('\\.rda','_table.csv',infile.subdistricts))
+	}
+	#	flows that we expect:
+	if(0)
+	{
+		s		<- c(0.2363956, 0.2631666, 0.3919308, 0.5427133)
+		pi		<- c(0.243,0.029,0.039,0.231,0.184,0.006,0.039,0.127)
+		pi		<- pi/sum(pi)
+		
+		pistar	<- c( 	pi[1]/s[4]/s[3],  pi[2]/s[4]/s[1],  pi[3]/s[2]/s[3], pi[4]/s[2]/s[1],
+				pi[5]/s[3]/s[4],  pi[6]/s[3]/s[2],  pi[7]/s[1]/s[4], pi[8]/s[1]/s[2])
+		pistar <- pistar/sum(pistar)
+		
+		(pistar[3]+pistar[7]) / (pistar[2]+pistar[6]) 
+		# 'Fish:M','Fish:F',
+	}
+	#	confirm I am right:
+	daggregateTo	<- subset(dobsRCCS, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
+	daggregateTo[, TR_TARGETCAT:= paste0(	gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$TR_TRM_CATEGORY,1,1)))),
+					':',
+					gsub('^[a-z]+:([FM]):.*','\\1',daggregateTo$TR_TRM_CATEGORY))]
+	daggregateTo[, REC_TARGETCAT:= paste0(	gsub('^e$','external',gsub('^f$','fishing',gsub('^a|i|t$','inland',substring(daggregateTo$REC_TRM_CATEGORY,1,1)))),
+					':',
+					gsub('^[a-z]+:([FM]):.*','\\1',daggregateTo$REC_TRM_CATEGORY))]
+	set(daggregateTo, NULL, c('TR_TRM_CATEGORY','REC_TRM_CATEGORY'), NULL)	
+	control	<- list(	burnin.p=0.05, 
+			thin=NA_integer_, 
+			regex_pars='*')
+	mca		<- source.attribution.mcmc.aggregateToTarget(infile.inference.mcmc, daggregateTo, control=control)
+	mca		<- subset(mca, !grepl('external',TR_TARGETCAT))
+	setnames(mca, c('TR_TARGETCAT','REC_TARGETCAT'), c('TR_TRM_CAT','REC_TRM_CAT'))
+	
+	
+	#
+	#	aggregate MCMC samples to area of subdistricts
+	#	
+	daggregateTo				<- subset(dobsRCCS, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
+	daggregateTo[, TR_DUMMY:= gsub('^([a-z]+):([FM]):.*','\\1:\\2',daggregateTo$TR_TRM_CATEGORY)]
+	daggregateTo[, REC_DUMMY:= gsub('^([a-z]+):([FM]):.*','\\1:\\2',daggregateTo$REC_TRM_CATEGORY)]
+	tmp							<- unique(subset(dsubdis, select=c(AREA, SEX, COMM_NUM_A)))
+	tmp							<- rbind(tmp, data.table(AREA='external', SEX=c('F','M'), COMM_NUM_A='emig'), data.table(AREA='inland', SEX=c('F','M'), COMM_NUM_A='imig'), data.table(AREA='fishing', SEX=c('F','M'), COMM_NUM_A='fmig'))
+	tmp[, DUMMY:= paste0(COMM_NUM_A,':',SEX)] 
+	tmp[, TARGETCAT:= paste0(AREA,':',SEX)]
+	tmp							<- subset(tmp, select=c(DUMMY,TARGETCAT))
+	setnames(tmp, colnames(tmp), paste0('TR_',colnames(tmp)))	
+	if( length( daggregateTo$TR_DUMMY[ !daggregateTo$TR_DUMMY%in%tmp$TR_DUMMY ] )>0 )
+		stop('Fatal error in aggregating MCMC transmitter categories to subdistrict areas')
+	daggregateTo				<- merge(daggregateTo,tmp,by='TR_DUMMY')
+	setnames(tmp, colnames(tmp), gsub('TR_','REC_',colnames(tmp)))	
+	if( length( daggregateTo$REC_DUMMY[ !daggregateTo$REC_DUMMY%in%tmp$REC_DUMMY ] )>0 )
+		stop('Fatal error in aggregating MCMC recipient categories to subdistrict areas')	
+	daggregateTo				<- merge(daggregateTo, tmp, by='REC_DUMMY')
+	set(daggregateTo, NULL, c('REC_DUMMY','TR_DUMMY','TR_TRM_CATEGORY','REC_TRM_CATEGORY'), NULL)	
+	control	<- list(	burnin.p=0.05, 
+			thin=NA_integer_, 
+			regex_pars='*')
+	mca		<- source.attribution.mcmc.aggregateToTarget(infile.inference.mcmc, daggregateTo, control=control)
+	mca		<- subset(mca, !grepl('external',TR_TARGETCAT))
+	setnames(mca, c('TR_TARGETCAT','REC_TARGETCAT'), c('TR_TRM_CAT','REC_TRM_CAT'))
+	dobs	<- unique(subset(mca, select=c(TR_TRM_CAT, REC_TRM_CAT)))
+	setkey(dobs, TR_TRM_CAT, REC_TRM_CAT)
+	dobs[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobs))]	
+	mca		<- merge(dobs, mca, by=c('TR_TRM_CAT','REC_TRM_CAT'))
+	dobs[, TR_SAMPLING_CATEGORY:= TR_TRM_CAT]
+	dobs[, REC_SAMPLING_CATEGORY:= REC_TRM_CAT]
+	
+	
+	dobs[, TRM_OBS:=NULL]
+	tmp	<- subset(mca, VARIABLE=='Z')[, list(VALUE=round(mean(VALUE))), by=c('TR_TRM_CAT','REC_TRM_CAT')]
+	set(tmp, NULL, 'TR_TRM_CAT', tmp[, factor(TR_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	set(tmp, NULL, 'REC_TRM_CAT', tmp[, factor(REC_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	setkey(tmp, TR_TRM_CAT, REC_TRM_CAT)
+	tmp[, PI:= round(VALUE/sum(VALUE)*100,d=1)]
+	
+	
+	tmp2	<- subset(mca, VARIABLE=='PI')[, list(VALUE=mean(VALUE)), by=c('TR_TRM_CAT','REC_TRM_CAT')]
+	set(tmp2, NULL, 'VALUE', tmp2[, VALUE/sum(VALUE)])
+	set(tmp2, NULL, 'TR_TRM_CAT', tmp2[, factor(TR_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	set(tmp2, NULL, 'REC_TRM_CAT', tmp2[, factor(REC_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	setkey(tmp2, TR_TRM_CAT, REC_TRM_CAT)
+	
+	tmp3	<- subset(mca, VARIABLE=='PI')[, list(VALUE=median(VALUE)), by=c('TR_TRM_CAT','REC_TRM_CAT')]
+	set(tmp3, NULL, 'VALUE', tmp3[, VALUE/sum(VALUE)])
+	set(tmp3, NULL, 'TR_TRM_CAT', tmp3[, factor(TR_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	set(tmp3, NULL, 'REC_TRM_CAT', tmp3[, factor(REC_TRM_CAT, levels=c('fishing:M','inland:M','fishing:F','inland:F'))])
+	setkey(tmp3, TR_TRM_CAT, REC_TRM_CAT)
+	
+	#	flows that we expect:
+	if(0)
+	{
+		s		<- c(0.2363956, 0.2631666, 0.3919308, 0.5427133)
+		#pi		<- c(0.243,0.029,0.039,0.231,0.184,0.006,0.039,0.127)
+		pi		<- c(0.31125152, 0.02319007, 0.04359218, 0.22639770, 0.21429612, 0.00310487, 0.04633952, 0.13182802)
+		pi		<- pi/sum(pi)
+		
+		pistar	<- c( 	pi[1]/s[4]/s[3],  pi[2]/s[4]/s[1],  pi[3]/s[2]/s[3], pi[4]/s[2]/s[1],
+				pi[5]/s[3]/s[4],  pi[6]/s[3]/s[2],  pi[7]/s[1]/s[4], pi[8]/s[1]/s[2])
+		pistar <- pistar/sum(pistar)
+		
+		(pistar[3]+pistar[7]) / (pistar[2]+pistar[6]) 
+		# 'Fish:M','Fish:F',
+	}
+	
+	tmp					<- subset(mca, VARIABLE=='Z' & SAMPLE==sample(max(mca$SAMPLE), 1))
+	setnames(tmp, 'VALUE', 'TRM_OBS')
+	tmp					<- subset(tmp, select=c(TRM_CAT_PAIR_ID, TRM_OBS))
+	dobs				<- merge(dobs, tmp, by='TRM_CAT_PAIR_ID')
+	cat('\nIteration', i,'\nSetting Z among RCCS communities to', dobs$TRM_OBS)
+	mc$pars$Z_RCCS[i,]	<- dobs$TRM_OBS
+	#
+	#	run MCMC and return
+	#
+	control			<- list( mcmc.n=9*pp.sweeps, verbose=0 )
+	mc[['pp']][[i]]	<- source.attribution.mcmc(dobs, dprior, control=control)
+	mc[['pp']][[i]][['it.info']][, PP_IT:= i]
+	gc()
+}
+
+RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	
+	#
+	#	read in all results
+	#
+	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	outfile.base	<- paste0(indir,'/190327_sensitivity_')
+	infiles	<- data.table(FI=list.files(indir, pattern='flowsetc'))
+	infiles	<- subset(infiles, grepl('nsweep1e5',FI) & grepl('samcmc190327',FI) & !grepl('^todi',FI) & !grepl('prAreas',FI) & !grepl('beforeSort',FI))
+	infiles[, OPT:= gsub('.*_opt([0-9]+)_.*','\\1',FI)]
+	infiles[, CONFCUT:= gsub('.*_conf([0-9]+)_.*','\\1',FI)]
+	set(infiles, infiles[,which(grepl('flowsetc',CONFCUT))], 'CONFCUT', '60')
+	set(infiles, NULL, 'CONFCUT', infiles[, paste0(CONFCUT,'%')])	
+	infiles[, MINDEPTH:= gsub('.*_min([0-9]+)_.*','\\1',FI)]
+	set(infiles, NULL, 'MINDEPTH', infiles[, paste0(MINDEPTH,'X')])
+	infiles[, OPT_PART:= factor(substring(OPT,2,2), levels=c('1','0'), labels=c('Yes','No'))]
+	infiles[, OPT_SEQ:= factor(substring(OPT,1,1), levels=c('1','0'), labels=c('Yes','No'))]
+	infiles[, OPT_MIG:= paste0(substring(OPT,3,4), ' months')]
+	infiles[, OPT_UNKMIG:= factor(substring(OPT,5,5), levels=c('0','1'), labels=c('fishing communities','inland communities'))]
+	infiles[, STRAT:= factor(grepl('ByGender',FI), levels=c(FALSE,TRUE), labels=c('overall','by gender'))]
+	
+	se	<- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{
+		tmp		<- as.data.table(read.csv(file.path(indir, infiles$FI[i]), stringsAsFactors=FALSE))
+		set(tmp, NULL, colnames(tmp)[!colnames(tmp)%in%c("TR_TARGETCAT","REC_TARGETCAT","CL","CU","IL","IU","M","STAT","FLOWRATIO_CAT")], NULL)
+		for(x in c('STRAT','CONFCUT','MINDEPTH','OPT_PART','OPT_SEQ','OPT_MIG','OPT_UNKMIG','FI'))
+			set(tmp, NULL, x, infiles[[x]][i])
+		se[[i]]	<- tmp
+		print(colnames(se[[i]]))
+	}
+	se	<- do.call('rbind', se)
+	
+	tmp	<- c("fishing","inland","external", "fishing:M","inland:M","external:M","fishing:F","inland:F","external:F")
+	set(se, NULL, 'TR_TARGETCAT', se[, factor(TR_TARGETCAT, levels=tmp)])
+	set(se, NULL, 'REC_TARGETCAT', se[, factor(REC_TARGETCAT, levels=tmp)])
+	setkey(se, FI, TR_TARGETCAT, REC_TARGETCAT)
+	set(se, NULL, 'TRM_CAT', se[, factor(paste0(as.character(TR_TARGETCAT),' -> ',as.character(REC_TARGETCAT)))])
+	
+	#
+	#	sensitivity: no sampling
+	#
+	df	<- subset(se, CONFCUT=='60%' & MINDEPTH=='30X' & OPT_MIG=='24 months' & OPT_UNKMIG=='fishing communities')
+	df[, SENS:= paste0(OPT_PART,', ', OPT_SEQ)]
+	tmp	<- df[, which(SENS=='Yes, Yes')]
+	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
+	tmp	<- 'sampling'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
+	
+	
+	#
+	#	sensitivity: quality criteria on deep seq depth
+	#
+	df	<- subset(se, CONFCUT=='60%' & OPT_PART=='Yes' & OPT_SEQ=='Yes' & OPT_MIG=='24 months' & OPT_UNKMIG=='fishing communities')
+	df[, SENS:= MINDEPTH]
+	tmp	<- df[, which(SENS=='30X')]
+	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
+	tmp	<- 'mindepth'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
+	
+	
+	#
+	#	sensitivity: confidence cut off on source-recipient pairs
+	#
+	df	<- subset(se, MINDEPTH=='30X' & OPT_PART=='Yes' & OPT_SEQ=='Yes' & OPT_MIG=='24 months' & OPT_UNKMIG=='fishing communities')
+	df[, SENS:= CONFCUT]
+	tmp	<- df[, which(SENS=='60%')]
+	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
+	tmp	<- 'confcut'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
+	
+	
+	#
+	#	sensitivity: migration
+	#
+	df	<- subset(se, MINDEPTH=='30X' & CONFCUT=='60%' & OPT_PART=='Yes' & OPT_SEQ=='Yes' & OPT_UNKMIG=='fishing communities')
+	df[, SENS:= OPT_MIG]
+	tmp	<- df[, which(SENS=='24 months')]
+	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
+	tmp	<- 'timeSinceMigration'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
+	
+	
+	#
+	#	sensitivity: migration missing origins
+	#
+	df	<- subset(se, MINDEPTH=='30X' & CONFCUT=='60%' & OPT_PART=='Yes' & OPT_SEQ=='Yes' & OPT_MIG=='24 months')
+	df[, SENS:= OPT_UNKMIG]
+	tmp	<- df[, which(SENS=='fishing communities')]
+	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
+	tmp	<- 'migrationUknOrigin'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=3)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=4)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.25)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=1.5)
+	
+}
+
+RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.data=NULL, infile.inference.mcmc=NULL, infile.subdistricts=NULL)
+{	
+	require(data.table)	
+	require(gtools)	
+	
+			
+	if(is.null(infile.inference.data))	
+		infile.inference.data			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	if(is.null(infile.inference.mcmc))
+		infile.inference.mcmc			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda"
+	if(is.null(infile.subdistricts))		
+		infile.subdistricts				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
+	
+	outfile.base						<- gsub('.rda$','',infile.inference.mcmc)
+	tmp									<- gsub('.*_opt([0-9]+).*','\\1',outfile.base)
+	#tmp									<- "112401"
+	opt									<- list()
+	opt$adjust.sequencing.bias			<- as.integer(substr(tmp,1,1))
+	opt$adjust.participation.bias		<- as.integer(substr(tmp,2,2))
+	opt$migration.def.code				<- substr(tmp,3,4)
+	opt$set.missing.migloc.to.inland	<- as.integer(substr(tmp,5,5))
+	opt$set.missing.migloc.to.fishing	<- as.integer(substr(tmp,6,6))
+	
+	cat('\ninfile.inference=',infile.inference.data)
+	cat('\ninfile.inference.mcmc=',infile.inference.mcmc)
+	cat('\ninfile.subdistricts=',infile.subdistricts)
+	cat('\nopt=',unlist(opt))			
+	
+	#
+	#	prepare data on observed transmission flows
+	#
+	load(infile.inference.data)
+	rtr	<- copy(rtr3)
+	if(opt$migration.def.code=='06')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_05YR, REC_INMIGRATE_05YR, TR_COMM_NUM_A_MIG_05YR')
+		setnames(rtr, 'TR_INMIGRATE_05YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_05YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_05YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='12')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_1YR, REC_INMIGRATE_1YR, TR_COMM_NUM_A_MIG_1YR')
+		setnames(rtr, 'TR_INMIGRATE_1YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_1YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_1YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='24')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_2YR, REC_INMIGRATE_2YR, TR_COMM_NUM_A_MIG_2YR')
+		setnames(rtr, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_2YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_2YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='36')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_3YR, REC_INMIGRATE_3YR, TR_COMM_NUM_A_MIG_3YR')
+		setnames(rtr, 'TR_INMIGRATE_3YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_3YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_3YR', 'TR_COMM_NUM_A_MIG')
+	}
+	if(opt$migration.def.code=='48')
+	{
+		cat('\nSource attribution analysis based on TR_INMIGRATE_4YR, REC_INMIGRATE_4YR, TR_COMM_NUM_A_MIG_4YR')
+		setnames(rtr, 'TR_INMIGRATE_4YR', 'TR_INMIGRATE')
+		setnames(rtr, 'REC_INMIGRATE_4YR', 'REC_INMIGRATE')
+		setnames(rtr, 'TR_COMM_NUM_A_MIG_4YR', 'TR_COMM_NUM_A_MIG')
+	}	
+	rtr	<- subset(rtr, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+					'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE',
+					'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
+					'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE'))	
+	# inmigrant status
+	rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
+	rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+	set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
+	#	set unknown origin to either fishing or inland
+	tmp	<- rtr[, which(TR_INMIGRATE=='inmigrant_from_unknown')]
+	if(opt$set.missing.migloc.to.inland)
+	{
+		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_inland')
+		set(rtr, tmp, 'TR_COMM_NUM_A_MIG', 'imig')
+	}		
+	if(opt$set.missing.migloc.to.fishing)
+	{
+		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_fisherfolk')
+		set(rtr, tmp, 'TR_COMM_NUM_A_MIG', 'fmig')
+	}
+	# add age 
+	rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
+	rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
+	# impute age
+	tmp	<- which(is.na(rtr$TR_AGE_AT_MID))
+	set(rtr, tmp, 'TR_AGE_AT_MID', mean(rtr$TR_AGE_AT_MID[which(!is.na(rtr$TR_AGE_AT_MID))]) )
+	tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
+	set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
+	# fixup from latest surveillance data
+	set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
+	set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
+	set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
+	set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
+	#	stratify age
+	rtr[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
+	stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
+	stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )	
+	#	build category to match with sampling data tables 
+	rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_NUM_A,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	#	build transmission flow category 
+	rtr[, REC_TRM_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_TRM_CATEGORY:= paste0(TR_COMM_NUM_A_MIG,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	#	calculate observed number of transmissions
+	dobsRCCS	<- rtr[, list( TRM_OBS=length(unique(PAIRID))), by=c('TR_TRM_CATEGORY','REC_TRM_CATEGORY','TR_SAMPLING_CATEGORY','REC_SAMPLING_CATEGORY')]
+	setkey(dobsRCCS, TR_TRM_CATEGORY, REC_TRM_CATEGORY )	
+	dobsRCCS[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobsRCCS))]
+	
+	
+	#
+	# 	prepare data on subdistricts
+	#		
+	#	calculate eligible in RCCS communities
+	dsubdis	<- desm[, list(COMM_ELIGIBLE=sum(PART_EVER+PART_NEVER)), by=c('COMM_NUM','COMM_NUM_A','COMM_TYPE','LONG','LAT','SEX')]
+	dsubdis	<- merge(dsubdis, data.table(COMM_NUM=c('16m','16m','51m','51m','24m','24m','22m','22m'), COMM_NUM2=c('107','16','776','51','4','24','1','22')), all=TRUE, by='COMM_NUM')	
+	tmp		<- dsubdis[, which(is.na(COMM_NUM2))]
+	set(dsubdis, tmp, 'COMM_NUM2', dsubdis[tmp, COMM_NUM])
+	set(dsubdis, NULL, 'COMM_NUM2', dsubdis[, as.integer(COMM_NUM2)])	
+	#	associate subdistrict names to communities	
+	load(infile.subdistricts)
+	tmp		<- subset(as.data.table(comgps2), select=c(COMM_NUM, loc))
+	setnames(tmp, c('COMM_NUM','loc'), c('COMM_NUM2','SUBDISTRICT'))
+	set(tmp, NULL, 'COMM_NUM2', tmp[, as.integer(as.character(COMM_NUM2))])
+	dsubdis	<- merge(dsubdis, tmp, by='COMM_NUM2', all=TRUE)
+	stopifnot( !any(is.na(dsubdis[,SUBDISTRICT])))
+	#	define subdistrict type as discussed with Kate
+	tmp		<- dsubdis[, list(	AREA=as.character(factor(any(COMM_TYPE=='fisherfolk'), levels=c(TRUE,FALSE), labels=c('fishing','inland')))), by=c('SUBDISTRICT')]	
+	dsubdis	<- merge(tmp, dsubdis, by='SUBDISTRICT' )
+	#	add further info on subdistricts
+	tmp		<- as.data.table(subdis.data)
+	setnames(tmp, colnames(tmp), toupper(gsub('_count','_popcount',gsub('\\.','_',gsub('subdis.name','SUBDISTRICT',colnames(tmp))))))
+	set(tmp, NULL, c('SURVEY_HIVPREV','SURVEY_MALE_HIVPREV','SURVEY_FEMALE_HIVPREV','MAP_POPCOUNT','MAP_HIVCOUNT','MAP_HIVPREV'), NULL)
+	set(tmp, NULL, 'SUBDISTRICT', tmp[, gsub('Bbaali','Bbaale',SUBDISTRICT)])
+	tmp		<- melt(tmp, id.vars='SUBDISTRICT', value.name='MAP_POPCOUNT', variable.name='SEX')
+	set(tmp, NULL, 'SEX', tmp[, substr(gsub('MAP_([A-Z]+)_POPCOUNT','\\1',SEX),1,1)])
+	dsubdis	<- merge(dsubdis, tmp, by=c('SUBDISTRICT','SEX'), all.x=TRUE)
+	#	define population surveyed by area
+	dprior	<- dsubdis[, list(	SUBDISTRICT_POP=MAP_POPCOUNT[1], POP_RCCS_YES=sum(COMM_ELIGIBLE), POP_RCCS_NO=MAP_POPCOUNT[1]-sum(COMM_ELIGIBLE)	), by=c('SUBDISTRICT','AREA','SEX')]
+	dprior	<- dprior[, lapply(.SD, sum, na.rm=TRUE), by=c('AREA','SEX'), .SDcols=c("POP_RCCS_YES","POP_RCCS_NO") ] 
+	dprior[, SAMPLING_CATEGORY:=paste0(AREA,':',SEX)]
+	dprior[, P:= POP_RCCS_YES/(POP_RCCS_YES+POP_RCCS_NO)]
+	dprior[, LP:= 0]
+	dprior[, SAMPLE:= 1L]
+	set(dprior, NULL, c('AREA','SEX','POP_RCCS_YES','POP_RCCS_NO'), NULL)
+	
+	#
+	#	make csv table for supplement
+	if(0)
+	{
+		df	<- unique(subset(dsubdis, select=c(AREA, SUBDISTRICT, SEX, COMM_NUM_A, COMM_ELIGIBLE, MAP_POPCOUNT)))	
+		df	<- df[, list(MAP_POPCOUNT=round(MAP_POPCOUNT[1]), RCCS_ELIGIBLE=sum(COMM_ELIGIBLE), RCCS_ELIGIBLE_P=sum(COMM_ELIGIBLE)/MAP_POPCOUNT[1], N_COMM=length(unique(COMM_NUM_A))), by=c('AREA','SUBDISTRICT','SEX')]
+		setkey(df, AREA, SUBDISTRICT, SEX )
+		df[, RCCS_LABEL:= paste0(RCCS_ELIGIBLE,' (',round(RCCS_ELIGIBLE_P*100,d=1),'%)')]
+		write.csv( subset(df, select=c(AREA, SUBDISTRICT, SEX, MAP_POPCOUNT, N_COMM, RCCS_LABEL)), row.names=FALSE, file=gsub('\\.rda','_table.csv',infile.subdistricts))
+	}
+	#	flows that we expect:
+	if(0)
+	{
+		s		<- c(0.2363956, 0.2631666, 0.3919308, 0.5427133)
+		pi		<- c(0.243,0.029,0.039,0.231,0.184,0.006,0.039,0.127)
+		pi		<- pi/sum(pi)
+		
+		pistar	<- c( 	pi[1]/s[4]/s[3],  pi[2]/s[4]/s[1],  pi[3]/s[2]/s[3], pi[4]/s[2]/s[1],
+						pi[5]/s[3]/s[4],  pi[6]/s[3]/s[2],  pi[7]/s[1]/s[4], pi[8]/s[1]/s[2])
+		pistar <- pistar/sum(pistar)
+		
+		(pistar[3]+pistar[7]) / (pistar[2]+pistar[6]) 
+		# 'Fish:M','Fish:F',
+	}
+	#
 	#	aggregate MCMC samples to area of subdistricts
 	#	
 	daggregateTo				<- subset(dobsRCCS, select=c(TRM_CAT_PAIR_ID, TR_TRM_CATEGORY, REC_TRM_CATEGORY))
@@ -8785,6 +9378,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 		control			<- list( mcmc.n=9*pp.sweeps, verbose=0 )
 		mc[['pp']][[i]]	<- source.attribution.mcmc(dobs, dprior, control=control)
 		mc[['pp']][[i]][['it.info']][, PP_IT:= i]
+		gc()
 	}
 	#	collect variables and save
 	for(x in c('XI','XI_LP','S','S_LP','Z','PI','N'))
@@ -8822,11 +9416,11 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	pars	<- merge(pars, tmp, by='TRM_CAT_PAIR_ID')
 	set(pars, NULL, c('TRM_CAT_PAIR_ID','variable'), NULL)
 	setnames(pars, colnames(pars), toupper(colnames(pars)))
-	write.csv(pars, row.names=FALSE, file=gsub('\\.rda','PI.csv',mcmc.file))		
+	write.csv(pars, row.names=FALSE, file=gsub('\\.rda','_PI.csv',mcmc.file))		
 	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 			flowratios= list( c('inland:M/fishing:M', 'inland:M fishing:F', 'fishing:M inland:F'), c('inland:F/fishing:F', 'inland:F fishing:M', 'fishing:F inland:M')),
-			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','PI.csv',mcmc.file)))
-	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','PI.csv',mcmc.file), control)
+			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','_PI.csv',mcmc.file)))
+	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','_PI.csv',mcmc.file), control)
 	
 	
 	#	aggregate to fish<->inland
@@ -8837,8 +9431,8 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	write.csv(pars, row.names=FALSE, file=gsub('\\.rda','PI2.csv',mcmc.file))
 	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 			flowratios= list( c('inland/fishing', 'inland fishing', 'fishing inland')),
-			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','PI2.csv',mcmc.file)))
-	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','PI2.csv',mcmc.file), control)	
+			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','_PI2.csv',mcmc.file)))
+	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','_PI2.csv',mcmc.file), control)	
 }
 
 RakaiFull.phylogeography.181006.example.count<- function()
@@ -8923,29 +9517,333 @@ RakaiFull.phylogeography.181006.sink.risk.ratio<- function()
 	exp(c(log.rr, log.ci))
 }
 
+RakaiFull.phylogeography.190327.data.eligibility.participation.sequenced<- function()
+{
+	require(data.table)
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_elibility.rda"
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	#	subset to data of interest
+	de	<- as.data.table(eldat)	
+	de	<- subset(de, status%in%c('_Participated','Away','Blood refusal','Missing data','Other','Refused','urine sample'))
+	de	<- subset(de, visit<17)
+	de	<- subset(de, select=c(PERM_ID, CURR_ID, visit, RESIDENT, MOBILITY, REGION, COMM_NUM, HH_NUM, SEX, STUDY_ID, status, date, AGEYRS, inmigrant))
+	setnames(de, colnames(de), toupper(colnames(de)))
+	#	define PARTICIPATED as "participated, missing data ok"
+	#	TODO take out missing data
+	de[, PARTICIPATED:= as.integer(STATUS%in%c('_Participated'))]
+	de[, DATE:= hivc.db.Date2numeric(DATE)]	
+	
+	#	merge communities that are very close / identical
+	setnames(de, 'COMM_NUM', 'COMM_NUM_RAW')
+	set(de, NULL, 'COMM_NUM', de[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM_RAW))))])
+	
+	#	fixup missing permanent IDs with Study IDs
+	stopifnot( nrow(subset(de, is.na(PERM_ID) & is.na(STUDY_ID)))==0 )
+	tmp		<- de[, which(is.na(PERM_ID))]
+	set(de, tmp, 'PERM_ID', de[tmp, STUDY_ID])
+	#	find study participants with multiple permanent IDs and fixup
+	tmp		<- subset(de, !is.na(STUDY_ID))[, list(N_PERM=length(unique(PERM_ID))), by='STUDY_ID']
+	tmp		<- subset(tmp, N_PERM>1, STUDY_ID)
+	tmp[, DUMMY:=1]
+	de		<- merge(de, tmp, by='STUDY_ID', all.x=1)
+	tmp		<- de[, which(DUMMY==1)]
+	set(de, tmp, 'PERM_ID', de[tmp, STUDY_ID])
+	de[, DUMMY:=NULL]
+	
+	#	we care about wether individuals participated in any of the visits 15, 15.1, 16
+	#	the best we can do is look at permanent ids, even though they are not unique
+	tmp		<- de[, list(PARTICIPATED_ANY_VISIT=as.integer(any(PARTICIPATED==1))), by='PERM_ID']
+	de		<- merge(de, tmp, by='PERM_ID')
+	#	to those of ever participated, find study id
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	stopifnot( nrow(subset(tmp, PARTICIPATED==1 & is.na(STUDY_ID)))==0 )
+	tmp		<- tmp[, list(DUMMY= STUDY_ID[PARTICIPATED==1][1]), by='PERM_ID']
+	de		<- merge(de, tmp, by='PERM_ID', all.x=TRUE)
+	tmp		<- de[, which(is.na(STUDY_ID) & !is.na(DUMMY))]
+	set(de, tmp, 'STUDY_ID', de[tmp,DUMMY])
+	de[, DUMMY:=NULL]
+	setnames(de, 'STUDY_ID','RID')
+	#	there are a few individuals with Study ID who did not "participate" when missing not included
+	#subset(de, PARTICIPATED_ANY_VISIT==0 & !is.na(STUDY_ID))
+	
+	#	prepare HIV status
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rd		<- tmp$rd
+	rneuro	<- tmp$rn
+	ra		<- tmp$ra
+	#	prepare self report ART
+	#	find those who report to be on ART at their first visit in 15-17
+	rart	<- merge(ra, ra[VISIT>=14 & VISIT<17, list(VISIT=min(VISIT)), by='RID'], by=c('RID','VISIT'))	
+	set(rart, rart[, which(is.na(ARVMED))], 'ARVMED', 2L)
+	setnames(rart, 'ARVMED', 'SELFREPORTART_AT_FIRST_VISIT')
+	rart	<- subset(rart, select=c(RID, SELFREPORTART_AT_FIRST_VISIT))
+	#set(rart, NULL,  'SELFREPORTART', rart[, factor(SELFREPORTART, levels=c(0,1,2), labels=c('no','yes','unknown'))])
+	#	select meta-data closest to first pos date	
+	tmp		<- rd[, list(VISIT=VISIT[which.min(abs(DATE-FIRSTPOSDATE))]), by='RID']
+	tmp2	<- rd[, list(PANGEA=as.integer(any(PANGEA==1))), by='RID']
+	rd		<- merge(rd, tmp, by=c('RID','VISIT'))
+	rd[, HIV:= 1L]
+	rd[, PANGEA:=NULL]
+	rd		<- merge(rd, tmp2, by='RID')
+	#
+	ra		<- unique(subset(ra, !is.na(FIRSTPOSDATE), select=c(RID, SEX, VISIT, VISDATE, FIRSTPOSDATE, ARVMED, COMM_NUM, COMM_NUM_A)))
+	tmp		<- ra[, list(VISIT=VISIT[which.min(abs(VISDATE-FIRSTPOSDATE))]), by='RID']	
+	ra		<- merge(ra, tmp, by=c('RID','VISIT'))
+	ra[, HIV_1517:= 1L]
+	#rd		<- subset(rd, BIRTHYR>2010-50 & (is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & EST_DATEDIED>2010)))
+	
+	#	add HIV status
+	tmp		<- rd[FIRSTPOSDATE<2015+2/12, list(HIV=max(HIV), PANGEA=max(PANGEA)), by='RID'] 			
+	de		<- merge(de, tmp, by='RID', all.x=1)	
+	tmp		<- unique(subset(ra, FIRSTPOSDATE<2015+2/12, select=c(RID, HIV_1517, FIRSTPOSDATE)))
+	de		<- merge(de, tmp, by='RID', all.x=1)
+	
+	#	add ART status
+	de		<- merge(de, rart, by='RID', all.x=1)
+	
+	#	get individuals with at least 750nt overlap with another individual at 20X
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda"
+	load(infile)
+	rn	<- subset(rn, NEFF>3)	
+	rn	<- data.table(RID=rn[, unique(c(ID1, ID2))],MIN_PNG_OUTPUT=1)		
+	#	add to rn individuals with any sequence data
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	tmp		<- unique(subset(dc, !is.na(SID), select=RID))
+	tmp[, BAM_OUTPUT:=1L]
+	rn		<- merge(tmp, rn, all=1, by='RID')
+	set(rn, rn[, which(is.na(MIN_PNG_OUTPUT))],'MIN_PNG_OUTPUT',0L)
+	#	add
+	de		<- merge(de, rn, by='RID', all.x=1)
+	rd		<- merge(rd, rn, by='RID', all.x=1)
+	rneuro	<- merge(rneuro, rn, by='RID', all.x=1)
+	
+	#	tmp above has 4074 individuals
+	#	of those, 3758 are in 'de', ie participated in rounds 15-17
+	
+	#	for every individual that ever participated, keep first record of when participated
+	#	for every individual that never participated, keep last record
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==0)[, list(VISIT=max(VISIT)), by='PERM_ID']
+	tmp		<- merge(de, tmp, by=c('PERM_ID','VISIT'))
+	tmp2	<- subset(de, PARTICIPATED_ANY_VISIT==1)[, list(VISIT=min(VISIT[PARTICIPATED==1])), by='PERM_ID']
+	de		<- merge(de, tmp2, by=c('PERM_ID','VISIT'))
+	de		<- rbind(de, tmp)
+	
+	#	fill in missing HIV etc
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(HIV))]
+	set(de, tmp, 'HIV', 0L)
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(HIV_1517))]
+	set(de, tmp, 'HIV_1517', 0L)
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(BAM_OUTPUT))]
+	set(de, tmp, c('BAM_OUTPUT','MIN_PNG_OUTPUT'), 0L)
+	tmp		<- rd[, which(is.na(BAM_OUTPUT))]
+	set(rd, tmp, c('BAM_OUTPUT','MIN_PNG_OUTPUT'), 0L)
+	
+	de[, table(HIV, HIV_1517)]	
+	# 672 with HIV_1517==1 and HIV==0
+	#	0 with HIV_1517==0 and HIV==1
+	# use HIV_1517 below
+	
+	rneuro[, sum(MIN_PNG_OUTPUT)]			# 224	
+	rd[, sum(MIN_PNG_OUTPUT)]				# 2746
+	de[, sum(MIN_PNG_OUTPUT, na.rm=TRUE)]	# 2689
+	
+	#	calculate number for whom we have deep seq output
+	tmp		<- subset(rd, MIN_PNG_OUTPUT==1)[, list(DEEP_SEQ=length(RID)), by=c('COMM_NUM')]	
+	tmp		<- subset(tmp, DEEP_SEQ>0)
+	tmp[, DEEP_SEQ:=NULL]	
+	tmp[, COMM_ANY_MIN_PNG_OUTPUT:= 1]
+	de		<- merge(de, tmp, by='COMM_NUM', all.x=1)
+	rd		<- merge(rd, tmp, by='COMM_NUM', all.x=1)
+	set(de, de[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
+	set(rd, rd[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
+	tmp		<- unique(subset(rd, select=c(COMM_NUM,COMM_NUM_A)))
+	de		<- merge(de, tmp, by='COMM_NUM')
+	
+	#	subset to only those communities with seq data
+	#	4 fishing, 34 inland
+	#def		<- copy(de)
+	#de		<- subset(de, !is.na(DUMMY))
+	#de[, DUMMY:=NULL]
+	#rd		<- subset(rd, !is.na(DUMMY))
+	#rd[, DUMMY:=NULL]	
+	#
+	
+	#	add age category at midpoint of observation period, 2013.25
+	set(de, de[, which(is.na(DATE))], 'DATE', hivc.db.Date2numeric(as.Date("2011-09-02")))	
+	de[, AGE_AT_MID:= 2013.25 - (hivc.db.Date2numeric(DATE)-AGEYRS)]
+	de[, AGE_AT_MID_C:= cut(AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE)]
+	stopifnot( nrow(subset(de, is.na(AGE_AT_MID_C)))==0 )
+	
+	#
+	#	prepare inmigrant -- identify inmigrants from fishing communities and from external
+	#
+
+	infile.migrant2		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrants_withMissingGPS.csv"
+	inmigrant2			<- as.data.table(read.csv(infile.migrant2))
+	inmigrant2			<- subset(inmigrant2, !is.na(inmig_lon), select=c(RCCS_studyid, visit, inmig_lon, inmig_lat, inmig_place, inmig_admin0, inmig_admin1, inmig_admin2, inmig_admin3, inmig_admin4))
+	setnames(inmigrant2, c('RCCS_studyid','visit'), c('RID','VISIT'))
+	set(inmigrant2, inmigrant2[, which(grepl('E095382|D110171',RID))], 'source_class', 'fish')
+	set(inmigrant2, inmigrant2[, which(grepl('J189465|C020384|F097032|A078484|H091385',RID))], 'source_class', 'inland')
+	set(inmigrant2, inmigrant2[, which(grepl('G078375',RID))], 'source_class', 'external')
+	
+	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/all_migrant_250319.rda"
+	load(infile.migrant)
+	inmigrant			<- as.data.table(all_migrant)	
+	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrant_source_12042019.rda"
+	load(infile.migrant)
+	tmp					<- subset(as.data.table(migrant_source), select=c(RCCS_studyid, visit, source_class))	
+	inmigrant			<- merge(inmigrant, tmp, by=c('RCCS_studyid','visit'), all.x=TRUE)
+	set(inmigrant, inmigrant[, which(is.na(source_class))], 'source_class', 'unknown')
+	set(inmigrant, NULL, 'source_class', inmigrant[, gsub('fishing','fish',tolower(source_class))])
+	setnames(inmigrant, colnames(inmigrant), gsub('RCCS_STUDYID','RID',toupper(colnames(inmigrant))))
+	
+	inmigrant			<- merge(inmigrant,inmigrant2,by=c('RID','VISIT'),all.x=TRUE)
+	tmp					<- inmigrant[, which(!is.na(inmig_lon) & is.na(INMIG_LON))]
+	for(x in c('inmig_lon','inmig_lat','inmig_place','inmig_admin0','inmig_admin1','inmig_admin2','inmig_admin3','inmig_admin4','source_class'))
+		set(inmigrant, tmp, toupper(x), inmigrant[[x]][tmp])
+	set(inmigrant, NULL, c('inmig_lon','inmig_lat','inmig_place','inmig_admin0','inmig_admin1','inmig_admin2','inmig_admin3','inmig_admin4','source_class'), NULL)
+	set(inmigrant, NULL, 'DATE', inmigrant[, hivc.db.Date2numeric(DATE)])
+	setnames(inmigrant, c('DATE','INMIG_LOC','SOURCE_CLASS'), c('INMIGRATE_DATE','INMIG_LOCATION','INMIG_LOC')) #for compatibility with olli s code		
+	#
+	#	inmigrants done
+	#
+	
+	
+	#
+	#	add inmigrants to eligibility / participation
+	#
+	di			<- subset(inmigrant, select=c(RID, INMIGRATE_DATE, INMIG_LOC))
+	di			<- merge(di, de, by='RID', all.x=TRUE)
+	#	ignore inmigrants not seen in 15-16
+	di			<- subset(di, !is.na(STATUS))
+	#	only inmigration date closest to first visit and before the first visit
+	tmp			<- di[, list(FIRSTVISITDATE=min(DATE)), by='RID']
+	di			<- merge(di, tmp, by='RID')	
+	tmp			<- di[INMIGRATE_DATE<=FIRSTVISITDATE, list(INMIGRATE_DATE= INMIGRATE_DATE[which.min(FIRSTVISITDATE-INMIGRATE_DATE)]), by='RID']
+	di			<- merge(di, tmp, by=c('RID','INMIGRATE_DATE'))
+	di			<- unique(di, by=c('RID','VISIT'))
+	#	select those inmigrated in the last 2 years
+	tmp			<- subset(di, (FIRSTVISITDATE-INMIGRATE_DATE)<=2, c(RID, INMIG_LOC))
+	setnames(tmp, 'INMIG_LOC', 'INMIG_2YRS_LOC')
+	tmp[, INMIG_2YRS:=1]
+	de			<- merge(de, tmp, by='RID', all.x=TRUE)
+	set(de, de[, which(is.na(INMIG_2YRS))], 'INMIG_2YRS', 0)
+	set(de, de[, which(is.na(INMIG_2YRS_LOC))], 'INMIG_2YRS_LOC', 'resident')	
+	
+	#	some fixup
+	set(de, de[, which(PARTICIPATED_ANY_VISIT==0 & MIN_PNG_OUTPUT==1)], 'PARTICIPATED_ANY_VISIT', 1L)
+	set(de, de[, which(SELFREPORTART_AT_FIRST_VISIT==1 & MIN_PNG_OUTPUT==1)], 'SELFREPORTART_AT_FIRST_VISIT', 0L)
+	
+	
+	de[, table(HIV_1517, SELFREPORTART_AT_FIRST_VISIT, useNA='if')]
+	#	        SELFREPORTART
+	#	HIV_1517     0         1     2  <NA>
+	#		    0    20715     8     7    10
+	#			1     3884  1256     2     0
+	#			<NA>     0     0     0 11763
+	
+	#	now calculate participation by community and gender
+	des		<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','PARTICIPATED_ANY_VISIT')]
+	set(des, NULL, 'PARTICIPATED_ANY_VISIT', des[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	des		<- dcast.data.table(des, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX~PARTICIPATED_ANY_VISIT, value.var='N')
+	
+	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
+	#	among those that participated in rounds 15 - 16
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)),
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
+	des		<- merge(des, tmp, by=c('COMM_NUM','SEX'), all=TRUE)
+	
+	#	add community type
+	des[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]	
+	
+	#	now do the same by community and gender and age category
+	desa	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','AGE_AT_MID_C','PARTICIPATED_ANY_VISIT')]
+	set(desa, NULL, 'PARTICIPATED_ANY_VISIT', desa[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	desa	<- dcast.data.table(desa, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX+AGE_AT_MID_C~PARTICIPATED_ANY_VISIT, value.var='N')
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)), 
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','AGE_AT_MID_C')]	
+	desa	<- merge(desa, tmp, by=c('COMM_NUM','SEX','AGE_AT_MID_C'), all=TRUE)
+	desa[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]
+	#	check for missing and replace by 0		
+	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','SLART_AT_FIRST_VISIT','DEEP_SEQ_1516'))
+		set(desa, which(is.na(desa[[x]])), x, 0)
+	
+	#	now do the same by community and gender and migration category
+	desm	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','INMIG_2YRS_LOC','PARTICIPATED_ANY_VISIT')]
+	set(desm, NULL, 'PARTICIPATED_ANY_VISIT', desm[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	desm	<- dcast.data.table(desm, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX+INMIG_2YRS_LOC~PARTICIPATED_ANY_VISIT, value.var='N')
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)),
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','INMIG_2YRS_LOC')]	
+	desm	<- merge(desm, tmp, by=c('COMM_NUM','SEX','INMIG_2YRS_LOC'), all=TRUE)
+	desm[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]
+	#	check for missing and replace by 0		
+	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','SLART_AT_FIRST_VISIT','DEEP_SEQ_1516'))
+		set(desm, which(is.na(desm[[x]])), x, 0)
+	
+	
+	
+	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
+	#	among those that ever participated
+	#	excluding those that died before 2010, or that reached age 60 before 2010
+	tmp		<- subset(rd, is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & EST_DATEDIED>=2010))	
+	tmp		<- subset(tmp, (2010-BIRTHYR)<60)
+	rds		<- tmp[, list(HIV_EVER_YES=length(which(HIV==1)), DEEP_SEQ_EVER=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
+	rds[, sum(DEEP_SEQ_EVER)]	
+	# 	2700 (among those in rd who are not too old and did not die before 2010)	
+	
+	save(des, desa, desm, rds, de, rd, di, inmigrant, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/190327_sampling_by_gender_age.rda')
+}
+
 RakaiFull.phylogeography.190327.determine.sampling.categories.required<- function()
 {
 	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
-	infiles	<- c(	"RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-					, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda")
-	
+	infiles	<- data.table(	F=	c(	  "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+									, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"),
+						   	TR= 'TR_INMIGRATE_2YR',
+						   	REC= 'REC_INMIGRATE_2YR',
+							MIG= 'TR_COMM_NUM_A_MIG_2YR')
+	tmp		<- data.table(	F="RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda",
+							TR= c('TR_INMIGRATE_05YR','TR_INMIGRATE_1YR','TR_INMIGRATE_3YR','TR_INMIGRATE_4YR'),
+							REC= c('REC_INMIGRATE_05YR','REC_INMIGRATE_1YR','REC_INMIGRATE_3YR','REC_INMIGRATE_4YR'),
+							MIG= c('TR_COMM_NUM_A_MIG_05YR','TR_COMM_NUM_A_MIG_1YR','TR_COMM_NUM_A_MIG_3YR','TR_COMM_NUM_A_MIG_4YR'))			
+	infiles	<- rbind(infiles, tmp)		
 	ans<- character(0)
-	for(i in seq_along(infiles))
+	for(i in seq_len(nrow(infiles)))
 	{
 		cat('\nProcessing',i)
 		
-		load(file.path(indir,infiles[i]))
+		load(file.path(indir,infiles[i,F]))
 		
-		rtr	<- subset(rtr3, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
-						'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE_1YR','TR_INMIGRATE_2YR',
+		rtr	<- copy(rtr3)
+		setnames(rtr, infiles[i,TR], 'TR_INMIGRATE')
+		setnames(rtr, infiles[i,REC], 'REC_INMIGRATE')
+		setnames(rtr, infiles[i,MIG], 'TR_COMM_NUM_A_MIG')
+		rtr	<- subset(rtr, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+						'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE',
 						'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
-						'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE_1YR','REC_INMIGRATE_2YR'))	
+						'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE'))		
+		# inmigrant status
+		rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
+		rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
+		set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])		
 		# add age 
 		rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
 		rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
@@ -8955,17 +9853,8 @@ RakaiFull.phylogeography.190327.determine.sampling.categories.required<- functio
 		tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
 		set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
 		# fixup from latest surveillance data
-		#de[RID=="C036808",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
-		#rtr[TR_RID=="C036808",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
 		set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
-		#de[RID=="D069722",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
-		#rtr[TR_RID=="D069722",c('TR_COMM_NUM_A','TR_INMIGRANT','TR_AGE_AT_MID','TR_SEX')]
-		set(rtr, rtr[,which(TR_RID=="D069722")], 'TR_INMIGRANT', 0L)
-		#de[RID=="G036802",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
-		#rtr[REC_RID=="G036802",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
 		set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
-		#de[RID=="H103745",c('COMM_NUM_A','INMIGRANT','AGE_AT_MID','SEX')]
-		#rtr[REC_RID=="H103745",c('REC_COMM_NUM_A','REC_INMIGRANT','REC_AGE_AT_MID','REC_SEX')]
 		set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
 		set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
 		#	stratify age
@@ -8973,18 +9862,9 @@ RakaiFull.phylogeography.190327.determine.sampling.categories.required<- functio
 		rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
 		stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
 		stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )
-				
-		# inmigrant status
-		setnames(rtr, 'TR_INMIGRATE_2YR', 'TR_INMIGRATE')
-		setnames(rtr, 'REC_INMIGRATE_2YR', 'REC_INMIGRATE')
-		rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
-		rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
-		set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
-		
 		#	build category to match with sampling data tables 
 		rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
 		rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_NUM_A,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
-		
 		
 		ans	<- sort(unique(c(ans, rtr$REC_SAMPLING_CATEGORY, rtr$TR_SAMPLING_CATEGORY)))
 	}
@@ -8999,8 +9879,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 	#
 	if(0)
 	{
-		infiles		<- c("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_withmetadata.rda"
-				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_withmetadata.rda"
+		infiles		<- c("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min10_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min20_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min50_withmetadata.rda"
 				, "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_withmetadata.rda"
@@ -9012,7 +9891,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		for(ii in seq_along(infiles))
 		{
 			infile.inference	<- infiles[[ii]]
-			RakaiFull.phylogeography.181006.gender.mobility.data(infile.inference)		
+			RakaiFull.phylogeography.190327.gender.mobility.data(infile.inference)		
 		}
 	}
 	
@@ -9035,14 +9914,14 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		infile.participation.prior.samples	<- "190327_participation_model_samples.rda"
 		infile.sequencing.prior.samples		<- "190327_sequencing_model_samples.rda"
 		
-		infiles		<- c( "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
-						, "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
+		infiles		<- c( "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
+						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
 						)	
 		infiles		<- c()
 		for(ii in seq_along(infiles))
@@ -9124,10 +10003,10 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
 		opts[[8]]	<- opt
 		
-		opts		<- list(opts[[1]], opts[[2]], opts[[4]])
+		#opts		<- list(opts[[1]], opts[[2]], opts[[4]])
 		infile.participation.prior.samples	<- "190327_participation_model_samples.rda"
 		infile.sequencing.prior.samples		<- "190327_sequencing_model_samples.rda"		
-		infile								<- "RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+		infile								<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
 								
 		for(ii in seq_along(opts))
 		{
@@ -9164,6 +10043,553 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		RakaiFull.phylogeography.181006.predict.areaflows(indir=indir, infile.inference.data=infile.inference.data, infile.inference.mcmc.thinned=infile.inference.mcmc.thinned, infile.subdistricts=infile.subdistricts)						
 	}
 	
+}
+
+RakaiFull.phylogeography.190327.figure.migration.pie<- function()
+{
+	library(data.table)
+	library(scatterpie)
+	library(ggplot2)
+	library(ggmap)
+	
+	infile.anymisedcom	<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
+	infile				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_181006_cl25_d50_prior23_min30_phylogeography_data_with_inmigrants.rda"
+	outfile				<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RCCS_inmigrants_piechart.pdf"
+	load(infile)
+	
+	#	get migration counts
+	df		<- desm[, list(HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_NUM','COMM_NUM_A','INMIG_LOC')]
+	df		<- dcast.data.table(df, COMM_NUM+COMM_NUM_A~INMIG_LOC, value.var='HIV_1516_YES')
+	for(x in c('external','fisherfolk','inland','resident','unknown'))
+	{
+		set(df, which(is.na(df[[x]])), x, 0)		
+	}		
+	set(df, NULL, 'COMM_NUM', df[, as.character(COMM_NUM)])
+	set(df, NULL, 'resident', df[, as.double(resident)])
+	set(df, NULL, 'unknown', df[, as.double(unknown)])
+	set(df, NULL, 'inland', df[, as.double(inland)])
+	set(df, NULL, 'fisherfolk', df[, as.double(fisherfolk)])
+	set(df, NULL, 'external', df[, as.double(external)])
+	df[, INMIGRANT:= external + fisherfolk + inland + unknown]
+	df[, HIV:= external + fisherfolk + inland + resident + unknown]
+	# 	add long/lat
+	zc		<- as.data.table(read.csv(infile.anymisedcom, stringsAsFactors=FALSE))
+	tmp		<- unique(subset(zc, select=c(COMM_NUM, longitude, latitude)), by='COMM_NUM')
+	df		<- merge(df, tmp, by='COMM_NUM')
+	setnames(df, colnames(df), toupper(colnames(df)))
+	df[, R:= HIV^(1/3)/300]
+	
+	ggmap(zm) +
+			geom_scatterpie(aes(x=LONGITUDE, y=LATITUDE, group=COMM_NUM, r=R), 
+							data=df,
+							cols=c('RESIDENT','INMIGRANT')) +
+			scale_fill_manual(values=c('RESIDENT'='grey50','INMIGRANT'='darkorange')) + 			
+			geom_scatterpie_legend(df$R, x=31.35, y=-0.4, n=4, labeller=function(radius) round((radius*300)^3))
+			
+	ggsave(file=outfile, w=7, h=5)
+}
+
+RakaiFull.phylogeography.190327.figure.traces<- function()
+{
+	require(bayesplot)
+	
+	mcmc.file	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda'
+	outfile.base<- gsub('\\.rda','',mcmc.file)
+	load(mcmc.file)
+	pars			<- mc$pars$PI[,c(1,119)]
+	colnames(pars)	<- c('PI-1','PI-119')
+	burnin.n		<- 0.05 * nrow(pars)
+	p				<- mcmc_trace(pars, pars=colnames(pars), facet_args = list(ncol = 1), n_warmup=burnin.n) +
+						coord_cartesian(xlim=c(0,1e5))
+	pdf(file=paste0(outfile.base,'_marginaltraces_suppfigure.pdf'), w=12, h=6)
+	print(p)
+	dev.off()	
+	
+	mcmc.file	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_prAreas.rda'
+	outfile.base<- gsub('\\.rda','',mcmc.file)
+	load(mcmc.file)
+	pars			<- mc$pars$PI[,2,drop=FALSE]
+	colnames(pars)	<- c('PI*-2')
+	burnin.n		<- 0
+	p				<- mcmc_trace(pars, pars=colnames(pars), facet_args = list(ncol = 1), n_warmup=burnin.n) +
+			coord_cartesian(xlim=c(0,1e5))
+	pdf(file=paste0(outfile.base,'_marginaltraces_suppfigure.pdf'), w=12, h=3)
+	print(p)
+	dev.off()	
+	
+}
+
+RakaiFull.phylogeography.190327.figure.transmissionflows<- function()
+{
+	indir	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'
+	infiles	<- list.files(indir, pattern='aggregatedFishInland|prAreas')
+	infiles	<- infiles[grepl('conf60',infiles) & grepl('opt112401',infiles) & grepl('flowsetc',infiles) & !grepl('beforeSort',infiles) ]
+	
+	df		<- as.data.table(read.csv(file.path(indir, infiles[1])))
+	df[, ANA:='overall']
+	tmp		<- as.data.table(read.csv(file.path(indir, infiles[2])))
+	tmp[, ANA:= as.character(factor(grepl('inland\\:M',FLOWRATIO_CAT), levels=c(TRUE,FALSE), labels=c('male to female','female to male')))]
+	df		<- rbind(df, tmp)
+	df		<- subset(df, STAT=='flow_ratio')
+	df[, STAT:= 'sampling-adjusted, among RCCS communities']
+	tmp		<- subset(as.data.table(read.csv(file.path(indir, infiles[3]))), STAT=='flow_ratio')
+	tmp[, ANA:= as.character(factor(grepl('inland\\:M',FLOWRATIO_CAT), levels=c(TRUE,FALSE), labels=c('male to female','female to male')))]
+	tmp[, STAT:= 'sampling-adjusted, among sub-districts']
+	df		<- rbind(df, tmp, fill=TRUE)
+	tmp		<- subset(as.data.table(read.csv(file.path(indir, infiles[4]))), STAT=='flow_ratio')
+	tmp[, ANA:= 'overall']
+	tmp[, STAT:= 'sampling-adjusted, among sub-districts']
+	df		<- rbind(df, tmp, fill=TRUE)
+	
+	tmp		<- data.table(M= c(24/8, 11/6, 13/2), ANA=c('overall', 'male to female', 'female to male'), STAT='directly observed')
+	df		<- rbind(df, tmp, fill=TRUE)
+	set(df, NULL, 'ANA', df[, factor(ANA, levels=c('overall', 'male to female', 'female to male'))])
+	set(df, NULL, 'STAT', df[, factor(STAT, levels=rev(c('directly observed', 'sampling-adjusted, among RCCS communities', 'sampling-adjusted, among sub-districts')))])
+	
+	ggplot(df, aes(y=STAT)) + 
+			facet_wrap(~ANA, ncol=1) +
+			geom_vline(xintercept=1, lty=2) +
+			geom_point(aes(x=M, pch=STAT), size=2) +
+			geom_errorbarh(aes(xmin=CL, xmax=CU), height=0.4) +
+			scale_x_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			labs(x= '\nflows inland->fishing / flows fishing->inland', y='') +
+			coord_cartesian(xlim=c(1/500,500)) +
+			theme_bw() +
+			theme(axis.title.y=element_blank(),
+					axis.text.y=element_blank(),
+					axis.ticks.y=element_blank(),
+					#panel.grid.major.x=element_blank(),
+					panel.grid.minor.x=element_blank(),
+					panel.grid.major.y=element_blank())
+	ggsave(file=file.path(indir,'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_transmissionflows.pdf'), w=7, h=6, useDingbats=FALSE)
+	
+	
+}
+
+RakaiFull.phylogeography.190327.migration.datasets<- function()
+{
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	load(infile)	
+	deold	<- copy(de)
+	deold	<- subset(deold, select=c(RID, PERM_ID, VISIT, INMIG_2YRS_LOC))
+	setnames(deold, 'INMIG_2YRS_LOC', 'INMIG_2YRS_LOC_OLD')
+	
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/190327_sampling_by_gender_age.rda'
+	load(infile)	
+	de	<- subset(de, select=c(RID, PERM_ID, VISIT, INMIG_2YRS_LOC))
+	
+	de	<- merge(de, deold, by= c('RID','PERM_ID','VISIT'))
+	de[, table(INMIG_2YRS_LOC, INMIG_2YRS_LOC_OLD)]
+	#	             INMIG_2YRS_LOC_OLD
+	#INMIG_2YRS_LOC external fisherfolk inland resident unknown
+    #external        360          0      0     1719       0
+    #fisherfolk        0          8      0       18       0
+    #inland            0          0    541     2712       0
+    #resident         20          1     48    31057       8
+    #unknown           1          1      6      938     207
+	
+}
+
+
+RakaiFull.phylogeography.190327.figure.migration.barcharts<- function()
+{
+	require(ggplot2)
+	infile		<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/190327_sampling_by_gender_age.rda'
+	outfile.base<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/190327_'
+	load(infile)
+	
+	tmp			<- desm[, list(PART_EVER=sum(PART_EVER)), by=c('COMM_TYPE','INMIG_2YRS_LOC')]
+	set(tmp, NULL, 'COMM_TYPE', tmp[, factor(COMM_TYPE, levels=c('inland','fisherfolk'), labels=c('inland communities','fishing sites'))])
+	set(tmp, NULL, 'INMIG_2YRS_LOC', tmp[, factor(INMIG_2YRS_LOC, levels=c('resident','inland','fish','external','unknown'))])
+	ggplot(tmp, aes(x=INMIG_2YRS_LOC, y=PART_EVER, fill=INMIG_2YRS_LOC)) +
+			geom_bar(position=position_dodge(), stat='identity') +
+			scale_y_sqrt(expand=c(0,0), lim=c(0,16000), breaks=c(100,1000,5e3,10e3)) +
+			#scale_y_continuous(expand=c(0,0), lim=c(0,16000)) +
+			scale_fill_manual(values=c('fish'='#7A5115','inland'='#66BD63','unknown'='grey70','resident'='darkorange1','external'='#00BFFF')) +
+			facet_grid(~COMM_TYPE) +
+			theme_bw() +
+			theme(	axis.ticks.x.bottom=element_blank(),
+					axis.text.x.bottom=element_blank(),
+					axis.title.x=element_blank(),
+					panel.grid.major.x=element_blank()
+					) +
+			labs(x='', y='participants\n', fill='inmigration status')
+	ggsave(file=paste0(outfile.base,'migration_barchart.pdf'),w=6,h=4)
+	
+	tmp			<- desm[, list(PART_EVER=sum(PART_EVER), HIV_1516_YES=sum(HIV_1516_YES)), by=c('COMM_TYPE','SEX','INMIG_2YRS_LOC')]
+	tmp[, HIV_PREV:= HIV_1516_YES/PART_EVER]
+	tmp			<- dcast.data.table(tmp, SEX+INMIG_2YRS_LOC~COMM_TYPE, value.var='HIV_PREV')
+	set(tmp, NULL, 'SEX', tmp[, factor(SEX, levels=c('M','F'), labels=c('men','women'))])
+	set(tmp, NULL, 'INMIG_2YRS_LOC', tmp[, factor(INMIG_2YRS_LOC, levels=c('resident','inland','fish','external','unknown'))])
+	ggplot(tmp, aes(x=inland, y=fisherfolk, pch=SEX, colour=INMIG_2YRS_LOC)) +
+			geom_abline(slope=1, lty=2) +
+			geom_point(size=4) + 
+			scale_x_continuous(labels=scales::percent, expand=c(0,0)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0)) +
+			scale_colour_manual(values=c('fish'='#7A5115','inland'='#66BD63','unknown'='grey70','resident'='darkorange1','external'='#00BFFF')) +
+			theme_bw() +
+			coord_cartesian(xlim=c(0,0.7), ylim=c(0,0.7)) +
+			labs(	x='\nHIV prevalence among immigrants to inland communities', 
+					y='HIV prevalence among immigrants to fishing sites\n',
+					colour='inmigration status',
+					pch='gender')
+	ggsave(file=paste0(outfile.base,'migration_prevalence_comparison.pdf'),w=5,h=4, useDingbats=FALSE)
+}
+
+RakaiFull.phylogeography.110327.data.eligibility.participation.sequenced<- function()
+{
+	require(data.table)
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_elibility.rda"
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	#	subset to data of interest
+	de	<- as.data.table(eldat)	
+	de	<- subset(de, status%in%c('_Participated','Away','Blood refusal','Missing data','Other','Refused','urine sample'))
+	de	<- subset(de, visit<17)
+	de	<- subset(de, select=c(PERM_ID, CURR_ID, visit, RESIDENT, MOBILITY, REGION, COMM_NUM, HH_NUM, SEX, STUDY_ID, status, date, AGEYRS, inmigrant))
+	setnames(de, colnames(de), toupper(colnames(de)))
+	#	define PARTICIPATED as "participated, missing data ok"
+	#	TODO take out missing data
+	de[, PARTICIPATED:= as.integer(STATUS%in%c('_Participated'))]
+	de[, DATE:= hivc.db.Date2numeric(DATE)]	
+	
+	#	merge communities that are very close / identical
+	setnames(de, 'COMM_NUM', 'COMM_NUM_RAW')
+	set(de, NULL, 'COMM_NUM', de[, gsub('^107$|^16$','16m',gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',COMM_NUM_RAW))))])
+	
+	#	fixup missing permanent IDs with Study IDs
+	stopifnot( nrow(subset(de, is.na(PERM_ID) & is.na(STUDY_ID)))==0 )
+	tmp		<- de[, which(is.na(PERM_ID))]
+	set(de, tmp, 'PERM_ID', de[tmp, STUDY_ID])
+	#	find study participants with multiple permanent IDs and fixup
+	tmp		<- subset(de, !is.na(STUDY_ID))[, list(N_PERM=length(unique(PERM_ID))), by='STUDY_ID']
+	tmp		<- subset(tmp, N_PERM>1, STUDY_ID)
+	tmp[, DUMMY:=1]
+	de		<- merge(de, tmp, by='STUDY_ID', all.x=1)
+	tmp		<- de[, which(DUMMY==1)]
+	set(de, tmp, 'PERM_ID', de[tmp, STUDY_ID])
+	de[, DUMMY:=NULL]
+	
+	#	we care about wether individuals participated in any of the visits 15, 15.1, 16
+	#	the best we can do is look at permanent ids, even though they are not unique
+	tmp		<- de[, list(PARTICIPATED_ANY_VISIT=as.integer(any(PARTICIPATED==1))), by='PERM_ID']
+	de		<- merge(de, tmp, by='PERM_ID')
+	#	to those of ever participated, find study id
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	stopifnot( nrow(subset(tmp, PARTICIPATED==1 & is.na(STUDY_ID)))==0 )
+	tmp		<- tmp[, list(DUMMY= STUDY_ID[PARTICIPATED==1][1]), by='PERM_ID']
+	de		<- merge(de, tmp, by='PERM_ID', all.x=TRUE)
+	tmp		<- de[, which(is.na(STUDY_ID) & !is.na(DUMMY))]
+	set(de, tmp, 'STUDY_ID', de[tmp,DUMMY])
+	de[, DUMMY:=NULL]
+	setnames(de, 'STUDY_ID','RID')
+	#	there are a few individuals with Study ID who did not "participate" when missing not included
+	#subset(de, PARTICIPATED_ANY_VISIT==0 & !is.na(STUDY_ID))
+	
+	#	prepare HIV status
+	tmp		<- RakaiCirc.epi.get.info.170208()
+	rd		<- tmp$rd
+	rneuro	<- tmp$rn
+	ra		<- tmp$ra
+	#	prepare self report ART
+	#	find those who report to be on ART at their first visit in 15-17
+	rart	<- merge(ra, ra[VISIT>=14 & VISIT<17, list(VISIT=min(VISIT)), by='RID'], by=c('RID','VISIT'))	
+	set(rart, rart[, which(is.na(ARVMED))], 'ARVMED', 2L)
+	setnames(rart, 'ARVMED', 'SELFREPORTART_AT_FIRST_VISIT')
+	rart	<- subset(rart, select=c(RID, SELFREPORTART_AT_FIRST_VISIT))
+	#set(rart, NULL,  'SELFREPORTART', rart[, factor(SELFREPORTART, levels=c(0,1,2), labels=c('no','yes','unknown'))])
+	#	select meta-data closest to first pos date	
+	tmp		<- rd[, list(VISIT=VISIT[which.min(abs(DATE-FIRSTPOSDATE))]), by='RID']
+	tmp2	<- rd[, list(PANGEA=as.integer(any(PANGEA==1))), by='RID']
+	rd		<- merge(rd, tmp, by=c('RID','VISIT'))
+	rd[, HIV:= 1L]
+	rd[, PANGEA:=NULL]
+	rd		<- merge(rd, tmp2, by='RID')
+	#
+	ra		<- unique(subset(ra, !is.na(FIRSTPOSDATE), select=c(RID, SEX, VISIT, VISDATE, FIRSTPOSDATE, ARVMED, COMM_NUM, COMM_NUM_A)))
+	tmp		<- ra[, list(VISIT=VISIT[which.min(abs(VISDATE-FIRSTPOSDATE))]), by='RID']	
+	ra		<- merge(ra, tmp, by=c('RID','VISIT'))
+	ra[, HIV_1517:= 1L]
+	#rd		<- subset(rd, BIRTHYR>2010-50 & (is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & EST_DATEDIED>2010)))
+	
+	#	add HIV status
+	tmp		<- rd[FIRSTPOSDATE<2015+2/12, list(HIV=max(HIV), PANGEA=max(PANGEA)), by='RID'] 			
+	de		<- merge(de, tmp, by='RID', all.x=1)	
+	tmp		<- unique(subset(ra, FIRSTPOSDATE<2015+2/12, select=c(RID, HIV_1517, FIRSTPOSDATE)))
+	de		<- merge(de, tmp, by='RID', all.x=1)
+	
+	#	add ART status
+	de		<- merge(de, rart, by='RID', all.x=1)
+	
+	#	get individuals with at least 750nt overlap with another individual at 20X
+	infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/close_pairs_170704_cl35_withmedian.rda"
+	load(infile)
+	rn	<- subset(rn, NEFF>3)	
+	rn	<- data.table(RID=rn[, unique(c(ID1, ID2))],MIN_PNG_OUTPUT=1)		
+	#	add to rn individuals with any sequence data
+	load('~/Dropbox (SPH Imperial College)/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_input_170301/Rakai_phyloscanner_170301_b75_part2.rda')
+	tmp		<- unique(subset(dc, !is.na(SID), select=RID))
+	tmp[, BAM_OUTPUT:=1L]
+	rn		<- merge(tmp, rn, all=1, by='RID')
+	set(rn, rn[, which(is.na(MIN_PNG_OUTPUT))],'MIN_PNG_OUTPUT',0L)
+	#	add
+	de		<- merge(de, rn, by='RID', all.x=1)
+	rd		<- merge(rd, rn, by='RID', all.x=1)
+	rneuro	<- merge(rneuro, rn, by='RID', all.x=1)
+	
+	#	tmp above has 4074 individuals
+	#	of those, 3758 are in 'de', ie participated in rounds 15-17
+	
+	#	for every individual that ever participated, keep first record of when participated
+	#	for every individual that never participated, keep last record
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==0)[, list(VISIT=max(VISIT)), by='PERM_ID']
+	tmp		<- merge(de, tmp, by=c('PERM_ID','VISIT'))
+	tmp2	<- subset(de, PARTICIPATED_ANY_VISIT==1)[, list(VISIT=min(VISIT[PARTICIPATED==1])), by='PERM_ID']
+	de		<- merge(de, tmp2, by=c('PERM_ID','VISIT'))
+	de		<- rbind(de, tmp)
+	
+	#	fill in missing HIV etc
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(HIV))]
+	set(de, tmp, 'HIV', 0L)
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(HIV_1517))]
+	set(de, tmp, 'HIV_1517', 0L)
+	tmp		<- de[, which(PARTICIPATED_ANY_VISIT==1 & is.na(BAM_OUTPUT))]
+	set(de, tmp, c('BAM_OUTPUT','MIN_PNG_OUTPUT'), 0L)
+	tmp		<- rd[, which(is.na(BAM_OUTPUT))]
+	set(rd, tmp, c('BAM_OUTPUT','MIN_PNG_OUTPUT'), 0L)
+	
+	de[, table(HIV, HIV_1517)]	
+	# 672 with HIV_1517==1 and HIV==0
+	#	0 with HIV_1517==0 and HIV==1
+	# use HIV_1517 below
+	
+	rneuro[, sum(MIN_PNG_OUTPUT)]			# 224	
+	rd[, sum(MIN_PNG_OUTPUT)]				# 2746
+	de[, sum(MIN_PNG_OUTPUT, na.rm=TRUE)]	# 2689
+	
+	#	calculate number for whom we have deep seq output
+	tmp		<- subset(rd, MIN_PNG_OUTPUT==1)[, list(DEEP_SEQ=length(RID)), by=c('COMM_NUM')]	
+	tmp		<- subset(tmp, DEEP_SEQ>0)
+	tmp[, DEEP_SEQ:=NULL]	
+	tmp[, COMM_ANY_MIN_PNG_OUTPUT:= 1]
+	de		<- merge(de, tmp, by='COMM_NUM', all.x=1)
+	rd		<- merge(rd, tmp, by='COMM_NUM', all.x=1)
+	set(de, de[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
+	set(rd, rd[, which(is.na(COMM_ANY_MIN_PNG_OUTPUT))], 'COMM_ANY_MIN_PNG_OUTPUT', 0L)
+	tmp		<- unique(subset(rd, select=c(COMM_NUM,COMM_NUM_A)))
+	de		<- merge(de, tmp, by='COMM_NUM')
+	
+	#	subset to only those communities with seq data
+	#	4 fishing, 34 inland
+	#def		<- copy(de)
+	#de		<- subset(de, !is.na(DUMMY))
+	#de[, DUMMY:=NULL]
+	#rd		<- subset(rd, !is.na(DUMMY))
+	#rd[, DUMMY:=NULL]	
+	#
+	
+	#	add age category at midpoint of observation period, 2013.25
+	set(de, de[, which(is.na(DATE))], 'DATE', hivc.db.Date2numeric(as.Date("2011-09-02")))	
+	de[, AGE_AT_MID:= 2013.25 - (hivc.db.Date2numeric(DATE)-AGEYRS)]
+	de[, AGE_AT_MID_C:= cut(AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE)]
+	stopifnot( nrow(subset(de, is.na(AGE_AT_MID_C)))==0 )
+	
+	#
+	#	prepare inmigrant -- identify inmigrants from fishing communities and from external
+	#
+	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/RakaiPangeaMetaData_v2.rda"
+	infile.migrant2		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrants_withMissingGPS.csv"
+	load(infile.migrant)
+	inmigrant	<- as.data.table(inmigrant)
+	inmigrant2	<- as.data.table(read.csv(infile.migrant2))
+	#	plot fisherfolk	to figure out how much of a radius we need
+	if(0)
+	{
+		zf		<- data.table(longitude=c(31.763,31.7968,31.754,31.838), latitude=c(-0.915, -0.6518, -0.703, -0.497), ID= c('Kasensero','Bukyanju','NearBwende','Fish4'))
+		make_circles <- function(centers, radius, nPoints = 100){
+			# centers: the data frame of centers with ID
+			# radius: radius measured in kilometer
+			#
+			meanLat <- mean(centers$latitude)
+			# length per longitude changes with lattitude, so need correction
+			radiusLon <- radius /111 / cos(meanLat/57.3) 
+			radiusLat <- radius / 111
+			circleDF <- data.frame(ID = rep(centers$ID, each = nPoints))
+			angle <- seq(0,2*pi,length.out = nPoints)
+			
+			circleDF$lon <- unlist(lapply(centers$longitude, function(x) x + radius * cos(angle)))
+			circleDF$lat <- unlist(lapply(centers$latitude, function(x) x + radius * sin(angle)))
+			return(circleDF)
+		}
+		zc <- make_circles(zf, 0.01)
+		ggmap(zm) +			
+				geom_point(data=zf, aes(x=longitude, y=latitude, pch=ID), stroke=1.5, alpha=0.8) +
+				geom_polygon(data=zc, aes(lon, lat, group = ID), color = "red", alpha = 0)
+		#	radius of length 0.01 should catch					
+		tmp		<- inmigrant[, list( 	DIST_KASENSERO= sqrt( (inmig_lon- 31.763)^2 + (inmig_lat - (-0.915))^2),
+						DIST_BUKYANJU= sqrt( (inmig_lon- 31.7968)^2 + (inmig_lat - (-0.6518))^2),
+						DIST_NEARBWENDE= sqrt( (inmig_lon- 31.754)^2 + (inmig_lat - (-0.703))^2),
+						DIST_FISH4= sqrt( (inmig_lon- 31.838)^2 + (inmig_lat - (-0.497))^2)
+				), by=c('RCCS_studyid','visit')]
+		tmp		<- melt(tmp, id.vars=c('RCCS_studyid','visit'))
+		ggplot(subset(tmp, value<0.3), aes(x=value)) +
+				geom_histogram(binwidth=0.01) +
+				facet_grid(variable~.)		
+		zfd		<- merge(inmigrant, subset(tmp, value<0.01, c(RCCS_studyid, visit)), by=c('RCCS_studyid','visit'))		
+	}
+	#	so fishing sites are MALEMBO DIMU KASENSERO NAMIREMBE but there are spelling mistakes
+	#	clean up inmigrant	
+	#
+	#	inmigrant[, unique(sort(inmig_place))]
+	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub('DDIMO|DDIMU|DIMO|DIMU','DIMU',inmig_place)])
+	set(inmigrant, inmigrant[, which(grepl('MALEMBO',inmig_place))], 'inmig_place', 'MALEMBO')
+	set(inmigrant, NULL, 'inmig_place', inmigrant[, gsub("KASEMSERO","KASENSERO",inmig_place)])
+	set(inmigrant, inmigrant[, which(grepl('KASENSERO',inmig_place))], 'inmig_place', 'KASENSERO')
+	set(inmigrant2, inmigrant2[, which(grepl('MALEMBO',inmig_place))], 'inmig_place', 'MALEMBO')
+	#	define from_fishing and from_outside and from_inland
+	inmigrant[, INMIG_LOC:= 'inland' ]
+	set(inmigrant, inmigrant[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE|KYABASIMBA',inmig_place))], 'INMIG_LOC','fisherfolk')
+	set(inmigrant, inmigrant[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
+	set(inmigrant, inmigrant[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
+	set(inmigrant, inmigrant[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')	
+	inmigrant2[, INMIG_LOC:= 'inland' ]
+	set(inmigrant2, inmigrant2[, which(grepl('MALEMBO|DIMU|KASENSERO|NAMIREMBE|KYABASIMBA',inmig_place))], 'INMIG_LOC','fisherfolk')
+	set(inmigrant2, inmigrant2[, which(inmig_admin0!='Uganda')], 'INMIG_LOC','external')
+	set(inmigrant2, inmigrant2[, which(inmig_admin1!='Rakai')], 'INMIG_LOC','external')
+	set(inmigrant2, inmigrant2[, which(is.na(inmig_admin1))], 'INMIG_LOC','unknown')
+	inmigrant2[, table(INMIG_LOC)]
+	#	  external fisherfolk     inland    unknown 
+	#       1          1          6          4
+	#	  now resolved 8 more locations, great
+	setnames(inmigrant2, 'INMIG_LOC', 'INMIG_LOC2')
+	inmigrant2	<- subset(inmigrant2, select=c('RCCS_studyid','visit','INMIG_LOC2'))
+	inmigrant	<- merge(inmigrant, inmigrant2, by=c('RCCS_studyid','visit'), all.x=TRUE)
+	tmp			<- inmigrant[, which(!is.na(INMIG_LOC2) & INMIG_LOC2!='unknown')]
+	set(inmigrant, tmp, 'INMIG_LOC', inmigrant[tmp, INMIG_LOC2])	
+	inmigrant[, table(INMIG_LOC)]
+	#	  external fisherfolk     inland    unknown 
+	#	   763         41       1577        373
+	inmigrant[, INMIGRATE_DATE:= hivc.db.Date2numeric(date)]	
+	set(inmigrant, NULL, c('date','inmigrant','INMIG_LOC2'), NULL)
+	setnames(inmigrant, colnames(inmigrant), gsub('RCCS_STUDYID','RID',toupper(colnames(inmigrant))))		
+	#
+	#	inmigrants done
+	#
+	
+	
+	#
+	#	add inmigrants to eligibility / participation
+	#
+	di			<- subset(inmigrant, select=c(RID, INMIGRATE_DATE, INMIG_LOC))
+	di			<- merge(di, de, by='RID', all.x=TRUE)
+	#	ignore inmigrants not seen in 15-16
+	di			<- subset(di, !is.na(STATUS))
+	#	only inmigration date closest to first visit and before the first visit
+	tmp			<- di[, list(FIRSTVISITDATE=min(DATE)), by='RID']
+	di			<- merge(di, tmp, by='RID')	
+	tmp			<- di[INMIGRATE_DATE<=FIRSTVISITDATE, list(INMIGRATE_DATE= INMIGRATE_DATE[which.min(FIRSTVISITDATE-INMIGRATE_DATE)]), by='RID']
+	di			<- merge(di, tmp, by=c('RID','INMIGRATE_DATE'))
+	di			<- unique(di, by=c('RID','VISIT'))
+	#	select those inmigrated in the last 2 years
+	tmp			<- subset(di, (FIRSTVISITDATE-INMIGRATE_DATE)<=2, c(RID, INMIG_LOC))
+	setnames(tmp, 'INMIG_LOC', 'INMIG_2YRS_LOC')
+	tmp[, INMIG_2YRS:=1]
+	de			<- merge(de, tmp, by='RID', all.x=TRUE)
+	set(de, de[, which(is.na(INMIG_2YRS))], 'INMIG_2YRS', 0)
+	set(de, de[, which(is.na(INMIG_2YRS_LOC))], 'INMIG_2YRS_LOC', 'resident')	
+	
+	#	some fixup
+	set(de, de[, which(PARTICIPATED_ANY_VISIT==0 & MIN_PNG_OUTPUT==1)], 'PARTICIPATED_ANY_VISIT', 1L)
+	set(de, de[, which(SELFREPORTART_AT_FIRST_VISIT==1 & MIN_PNG_OUTPUT==1)], 'SELFREPORTART_AT_FIRST_VISIT', 0L)
+	
+	
+	de[, table(HIV_1517, SELFREPORTART_AT_FIRST_VISIT, useNA='if')]
+	#	        SELFREPORTART
+	#	HIV_1517     0         1     2  <NA>
+	#		    0    20715     8     7    10
+	#			1     3884  1256     2     0
+	#			<NA>     0     0     0 11763
+	
+	#	now calculate participation by community and gender
+	des		<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','PARTICIPATED_ANY_VISIT')]
+	set(des, NULL, 'PARTICIPATED_ANY_VISIT', des[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	des		<- dcast.data.table(des, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX~PARTICIPATED_ANY_VISIT, value.var='N')
+	
+	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
+	#	among those that participated in rounds 15 - 16
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)),
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
+	des		<- merge(des, tmp, by=c('COMM_NUM','SEX'), all=TRUE)
+	
+	#	add community type
+	des[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]	
+	
+	#	now do the same by community and gender and age category
+	desa	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','AGE_AT_MID_C','PARTICIPATED_ANY_VISIT')]
+	set(desa, NULL, 'PARTICIPATED_ANY_VISIT', desa[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	desa	<- dcast.data.table(desa, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX+AGE_AT_MID_C~PARTICIPATED_ANY_VISIT, value.var='N')
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)), 
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','AGE_AT_MID_C')]	
+	desa	<- merge(desa, tmp, by=c('COMM_NUM','SEX','AGE_AT_MID_C'), all=TRUE)
+	desa[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]
+	#	check for missing and replace by 0		
+	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','SLART_AT_FIRST_VISIT','DEEP_SEQ_1516'))
+		set(desa, which(is.na(desa[[x]])), x, 0)
+	
+	#	now do the same by community and gender and migration category
+	desm	<- de[, list(N=length(CURR_ID)), by=c('COMM_NUM','COMM_NUM_A','COMM_ANY_MIN_PNG_OUTPUT','SEX','INMIG_2YRS_LOC','PARTICIPATED_ANY_VISIT')]
+	set(desm, NULL, 'PARTICIPATED_ANY_VISIT', desm[, factor(PARTICIPATED_ANY_VISIT, levels=c('1','0'), labels=c('PART_EVER','PART_NEVER'))])
+	desm	<- dcast.data.table(desm, COMM_NUM+COMM_NUM_A+COMM_ANY_MIN_PNG_OUTPUT+SEX+INMIG_2YRS_LOC~PARTICIPATED_ANY_VISIT, value.var='N')
+	tmp		<- subset(de, PARTICIPATED_ANY_VISIT==1)
+	tmp		<- tmp[, list(	HIV_1516_YES=length(which(HIV_1517==1)), 
+					HIV_1516_NO=length(which(HIV_1517==0)),
+					SLART_AT_FIRST_VISIT=length(which(SELFREPORTART_AT_FIRST_VISIT==1)),
+					DEEP_SEQ_1516=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX','INMIG_2YRS_LOC')]	
+	desm	<- merge(desm, tmp, by=c('COMM_NUM','SEX','INMIG_2YRS_LOC'), all=TRUE)
+	desm[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f',levels=c(TRUE,FALSE),labels=c('fisherfolk','inland')))]
+	#	check for missing and replace by 0		
+	for(x in c('PART_EVER','PART_NEVER','HIV_1516_YES','HIV_1516_NO','SLART_AT_FIRST_VISIT','DEEP_SEQ_1516'))
+		set(desm, which(is.na(desm[[x]])), x, 0)
+	
+	
+	
+	#	now calculate HIV pos by end of round 16, and sequenced by end of round 16, by community and gender
+	#	among those that ever participated
+	#	excluding those that died before 2010, or that reached age 60 before 2010
+	tmp		<- subset(rd, is.na(EST_DATEDIED) | (!is.na(EST_DATEDIED) & EST_DATEDIED>=2010))	
+	tmp		<- subset(tmp, (2010-BIRTHYR)<60)
+	rds		<- tmp[, list(HIV_EVER_YES=length(which(HIV==1)), DEEP_SEQ_EVER=length(which(MIN_PNG_OUTPUT==1)) ), by=c('COMM_NUM','SEX')]	
+	rds[, sum(DEEP_SEQ_EVER)]	
+	# 	2700 (among those in rd who are not too old and did not die before 2010)	
+	
+	save(des, desa, desm, rds, de, rd, di, inmigrant, file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda')
+}
+
+RakaiFull.phylogeography.190327.table.neff<- function()
+{
+	require(data.table)
+	
+	infile	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_summary.csv'
+	outfile.base<- gsub('\\.csv','',mcmc.file)
+	df		<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+	df		<- subset(df, grepl('PI',VAR))
+	df		<- df[order(NEFF)]
+	
+	ggplot(df, aes(x=NEFF)) + 
+			geom_histogram(bins=40) + 
+			theme_bw() +
+			scale_y_continuous(expand=c(0,0), lim=c(0,22)) +
+			scale_x_log10(breaks=c(100,300,500,1e3,2e3,5e3,10e3,15e3,30e3), lim=c(100,20e3),expand=c(0,0)) +
+			labs(x='\neffective sample size')
+	ggsave(file=paste0(outfile.base,'_neffhist.pdf'), w=10, h=6)  
 }
 
 RakaiFull.phylogeography.190327.flows.obs<- function()
