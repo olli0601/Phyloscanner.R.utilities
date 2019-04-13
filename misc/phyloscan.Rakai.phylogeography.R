@@ -9922,8 +9922,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
-						)	
-		infiles		<- c()
+						)			
 		for(ii in seq_along(infiles))
 		{
 			#	main command
@@ -9941,7 +9940,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 			outfile	<- paste("prk",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 			cmd.hpccaller(indir, outfile, cmd)		
 		}	
-		
+		stop()
 		#
 		#	vary downstream options
 		#
