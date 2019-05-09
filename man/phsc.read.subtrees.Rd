@@ -5,9 +5,9 @@
 \title{Read subtree information}
 \usage{
 phsc.read.subtrees(prefix.infiles, prefix.run = "ptyr",
-  regexpr.subtrees = "Subtrees_r_.*\\\\.rda$", prefix.wfrom = "Window_",
-  prefix.wto = "Window_[0-9]+_to_", save.file = NA, resume = FALSE,
-  zip = FALSE)
+  regexpr.subtrees = "Subtrees_r_.*\\\\.rda$",
+  prefix.wfrom = "Window_", prefix.wto = "Window_[0-9]+_to_",
+  save.file = NA, resume = FALSE, zip = FALSE)
 }
 \arguments{
 \item{prefix.infiles}{Full path name that identifies subtree files}

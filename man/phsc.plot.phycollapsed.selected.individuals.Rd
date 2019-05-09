@@ -5,10 +5,11 @@
 \title{Plot short read phylogenies and highlight individuals}
 \usage{
 phsc.plot.phycollapsed.selected.individuals(phs, dfs, ids,
-  plot.cols = rainbow(length(ids)), plot.cols.background = function(n) {    
-  rainbow_hcl(n, start = 60, end = 240, c = 30, l = 80) },
-  drop.blacklisted = TRUE, tip.regex = "(.*)_read_([0-9]+)_count_([0-9]+)",
-  plot.file = NA, drop.less.than.n.ids = 2, pdf.h = 50, pdf.rw = 10,
+  plot.cols = rainbow(length(ids)), plot.cols.background = function(n)
+  {     rainbow_hcl(n, start = 60, end = 240, c = 30, l = 80) },
+  drop.blacklisted = TRUE,
+  tip.regex = "(.*)_read_([0-9]+)_count_([0-9]+)", plot.file = NA,
+  drop.less.than.n.ids = 2, pdf.h = 50, pdf.rw = 10,
   pdf.ntrees = 20, pdf.title.size = 40)
 }
 \arguments{

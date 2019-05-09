@@ -4,7 +4,8 @@
 \alias{phsc.get.pairwise.relationships.keff.and.neff}
 \title{Count observed relationship states}
 \usage{
-phsc.get.pairwise.relationships.keff.and.neff(df, get.groups, w.slide = NA)
+phsc.get.pairwise.relationships.keff.and.neff(df, get.groups,
+  w.slide = NA)
 }
 \arguments{
 \item{df}{data.table with basic relationship types for paired individuals across windows. Must contain columns 'ID1','ID2','W_FROM','W_TO','TYPE_BASIC'.}

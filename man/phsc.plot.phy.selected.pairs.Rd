@@ -4,8 +4,8 @@
 \alias{phsc.plot.phy.selected.pairs}
 \title{Plot all short read phylogenies including two individuals}
 \usage{
-phsc.plot.phy.selected.pairs(phs, dfs, id1, id2, plot.file = NA, pdf.h = 50,
-  pdf.rw = 10, pdf.ntrees = 20, pdf.title.size = 40)
+phsc.plot.phy.selected.pairs(phs, dfs, id1, id2, plot.file = NA,
+  pdf.h = 50, pdf.rw = 10, pdf.ntrees = 20, pdf.title.size = 40)
 }
 \arguments{
 \item{phs}{List of trees in ape format}

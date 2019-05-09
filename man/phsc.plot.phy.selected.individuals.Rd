@@ -5,9 +5,10 @@
 \title{Plot short read phylogenies and highlight individuals}
 \usage{
 phsc.plot.phy.selected.individuals(phs, dfs, ids,
-  plot.cols = rainbow(length(ids)), plot.file = NA, group.redo = FALSE,
-  drop.less.than.n.ids = 2, drop.blacklisted = FALSE, pdf.h = 50,
-  pdf.rw = 10, pdf.ntrees = 20, pdf.title.size = 40)
+  plot.cols = rainbow(length(ids)), plot.file = NA,
+  group.redo = FALSE, drop.less.than.n.ids = 2,
+  drop.blacklisted = FALSE, pdf.h = 50, pdf.rw = 10,
+  pdf.ntrees = 20, pdf.title.size = 40)
 }
 \arguments{
 \item{phs}{List of trees in ape format}

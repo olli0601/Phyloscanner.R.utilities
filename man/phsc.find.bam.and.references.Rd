@@ -5,8 +5,9 @@
 \title{Find bam and corresponding reference files}
 \usage{
 phsc.find.bam.and.references(data.dir,
-  regex.person = "^([A-Z0-9]+-[A-Z0-9]+)-.*$", regex.bam = "^(.*)\\\\.bam$",
-  regex.ref = "^(.*)_ref\\\\.fasta$", verbose = 1)
+  regex.person = "^([A-Z0-9]+-[A-Z0-9]+)-.*$",
+  regex.bam = "^(.*)\\\\.bam$", regex.ref = "^(.*)_ref\\\\.fasta$",
+  verbose = 1)
 }
 \arguments{
 \item{data.dir}{Full path of data directory}

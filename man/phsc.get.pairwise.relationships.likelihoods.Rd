@@ -4,9 +4,12 @@
 \alias{phsc.get.pairwise.relationships.likelihoods}
 \title{Wrapper script to calculate pairwise relationships and likelihoods}
 \usage{
-phsc.get.pairwise.relationships.likelihoods(dwin, trmw.min.reads, trmw.min.tips,
-  trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff,
+phsc.get.pairwise.relationships.likelihoods(dwin, trmw.min.reads,
+  trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff,
   prior.calibrated.prob, relationship.types, prior.keff.dir = prior.keff,
   prior.neff.dir = prior.neff, verbose = TRUE)
+}
+\description{
+Wrapper script to calculate pairwise relationships and likelihoods
 }
 \keyword{internal}
