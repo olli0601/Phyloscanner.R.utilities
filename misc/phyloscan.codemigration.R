@@ -31,7 +31,32 @@ phsc.migrate.findbams<- function()
 	
 }
 
-phsc.migrate.counts.Rakai.branch.mh_devel2<- function()
+phsc.migrate.phyloscan.plot<- function()
+{
+	require(Phyloscanner.R.utilities)
+	require(phyloscannerR)
+	require(tidyverse)
+	
+	#	load phyloscanner data	
+	file	<- system.file(file.path('extdata','ptyr192_phsc_analyse_trees_output.RData'),package='phyloscannerR')
+	load(file)	#loads 'phsc', output from 'phyloscanner.analyse.trees'	
+	tmp	<- produce.pairwise.graphs(phsc, 
+				0.025,	
+				hosts=c('RkA05868F','RkA05968M','RkA00369F','RkA01344M'),
+				contiguous.pairs = FALSE,
+				inclusion = "both")
+		
+	
+	hosts	<- c('RkA05868F','RkA05968M','RkA00369F','RkA01344M')
+	inclusion <- "both"# "either"
+	tmp	<- produce.pairwise.graphs2(phsc, hosts=hosts, inclusion = "both")
+	tmp$graph
+	
+	
+	table( dwin$basic.topology )
+}
+	
+phsc.migrate.counts.Rakai.classify.pairwise.relationships.branch.mh_devel2<- function()
 {
 	require(Phyloscanner.R.utilities)
 	require(phyloscannerR)
@@ -53,7 +78,7 @@ phsc.migrate.counts.Rakai.branch.mh_devel2<- function()
 			'close.and.contiguous',					
 			'close.and.contiguous.and.directed',					
 			'close.and.contiguous.and.ancestry')		
-	dwin	<- classify.pairwise.relationships(phsc, 			 
+	dwin	<- classify.pairwise.relationships(phsc, 				 
 			close.threshold=close.threshold, 
 			distant.threshold=distant.threshold,			
 			relationship.types=relationship.types, 
@@ -89,9 +114,85 @@ phsc.migrate.counts.Rakai.branch.mh_devel2<- function()
 		group_by(basic.classification.mhdevel2, basic.classification.migcnts) %>%
 		summarise(k = n()) 
 
+	# check close.and.adjacent ...
+	tmp	<- dwin %>% 
+			select(host.1, host.2, tree.id, close.and.adjacent.cat, close.and.adjacent.and.directed.cat, close.and.adjacent.and.ancestry.cat, adjacent, contiguous, paths12, paths21, ancestry) %>%
+			rename(	close.and.adjacent.mhdevel2= close.and.adjacent.cat,
+				close.and.adjacent.and.directed.mhdevel2=close.and.adjacent.and.directed.cat,
+				close.and.adjacent.and.ancestry.mhdevel2=close.and.adjacent.and.ancestry.cat,
+				adjacent.mhdevel2=adjacent, 
+				contiguous.mhdevel2=contiguous, 
+				paths12.mhdevel2=paths12, 
+				paths21.mhdevel2=paths21,
+				ancesctry.mhdevel2=ancestry)
+	tmp2 <- dwino %>% 
+				select(host.1, host.2, tree.id, close.and.adjacent.cat, close.and.adjacent.and.directed.cat, close.and.adjacent.and.ancestry.cat, adjacent, contiguous, paths12, paths21, ancestry) %>%
+				rename( close.and.adjacent.migcnts= close.and.adjacent.cat,
+						close.and.adjacent.and.directed.migcnts=close.and.adjacent.and.directed.cat,
+						close.and.adjacent.and.ancestry.migcnts=close.and.adjacent.and.ancestry.cat,				
+						adjacent.migcnts=adjacent, 
+						contiguous.migcnts=contiguous, 
+						paths12.migcnts=paths12, 
+						paths21.migcnts=paths21,
+						ancesctry.migcnts=ancestry)
+	tmp	<- tmp %>% 
+		full_join(tmp2, by=c('host.1','host.2','tree.id'))
+	tmp %>%
+		filter(close.and.adjacent.mhdevel2!=close.and.adjacent.migcnts)
+	tmp %>%
+		filter(close.and.adjacent.and.directed.mhdevel2!=close.and.adjacent.and.directed.migcnts)
+	tmp %>%
+		filter(close.and.adjacent.and.ancestry.mhdevel2!=close.and.adjacent.and.ancestry.migcnts)
+
+	# check close.and.contiguous ...
+	tmp	<- dwin %>% 
+			select(host.1, host.2, tree.id, close.and.contiguous.cat, close.and.contiguous.and.directed.cat, close.and.contiguous.and.ancestry.cat, adjacent, contiguous, paths12, paths21, ancestry) %>%
+			rename(	close.and.contiguous.mhdevel2= close.and.contiguous.cat,
+					close.and.contiguous.and.directed.mhdevel2=close.and.contiguous.and.directed.cat,
+					close.and.contiguous.and.ancestry.mhdevel2=close.and.contiguous.and.ancestry.cat,
+					adjacent.mhdevel2=adjacent, 
+					contiguous.mhdevel2=contiguous, 
+					paths12.mhdevel2=paths12, 
+					paths21.mhdevel2=paths21,
+					ancesctry.mhdevel2=ancestry)
+	tmp2 <- dwino %>% 
+			select(host.1, host.2, tree.id, close.and.contiguous.cat, close.and.contiguous.and.directed.cat, close.and.contiguous.and.ancestry.cat, adjacent, contiguous, paths12, paths21, ancestry) %>%
+			rename( close.and.contiguous.migcnts= close.and.contiguous.cat,
+					close.and.contiguous.and.directed.migcnts=close.and.contiguous.and.directed.cat,
+					close.and.contiguous.and.ancestry.migcnts=close.and.contiguous.and.ancestry.cat,				
+					adjacent.migcnts=adjacent, 
+					contiguous.migcnts=contiguous, 
+					paths12.migcnts=paths12, 
+					paths21.migcnts=paths21,
+					ancesctry.migcnts=ancestry)
+	tmp	<- tmp %>% 
+			full_join(tmp2, by=c('host.1','host.2','tree.id'))
+	tmp %>%
+			filter(close.and.contiguous.mhdevel2!=close.and.contiguous.migcnts)
+	tmp %>%
+			filter(close.and.contiguous.and.directed.mhdevel2!=close.and.contiguous.and.directed.migcnts)
+	tmp %>%
+			filter(close.and.contiguous.and.ancestry.mhdevel2!=close.and.contiguous.and.ancestry.migcnts)
+	
+	#	patristic distance
+	tmp	<- dwin %>% 
+		select(host.1, host.2, tree.id, patristic.distance, categorical.distance) %>%
+		rename(	patristic.distance.mhdevel2= patristic.distance,
+				categorical.distance.mhdevel2=categorical.distance)
+	tmp2<- dwin %>% 
+		select(host.1, host.2, tree.id, patristic.distance, categorical.distance) %>%
+		rename(	patristic.distance.migcnts= patristic.distance,
+				categorical.distance.migcnts=categorical.distance)
+	tmp	<- tmp %>% 
+		full_join(tmp2, by=c('host.1','host.2','tree.id'))
+	tmp %>%
+		filter(categorical.distance.mhdevel2!=categorical.distance.migcnts)
+	tmp %>%
+		filter(patristic.distance.mhdevel2!=patristic.distance.migcnts)
+
 }
 
-phsc.migrate.counts.Rakai.branch.migrateCounts<- function()
+phsc.migrate.counts.Rakai.classify.pairwise.relationships.branch.migrateCounts<- function()
 {
 	require(Phyloscanner.R.utilities)
 	require(phyloscannerR)
@@ -246,6 +347,120 @@ phsc.migrate.counts.Rakai.branch.migrateCounts<- function()
 	
 }
 
+phsc.migrate.normalisation<- function()
+{
+	norm.ref.file.name			<- system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
+	dn	<- as.data.table(read.csv(norm.ref.file.name))
+	ggplot(dn, aes(x=POSITION_WRT_HXB2, y=log10(MEDIAN_PAIRWISE_DISTANCE_BETWEEN_STANDARD_REFS))) +
+			geom_point()
+}
+
+phsc.Rakai.analyzetrees.stage2<- function()
+{	
+	require(data.table)
+	require(phyloscannerR)
+	
+	#	locate tree and patient files for each run
+	indir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+	df	<- data.table(F=list.files(indir))	
+	df[, TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F)]
+	set(df, NULL, 'TYPE', df[, gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)])
+	df[, RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))]
+	df	<- dcast.data.table(df, RUN~TYPE, value.var='F')
+	setnames(df, colnames(df), toupper(colnames(df)))
+	
+	tmpdir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phsc_work'
+	outdir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190512'
+	
+	#	set phyloscanner variables
+	#	arguments as used for RCCS analysis
+	control	<- list()
+	control$allow.mt <- TRUE
+	control$alignment.file.directory = NULL 
+	control$alignment.file.regex = NULL
+	control$blacklist.underrepresented = FALSE
+	control$count.reads.in.parsimony = TRUE
+	control$do.dual.blacklisting = FALSE
+	control$duplicate.file.directory = NULL
+	control$duplicate.file.regex = NULL
+	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
+	control$guess.multifurcation.threshold = FALSE
+	control$max.reads.per.host = 50
+	control$multifurcation.threshold = 1e-5
+	control$norm.constants = NULL
+	control$norm.ref.file.name = system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
+	control$norm.standardise.gag.pol = TRUE
+	control$no.progress.bars = TRUE
+	control$outgroup.name = "REF_CPX_AF460972"
+	control$parsimony.blacklist.k = 20
+	control$prune.blacklist = FALSE
+	control$ratio.blacklist.threshold = 0 
+	control$raw.blacklist.threshold = 20			
+	control$recombination.file.directory = NULL
+	control$recombination.file.regex = NULL
+	control$relaxed.ancestry = TRUE
+	control$sankoff.k = 20
+	control$sankoff.unassigned.switch.threshold = 0
+	control$seed = 42
+	control$splits.rule = 's'
+	control$tip.regex = "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$"
+	control$tree.file.regex = "^ptyr[0-9]+_InWindow_([0-9]+_to_[0-9]+)\\.tree$"
+	control$use.ff = FALSE
+	control$user.blacklist.directory = NULL 
+	control$user.blacklist.file.regex = NULL
+	control$verbosity = 1
+	
+	for(i in seq_len(nrow(df)))
+	{
+		#	file management: extract tree files, copy patient file		 
+		tree.file.directory	<- file.path(tmpdir, paste0('ptyr',df[i,RUN]))
+		unzip(file.path(indir, df[i, TREES_NEWICK]), exdir=tree.file.directory, junkpaths=TRUE)		
+		file.copy(file.path(indir, df[i, PATIENTS]), tree.file.directory)
+		#	run phyloscanner
+		phsc	<- phyloscanner.analyse.trees(tree.file.directory,
+						allow.mt= control$allow.mt,
+						alignment.file.directory = control$alignment.file.directory, 
+						alignment.file.regex = control$alignment.file.regex,
+						blacklist.underrepresented = control$blacklist.underrepresented,
+						count.reads.in.parsimony = control$count.reads.in.parsimony,
+						do.dual.blacklisting = control$do.dual.blacklisting,
+						duplicate.file.directory = control$duplicate.file.directory,
+						duplicate.file.regex = control$duplicate.file.regex,
+						file.name.regex = control$file.name.regex,
+						guess.multifurcation.threshold = control$guess.multifurcation.threshold,
+						max.reads.per.host = control$max.reads.per.host,
+						multifurcation.threshold = control$multifurcation.threshold,
+						norm.constants = control$norm.constants,
+						norm.ref.file.name = control$norm.ref.file.name,
+						norm.standardise.gag.pol = control$norm.standardise.gag.pol,
+						no.progress.bars = control$no.progress.bars,
+						outgroup.name = control$outgroup.name,
+						parsimony.blacklist.k = control$sankoff.k,
+						prune.blacklist = control$prune.blacklist,
+						ratio.blacklist.threshold = control$ratio.blacklist.threshold, 
+						raw.blacklist.threshold = control$raw.blacklist.threshold,			
+						recombination.file.directory = control$recombination.file.directory,
+						recombination.file.regex = control$recombination.file.regex,
+						relaxed.ancestry = control$relaxed.ancestry,
+						sankoff.k = control$sankoff.k,
+						sankoff.unassigned.switch.threshold = control$sankoff.unassigned.switch.threshold,
+						seed = control$seed,
+						splits.rule = control$splits.rule,
+						tip.regex = control$tip.regex,
+						tree.file.regex = control$tree.file.regex,
+						use.ff = control$use.ff,
+						user.blacklist.directory = control$user.blacklist.directory, 
+						user.blacklist.file.regex = control$user.blacklist.file.regex,
+						verbosity = control$verbosity 
+						)
+		#	save output
+		save(phsc, file=file.path(outdir,paste0('ptyr',df[i,RUN],'_analyse_trees.RData')))
+		#	delete working directory
+		sapply( list.files(tree.file.directory, full.names=TRUE), file.remove)
+		file.remove(tree.file.directory)
+	}		
+}
+
 phsc.migrate.analyzetrees.Rakai<- function()
 {
 	require(Phyloscanner.R.utilities)
@@ -270,44 +485,47 @@ phsc.migrate.analyzetrees.Rakai<- function()
 	seed						<- 42
 	splits.rule					<- 's'
 	relaxed.ancestry			<- TRUE
+	allow.mt					<- TRUE
 	tip.regex					<- "^(.*)_fq[0-9]+_read_([0-9]+)_count_([0-9]+)$"
 	tree.file.regex				<- "^ptyr192_InWindow_([0-9]+_to_[0-9]+)\\.tree$"
 	verbosity					<- 1
 	
 	phsc	<- phyloscanner.analyse.trees(tree.file.directory,
-			tree.file.regex = tree.file.regex,
-			splits.rule = splits.rule, 
-			sankoff.k = sankoff.k,
-			sankoff.unassigned.switch.threshold = sankoff.unassigned.switch.threshold,
-			outgroup.name = outgroup.name,
-			multifurcation.threshold = multifurcation.threshold, 
-			guess.multifurcation.threshold = FALSE,
-			user.blacklist.directory = NULL, 
-			user.blacklist.file.regex = NULL,
-			duplicate.file.directory = NULL,
-			duplicate.file.regex = NULL,
-			recombination.file.directory = NULL,
-			recombination.file.regex = NULL,
+			allow.mt=allow.mt,
 			alignment.file.directory = NULL, 
 			alignment.file.regex = NULL,
-			tip.regex = tip.regex,
-			file.name.regex = file.name.regex,
-			seed = seed, 
-			relaxed.ancestry = relaxed.ancestry,
-			norm.ref.file.name = NULL,
-			norm.standardise.gag.pol = TRUE, 
-			norm.constants = NULL,
-			parsimony.blacklist.k = sankoff.k, 
-			raw.blacklist.threshold = raw.blacklist.threshold,
-			ratio.blacklist.threshold = 0, 
-			do.dual.blacklisting = FALSE,
-			max.reads.per.host = max.reads.per.host, 
 			blacklist.underrepresented = FALSE,
-			use.ff = FALSE, 
-			prune.blacklist = FALSE, 
 			count.reads.in.parsimony = TRUE,
-			verbosity = verbosity, 
-			no.progress.bars = FALSE)
+			do.dual.blacklisting = FALSE,
+			duplicate.file.directory = NULL,
+			duplicate.file.regex = NULL,
+			file.name.regex = file.name.regex,
+			guess.multifurcation.threshold = FALSE,
+			max.reads.per.host = max.reads.per.host,
+			multifurcation.threshold = multifurcation.threshold,
+			norm.constants = NULL,
+			norm.ref.file.name = norm.ref.file.name,
+			norm.standardise.gag.pol = TRUE,
+			no.progress.bars = FALSE,
+			outgroup.name = outgroup.name,
+			parsimony.blacklist.k = sankoff.k,
+			prune.blacklist = FALSE,
+			ratio.blacklist.threshold = 0, 
+			raw.blacklist.threshold = raw.blacklist.threshold,			
+			recombination.file.directory = NULL,
+			recombination.file.regex = NULL,
+			relaxed.ancestry = relaxed.ancestry,
+			sankoff.k = sankoff.k,
+			sankoff.unassigned.switch.threshold = sankoff.unassigned.switch.threshold,
+			seed = seed,
+			splits.rule = splits.rule,
+			tip.regex = tip.regex,
+			tree.file.regex = tree.file.regex,
+			use.ff = FALSE,
+			user.blacklist.directory = NULL, 
+			user.blacklist.file.regex = NULL,
+			verbosity = verbosity 
+			)
 	
 	#	save phyloscanner output
 	save(phsc, file=file.path(tree.file.directory,'ptyr192_phsc_analyse_trees_output.RData'))	

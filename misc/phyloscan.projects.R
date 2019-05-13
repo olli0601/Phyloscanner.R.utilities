@@ -31,8 +31,9 @@ project.dual<- function()
 	#project.dualinfecions.phylotypes.evaluatereads.150119()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#pty.pipeline.phyloscanner.180302.beehive67.process()
-	#pty.pipeline.phyloscanner.180605.MunichCluster.process()
-	RakaiFull.phylogeography.190327.flows.wrapper()
+	#pty.pipeline.phyloscanner.180605.MunichCluster.process()	
+	#RakaiFull.phylogeography.190327.flows.wrapper()
+	pty.MRC.stage1.zip.trees()
 	#	various   
 	if(0) 
 	{
@@ -63,7 +64,8 @@ pty.various	<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#RakaiFull.phylogeography.181006.flows.wrapper()
-	Rakai190327.RCCStransmissionflows.inference.age3model()
+	#Rakai190327.RCCStransmissionflows.inference.age3model()
+	pty.MRC.stage1.zip.trees()
 }
 
 project.dual.alignments.missing<- function()

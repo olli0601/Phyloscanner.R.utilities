@@ -131,6 +131,105 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	cat(system(cmd, intern= TRUE))		
 }
 
+pty.MRC.stage1.zip.trees<- function()
+{
+	require(data.table)
+	require(Phyloscanner.R.utilities)
+	
+	#	set up working environment	
+	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+	data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
+	prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+	#in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage1_output')		
+	#work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+	#out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage1_output")	
+	
+	#
+	#	zip trees	
+	if(1)
+	{
+		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage1_output')
+		#
+		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		#allwin	<- data.table(W_FROM=seq(800,9050,125))
+		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
+		for(i in seq_along(indirs))
+		{
+			indir	<- indirs[i]
+			pty.run	<- as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(indir)))
+			#	check if we have all fasta and tree files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
+			missfs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(missfs))
+				cat('\nIn',indir,'Found missing fasta files for',paste(missfs,collapse=', '))
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(misstrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
+			zipit	<- 0
+			if(!length(missfs) & !length(misstrs))
+			{
+				cat('\nIn',indir,'Found all fasta and tree files')
+				zipit	<- 1
+			}				
+			if(!length(setdiff(misstrs,missfs)))
+			{ 
+				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+				zipit	<- 1
+			}	
+			#
+			if(zipit)
+			{			
+				cat('\nProcess',indir)
+				#	first combine all zip files into ptyrXXX_otherstuff.zip
+				infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+				cat('\nZip to file', tmp,'...\n')
+				suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+				invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip fasta files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip tree files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	remove tmp dir
+				invisible( file.remove( file.path(indir,'tmp42') ) )
+				#	move one level down
+				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				cat('\nDone',indir)
+			}
+			#if(!length(misstrs))
+			if(zipit)
+				invisible(unlink(indir, recursive=TRUE))
+			#	expand again if asked to
+			#if(length(misstrs))
+			if(0)
+			{
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
+		}					
+	}
+}
+
 pty.MRC.stage1.generate.trees<- function()
 {
 	require(data.table)
