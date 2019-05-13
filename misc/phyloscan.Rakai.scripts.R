@@ -278,6 +278,7 @@ pty.MRC.stage1.generate.trees<- function()
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1001:1400))
 	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
 	infiles[, CASE_ID:= ceiling(CASE_ID2/10)]
+	print(infiles)
 	#infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
 	stop()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
