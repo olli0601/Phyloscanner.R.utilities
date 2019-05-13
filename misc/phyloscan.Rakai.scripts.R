@@ -182,6 +182,7 @@ pty.MRC.stage1.zip.trees<- function()
 				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
 				zipit	<- 1
 			}	
+			zipit	<- 0
 			#
 			if(zipit)
 			{			
