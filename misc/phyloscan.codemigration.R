@@ -361,7 +361,7 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	require(phyloscannerR)
 	
 	#	locate tree and patient files for each run
-	indir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+	indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
 	df	<- data.table(F=list.files(indir))	
 	df[, TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F)]
 	set(df, NULL, 'TYPE', df[, gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)])
@@ -369,18 +369,18 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	df	<- dcast.data.table(df, RUN~TYPE, value.var='F')
 	setnames(df, colnames(df), toupper(colnames(df)))
 	
-	tmpdir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phsc_work'
-	outdir	<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190512'
+	tmpdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_work'
+	outdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190512'
 	
 	#	set phyloscanner variables
 	#	arguments as used for RCCS analysis
 	control	<- list()
-	control$allow.mt <- TRUE
+	control$allow.mt <- TRUE				
 	control$alignment.file.directory = NULL 
 	control$alignment.file.regex = NULL
-	control$blacklist.underrepresented = FALSE
+	control$blacklist.underrepresented = FALSE	
 	control$count.reads.in.parsimony = TRUE
-	control$do.dual.blacklisting = FALSE
+	control$do.dual.blacklisting = FALSE					
 	control$duplicate.file.directory = NULL
 	control$duplicate.file.regex = NULL
 	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
@@ -392,10 +392,11 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	control$norm.standardise.gag.pol = TRUE
 	control$no.progress.bars = TRUE
 	control$outgroup.name = "REF_CPX_AF460972"
+	control$output.dir = outdir
 	control$parsimony.blacklist.k = 20
 	control$prune.blacklist = FALSE
 	control$ratio.blacklist.threshold = 0 
-	control$raw.blacklist.threshold = 20			
+	control$raw.blacklist.threshold = 20					
 	control$recombination.file.directory = NULL
 	control$recombination.file.regex = NULL
 	control$relaxed.ancestry = TRUE
@@ -410,12 +411,47 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	control$user.blacklist.file.regex = NULL
 	control$verbosity = 1
 	
+	
+	
+	#	make bash for one file
+	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
+	valid.input.args <- cmd.phyloscanner_analyse_trees.valid.args(prog.phyloscanner_analyse_trees)
+	tree.input <- system.file(file.path('extdata','Rakai_run192_trees.zip'),package='phyloscannerR')
+	control$output.string <- 'Rakai_run192'
+	cmd <- cmd.phyloscanner_analyse_trees(prog.phyloscanner_analyse_trees, 
+			tree.input, 
+			control,
+			valid.input.args=valid.input.args)
+	cat(cmd)
+	
+	#	make bash for many files
+	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
+	valid.input.args 				<- cmd.phyloscanner_analyse_trees.valid.args(prog.phyloscanner_analyse_trees)
+	cmds							<- vector('list',nrow(df))
+	for(i in seq_len(nrow(df)))
+	{
+		#	set input args
+		control$output.string 	<- paste0('ptyr',df[i,RUN])	
+		#	make script
+		tree.input				<- file.path(indir, df[i, TREES_NEWICK])
+		cmd						<- cmd.phyloscanner_analyse_trees(prog.phyloscanner_analyse_trees, 
+				tree.input, 
+				control,
+				valid.input.args=valid.input.args)
+		cmds[[i]]				<- cmd		
+	}	
+	cat(cmds[[100]])
+	
+	
+	#	call in R
 	for(i in seq_len(nrow(df)))
 	{
 		#	file management: extract tree files, copy patient file		 
 		tree.file.directory	<- file.path(tmpdir, paste0('ptyr',df[i,RUN]))
 		unzip(file.path(indir, df[i, TREES_NEWICK]), exdir=tree.file.directory, junkpaths=TRUE)		
 		file.copy(file.path(indir, df[i, PATIENTS]), tree.file.directory)
+		
+		control$output.string <- paste0('ptyr',df[i,RUN])
 		#	run phyloscanner
 		phsc	<- phyloscanner.analyse.trees(tree.file.directory,
 						allow.mt= control$allow.mt,

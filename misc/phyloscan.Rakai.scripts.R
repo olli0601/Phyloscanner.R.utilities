@@ -2,7 +2,7 @@ pty.MRC.stage1.generate.read.alignments<- function()
 {
 	#	set up working environment
 	require(Phyloscanner.R.utilities)
-	#HOME			<<- '/rds/general/user/or105/home'
+	#HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
 	#data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
 	#prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
 	HOME			<<- '~/sandbox/DeepSeqProjects'

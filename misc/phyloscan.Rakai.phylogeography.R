@@ -10601,6 +10601,7 @@ RakaiFull.phylogeography.190327.data.eligibility.participation.sequenced<- funct
 	inmigrant			<- as.data.table(all_migrant)	
 	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrant_source_12042019.rda"
 	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrant_source_17042019.rda"
+	infile.migrant		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/migrant_source_20052019.rda"
 	load(infile.migrant)
 	tmp					<- subset(as.data.table(migrant_source), select=c(RCCS_studyid, visit, source_class))	
 	inmigrant			<- merge(inmigrant, tmp, by=c('RCCS_studyid','visit'), all.x=TRUE)
@@ -10830,7 +10831,8 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min50_phylogeography_data_with_inmigrants.rda"												
-						)			
+						)		
+		infiles		<- infiles[1]
 		for(ii in seq_along(infiles))
 		{
 			#	main command
@@ -10848,6 +10850,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 			outfile	<- paste("prk",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 			cmd.hpccaller(indir, outfile, cmd)		
 		}	
+		stop()
 		#
 		#	vary downstream options
 		#
