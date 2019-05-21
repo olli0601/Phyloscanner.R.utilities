@@ -39,7 +39,7 @@ project.dual<- function()
 	if(1) 
 	{
 		require(big.phylo)
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")
+		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="24gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="36gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=46, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=12, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
