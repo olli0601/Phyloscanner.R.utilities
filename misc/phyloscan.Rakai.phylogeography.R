@@ -9716,7 +9716,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(1)
+	if(0)
 	{
 		predict.with.infcounts	<- 0
 		predict.inflation		<- 10
@@ -9726,7 +9726,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 0
 		predict.inflation		<- 20
