@@ -36,7 +36,7 @@ project.dual<- function()
 	#pty.MRC.stage1.generate.trees()
 	#pty.MRC.stage1.zip.trees()
 	#	various   
-	if(0) 
+	if(1) 
 	{
 		require(big.phylo)
 		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")
@@ -66,7 +66,8 @@ pty.various	<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#RakaiFull.phylogeography.181006.flows.wrapper()
 	#Rakai190327.RCCStransmissionflows.inference.age3model()
-	pty.MRC.stage1.zip.trees()
+	RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
+	#pty.MRC.stage1.zip.trees()
 }
 
 project.dual.alignments.missing<- function()

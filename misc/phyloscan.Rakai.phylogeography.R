@@ -8844,7 +8844,8 @@ RakaiFull.phylogeography.190327.predict.areaflows.debug<- function()
 
 RakaiFull.phylogeography.190327.sensitivity.analyses.prep<- function()
 {
-	mcmc.files		<- c(	"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt113601.rda",
+	mcmc.files		<- c(	"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
+							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt113601.rda",
 							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
 							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
 							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
@@ -8853,6 +8854,7 @@ RakaiFull.phylogeography.190327.sensitivity.analyses.prep<- function()
 							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt012401.rda",
 							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt002401.rda"
 							)
+	mcmc.files	<- mcmc.files[1]						
 	for(i in seq_along(mcmc.files))
 	{
 		mcmc.file		<- mcmc.files[i]
@@ -9022,7 +9024,7 @@ RakaiFull.phylogeography.190327.sensitivity.analyses.prep<- function()
 			control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 					flowratios= list( c('inland:M/fishing:M', 'inland:M fishing:F', 'fishing:M inland:F'), c('inland:F/fishing:F', 'inland:F fishing:M', 'fishing:F inland:M')),
 					outfile=gsub('\\.csv','_flowsetc.csv',aggregate.file))
-			source.attribution.aggmcmc.getKeyQuantities(aggregate.file, control)		
+			source.attribution.mcmc.getKeyQuantities(infile=aggregate.file, control=control)		
 		}	
 		#	calculate flows sources WAIFM flow_ratio overall
 		aggregate.file	<- gsub('\\.rda','_aggregatedFishInland.csv',mcmc.file)
@@ -9031,7 +9033,7 @@ RakaiFull.phylogeography.190327.sensitivity.analyses.prep<- function()
 			control			<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 					flowratios= list( c('inland/fishing', 'inland fishing', 'fishing inland')),
 					outfile=gsub('\\.csv','_flowsetc.csv',aggregate.file))
-			source.attribution.aggmcmc.getKeyQuantities(aggregate.file, control)	
+			source.attribution.mcmc.getKeyQuantities(infile=aggregate.file, control=control)	
 		}		
 	}
 		
@@ -9674,23 +9676,76 @@ RakaiFull.phylogeography.190327.highway.distancesToHighway<- function()
 }
 
 RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
-{
-	infile.inference.data			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-	infile.inference.mcmc			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda"
-	infile.subdistricts				<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Raster_HIVandPopcounts.rda"
+{	
+	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	indir2	<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group"
+	indir	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
+	indir2	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
 	
-	for(predict.with.infcounts in c(1,0))
-		for(predict.inflation in c(10,20,30))
-		{
-			RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
-																infile.inference.mcmc=infile.inference.mcmc, 
-																infile.subdistricts=infile.subdistricts, 
-																predict.with.infcounts=predict.with.infcounts, 
-																predict.inflation=predict.inflation)
-			gc()
-		}
-			
+	infile.inference.data			<- file.path(indir,"RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
+	infile.inference.mcmc			<- file.path(indir,"RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda")
+	infile.subdistricts				<- file.path(indir2,"Raster_HIVandPopcounts.rda")
 	
+	if(1)
+	{
+		predict.with.infcounts	<- 1
+		predict.inflation		<- 20
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(0)
+	{
+		predict.with.infcounts	<- 1
+		predict.inflation		<- 10
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(0)
+	{
+		predict.with.infcounts	<- 1
+		predict.inflation		<- 30
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(0)
+	{
+		predict.with.infcounts	<- 0
+		predict.inflation		<- 10
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(0)
+	{
+		predict.with.infcounts	<- 0
+		predict.inflation		<- 20
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(0)
+	{
+		predict.with.infcounts	<- 0
+		predict.inflation		<- 30
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}					
 }
 
 RakaiFull.phylogeography.190327.predict.areaflows.process<- function()
@@ -9741,6 +9796,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	require(gtools)	
 	require(coda)
 	require(bayesplot)
+	require(phyloflows)
 	
 			
 	if(is.null(infile.inference.data))	
@@ -10029,7 +10085,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 			flowratios= list( c('inland:M/fishing:M', 'inland:M fishing:F', 'fishing:M inland:F'), c('inland:F/fishing:F', 'inland:F fishing:M', 'fishing:F inland:M')),
 			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','_PIGender.csv',mcmc.file)))
-	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','_PIGender.csv',mcmc.file), control)
+	source.attribution.mcmc.getKeyQuantities(infile=gsub('\\.rda','_PIGender.csv',mcmc.file), control=control)
 	
 	
 	#	aggregate to fish<->inland
@@ -10041,7 +10097,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	control		<- list(	quantiles= c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975),
 			flowratios= list( c('inland/fishing', 'inland fishing', 'fishing inland')),
 			outfile=gsub('\\.csv','_flowsetc.csv',gsub('\\.rda','_PI.csv',mcmc.file)))
-	source.attribution.aggmcmc.getKeyQuantities(gsub('\\.rda','_PI.csv',mcmc.file), control)	
+	source.attribution.mcmc.getKeyQuantities(infile=gsub('\\.rda','_PI.csv',mcmc.file), control=control)	
 }
 
 RakaiFull.phylogeography.190327.predict.areaflows.old<- function(infile.inference.data=NULL, infile.inference.mcmc=NULL, infile.subdistricts=NULL)
@@ -11052,8 +11108,7 @@ RakaiFull.phylogeography.190327.figure.areas.on.map<- function()
 	# https://groups.google.com/forum/embed/#!topic/ggplot2/nqzBX22MeAQ
 	
 	indir					<-  "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
-	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-	infile.subdistricts		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Subdistrict_Data_fromMapsAndSurvey.rda"
+	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"	
 	infile.subdistricts		<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/Raster_HIVandPopcounts.rda"
 	outfile.base			<- indir
 	load(file.path(indir, infile))
