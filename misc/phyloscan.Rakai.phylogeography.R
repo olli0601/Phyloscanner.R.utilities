@@ -9686,7 +9686,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 	infile.inference.mcmc			<- file.path(indir,"RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda")
 	infile.subdistricts				<- file.path(indir2,"Raster_HIVandPopcounts.rda")
 	
-	if(1)
+	if(0)
 	{
 		predict.with.infcounts	<- 1
 		predict.inflation		<- 20
@@ -9696,7 +9696,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 1
 		predict.inflation		<- 10
