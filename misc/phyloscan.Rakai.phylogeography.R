@@ -9726,7 +9726,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(1)
+	if(0)
 	{
 		predict.with.infcounts	<- 0
 		predict.inflation		<- 20
@@ -9736,7 +9736,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 0
 		predict.inflation		<- 30
@@ -11430,6 +11430,7 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 	z			<- dcast.data.table(z, FLOW~P, value.var='Q')
 	set(z, NULL, 'FLOW', z[, factor(FLOW, levels=rev(c('within','inland -> fishing','fishing -> inland','external -> fishing','external -> inland')))])
 	z[, ANA:='transmission flows']
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
 	
 	ggplot(z) +
 			geom_point(aes(x=FLOW, y=M)) +
