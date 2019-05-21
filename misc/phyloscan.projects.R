@@ -32,7 +32,7 @@ project.dual<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#pty.pipeline.phyloscanner.180302.beehive67.process()
 	#pty.pipeline.phyloscanner.180605.MunichCluster.process()	
-	RakaiFull.phylogeography.190327.flows.wrapper()
+	#RakaiFull.phylogeography.190327.flows.wrapper()
 	#pty.MRC.stage1.generate.trees()
 	#pty.MRC.stage1.zip.trees()
 	#	various   
