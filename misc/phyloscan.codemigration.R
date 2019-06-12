@@ -415,30 +415,43 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	
 	#	make bash for one file
 	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-	valid.input.args <- cmd.phyloscanner_analyse_trees.valid.args(prog.phyloscanner_analyse_trees)
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
 	tree.input <- system.file(file.path('extdata','Rakai_run192_trees.zip'),package='phyloscannerR')
 	control$output.string <- 'Rakai_run192'
-	cmd <- cmd.phyloscanner_analyse_trees(prog.phyloscanner_analyse_trees, 
+	cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
 			tree.input, 
 			control,
 			valid.input.args=valid.input.args)
 	cat(cmd)
 	
 	#	make bash for many files
+	require(tibble)
 	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-	valid.input.args 				<- cmd.phyloscanner_analyse_trees.valid.args(prog.phyloscanner_analyse_trees)
-	cmds							<- vector('list',nrow(df))
+	tree.dir <- "RakaiPopSample_deepseqtrees"
+	tree.dir <- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+	tmp <- "https://datadryad.org/bitstream/handle/10255/dryad.208473/Dataset_S1.tar?sequence=1"
+	download.file(tmp, destfile="Dataset_S1.tar", method="curl")
+	untar("Dataset_S1.tar", exdir=tree.dir, extras='-xvf')	
+	df <- tibble(F=list.files(tree.dir))
+	df <- df %>% 
+			mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
+					RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
+			mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
+			spread(TYPE, F) %>%
+			set_names(~ str_to_upper(.))
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+	cmds <- vector('list',nrow(df))
 	for(i in seq_len(nrow(df)))
 	{
 		#	set input args
-		control$output.string 	<- paste0('ptyr',df[i,RUN])	
+		control$output.string <- paste0('ptyr',df$RUN[i])	
 		#	make script
-		tree.input				<- file.path(indir, df[i, TREES_NEWICK])
-		cmd						<- cmd.phyloscanner_analyse_trees(prog.phyloscanner_analyse_trees, 
+		tree.input <- file.path(indir, df$TREES_NEWICK[i])
+		cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
 				tree.input, 
 				control,
 				valid.input.args=valid.input.args)
-		cmds[[i]]				<- cmd		
+		cmds[[i]] <- cmd		
 	}	
 	cat(cmds[[100]])
 	

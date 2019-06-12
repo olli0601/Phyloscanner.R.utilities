@@ -66,8 +66,9 @@ pty.various	<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#RakaiFull.phylogeography.181006.flows.wrapper()
 	#Rakai190327.RCCStransmissionflows.inference.age3model()
-	RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
+	#RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
 	#pty.MRC.stage1.zip.trees()
+	couples.distances.from.trees()
 }
 
 project.dual.alignments.missing<- function()

@@ -11041,9 +11041,11 @@ RakaiFull.phylogeography.190327.figure.migration.pie<- function()
 	# 	add long/lat
 	zc		<- as.data.table(read.csv(infile.anymisedcom, stringsAsFactors=FALSE))
 	tmp		<- unique(subset(zc, select=c(COMM_NUM, longitude, latitude)), by='COMM_NUM')
-	df		<- merge(df, tmp, by='COMM_NUM')
+	df		<- merge(df, tmp, by='COMM_NUM', all.x=TRUE)
 	setnames(df, colnames(df), toupper(colnames(df)))
 	df[, R:= HIV^(1/3)/300]
+	
+	#ggplot(df) + geom_point(aes(x=LONGITUDE, y=LATITUDE))
 	
 	ggmap(zm) +
 			geom_scatterpie(aes(x=LONGITUDE, y=LATITUDE, group=COMM_NUM, r=R), 
@@ -11100,10 +11102,7 @@ RakaiFull.phylogeography.190327.figure.areas.on.map<- function()
 	require(scales)
 	require(ggplot2)
 	require(ggmap)
-	require(grid)
-	require(gridExtra)
-	require(RColorBrewer)
-	require(gtools)	#rdirichlet
+	
 	
 	# https://groups.google.com/forum/embed/#!topic/ggplot2/nqzBX22MeAQ
 	
@@ -11113,7 +11112,10 @@ RakaiFull.phylogeography.190327.figure.areas.on.map<- function()
 	outfile.base			<- indir
 	load(file.path(indir, infile))
 	
-	tmp	<- unique(subset(desm, select=c(COMM_NUM_A, LONG, LAT, COMM_TYPE)))
+	tmp	<- unique(subset(desm, select=c(COMM_NUM, COMM_NUM_A, LONG, LAT, COMM_TYPE)))
+	#	replace 16m with 16 and 107
+	tmp	<- rbind( 	subset(tmp, COMM_NUM!='16m'),
+					data.table(COMM_NUM=c('16','107'), COMM_NUM_A=c('thd','thx'), LONG=c(31.49650, 31.52377), LAT=c(-0.8339917,-0.8341833), COMM_TYPE='inland'))
 	
 	load(infile.subdistricts)
 	rasdata	<- as.data.table(rasdata)
@@ -11298,6 +11300,132 @@ RakaiFull.phylogeography.190327.figure.transmissionflows.on.map<- function()
 	ggsave(file=paste0(outfile.base,'_flows_inland_on_map.pdf'), w=7, h=7, useDingbats=FALSE)	
 }
 
+RakaiFull.phylogeography.190327.figure.prevalence.gender<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	require(gtools)	#rdirichlet
+	require(rethinking)	# STAN wrapper
+		
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_hivprev_byGenderStudyVisit.rda"
+	load(infile)
+	df	<- as.data.table(melt(female.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_NEG'))	
+	tmp	<- as.data.table(melt(male.negative, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_NEG'))	
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)	
+	tmp	<- as.data.table(melt(female.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='FEMALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	tmp	<- as.data.table(melt(male.positive, varnames=c('COMM_NUM', 'VISIT'), value.name='MALE_POS'))
+	df	<- merge(df, tmp, by=c('COMM_NUM', 'VISIT'), all=TRUE)
+	#	add geo-locations
+	load("~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/community_geography.rda")
+	comgps	<- as.data.table(comgps)
+	set(comgps, NULL, 'COMM_NUM', comgps[, as.integer(as.character(COMM_NUM))])
+	df	<- merge(df, comgps, by='COMM_NUM', all.x=TRUE)
+	#	Kate don t merge 107 and 16 to 16m
+	set(df, NULL, 'COMM_NUM', df[, gsub('^776$|^51$','51m',gsub('^4$|^24$','24m',gsub('^1$|^22$','22m',as.character(COMM_NUM))))])
+	for(x in c('FEMALE_NEG','MALE_NEG','FEMALE_POS','MALE_POS'))
+		set(df, which(is.na(df[[x]])), x, 0L)
+	df	<- subset(df, FEMALE_NEG!=0 | MALE_NEG!=0 | FEMALE_POS!=0 | MALE_POS!=0)
+	#	sum by merged communities that are essentially the same
+	df	<- df[, list(FEMALE_NEG=sum(FEMALE_NEG), MALE_NEG=sum(MALE_NEG), FEMALE_POS=sum(FEMALE_POS), MALE_POS=sum(MALE_POS), longitude=mean(longitude), latitude=mean(latitude)), by= c('COMM_NUM','VISIT')]
+	
+	#	the code below is the same as:
+	df	<- subset(df, !is.na(longitude))
+	
+	#	add anonymized ID
+	tmp	<- as.data.table(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv', stringsAsFactors=FALSE))
+	tmp	<- unique(subset(tmp, select=c(COMM_NUM, COMM_NUM_A, COMM_TYPE)))
+	set(tmp, tmp[,which(COMM_NUM=='16m')],'COMM_NUM','16')
+	tmp	<- rbind(tmp, data.table(COMM_NUM='107', COMM_NUM_A='thx',  COMM_TYPE='trading'))	
+	df	<- merge(df, tmp, by='COMM_NUM', all.x=TRUE)
+	
+	df[, FEMALE:= FEMALE_NEG+FEMALE_POS]
+	df[, MALE:= MALE_NEG+MALE_POS]
+	df[, POS:= MALE_POS+FEMALE_POS]
+	df[, NEG:= MALE_NEG+FEMALE_NEG]
+	#	new clean community numbers
+	dg	<- subset(df, VISIT%in%c(15,15.1,16))
+	tmp	<- unique(subset(dg, select=c(COMM_NUM,COMM_TYPE)))
+	tmp[, COMM_NUM2:= seq_len(nrow(tmp))]
+	tmp[, COMM_TYPE2:= as.integer(as.character(factor(COMM_TYPE,levels=c('agrarian','trading','fisherfolk'), labels=c('1','2','3'))))]
+	dg	<- merge(dg, tmp, by=c('COMM_NUM','COMM_TYPE'))
+	
+	if(0)
+	{
+		#	any change in time in gender specific prevalence?
+		#	not really
+		dg	<- subset(df, VISIT%in%c(14,15,15.1,16,17))
+		ggplot(dg, aes(x=factor(VISIT), group=COMM_NUM)) +
+				geom_line(aes(y= MALE_POS/MALE), colour='blue') +
+				geom_line(aes(y= FEMALE_POS/FEMALE), colour='hotpink2') +
+				geom_point(aes(y= MALE_POS/MALE), colour='blue') +
+				geom_point(aes(y= FEMALE_POS/FEMALE), colour='hotpink2') +
+				theme_bw() +
+				facet_wrap(~COMM_TYPE+COMM_NUM, ncol=4) +
+				labs(x='\nvisit', y='gender specific HIV prevalence estimate\n')
+		ggsave(file=paste0(outfile.base,'_trmMF_prevalenceratios.pdf'), w=9, h=9)		
+	}
+	
+	#	estimate prevalences and prevalence ratio for each community		
+	mpr.1 	<- map2stan(
+			alist(
+					FEMALE_POS ~ dbinom(FEMALE, seropos_f),
+					MALE_POS ~ dbinom(MALE, seropos_m),
+					logit(seropos_f) <- afc[COMM_NUM2],
+					logit(seropos_m) <- amc[COMM_NUM2],					
+					afc[COMM_NUM2] ~ dnorm(0, 10),
+					amc[COMM_NUM2] ~ dnorm(0, 10)										
+			),
+			data=as.data.frame(dg), 
+			start=list(	afc=rep(0,length(unique(dg$COMM_NUM2))), amc=rep(0,length(unique(dg$COMM_NUM2)))),
+			warmup=5e2, iter=5e3, chains=1, cores=4
+	)	
+	post	<- extract.samples(mpr.1)			
+	dgg		<- unique(subset(dg, select=c(COMM_NUM, COMM_TYPE, COMM_NUM2, COMM_NUM_A, longitude, latitude)))
+	tmp		<- dgg[, 
+			list(	STAT=c('M','CL','IL','IU','CU'),
+					PF= as.numeric(quantile(logistic(post$afc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975))),
+					PM= as.numeric(quantile(logistic(post$amc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975))),
+					RFM= as.numeric(quantile(logistic(post$afc[, COMM_NUM2])/logistic(post$amc[, COMM_NUM2]), prob=c(0.5,0.025,0.25,0.75,0.975)))
+			), 
+			by='COMM_NUM2']
+	tmp		<- melt(tmp, id.vars=c('COMM_NUM2','STAT'))	
+	tmp		<- dcast.data.table(tmp, variable+COMM_NUM2~STAT, value.var='value')
+	dgg		<- merge(dgg, tmp, by='COMM_NUM2')
+	#
+	#	 plot
+	#
+	tmp		<- subset(dgg, variable!='RFM')
+	set(tmp, tmp[, which(COMM_TYPE!='fisherfolk')], 'COMM_TYPE', 'inland')
+	set(tmp, tmp[, which(COMM_TYPE=='fisherfolk')], 'COMM_TYPE', 'fishing')
+	set(tmp, NULL, 'COMM_TYPE', tmp[, factor(COMM_TYPE, levels=c('inland','fishing'))])
+	set(tmp, tmp[, which(variable=='PM')], 'variable', 'men')
+	set(tmp, tmp[, which(variable=='PF')], 'variable', 'women')
+	tmp2	<- subset(tmp, variable=='men', c(COMM_NUM, COMM_NUM_A, COMM_TYPE, M))	
+	tmp2	<- tmp2[order(COMM_TYPE, M),]
+	tmp2[, DUMMY:= seq_len(nrow(tmp2))]
+	set(tmp2, NULL, 'COMM_NUM_A', tmp2[, factor(DUMMY, levels=DUMMY, labels=COMM_NUM_A)])
+	tmp2	<- subset(tmp2, select=c(COMM_NUM,COMM_NUM_A))
+	tmp[, COMM_NUM_A:=NULL]
+	tmp		<- merge(tmp, tmp2, by='COMM_NUM')
+	ggplot(tmp, aes(x=COMM_NUM_A)) +
+			geom_boxplot(aes(middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=variable), stat='identity') +
+			theme_bw() + 
+			facet_grid(~COMM_TYPE, space='free', scale='free') +
+			scale_fill_manual(values=c('women'='hotpink2', 'men'='deepskyblue')) +
+			scale_y_continuous(labels=scales:::percent, expand=c(0,0), lim=c(0,0.6)) +
+			labs(x='\ncommunity', y='HIV-1 prevalence\n', fill='gender') +
+			theme(axis.text.x=element_blank(),
+					axis.ticks.x=element_blank())
+	ggsave(file=paste0(outfile.base,'_trmMF_estimatedprevalence.pdf'), w=12, h=6)	
+}
+
 RakaiFull.phylogeography.190327.figure.flows<- function()
 {
 	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
@@ -11444,7 +11572,32 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 	
 	
 	
-	z		<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_aggregatedFishInland_flowsetc.csv")) 
+	z		<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401020_prAreas_PIGender.csv"))
+	z[, TR_LOC:= gsub('^([a-zA-Z]+)\\:([a-zA-Z]+)','\\1', TR_TARGETCAT)]
+	z[, REC_LOC:= gsub('^([a-zA-Z]+)\\:([a-zA-Z]+)','\\1', REC_TARGETCAT)]
+	z[, FLOW:= paste0(TR_LOC,' -> ',REC_LOC)]
+	set(z, z[, which(TR_LOC=='inland' & REC_LOC=='inland')], 'FLOW', 'within')
+	set(z, z[, which(TR_LOC=='fishing' & REC_LOC=='fishing')], 'FLOW', 'within')	
+	z			<- z[, list(VALUE=sum(VALUE)), by=c('FLOW','SAMPLE')]
+	z			<- z[, list(P=names(quantiles), Q=unname(quantile(VALUE, p=quantiles))), by=c('FLOW')]
+	z			<- dcast.data.table(z, FLOW~P, value.var='Q')
+	set(z, NULL, 'FLOW', z[, factor(FLOW, levels=rev(c('within','inland -> fishing','fishing -> inland','external -> fishing','external -> inland')))])
+	z[, ANA:='transmission flows']
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	ggplot(z) +
+			geom_point(aes(x=FLOW, y=M)) +
+			geom_errorbar(aes(x=FLOW, ymin=CL, ymax=CU), width=0.25) +
+			#geom_boxplot(aes(x=FLOW, ymin=CL, ymax=CU, lower=IL, upper=IU, middle=M), stat='identity', fill='grey50') +
+			theme_classic() +
+			scale_y_continuous(labels=scales:::percent, lim=c(0,1), expand=c(0,0)) +
+			labs(y='\npredicted transmission flows', x='') +
+			coord_flip() 			
+	ggsave(file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401020_prAreas_flows.pdf', w=5, h=2, useDingbats=FALSE)	
+	
+	
+	
+	z		<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_aggregatedFishInland_flowsetc.csv"))
+	z		<- as.data.table(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401020_prAreas_PI_flowsetc.csv"))
 	z		<- subset(z, STAT=='flow_ratio')	
 	ggplot(z, aes(y=STAT)) + 			
 			geom_vline(xintercept=1, lty=2) +
@@ -11454,7 +11607,7 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 			labs(x= '\nestimated flow ratio', y='') +
 			coord_cartesian(xlim=c(1/10,10)) +
 			theme_classic() 
-	ggsave(file=gsub('\\.rda','_flowRatioOverall.pdf',mcmc.file), w=5, h=2, useDingbats=FALSE)		
+	ggsave(file='~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401020_prAreas_flowRatioOverall.pdf', w=5, h=2, useDingbats=FALSE)		
 	
 	
 }
@@ -11637,6 +11790,7 @@ RakaiFull.phylogeography.190327.figure.gender.and.migration.sources<- function()
 	z			<- z[, list(TR_GENDER=TR_GENDER, VALUE=VALUE/sum(VALUE)), by=c('REC_TARGETCAT','TR_MIGRANT','SAMPLE')]	
 	z			<- z[, list(P=names(quantiles), Q=unname(quantile(VALUE, p=quantiles))), by=c('REC_TARGETCAT','TR_MIGRANT','TR_GENDER')]
 	z			<- dcast.data.table(z, REC_TARGETCAT+TR_MIGRANT+TR_GENDER~P, value.var='Q')
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
 	ans			<- copy(z)
 	
 	
@@ -11655,6 +11809,7 @@ RakaiFull.phylogeography.190327.figure.gender.and.migration.sources<- function()
 	z			<- z[, list(TR_MIGRANT=TR_MIGRANT, VALUE=VALUE/sum(VALUE)), by=c('REC_TARGETCAT','TR_GENDER','SAMPLE')]	
 	z			<- z[, list(P=names(quantiles), Q=unname(quantile(VALUE, p=quantiles))), by=c('REC_TARGETCAT','TR_MIGRANT','TR_GENDER')]
 	z			<- dcast.data.table(z, REC_TARGETCAT+TR_MIGRANT+TR_GENDER~P, value.var='Q')
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
 	ans			<- rbind(ans,z)
 	
 	
@@ -11676,7 +11831,19 @@ RakaiFull.phylogeography.190327.figure.gender.and.migration.sources<- function()
 	z			<- z[, list(TR_MIGRANT=TR_MIGRANT, TR_GENDER=TR_GENDER, VALUE=VALUE/sum(VALUE)), by=c('REC_TARGETCAT','SAMPLE')]	
 	z			<- z[, list(P=names(quantiles), Q=unname(quantile(VALUE, p=quantiles))), by=c('REC_TARGETCAT','TR_MIGRANT','TR_GENDER')]
 	z			<- dcast.data.table(z, REC_TARGETCAT+TR_MIGRANT+TR_GENDER~P, value.var='Q')
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
 	ans			<- rbind(ans,z)
+	
+	# probability that flows from men > flows from women
+	z			<- copy(mca)	
+	z[, TR_GENDER:= gsub('^([FM]):([0-1])','\\1', TR_TARGETCAT)]
+	z[, TR_MIGRANT:= gsub('^([FM]):([0-1])','\\2', TR_TARGETCAT)]
+	z			<- z[, list(TR_MIGRANT=TR_MIGRANT, TR_GENDER=TR_GENDER, VALUE=VALUE/sum(VALUE)), by=c('REC_TARGETCAT','SAMPLE')]	
+	z			<- z[ ,list(VALUE= VALUE[TR_GENDER=='M']/VALUE[TR_GENDER=='F'] ) , by=c('REC_TARGETCAT','TR_MIGRANT','SAMPLE')]
+	z			<- z[, list(P=names(quantiles), Q=unname(quantile(VALUE, p=quantiles))), by=c('REC_TARGETCAT','TR_MIGRANT')]
+	z			<- dcast.data.table(z, REC_TARGETCAT+TR_MIGRANT~P, value.var='Q')
+	z[, LABEL2:= paste0(round(M*100, d=1), '% (',round(CL*100,d=1),'%-',round(CU*100,d=1),'%)')]
+	z[, LABEL2:= paste0(round(M, d=2), ' (',round(CL,d=2),'-',round(CU,d=2),')')]
 	
 	tmp			<- subset(ans, TR_MIGRANT=='Any')
 	tmp[, TR_GENDER:= factor(TR_GENDER, levels=c('M','F'), labels=c('men','women'))]	

@@ -100,7 +100,7 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 71						# walltime
+	hpc.walltime		<- 171						# walltime
 	hpc.q				<- "pqeelab"				# PBS queue
 	hpc.mem				<- "6gb" 					# RAM	
 	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
@@ -277,7 +277,7 @@ pty.MRC.stage1.generate.trees<- function()
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1001:1400))
 	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
-	infiles[, CASE_ID:= ceiling(CASE_ID2/10)]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
 	print(infiles)
 	#infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
 	stop()
