@@ -1,3 +1,4 @@
+#' Make list of RCCS couples with phyloscanner output
 couples.find	<- function()
 {
 	require(data.table)
@@ -71,6 +72,7 @@ couples.find	<- function()
 	save(rca, file=file.path(outdir,'analyses','190611_phsccouples.rda'))
 }
 
+#' Ask Tanya to provide infection time estimates for RCCS couples
 couples.csv.for.Tanya<- function()
 {
 	indir	<- '~/Box Sync/OR_Work/MSCs/2019_Melodie'
@@ -80,6 +82,69 @@ couples.csv.for.Tanya<- function()
 	write.csv( data.table(RID=sort( unique(c( rca[, MALE_RID], rca[, FEMALE_RID] )) )), row.names=FALSE, file=file.path(indir,'analyses','190611_phsccouples_NeedInfTimes.csv')) 
 }
 
+#' Find relationship statistics for RCCS couples
+couples.relationship.stats	<- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	
+	#	locally
+	if(1)
+	{
+		indir	<- '~/Box Sync/OR_Work/MSCs/2019_Melodie'
+		infile.couples <- file.path(indir,'analyses','190611_phsccouples.rda')	
+		rel.dir <- "~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis"
+	}
+	
+	#	list relationship files
+	df <- tibble(F=list.files(rel.dir)) %>% 
+			filter(grepl('pairwise_relationships.rda',F)) %>%
+			mutate(PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) 
+			
+	#	load couples and select those between whom we want to compute tip-to-tip distances
+	load(infile.couples)
+	set(rca, NULL, 'MALE_ARID', as.character(rca$MALE_ARID))
+	set(rca, NULL, 'FEMALE_ARID', as.character(rca$FEMALE_ARID))
+	rcl	<- subset(rca, grepl('most likely',SELECT))
+	
+	#	select phyloscanner runs with linked couples
+	tmp	<- unique(subset(rcl, select=PTY_RUN))
+	df	<- merge(tmp, as.data.table(df), by='PTY_RUN')
+	
+	#	for each run, unzip and calculate tip-to-tip distances among linked couples
+	ans	<- vector('list', 0)
+	for(run in df$PTY_RUN)
+	{
+		#run	<- 5	#for devel
+		
+		#	load relationship file and extract basic statistics for all windows
+		tmpfile	<-  subset(df,PTY_RUN==run)[,file.path(rel.dir, F)]
+		load(tmpfile)
+		dwin 	<- subset(dwin, select=c(SUFFIX, W_FROM, W_TO, ID1, ID2, ADJACENT, CONTIGUOUS, PATHS_12, PATHS_21))
+		dwin[, ID1_GENDER:= gsub('.*([MF])$','\\1',ID1)]
+		dwin[, ID2_GENDER:= gsub('.*([MF])$','\\1',ID2)]
+		dwin 	<- subset(dwin, ID1_GENDER=='F' & ID2_GENDER=='M'  |   ID1_GENDER=='M' & ID2_GENDER=='F')
+		tmp		<- subset(dwin, ID1_GENDER=='F' & ID2_GENDER=='M')
+		setnames(tmp, c('ID1','ID2','PATHS_12','PATHS_21','ID1_GENDER','ID2_GENDER'), c('ID2','ID1','PATHS_21','PATHS_12','ID2_GENDER','ID1_GENDER'))
+		dwin	<- rbind( subset(dwin, ID1_GENDER=='M' & ID2_GENDER=='F'), tmp)
+		
+		#	select couples
+		tmp		<- data.table(ID1= rcl$MALE_ARID, ID2= rcl$FEMALE_ARID)
+		dwin	<- merge(tmp, dwin, by=c('ID1','ID2'))
+		
+		#	return
+		dwin[, PTY_RUN:= run]
+		ans[[length(ans)+1L]]	<- copy(dwin)
+	}
+	ans	<- do.call('rbind', ans)
+	setkey(ans, PTY_RUN, ID1, ID2)
+	write.csv(ans, row.names=FALSE, file=file.path(indir,'analyses','190611_phsccouples_basic_topology_stats.csv'))
+}
+
+
+#' Find mean patristic tip to tip distances for RCCS couples
 couples.distances.from.trees <- function()
 {
 	require(data.table)
@@ -130,11 +195,22 @@ couples.distances.from.trees <- function()
 	rcl	<- subset(rca, grepl('most likely',SELECT))
 	
 	#	select phyloscanner runs with linked couples
-	tmp	<- unique(subset(rcl, select=PTY_RUN))
-	df	<- merge(tmp, as.data.table(df), by='PTY_RUN')
+	df	<- unique(subset(rcl, select=PTY_RUN)) %>%
+			inner_join(df, by='PTY_RUN')
+	df	<- tibble(FO=list.files(file.path(indir,'analyses'), pattern='mpd_[0-9]+')) %>%
+			mutate(PTY_RUN:= as.integer(gsub('^.*_mpd_([0-9]+).*$','\\1', FO))) %>%
+			full_join(df, by='PTY_RUN')			
+	df	<- df %>% 
+			filter(is.na(FO)) %>%
+			arrange(PTY_RUN) 
+	df	<- df %>%
+			mutate(CASE_ID:= seq_len(nrow(df))) %>%
+			mutate(CASE_ID2:= floor(CASE_ID/10))
+			
+	df	<- df	<- df %>% filter(CASE_ID2==0)
 	
 	#	for each run, unzip and calculate tip-to-tip distances among linked couples	
-	for(run in df$PTY_RUN[-1])
+	for(run in df$PTY_RUN)
 	{
 		#run	<- 5	#for devel
 		#	unzip

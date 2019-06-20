@@ -277,26 +277,26 @@ pty.MRC.stage1.generate.trees<- function()
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1001:1400))
 	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
-	infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/12)]
 	print(infiles)
 	#infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
 	stop()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 23						# walltime
+	hpc.walltime		<- 300						# walltime
 	#	TODO:
 	#		run either this block to submit a job array to college machines 
 	#		the choice depends on whether the previous job array on college machines is done, 
 	#		or on whether the previous job array on Oliver's machines is done.
-	if(1)		
+	if(0)		
 	{
 		hpc.q			<- NA						# PBS queue
-		hpc.mem			<- "6gb" 					# RAM
+		hpc.mem			<- "8gb" 					# RAM
 		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
 	}
 	#		or run this block to submit a job array to Oliver's machines
-	if(0)
+	if(1)
 	{
 		hpc.q			<- "pqeelab"				# PBS queue
 		hpc.mem			<- "6gb" 					# RAM

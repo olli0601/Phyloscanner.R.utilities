@@ -9132,6 +9132,118 @@ RakaiFull.phylogeography.190327.sensitivity.analyses.prediction<- function()
 	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=3.5)
 }
 
+RakaiFull.phylogeography.190327.sensitivity.analyses2<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(Hmisc)
+	
+	
+	#
+	#	read in all results
+	#
+	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	outfile.base	<- paste0(indir,'/190327_sensitivity_')
+	infiles	<- data.table(FI=list.files(indir, pattern='flowsetc'))
+	infiles	<- subset(infiles, grepl('nsweep1e5',FI) & grepl('samcmc190327',FI) & !grepl('^todi',FI) & !grepl('prAreas',FI) & !grepl('beforeSort',FI))
+	infiles[, OPT:= gsub('.*_opt([0-9]+)_.*','\\1',FI)]
+	infiles[, CONFCUT:= gsub('.*_conf([0-9]+)_.*','\\1',FI)]
+	set(infiles, infiles[,which(grepl('flowsetc',CONFCUT))], 'CONFCUT', '60')
+	set(infiles, NULL, 'CONFCUT', infiles[, paste0(CONFCUT,'%')])	
+	infiles[, MINDEPTH:= gsub('.*_min([0-9]+)_.*','\\1',FI)]
+	set(infiles, NULL, 'MINDEPTH', infiles[, paste0(MINDEPTH,'X')])
+	infiles[, OPT_PART:= factor(substring(OPT,2,2), levels=c('1','0'), labels=c('Yes','No'))]
+	infiles[, OPT_SEQ:= factor(substring(OPT,1,1), levels=c('1','0'), labels=c('Yes','No'))]
+	infiles[, OPT_MIG:= paste0(substring(OPT,3,4), ' months')]
+	infiles[, OPT_UNKMIG:= factor(substring(OPT,5,5), levels=c('0','1'), labels=c('fishing communities','inland communities'))]
+	infiles[, STRAT:= factor(grepl('ByGender',FI), levels=c(FALSE,TRUE), labels=c('overall','by gender'))]
+	
+	se	<- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{
+		tmp		<- as.data.table(read.csv(file.path(indir, infiles$FI[i]), stringsAsFactors=FALSE))
+		if(!all(c("TR_TARGETCAT","REC_TARGETCAT","CL","CU","IL","IU","M","STAT","FLOWRATIO_CAT")%in%colnames(tmp)))
+			warning('Expeced column not in ', infiles$FI[i])
+		set(tmp, NULL, colnames(tmp)[!colnames(tmp)%in%c("TR_TARGETCAT","REC_TARGETCAT","CL","CU","IL","IU","M","STAT","FLOWRATIO_CAT")], NULL)
+		for(x in c('STRAT','CONFCUT','MINDEPTH','OPT_PART','OPT_SEQ','OPT_MIG','OPT_UNKMIG','FI'))
+			set(tmp, NULL, x, infiles[[x]][i])
+		se[[i]]	<- tmp
+		print(colnames(se[[i]]))
+	}
+	se	<- do.call('rbind', se)
+	
+	tmp	<- c("fishing","inland","external", "fishing:M","inland:M","external:M","fishing:F","inland:F","external:F")
+	set(se, NULL, 'TR_TARGETCAT', se[, factor(TR_TARGETCAT, levels=tmp)])
+	set(se, NULL, 'REC_TARGETCAT', se[, factor(REC_TARGETCAT, levels=tmp)])
+	setkey(se, FI, TR_TARGETCAT, REC_TARGETCAT)
+	set(se, NULL, 'TRM_CAT', se[, factor(paste0(as.character(TR_TARGETCAT),' -> ',as.character(REC_TARGETCAT)))])
+	
+	#
+	#	sensitivity: no sampling
+	#
+	df	<- subset(se, CONFCUT=='60%' & MINDEPTH=='30X' & OPT_MIG=='24 months' & OPT_UNKMIG=='fishing communities')
+	df[, SENS:= paste0(OPT_PART,', ', OPT_SEQ)]
+	df	<- subset(df, SENS=='Yes, Yes' | SENS=='No, No')
+	
+	tmp <- subset(df, STAT=='waifm' & STRAT=='by gender')
+	tmp[, TR_LOC:= gsub('([a-z]+)\\:(M|F)','\\1',TR_TARGETCAT)]
+	tmp[, TR_GENDER:= gsub('([a-z]+)\\:(M|F)','\\2',TR_TARGETCAT)]
+	tmp[, REC_LOC:= gsub('([a-z]+)\\:(M|F)','\\1',REC_TARGETCAT)]
+	ggplot(tmp) + 
+			geom_point(aes(x= TR_LOC, y=M, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(x= TR_LOC, ymin=CL, ymax=CU, colour=SENS), position=position_dodge(0.9)) +
+			facet_grid(TR_GENDER~REC_LOC)
+	
+	
+	tmp	<- 'sampling'
+	#	
+	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
+			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			coord_flip()
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
+	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			scale_colour_brewer(palette='Dark2') +
+			theme_bw() +
+			labs(y='\ntransmission flow ratio',x='',colour='') +
+			coord_flip(ylim=c(1/500,500)) 
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
+	
+	
+}
+
 RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 {
 	require(data.table)
