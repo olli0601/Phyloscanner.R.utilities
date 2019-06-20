@@ -205,10 +205,10 @@ couples.distances.from.trees <- function()
 			arrange(PTY_RUN) 
 	df	<- df %>%
 			mutate(CASE_ID:= seq_len(nrow(df))) %>%
-			mutate(CASE_ID2:= floor(CASE_ID/10))
-			
+			mutate(CASE_ID2:= floor(CASE_ID/10))		
 	df	<- df	<- df %>% filter(CASE_ID2==0)
 	
+	df	<- as.data.table(df)
 	#	for each run, unzip and calculate tip-to-tip distances among linked couples	
 	for(run in df$PTY_RUN)
 	{
