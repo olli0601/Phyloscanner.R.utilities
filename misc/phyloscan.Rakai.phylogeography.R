@@ -9195,9 +9195,21 @@ RakaiFull.phylogeography.190327.sensitivity.analyses2<- function()
 	tmp[, TR_GENDER:= gsub('([a-z]+)\\:(M|F)','\\2',TR_TARGETCAT)]
 	tmp[, REC_LOC:= gsub('([a-z]+)\\:(M|F)','\\1',REC_TARGETCAT)]
 	ggplot(tmp) + 
+			geom_point(aes(x= REC_LOC, y=M, colour=SENS), position=position_dodge(0.9)) +
+			geom_errorbar(aes(x= REC_LOC, ymin=CL, ymax=CU, colour=SENS), position=position_dodge(0.9)) +
+			facet_grid(TR_GENDER~TR_LOC)
+	
+	
+	tmp <- subset(df, STAT=='sources' & STRAT=='by gender')
+	tmp[, TR_LOC:= gsub('([a-z]+)\\:(M|F)','\\1',TR_TARGETCAT)]
+	tmp[, TR_GENDER:= gsub('([a-z]+)\\:(M|F)','\\2',TR_TARGETCAT)]
+	tmp[, REC_LOC:= gsub('([a-z]+)\\:(M|F)','\\1',REC_TARGETCAT)]
+	tmp[, REC_GENDER:= gsub('([a-z]+)\\:(M|F)','\\2',REC_TARGETCAT)]
+	ggplot(tmp) + 
 			geom_point(aes(x= TR_LOC, y=M, colour=SENS), position=position_dodge(0.9)) +
 			geom_errorbar(aes(x= TR_LOC, ymin=CL, ymax=CU, colour=SENS), position=position_dodge(0.9)) +
-			facet_grid(TR_GENDER~REC_LOC)
+			facet_grid(REC_GENDER~REC_LOC)
+	
 	
 	
 	tmp	<- 'sampling'

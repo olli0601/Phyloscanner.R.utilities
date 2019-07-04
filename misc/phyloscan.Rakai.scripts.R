@@ -72,20 +72,25 @@ pty.MRC.stage1.generate.read.alignments<- function()
 									)	
 	save(pty.args, file=file.path(in.dir, 'phsc_args_stage1_create_read_alignments.rda'))
 	
+	
+	
 	#
 	#	define bash scripts to generate read alignments for all pairs of batches
 	#
 	
-	#	check which (if any) batches have already been processed, and remove from TODO list	
+	#	check which (if any) batches have already been processed, and remove from TODO list
 	tmp			<- data.table(FILE_FASTA=list.files(out.dir, pattern='^ptyr[0-9]+_', full.names=TRUE))
 	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
+	tmp			<- merge(tmp, tmp[, list(FILE_FASTA_N= length(list.files(FILE_FASTA, pattern='fasta$'))), by='PTY_RUN'], by='PTY_RUN')
 	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
-	pty.runs	<- subset(pty.runs, is.na(FILE_FASTA))
+	pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
+	
 	#	search for bam files and references and merge with runs	
 	pty.runs	<- subset(pty.runs, select=c(PTY_RUN, IND))	
 	tmp			<- phsc.find.bam.and.references(pty.args[['data.dir']], regex.person='^([A-Z0-9]+-[A-Z0-9]+)-.*$')	
 	pty.runs	<- merge(pty.runs, tmp, by='IND')
 	#	create UNIX bash scripts
+	pty.runs	<- unique(pty.runs, by=c('PTY_RUN','UNIT_ID','BAM'))
 	pty.runs	<- pty.runs[, list(BAM=BAM, REF=REF, SAMPLE=SAMPLE, RENAME_ID=paste0(IND,'-fq',seq_len(length(BAM)))), by=c('PTY_RUN','IND')]
 	setkey(pty.runs, PTY_RUN)		
 	setnames(pty.runs, c('IND','SAMPLE'), c('UNIT_ID','SAMPLE_ID'))
@@ -102,7 +107,7 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	hpc.nproc			<- 1						# number of processors on node
 	hpc.walltime		<- 171						# walltime
 	hpc.q				<- "pqeelab"				# PBS queue
-	hpc.mem				<- "6gb" 					# RAM	
+	hpc.mem				<- "12gb" 					# RAM	
 	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
 	#	define PBS header for job scheduler. this will depend on your job scheduler.
 	pbshead		<- "#!/bin/sh"
@@ -138,8 +143,7 @@ pty.MRC.stage1.zip.trees<- function()
 	
 	#	set up working environment	
 	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
-	data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
-	prog.pty		<- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+	data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'	
 	#in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage1_output')		
 	#work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
 	#out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage1_output")	
@@ -176,13 +180,13 @@ pty.MRC.stage1.zip.trees<- function()
 			{
 				cat('\nIn',indir,'Found all fasta and tree files')
 				zipit	<- 1
-			}				
-			if(!length(setdiff(misstrs,missfs)))
-			{ 
-				cat('\nIn',indir,'Found all tree files for which there is a fasta file')
-				zipit	<- 1
-			}	
-			zipit	<- 0
+			}			
+			#if(!length(setdiff(misstrs,missfs)))
+			#{ 
+			#	cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+			#	zipit	<- 1
+			#}	
+			#zipit	<- 0
 			#
 			if(zipit)
 			{			
@@ -277,29 +281,29 @@ pty.MRC.stage1.generate.trees<- function()
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
 	#infiles	<- subset(infiles, PTY_RUN%in%c(1001:1400))
 	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
-	infiles[, CASE_ID:= ceiling(CASE_ID2/12)]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/10)]
 	print(infiles)
 	#infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
 	stop()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 300						# walltime
+	hpc.walltime		<- 23						# walltime
 	#	TODO:
 	#		run either this block to submit a job array to college machines 
 	#		the choice depends on whether the previous job array on college machines is done, 
 	#		or on whether the previous job array on Oliver's machines is done.
-	if(0)		
+	if(1)		
 	{
 		hpc.q			<- NA						# PBS queue
-		hpc.mem			<- "8gb" 					# RAM
+		hpc.mem			<- "2gb" 					# RAM
 		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
 	}
 	#		or run this block to submit a job array to Oliver's machines
-	if(1)
+	if(0)
 	{
 		hpc.q			<- "pqeelab"				# PBS queue
-		hpc.mem			<- "6gb" 					# RAM
+		hpc.mem			<- "12gb" 					# RAM
 		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
 	}
 	#

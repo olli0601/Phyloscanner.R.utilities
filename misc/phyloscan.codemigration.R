@@ -357,20 +357,27 @@ phsc.migrate.normalisation<- function()
 
 phsc.Rakai.analyzetrees.stage2<- function()
 {	
+	require(tidyverse)
 	require(data.table)
 	require(phyloscannerR)
 	
-	#	locate tree and patient files for each run
-	indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
-	df	<- data.table(F=list.files(indir))	
-	df[, TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F)]
-	set(df, NULL, 'TYPE', df[, gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)])
-	df[, RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))]
-	df	<- dcast.data.table(df, RUN~TYPE, value.var='F')
-	setnames(df, colnames(df), toupper(colnames(df)))
-	
-	tmpdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_work'
-	outdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190512'
+	if(0)
+	{
+		indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+		tmpdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_work'
+		outdir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190512'
+		prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
+		tree.dir <- "RakaiPopSample_deepseqtrees"
+		tree.dir <- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'		
+	}
+	if(1)
+	{
+		indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+		tmpdir	<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_tmp'
+		outdir	<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_phsc190620'
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+		tree.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_trees'		
+	}
 	
 	#	set phyloscanner variables
 	#	arguments as used for RCCS analysis
@@ -413,25 +420,14 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	
 	
 	
-	#	make bash for one file
-	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
-	tree.input <- system.file(file.path('extdata','Rakai_run192_trees.zip'),package='phyloscannerR')
-	control$output.string <- 'Rakai_run192'
-	cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
-			tree.input, 
-			control,
-			valid.input.args=valid.input.args)
-	cat(cmd)
 	
-	#	make bash for many files
-	require(tibble)
-	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
-	tree.dir <- "RakaiPopSample_deepseqtrees"
-	tree.dir <- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
-	tmp <- "https://datadryad.org/bitstream/handle/10255/dryad.208473/Dataset_S1.tar?sequence=1"
-	download.file(tmp, destfile="Dataset_S1.tar", method="curl")
-	untar("Dataset_S1.tar", exdir=tree.dir, extras='-xvf')	
+	#	make bash for many files	
+	if(0)
+	{
+		tmp <- "https://datadryad.org/bitstream/handle/10255/dryad.208473/Dataset_S1.tar?sequence=1"
+		download.file(tmp, destfile="Dataset_S1.tar", method="curl")
+		untar("Dataset_S1.tar", exdir=tree.dir, extras='-xvf')		
+	}
 	df <- tibble(F=list.files(tree.dir))
 	df <- df %>% 
 			mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
@@ -446,7 +442,7 @@ phsc.Rakai.analyzetrees.stage2<- function()
 		#	set input args
 		control$output.string <- paste0('ptyr',df$RUN[i])	
 		#	make script
-		tree.input <- file.path(indir, df$TREES_NEWICK[i])
+		tree.input <- file.path(tree.dir, df$TREES_NEWICK[i])
 		cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
 				tree.input, 
 				control,
@@ -455,7 +451,73 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	}	
 	cat(cmds[[100]])
 	
+	#
+	# 	submit array job to HPC
+	#
+	#	make header
+	hpc.load			<- "module load anaconda3/personal"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 23						# walltime
+	if(1)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "6gb" 					# RAM		
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(0)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM		
+	}
+	hpc.array			<- length(cmds)	# number of runs for job array	
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	#	make array job
+	for(i in 1:length(cmds))
+		cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+	cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(tmpdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))	
 	
+	
+	stop()
+	
+	#	make bash for one file
+	prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+	tree.input <- system.file(file.path('extdata','Rakai_run192_trees.zip'),package='phyloscannerR')
+	control$output.string <- 'Rakai_run192'
+	cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
+			tree.input, 
+			control,
+			valid.input.args=valid.input.args)
+	cat(cmd)
+	
+	
+	#	locate tree and patient files for each run
+	df	<- data.table(F=list.files(indir))	
+	df[, TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F)]
+	set(df, NULL, 'TYPE', df[, gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)])
+	df[, RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))]
+	df	<- dcast.data.table(df, RUN~TYPE, value.var='F')
+	setnames(df, colnames(df), toupper(colnames(df)))	
 	#	call in R
 	for(i in seq_len(nrow(df)))
 	{

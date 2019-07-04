@@ -144,6 +144,132 @@ couples.relationship.stats	<- function()
 }
 
 
+#' Find relationship statistics for RCCS couples based on the latest version of phyloscanner, version 1.8.0
+couples.stats.phyloscanner.1.8.0	<- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	
+	#	locally
+	if(1)
+	{
+		indir	<- '~/Box Sync/OR_Work/MSCs/2019_Melodie'
+		infile.couples <- file.path(indir,'analyses','190611_phsccouples.rda')	
+		rel.dir <- "~/sandbox/DeepSeqProjects/RakaiPopSample_phsc_out190626"
+	}
+	
+	#	list relationship files
+	df <- tibble(F=list.files(rel.dir)) %>% 
+			filter(grepl('workspace.rda',F)) %>%
+			mutate(PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) 
+	
+	#	load couples and select those between whom we want to compute tip-to-tip distances and relationships
+	load(infile.couples)
+	set(rca, NULL, 'MALE_ARID', as.character(rca$MALE_ARID))
+	set(rca, NULL, 'FEMALE_ARID', as.character(rca$FEMALE_ARID))
+	rcl	<- subset(rca, grepl('most likely',SELECT))
+	
+	#	select phyloscanner runs with linked couples
+	tmp	<- unique(subset(rcl, select=PTY_RUN))
+	df	<- merge(tmp, as.data.table(df), by='PTY_RUN')
+	
+	#	for each run, unzip and calculate tip-to-tip distances among linked couples
+	ans	<- vector('list', 0)
+	for(run in df$PTY_RUN)
+	{
+		print(run)
+		#run	<- 5	#for devel
+		
+		#	load phyloscanner output file and extract mean tip to tip distances
+		tmpfile	<-  subset(df,PTY_RUN==run)[,file.path(rel.dir, F)]
+		load(tmpfile)
+		
+		#	
+		rclr	<- subset(rcl, PTY_RUN==run)
+		for(j in seq_len(nrow(rclr)))
+			for(k in seq_along(phyloscanner.trees))
+			{
+				dc	<- phyloscanner.trees[[k]][['classification.results']][['classification']]
+				#	extract topology statistics
+				dc	<- dc %>% 
+						filter( (host.1==rclr[j, FEMALE_ARID] & host.2==rclr[j, MALE_ARID]) | 
+								(host.2==rclr[j, FEMALE_ARID] & host.1==rclr[j, MALE_ARID])	)				
+				#	extract tip to tip distances
+				tmp	<- c( phyloscanner.trees[[k]][['tips.for.hosts']][[rclr[j, FEMALE_ARID]]], phyloscanner.trees[[k]][['tips.for.hosts']][[rclr[j, MALE_ARID]]])
+				if(length(tmp)>0 && nrow(dc)>0)
+				{
+					tmp	<- ape:::keep.tip(phyloscanner.trees[[k]][['tree']], tmp)
+					tmp	<- adephylo:::distTips( tmp )
+					tmp	<- as.matrix(tmp)
+					tmp	<- as_tibble(melt(tmp, as.is=TRUE, varnames=c('MALE_TAXA','FEMALE_TAXA'), value.name = "PD"))
+					#	calculate mean tip to tip distance between taxa from male and female
+					tmp	<- tmp	%>%
+							mutate(	MALE_ARID= gsub('^([^_]+).*','\\1', MALE_TAXA),
+									FEMALE_ARID= gsub('^([^_]+).*','\\1', FEMALE_TAXA) ) %>%
+							filter( MALE_ARID!=FEMALE_ARID) %>%
+							summarise(MPD=mean(PD)) %>%
+							as.double()
+					dc	<- dc %>%
+							mutate(	MPD:= tmp, 
+									MPD_STD:= tmp/phyloscanner.trees[[k]][['normalisation.constant']],
+									W_FROM:= phyloscanner.trees[[k]][['window.coords']][['start']],
+									W_TO:= phyloscanner.trees[[k]][['window.coords']][['end']],
+									PTY_RUN:= run)				
+					# return 
+					ans[[length(ans)+1L]]	<- dc
+				}				
+			}
+	}
+		
+	
+	ans	<- do.call('rbind', ans)
+	
+	save(ans, file=file.path(indir,'analyses','190627_phsccouples_topology_and_distance.rda'))
+	
+}
+
+#' Extract the phyloscanner summary stats for each individual to estimate infection times
+participants.phyloscanner.summarystats<- function()
+{
+	require(data.table)
+	require(tidyverse)
+	require(ape)
+	require(phytools)
+	
+	#	locally
+	if(1)
+	{
+		indir	<- '~/Box Sync/OR_Work/MSCs/2019_Melodie'
+		#infile.couples <- file.path(indir,'analyses','190611_phsccouples.rda')	
+		rel.dir <- "~/Box Sync/OR_Work/MSCs/2019_Melodie/data/RakaiPopSample_phsc_out190626"
+	}
+	
+	#	list relationship files
+	df <- tibble(F=list.files(rel.dir)) %>% 
+			filter(grepl('workspace.rda',F)) %>%
+			mutate(PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) 
+	
+	ans	<- vector('list', 0)
+	for(run in df$PTY_RUN)
+	{
+		print(run)
+		#run	<- 5	#for devel
+		tmpfile	<- df %>% filter(PTY_RUN==run) %>% transmute(F:= file.path(rel.dir, F)) %>% as.character()
+		#	load phyloscanner output file and extract mean tip to tip distances		
+		load(tmpfile)
+		ans[[length(ans)+1L]] <- summary.stats
+	}
+	
+	for(run in seq_along(ans))
+		ans[[run]]<- dplyr:::select(ans[[run]],setdiff(1:ncol(ans[[run]]),contains('prop.gp')))
+	
+	ans	<- do.call('rbind', ans)
+	
+	save(ans, file=file.path(indir,'analyses','190627_phsccouples_summary_stats.rda'))
+}
+
 #' Find mean patristic tip to tip distances for RCCS couples
 couples.distances.from.trees <- function()
 {
