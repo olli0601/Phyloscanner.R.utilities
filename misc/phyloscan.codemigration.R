@@ -347,6 +347,75 @@ phsc.migrate.counts.Rakai.classify.pairwise.relationships.branch.migrateCounts<-
 	
 }
 
+phsc.migrate.transmission.networks<- function()
+{
+	#	get meta-data for individuals in general pop cohort
+	infile			<- "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S2.csv"
+	dmeta			<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
+	
+	indir <-  '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706'
+	outfile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_allpairs_190706.rda' 
+	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
+	dpl <- copy(tmp$linked.pairs)
+	dc <- copy(tmp$relationship.counts)
+	dw <- copy(tmp$windows)
+	save(dpl, dc, dw, file=outfile)
+	
+	infile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_allpairs_190706.rda'
+	outfile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_190706.rda'
+	load(infile)	
+	tmp <- find.networks(dc, neff.cut=3, verbose=TRUE)
+	dnet <- copy(tmp$transmission.networks)
+	dchain <- copy(tmp$most.likely.transmission.chains)
+	save(dpl, dc, dw, dnet, dchain, file=outfile)
+	
+	
+	
+	infile			<- "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S2.csv"
+	dmeta			<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
+	infile			<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_190706.rda'
+	load(infile)
+	idclus <- sort(unique(dnet$IDCLU))
+	di <- copy(dmeta)
+	setnames(di, 'ID', 'H')
+	df <- dnet %>% 
+			filter(IDCLU == 34) %>%
+			select(-c(H1_SEX,H2_SEX))		
+	control<- list()
+	control$point.size = 10
+	control$edge.gap = 0.04
+	control$edge.size = 2
+	control$curvature = -0.2
+	control$arrow = arrow(length = unit(0.04, "npc"), type = "open")
+	control$curv.shift = 0.06
+	control$label.size = 3
+	control$node.label = "H" 
+	control$node.fill = "SEX"
+	control$node.shape = NA_character_
+	control$node.shape.values = c(`NA` = 16)
+	control$node.fill.values = c(F = "hotpink2", M = "steelblue2")
+	control$threshold.linked = 0.6
+	p <- plot.network(df, di, control)	
+	png(file = paste0(outfile.base, "_trmnetwork_34.png"), width = 6, height = 6, 
+			units = "in", res = 400)
+	print(p)
+	dev.off()
+	
+	
+	control$layout <- p$layout 
+	di <- copy(dmeta)			
+	setnames(di, 'ID', 'H')
+	df <- subset(dchain, IDCLU==34)	
+	p2 <- plot.chain(df, di, control)
+	
+	
+	png(file=paste0(outfile.base,'_trmchain_34.png'), width=6, height=6, units='in', res=400)		
+	print(p2)
+	dev.off()
+	
+}
+
+
 phsc.migrate.normalisation<- function()
 {
 	norm.ref.file.name			<- system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
@@ -374,7 +443,7 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	{
 		indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
 		tmpdir	<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_tmp'
-		outdir	<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_phsc190620'
+		outdir	<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_phsc190706'
 		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
 		tree.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS_trees'		
 	}
@@ -387,13 +456,17 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	control$alignment.file.regex = NULL
 	control$blacklist.underrepresented = FALSE	
 	control$count.reads.in.parsimony = TRUE
+	control$distance.threshold <- '0.025 0.05'
 	control$do.dual.blacklisting = FALSE					
 	control$duplicate.file.directory = NULL
 	control$duplicate.file.regex = NULL
 	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
 	control$guess.multifurcation.threshold = FALSE
 	control$max.reads.per.host = 50
+	control$min.reads.per.host <- 30
+	control$min.tips.per.host <- 1	
 	control$multifurcation.threshold = 1e-5
+	control$multinomial= TRUE
 	control$norm.constants = NULL
 	control$norm.ref.file.name = system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
 	control$norm.standardise.gag.pol = TRUE
@@ -402,6 +475,7 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	control$output.dir = outdir
 	control$parsimony.blacklist.k = 20
 	control$prune.blacklist = FALSE
+	control$post.hoc.count.blacklisting <- TRUE
 	control$ratio.blacklist.threshold = 0 
 	control$raw.blacklist.threshold = 20					
 	control$recombination.file.directory = NULL
@@ -416,9 +490,7 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	control$use.ff = FALSE
 	control$user.blacklist.directory = NULL 
 	control$user.blacklist.file.regex = NULL
-	control$verbosity = 1
-	
-	
+	control$verbosity = 1		
 	
 	
 	#	make bash for many files	
@@ -434,7 +506,9 @@ phsc.Rakai.analyzetrees.stage2<- function()
 					RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
 			mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
 			spread(TYPE, F) %>%
-			set_names(~ str_to_upper(.))
+			set_names(~ str_to_upper(.))	
+	tmp	<- sort(as.integer(gsub('ptyr([0-9]+)_(.*)','\\1',list.files(outdir, pattern='_workspace.rda$'))))
+	df <- df %>% filter(!RUN%in%tmp)
 	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
 	cmds <- vector('list',nrow(df))
 	for(i in seq_len(nrow(df)))
@@ -459,16 +533,16 @@ phsc.Rakai.analyzetrees.stage2<- function()
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
 	hpc.walltime		<- 23						# walltime
-	if(1)		
+	if(0)		
 	{
 		hpc.q			<- NA						# PBS queue
-		hpc.mem			<- "6gb" 					# RAM		
+		hpc.mem			<- "48gb" 					# RAM		
 	}
 	#		or run this block to submit a job array to Oliver's machines
-	if(0)
+	if(1)
 	{
 		hpc.q			<- "pqeelab"				# PBS queue
-		hpc.mem			<- "6gb" 					# RAM		
+		hpc.mem			<- "36gb" 					# RAM		
 	}
 	hpc.array			<- length(cmds)	# number of runs for job array	
 	pbshead		<- "#!/bin/sh"
