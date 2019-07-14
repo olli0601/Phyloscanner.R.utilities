@@ -83,6 +83,7 @@ pty.MRC.stage1.generate.read.alignments<- function()
 	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
 	tmp			<- merge(tmp, tmp[, list(FILE_FASTA_N= length(list.files(FILE_FASTA, pattern='fasta$'))), by='PTY_RUN'], by='PTY_RUN')
 	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
+	pty.runs	<- subset(pty.runs, !is.na(FILE_FASTA_N))
 	pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
 	
 	#	search for bam files and references and merge with runs	
@@ -186,7 +187,7 @@ pty.MRC.stage1.zip.trees<- function()
 			#	cat('\nIn',indir,'Found all tree files for which there is a fasta file')
 			#	zipit	<- 1
 			#}	
-			#zipit	<- 0
+			zipit	<- 1
 			#
 			if(zipit)
 			{			

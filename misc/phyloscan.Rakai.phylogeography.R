@@ -11547,7 +11547,18 @@ RakaiFull.phylogeography.190327.figure.prevalence.gender<- function()
 			labs(x='\ncommunity', y='HIV-1 prevalence\n', fill='gender') +
 			theme(axis.text.x=element_blank(),
 					axis.ticks.x=element_blank())
-	ggsave(file=paste0(outfile.base,'_trmMF_estimatedprevalence.pdf'), w=12, h=6)	
+	ggsave(file=paste0(outfile.base,'_trmMF_estimatedprevalence.pdf'), w=12, h=6)
+	
+	#	coefficient of variation
+	tmp <- dcast.data.table(dgg, COMM_NUM_A+COMM_TYPE~variable, valuer.var='M')
+	tmp[, list(COV_M= sd(PM)/mean(PM),  COV_F= sd(PF)/mean(PF)), by='COMM_TYPE']
+	
+	tmp[, list(MEAN_M= mean(PM),  MEAN_F= mean(PF) )]
+	
+	tmp[, list(EXP_SD_M= sqrt( mean(PM)*(1-mean(PM))/length(PM) ),  EXP_SD_F= sqrt( mean(PF)*(1-mean(PF))/length(PF) ) )]
+	
+	tmp[COMM_TYPE!='fisherfolk', list(EXP_SD_M= sqrt( mean(PM)*(1-mean(PM))/length(PM) ),  EXP_SD_F= sqrt( mean(PF)*(1-mean(PF))/length(PF) ) )]
+	tmp[COMM_TYPE!='fisherfolk', list(SD_M= sd(PM),  SD_F= sd(PF) )]
 }
 
 RakaiFull.phylogeography.190327.figure.flows<- function()
