@@ -1,3 +1,27 @@
+pty.MRC.stage1.find.pairs.in.networks<- function()
+{
+	require(tidyverse)
+	require(phyloscannerR)
+	
+	#	set up working environment	
+	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+	indir			<- file.path(HOME,'MRCPopSample_phsc_stage1_190715')		
+	outfile <- file.path(indir, 'MRC_phscnetworks_allpairs_by_distance_190715.rda')	
+	control <- list(	linked.group='proximity.3.way.cat',
+						linked.no='distant',
+						linked.yes='close', 
+						conf.cut=0.6, 
+						neff.cut=3
+						)
+	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE)
+	dpl <- copy(tmp$linked.pairs)
+	dc <- copy(tmp$relationship.counts)
+	dw <- copy(tmp$windows)
+	
+	save(dpl, dc, dw, file=outfile)
+	
+}
+
 pty.MRC.stage1.generate.read.alignments<- function()
 {
 	#	set up working environment
@@ -647,4 +671,138 @@ pty.4.highlysupported.links<- function()
 	rtpd		<- merge(rtpd, red, by=c('ID1','ID2'))
 	rtpd[, PHYSCANNER_DIR_CONSISTENT:= as.integer(PHYSCANNER_DIR==EPID_EVIDENCE_DIR)]
 	rtpd[, table(PHYSCANNER_DIR_CONSISTENT)]
+}
+
+
+pty.MRC.stage1.get.phylo.relationships<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	
+	
+	if(1)
+	{
+		#indir	<- '/Users/Oliver/sandbox/DeepSeqProjects/RakaiPopSample_deepseqtrees'
+		tmpdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_tmp'
+		outdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage1_190715'
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+		tree.dir <- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage1_output'		
+	}
+	
+	#	set phyloscanner variables
+	#	arguments as used for RCCS analysis
+	control	<- list()
+	control$allow.mt <- TRUE				
+	control$alignment.file.directory = NULL 
+	control$alignment.file.regex = NULL
+	control$blacklist.underrepresented = FALSE	
+	control$count.reads.in.parsimony = TRUE
+	control$distance.threshold <- '0.025 0.05'
+	control$do.dual.blacklisting = FALSE					
+	control$duplicate.file.directory = NULL
+	control$duplicate.file.regex = NULL
+	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
+	control$guess.multifurcation.threshold = FALSE
+	control$max.reads.per.host = 50
+	control$min.reads.per.host <- 30
+	control$min.tips.per.host <- 1	
+	control$multifurcation.threshold = 1e-5
+	control$multinomial= TRUE
+	control$norm.constants = NULL
+	control$norm.ref.file.name = system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
+	control$norm.standardise.gag.pol = TRUE
+	control$no.progress.bars = TRUE
+	control$outgroup.name = "REF_CPX_AF460972"
+	control$output.dir = outdir
+	control$parsimony.blacklist.k = 20
+	control$prune.blacklist = FALSE
+	control$post.hoc.count.blacklisting <- TRUE
+	control$ratio.blacklist.threshold = 0 
+	control$raw.blacklist.threshold = 20					
+	control$recombination.file.directory = NULL
+	control$recombination.file.regex = NULL
+	control$relaxed.ancestry = TRUE
+	control$sankoff.k = 20
+	control$sankoff.unassigned.switch.threshold = 0
+	control$seed = 42
+	control$splits.rule = 's'
+	control$tip.regex = "^(.*)-fq[0-9]+_read_([0-9]+)_count_([0-9]+)$"
+	control$tree.file.regex = "^ptyr[0-9]+_InWindow_([0-9]+_to_[0-9]+)\\.tree$"
+	control$use.ff = FALSE
+	control$user.blacklist.directory = NULL 
+	control$user.blacklist.file.regex = NULL
+	control$verbosity = 1		
+	
+	
+	#	make bash for many files	
+	df <- tibble(F=list.files(tree.dir))
+	df <- df %>% 
+			mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
+					RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
+			mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
+			spread(TYPE, F) %>%
+			set_names(~ str_to_upper(.))	
+	tmp	<- sort(as.integer(gsub('ptyr([0-9]+)_(.*)','\\1',list.files(outdir, pattern='_workspace.rda$'))))
+	df <- df %>% filter(!RUN%in%tmp)
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+	cmds <- vector('list',nrow(df))
+	for(i in seq_len(nrow(df)))
+	{
+		#	set input args
+		control$output.string <- paste0('ptyr',df$RUN[i])	
+		#	make script
+		tree.input <- file.path(tree.dir, df$TREES_NEWICK[i])
+		cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
+				tree.input, 
+				control,
+				valid.input.args=valid.input.args)
+		cmds[[i]] <- cmd		
+	}	
+	cat(cmds[[100]])
+	
+	#
+	# 	submit array job to HPC
+	#
+	#	make header
+	hpc.load			<- "module load anaconda3/personal"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 23						# walltime
+	if(0)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "36gb" 					# RAM		
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(1)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM		
+	}
+	hpc.array			<- length(cmds)	# number of runs for job array	
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	#	make array job
+	for(i in 1:length(cmds))
+		cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+	cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(tmpdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))
 }

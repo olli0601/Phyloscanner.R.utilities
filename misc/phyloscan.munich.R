@@ -382,7 +382,280 @@ Munich.phyloscan.plots.on.MLE.network.180924<- function()
 	}				
 }
 
-Munich.phyloscanner.stage.1.and.2.180605<- function() 
+Munich.phyloscanner.190715.make.trees<- function()
+{
+	require(data.table)
+	require(Phyloscanner.R.utilities)
+	
+	#	set up working environment	
+	if(1)
+	{
+		prog.pty <- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
+		data.dir <- '/rds/general/user/or105/home/WORK/MUNICH/Data_190130'		
+	}
+	in.dir			<- file.path(HOME,'M190715_phsc_output')		
+	work.dir		<- file.path(HOME,"M190715_phsc_work")
+	out.dir			<- file.path(HOME,"M190715_phsc_output")	
+	
+	
+	#
+	#	generate trees	
+	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+	infiles[, FO:= gsub('fasta$','tree',FI)]
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
+	#	check which (if any) trees have already been processed, and remove from TODO list
+	tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+	infiles	<- subset(infiles, is.na(FT))	
+	setkey(infiles, PTY_RUN, W_FROM)			
+	
+	#
+	#	define pbs header, max 10,000 trees (re-start a few times)
+	#	create header first because RAXML call depends on single-core / multi-core
+	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
+	
+		
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 123						# walltime
+	if(0)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "2gb" 					# RAM
+		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(1)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM
+		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
+	}
+	#
+	#	
+	hpc.array			<- infiles[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#
+	#	create UNIX bash script to generate trees with RAxML
+	#	
+	raxml.args	<- ifelse(hpc.nproc==1, '-m GTRCAT --HKY85 -p 42 -o REF_B_K03455', paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o REF_B_K03455'))
+	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID','CASE_ID2')]
+	pty.c	<- pty.c[, list(CMD=paste(CMD, collapse='\n')), by='CASE_ID']
+	pty.c[1,cat(CMD)]
+	
+	#
+	#	make array job
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("trs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(work.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))	
+}
+
+
+Munich.phyloscanner.190715.make.alignments<- function()
+{
+	#
+	#	set up working environment
+	require(Phyloscanner.R.utilities)
+	if(1)
+	{
+		prog.pty <- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
+		data.dir <- '/rds/general/user/or105/home/WORK/MUNICH/Data_190130'
+	}
+	in.dir			<- file.path(HOME,'M190715_phsc_input')		
+	work.dir		<- file.path(HOME,"M190715_phsc_work")
+	out.dir			<- file.path(HOME,"M190715_phsc_output")	
+	dir.create(in.dir)
+	dir.create(work.dir)
+	dir.create(out.dir)
+	
+	#
+	#	load runs
+	if(1)
+	{
+		load(file.path(in.dir, "MunichCluster_190715.rda"))
+		# loads pty.runs
+	}	
+	#
+	#	search for bam files and references and merge with runs		
+	tmp			<- phsc.find.bam.and.references(data.dir, 
+						regex.person='^([A-Za-z0-9]+-[0-9]+)_.*$',
+						regex.bam="^(.*)\\.bam$",
+						regex.ref="^(.*)\\.fasta$")	
+	setnames(tmp, c('IND','SAMPLE'), c('UNIT_ID','SAMPLE_ID'))
+	tmp2 <- which(!grepl('Control',tmp$UNIT_ID))
+	set(tmp, tmp2, 'UNIT_ID', tmp[tmp2, paste0('MC-',UNIT_ID)])
+	set(tmp, NULL, 'UNIT_ID', tmp[, gsub('Control','CNTRL-', UNIT_ID)])	
+	pty.runs	<- merge(pty.runs, tmp, by=c('UNIT_ID','SAMPLE_ID'))
+	
+	
+	#
+	#	define phyloscanner input args to generate read alignments 
+	#	for each window and each run
+	ptyi		<- seq(2000,5500,25)		
+	pty.c		<- lapply(seq_along(ptyi), function(i)
+			{
+				pty.args			<- list(	prog.pty=prog.pty, 
+						prog.mafft='mafft', 						 
+						data.dir=data.dir, 
+						work.dir=work.dir, 
+						out.dir=out.dir, 
+						alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_B.fasta"),
+						alignments.root='REF_B_K03455', 
+						alignments.pairwise.to='REF_B_K03455',
+						window.automatic= '', 
+						merge.threshold=1, 
+						min.read.count=1, 
+						quality.trim.ends=23, 
+						min.internal.quality=23, 
+						merge.paired.reads=TRUE, 
+						no.trees=TRUE, 
+						dont.check.duplicates=FALSE,
+						dont.check.recombination=TRUE,
+						num.bootstraps=1,
+						all.bootstrap.trees=TRUE,
+						strip.max.len=350, 
+						min.ureads.individual=NA, 
+						win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+						keep.overhangs=FALSE,
+						mem.save=0,
+						verbose=TRUE,					
+						select=NA	
+				)											
+				pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+				pty.c[, W_FROM:= ptyi[i]]
+				pty.c[, PTY_RUN:= as.integer(sub('.*ptyr([0-9])_.*','\\1',CMD))]
+				pty.c
+			})
+	pty.c	<- do.call('rbind', pty.c)	
+	tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
+	pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)		
+	pty.c	<- subset(pty.c, is.na(FO))		
+	#pty.c	<- subset(pty.c, W_FROM==2350)
+	#print(pty.c, n=1e3)
+
+	#	define PBS variables
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 23						# walltime
+	hpc.q				<- "pqeelab"				# PBS queue
+	hpc.mem				<- "6gb" 					# RAM	
+	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#	create PBS job array
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(work.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))		
+}
+
+
+Munich.phyloscanner.190715.make.ptyruns<- function() 
+{
+	require(big.phylo)
+	require(Phyloscanner.R.utilities)
+	
+	
+	# set up pty.runs file -- version 5
+	# with cols	'SAMPLE_ID','RENAME_ID','UNIT_ID'
+	# 39 individuals is too many, set up multiple analyses
+	if(1)	
+	{
+		pty.runs		<- data.table(SAMPLE_ID=list.files('~/duke/2018_MunichCluster/Data_190130', pattern='bam$'))
+		set(pty.runs, NULL, 'SAMPLE_ID', pty.runs[, gsub('\\.bam','',SAMPLE_ID)])
+		#	manually define Doppelmeldung
+		#	16-02593 (don t have)
+		#	16-01790 (don t have)
+		#	we have both 18-01721, 17-02604 but only PRRT from 17-02604. So just use 18-01721.  
+		pty.runs <- subset(pty.runs, !grepl('17-02604',SAMPLE_ID))
+		tmp	<- pty.runs[, which(!grepl('Control',SAMPLE_ID))]
+		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,paste0('MC-',SAMPLE_ID)])
+		tmp	<- pty.runs[, which(grepl('Control',SAMPLE_ID))]
+		set(pty.runs, tmp, 'RENAME_ID', pty.runs[tmp,gsub('Control','CNTRL-',SAMPLE_ID)])
+		pty.runs[, UNIT_ID:= gsub('_INT|_PRRT','',RENAME_ID)]
+		#	define runs for individuals in periphery 
+		load('~/Box Sync/OR_Work/2018/2018_MunichCluster/180924_analysis/180924_MunichCluster_w250_cl25_d50_min30_cut60_strongsupport_networksallpairs.rda')
+		
+		conf.cut <- 0.5
+		pinds <- c('MC-16-03807', 'MC-16-03259', 'MC-16-03499', 'MC-15-01402', 'MC-16-04475', 'MC-16-03644', 'MC-16-03516', 'MC-15-04719')
+		pty.runs2 <- lapply(seq_along(pinds), function(i)
+				{
+					#pind<- 'MC-16-03807'	
+					pind <- pinds[i]
+					tmp <- subset(rplkl, (ID1==pind | ID2==pind) & GROUP=="TYPE_CHAIN_TODI" & TYPE=='chain' & KEFF/NEFF>conf.cut)
+					data.table( PTY_RUN=i, UNIT_ID= unique(c(tmp$ID1, tmp$ID2)) )			
+				})
+		pty.runs2<- do.call('rbind',pty.runs2)		
+		tmp <- setdiff( subset(pty.runs, !grepl('CNTRL',UNIT_ID))[, unique(UNIT_ID)], pinds )
+		tmp <- data.table( PTY_RUN= max(pty.runs2$PTY_RUN)+1L,  UNIT_ID=tmp)
+		pty.runs2<- rbind(pty.runs2, tmp)
+		#	run #4 is smallest, add all controls
+		tmp <- data.table(PTY_RUN= 4, UNIT_ID=subset(pty.runs, grepl('CNTRL',UNIT_ID))[, unique(UNIT_ID)])
+		pty.runs2<- rbind(pty.runs2,tmp)		
+		#	for all other runs except #4, add two standard controls 
+		tmp <- as.data.table(expand.grid(PTY_RUN= setdiff(1:max(pty.runs2$PTY_RUN),4), UNIT_ID=c('CNTRL-16-01405','CNTRL-16-01277')))
+		pty.runs2<- rbind(pty.runs2,tmp)
+		
+		#	check numbers
+		pty.runs2[, list(N=length(unique(UNIT_ID))), by='PTY_RUN']
+				
+		
+		#	make overall run file
+		pty.runs <- merge(pty.runs2, pty.runs, by='UNIT_ID', allow.cartesian=TRUE)
+		outfile	<- '~/duke/2018_MunichCluster/Data_190130/MunichCluster_190715.rda'
+		save(pty.runs, file=outfile)
+	}
+}
+
+Munich.phyloscanner.180605<- function() 
 {
 	require(big.phylo)
 	require(Phyloscanner.R.utilities)

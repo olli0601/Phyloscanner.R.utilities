@@ -354,8 +354,9 @@ phsc.migrate.transmission.networks<- function()
 	dmeta			<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
 	
 	indir <-  '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706'
-	outfile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_allpairs_190706.rda' 
-	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', conf.cut=0.6, neff.cut=3, verbose=TRUE, dmeta=dmeta)
+	outfile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_allpairs_190706.rda'
+	control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.6, neff.cut=3)
+	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE, dmeta=dmeta)
 	dpl <- copy(tmp$linked.pairs)
 	dc <- copy(tmp$relationship.counts)
 	dw <- copy(tmp$windows)
@@ -364,7 +365,7 @@ phsc.migrate.transmission.networks<- function()
 	infile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_allpairs_190706.rda'
 	outfile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_190706.rda'
 	load(infile)	
-	tmp <- find.networks(dc, neff.cut=3, verbose=TRUE)
+	tmp <- find.networks(dc, control=control, verbose=TRUE)
 	dnet <- copy(tmp$transmission.networks)
 	dchain <- copy(tmp$most.likely.transmission.chains)
 	save(dpl, dc, dw, dnet, dchain, file=outfile)
