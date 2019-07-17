@@ -37,14 +37,30 @@ project.dual<- function()
 	#pty.MRC.stage1.zip.trees()
 	#	various   
 	if(1) 
-	{
-		require(big.phylo)
+	{		
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")
-		cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load anaconda3/personal")
+		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load anaconda3/personal")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="36gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=46, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=12, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
-		tmp		<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
-		cmd		<- paste(cmd,tmp,sep='\n')
+		
+		hpc.load	<- "module load anaconda3/personal"		 
+		hpc.select	<- 1						# number of nodes
+		hpc.nproc	<- 1						# number of processors on node
+		hpc.walltime<- 123						# walltime
+		hpc.q		<- "pqeelab"				# PBS queue
+		hpc.mem		<- "6gb" 					# RAM		
+		pbshead		<- "#!/bin/sh"
+		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+		pbshead		<- paste(pbshead, tmp, sep = "\n")
+		tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+		pbshead 	<- paste(pbshead, tmp, sep = "\n")
+		pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+		if(!is.na(hpc.q)) 
+			pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+		pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+		cat(pbshead)
+		tmp			<- paste('Rscript ',file.path(CODE.HOME, "misc/phyloscan.startme.Rscript"), ' -exe=VARIOUS', '\n', sep='')
+		cmd			<- paste(pbshead,tmp,sep='\n')
 		cat(cmd)	 								
 		outfile		<- paste("pv",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
 		cmd.hpccaller(file.path(HOME,"ptyruns"), outfile, cmd)
