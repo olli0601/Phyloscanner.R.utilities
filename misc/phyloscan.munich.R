@@ -382,6 +382,230 @@ Munich.phyloscan.plots.on.MLE.network.180924<- function()
 	}				
 }
 
+Munich.phyloscanner.190715.zip.trees<- function()
+{
+	require(data.table)
+	require(Phyloscanner.R.utilities)
+	HOME			<<- '/rds/general/user/or105/home/WORK/MUNICH'			
+	#
+	#	zip trees	
+	if(1)
+	{
+		indirs	<- file.path(HOME,'M190715_phsc_output')
+		#
+		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
+		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		#allwin	<- data.table(W_FROM=seq(800,9050,125))
+		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
+		for(i in seq_along(indirs))
+		{
+			indir	<- indirs[i]
+			pty.run	<- as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(indir)))
+			#	check if we have all fasta and tree files
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)			 					
+			missfs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(missfs))
+				cat('\nIn',indir,'Found missing fasta files for',paste(missfs,collapse=', '))
+			infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+			infiles[, W_FROM:= as.integer(gsub('.*_InWindow_([0-9]+)_.*','\\1',basename(F)))]
+			infiles	<- merge(allwin, infiles, by='W_FROM', all.x=1)
+			misstrs	<- subset(infiles, is.na(F))[, W_FROM]
+			if(length(misstrs))
+				cat('\nIn',indir,'Found missing tree files for',paste(misstrs,collapse=', '))
+			zipit	<- 0
+			if(!length(missfs) & !length(misstrs))
+			{
+				cat('\nIn',indir,'Found all fasta and tree files')
+				zipit	<- 1
+			}			
+			#if(!length(setdiff(misstrs,missfs)))
+			#{ 
+			#	cat('\nIn',indir,'Found all tree files for which there is a fasta file')
+			#	zipit	<- 1
+			#}	
+			zipit	<- 1
+			#
+			if(zipit)
+			{			
+				cat('\nProcess',indir)
+				#	first combine all zip files into ptyrXXX_otherstuff.zip
+				infiles	<- data.table(F=list.files(indir,pattern='zip$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				stopifnot(!nrow(subset(infiles, is.na(PTY_RUN))))		
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_otherstuff.zip'))]
+				cat('\nZip to file', tmp,'...\n')
+				suppressWarnings(invisible( infiles[, list(RTN= unzip(F, overwrite=FALSE, exdir=file.path(indir,'tmp42'))), by='F'] ))
+				invisible( infiles[, list(RTN= file.remove(F)), by='F'] )
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip fasta files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*fasta$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	now zip tree files
+				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
+				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
+				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
+				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
+				#	remove tmp dir
+				invisible( file.remove( file.path(indir,'tmp42') ) )
+				#	move one level down
+				infiles	<- data.table(F=list.files(indir, full.names=TRUE))
+				invisible( infiles[, file.rename(F, file.path(dirname(indir),basename(F))), by='F'] )
+				cat('\nDone',indir)
+			}
+			#if(!length(misstrs))
+			if(zipit)
+				invisible(unlink(indir, recursive=TRUE))
+			#	expand again if asked to
+			#if(length(misstrs))
+			if(0)
+			{
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_fasta.zip')), junkpaths=TRUE, exdir=indir)
+				cat('\nExtract',file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')))
+				unzip(file.path(dirname(indir),paste0('ptyr',pty.run,'_trees_newick.zip')), junkpaths=TRUE, exdir=indir)
+			}
+		}					
+	}
+}
+
+Munich.phyloscanner.190715.get.phylo.relationships<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	
+	if(1)
+	{
+		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
+		tree.dir <- file.path(HOME,'M190715_phsc_output')
+		tmpdir	<- file.path(HOME,"M190715_phsc_work")
+		outdir	<- file.path(HOME,'M190715_phscrelationships_025_50')
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+				
+	}
+	
+	#	set phyloscanner variables	
+	control	<- list()
+	control$allow.mt <- TRUE				
+	control$alignment.file.directory = NULL 
+	control$alignment.file.regex = NULL
+	control$blacklist.underrepresented = FALSE	
+	control$count.reads.in.parsimony = TRUE
+	control$distance.threshold <- '0.025 0.05'
+	control$do.dual.blacklisting = FALSE					
+	control$duplicate.file.directory = NULL
+	control$duplicate.file.regex = NULL
+	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
+	control$guess.multifurcation.threshold = FALSE
+	#control$max.reads.per.host <- 50
+	control$min.reads.per.host <- 30
+	control$min.tips.per.host <- 1	
+	control$multifurcation.threshold = 1e-5
+	control$multinomial= TRUE
+	control$norm.constants = NULL
+	control$norm.ref.file.name = system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
+	control$norm.standardise.gag.pol = TRUE
+	control$no.progress.bars = TRUE
+	control$outgroup.name = "REF_B_K03455"
+	control$output.dir = outdir
+	control$parsimony.blacklist.k = 20
+	control$prune.blacklist = FALSE
+	control$post.hoc.count.blacklisting <- TRUE
+	control$ratio.blacklist.threshold = 0 
+	control$raw.blacklist.threshold = 20					
+	control$recombination.file.directory = NULL
+	control$recombination.file.regex = NULL
+	control$relaxed.ancestry = TRUE
+	control$sankoff.k = 20
+	control$sankoff.unassigned.switch.threshold = 0
+	control$seed = 42
+	control$splits.rule = 's'
+	control$tip.regex = '^(.*)_[A-Z]+_read_([0-9]+)_count_([0-9]+)$'
+	control$tree.file.regex = "^ptyr[0-9]+_InWindow_([0-9]+_to_[0-9]+)\\.tree$"
+	control$use.ff = FALSE
+	control$user.blacklist.directory = NULL 
+	control$user.blacklist.file.regex = NULL
+	control$verbosity = 1		
+	
+	
+	#	make bash for many files	
+	df <- tibble(F=list.files(tree.dir))
+	df <- df %>% 
+			mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
+					RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
+			mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
+			spread(TYPE, F) %>%
+			set_names(~ str_to_upper(.))	
+	tmp	<- sort(as.integer(gsub('ptyr([0-9]+)_(.*)','\\1',list.files(outdir, pattern='_workspace.rda$'))))
+	df <- df %>% filter(!RUN%in%tmp)
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+	cmds <- vector('list',nrow(df))
+	for(i in seq_len(nrow(df)))
+	{
+		#	set input args
+		control$output.string <- paste0('ptyr',df$RUN[i])	
+		#	make script
+		tree.input <- file.path(tree.dir, df$TREES_NEWICK[i])
+		cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
+				tree.input, 
+				control,
+				valid.input.args=valid.input.args)
+		cmds[[i]] <- cmd		
+	}	
+	cat(cmds[[1]])
+	
+	#
+	# 	submit array job to HPC
+	#
+	#	make header
+	hpc.load			<- "module load anaconda3/personal"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 123						# walltime
+	if(0)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "36gb" 					# RAM		
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(1)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM		
+	}
+	hpc.array			<- length(cmds)	# number of runs for job array	
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	#	make array job
+	for(i in 1:length(cmds))
+		cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+	cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(tmpdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))
+}
+
 Munich.phyloscanner.190715.make.trees<- function()
 {
 	require(data.table)

@@ -39,6 +39,7 @@ pty.MRC.stage2.identify.potential.networks<- function()
 			conf.cut=0.6, 
 			neff.cut=3
 			)	
+	verbose <- TRUE
 	load(infile)
 	linked.group 	<- control$linked.group 
 	linked.no 		<- control$linked.no 
