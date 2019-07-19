@@ -33,6 +33,12 @@ pty.MRC.stage2.identify.potential.networks<- function()
 	#	need at least 50% of windows in which two pairs have patristic distance <2.5%
 	#	
 	infile <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715', 'MRC_phscnetworks_allpairs_by_distance_190715.rda')
+	control <- list(	linked.group='proximity.3.way.cat',
+			linked.no='distant',
+			linked.yes='close', 
+			conf.cut=0.6, 
+			neff.cut=3
+			)	
 	load(infile)
 	linked.group 	<- control$linked.group 
 	linked.no 		<- control$linked.no 
