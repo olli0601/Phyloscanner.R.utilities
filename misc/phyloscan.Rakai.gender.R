@@ -1,3 +1,74 @@
+RakaiFull.high.incidence.groups <- function()
+{
+	require(data.table)
+	infile.inference<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_withmetadata.rda"
+	
+	load(infile.inference)
+	infile <- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+	load(infile)
+	
+	ans <- vector('numeric',0)
+	
+	#	Men, aged 15-49 years
+	tmp <- subset(rtr3, REC_SEX=='M')
+	ans <- c(ans, c('Men, aged 15-49 years'=nrow(tmp)))	
+	
+	#	Women, aged 15-49 years
+	tmp <- subset(rtr3, REC_SEX=='F')
+	ans <- c(ans, c('Women, aged 15-49 years'=nrow(tmp)))
+		
+	#	Women, aged 20-29
+	tmp <- subset(rtr3, REC_SEX=='F' & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<30 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=20)
+	ans <- c(ans, c('Women, aged 20-29 years'=nrow(tmp)))
+	
+	#	Men, 25-34
+	tmp <- subset(rtr3, REC_SEX=='M' & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<35 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=25)
+	ans <- c(ans, c('Men, aged 25-34 years'=nrow(tmp)))
+	
+	# 	Women, aged 15-49, multiple partners in the past year
+	tmp <- subset(rtr3, REC_SEX=='F' & REC_SEXP1YR>1)
+	ans <- c(ans, c('Women, aged 15-49, multiple partners in the past year'=nrow(tmp)))
+	
+	#	Women, aged <30, multiple partners in the past year
+	tmp <- subset(rtr3, REC_SEX=='F' & REC_SEXP1YR>1 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<30)
+	ans <- c(ans, c('Women, aged 15-30 at date first positive, multiple partners in the past year'=nrow(tmp)))
+	
+	#	Women, aged 20-29, never married
+	tmp <- subset(rtr3, REC_SEX=='F' & REC_SEXP1YR>1 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<30 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=20 & grepl('Never Married',REC_MARSTAT))
+	ans <- c(ans, c('Women, aged 20-29 at date first positive, never married'=nrow(tmp)))
+	
+	#	Women, aged 20-29, previously married
+	tmp <- subset(rtr3, REC_SEX=='F' & REC_SEXP1YR>1 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<30 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=20 & grepl('Previously Married',REC_MARSTAT))
+	ans <- c(ans, c('Women, aged 20-29 at date first positive, previously married'=nrow(tmp)))
+	
+	#	Women, aged 20-29, previously married, one partner in past year
+	tmp <- subset(rtr3, REC_SEX=='F' & REC_SEXP1YR>1 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<30 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=20 & grepl('Previously Married',REC_MARSTAT) & REC_SEXP1YR==1)
+	ans <- c(ans, c('Women, aged 20-29 at date first positive, previously married, one partner in past year'=nrow(tmp)))
+	
+	#	Men, aged 15-49 years, multiple partners in the past year
+	tmp <- subset(rtr3, REC_SEX=='M' & REC_SEXP1YR>1)
+	ans <- c(ans, c('Men, aged 15-49 years, multiple partners in the past year'=nrow(tmp)))
+	
+	#	Men, aged 15-49 years, multiple partners in the past year, uncircumcised
+	tmp <- subset(rtr3, REC_SEX=='M' & REC_SEXP1YR>1 & REC_CIRCUM=='N')
+	ans <- c(ans, c('Men, aged 15-49 years, multiple partners in the past year, uncircumcised'=nrow(tmp)))
+		
+	#	Men, aged 20-34 years, multiple partners in the past year, uncircumcised
+	tmp <- subset(rtr3, REC_SEX=='M' & REC_SEXP1YR>1 & REC_CIRCUM=='N' & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<35 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=20)
+	ans <- c(ans, c('Men, aged 20-34 years, multiple partners in the past year, uncircumcised'=nrow(tmp)))
+	
+	
+	#	Men, aged 15-49 years, multiple partners in the past year, uncircumcised, unmarried
+	tmp <- subset(rtr3, REC_SEX=='M' & REC_SEXP1YR>1 & REC_CIRCUM=='N' & !grepl('Monogamous|Polygamous',REC_MARSTAT))
+	ans <- c(ans, c('Men, aged 15-49 years, multiple partners in the past year, uncircumcised, unmarried'=nrow(tmp)))
+	
+	#	Men, aged 25-34 years, multiple partners in the past year, uncircumcised, unmarried
+	tmp <- subset(rtr3, REC_SEX=='M' & REC_SEXP1YR>1 & REC_CIRCUM=='N' & !grepl('Monogamous|Polygamous',REC_MARSTAT) & (REC_FIRSTPOSDATE-REC_BIRTHDATE)<35 & (REC_FIRSTPOSDATE-REC_BIRTHDATE)>=25)
+	ans <- c(ans, c('Men, aged 25-34 years, multiple partners in the past year, uncircumcised, unmarried'=nrow(tmp)))
+	
+	data.table(CATEGORY= names(ans), LKL_RECIPIENT='Yes', N=ans)
+}
+
 RakaiFull.gender.171122.propfemalepos.communities.merged<- function()
 {
 	require(data.table)

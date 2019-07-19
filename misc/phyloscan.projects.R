@@ -88,7 +88,8 @@ pty.various	<- function()
 	#RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
 	#pty.MRC.stage1.zip.trees()
 	#couples.distances.from.trees()
-	pty.MRC.stage1.find.pairs.in.networks()
+	#pty.MRC.stage1.find.pairs.in.networks()
+	pty.MRC.stage2.identify.potential.networks()
 }
 
 project.dual.alignments.missing<- function()
@@ -6804,6 +6805,106 @@ project.transphylo<- function()
 	#	POSTERIOR SAMPLING_PROB   WH_COALRATE             R 
 	#	33.16859      40.02117      64.51638     150.14108 
 
+}
+
+project.Bezemer.NLintroductions.trees<- function()
+{
+	require(data.table)
+	require(ape)
+	
+	#	make new master csv file
+	if(0)
+	{
+		infile	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+		df	<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
+		
+		for(x in c('SAMPLING_LOC','BORN_LOC','INFECTED_LOC'))
+		{
+			set(df, which(grepl('HTF|HTM', df$GENDER_TRMGROUP) & df[[x]]=='NL'), x, 'NLHSX'   )
+			set(df, which(grepl('MSM', df$GENDER_TRMGROUP) & df[[x]]=='NL'), x, 'NLMSM'   )
+			set(df, which(df[[x]]=='NL'), x, 'NLOTH'   )			
+		}
+		
+		outfile	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_NLbyTrmGroup.csv'
+		write.csv(df, file=outfile, row.names=FALSE)		
+		
+	}
+	
+	#	re-annotate all newick files
+	if(0)
+	{
+		metafile <- '/rds/general/user/or105/home/WORK/DB_Netherlands/NONB_flowinfo_NLbyTrmGroup.csv'
+		metadata <- as.data.table(read.csv(metafile, stringsAsFactors = F))
+		
+		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted'
+		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
+		infiles <- list.files(indir, pattern='newick$')
+		for(i in seq_along(infiles))
+		{
+			cat("Opening tree number ",i, " file name ",file.path(indir,infiles[i]),'\n', sep="")			
+			tree <- read.tree(file.path(indir,infiles[i]))			
+			labels <- data.table(ID=tree$tip.label, TREE_ID= seq_along(tree$tip.label))
+			set(labels, NULL, 'ID', gsub('_samp.*','',labels$ID))
+			labels <- merge(labels, metadata, by='ID', all.x=TRUE)
+			labels[, ID2:= ID]
+			tmp <- labels[, which(!is.na(SAMPLING_LOC))]
+			set(labels, tmp, 'ID2', labels[tmp, paste0(ID,'_samp',SAMPLING_LOC,'_born',BORN_LOC,'_inf',INFECTED_LOC,'_',SAMPLING_DATE)])
+			tree$tip.label <- labels[order(TREE_ID)][, ID2]
+			cat("Writing tree ",file.path(outdir,infiles[i]),'\n', sep="")			
+			write.tree(tree, file.path(outdir,infiles[i]))			
+		}		
+	}
+	
+	# run phyloscanner on trees on sampling location
+	if(1)
+	{
+		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
+		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/phyloscanner_190718'
+		tmpdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands'
+		infiles <- list.files(indir, pattern='newick$')
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+		
+		cmds <- lapply(seq_along(infiles), function(i)
+			{
+				infile <- file.path(indir, infiles[i])
+				outputString <- file.path(outdir,gsub('\\.newick','',basename(infile),'_samp_'))
+				cmd <- paste0('Rscript ',prog.phyloscanner_analyse_trees,' ',infile,' ',outputString)
+				cmd <- paste0(cmd,' s,0 -m g -x "[A-Z]*[0-9]*.*_samp([A-Z]*)_born[A-Z]*_inf[A-Z]*_.*" -v -ow -rda')
+			})
+	
+		# 	submit array job to HPC
+		hpc.load		<- "module load anaconda3/personal"	# make third party requirements available	 
+		hpc.select		<- 1						# number of nodes
+		hpc.nproc		<- 1						# number of processors on node
+		hpc.walltime	<- 23						# walltime
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM				
+		hpc.array		<- length(cmds)	# number of runs for job array	
+		pbshead		<- "#!/bin/sh"
+		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+		pbshead		<- paste(pbshead, tmp, sep = "\n")
+		tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+		pbshead 	<- paste(pbshead, tmp, sep = "\n")
+		pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+		if(!is.na(hpc.array))
+			pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+		if(!is.na(hpc.q)) 
+			pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+		pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+		cat(pbshead)
+		#	make array job
+		for(i in 1:length(cmds))
+			cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+		cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+		cmd		<- paste(pbshead,cmd,sep='\n')	
+		#	submit job
+		outfile		<- gsub(':','',paste("nli",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+		outfile		<- file.path(tmpdir, outfile)
+		cat(cmd, file=outfile)
+		cmd 		<- paste("qsub", outfile)
+		cat(cmd)
+		cat(system(cmd, intern= TRUE))			
+	}
 }
 
 project.TillHIV2.power<- function()

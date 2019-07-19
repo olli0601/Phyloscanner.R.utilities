@@ -1,7 +1,9 @@
 pty.MRC.stage1.find.pairs.in.networks<- function()
 {
 	require(tidyverse)
+	require(data.table)
 	require(phyloscannerR)
+	require(igraph)
 	
 	#	set up working environment	
 	HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
@@ -14,12 +16,107 @@ pty.MRC.stage1.find.pairs.in.networks<- function()
 						neff.cut=3
 						)
 	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE)
-	dpl <- copy(tmp$linked.pairs)
+	dpl <- copy(tmp$network.pairs)
 	dc <- copy(tmp$relationship.counts)
-	dw <- copy(tmp$windows)
-	
+	dw <- copy(tmp$windows)	
 	save(dpl, dc, dw, file=outfile)
+}
+
+pty.MRC.stage2.identify.potential.networks<- function()
+{
+	require(tidyverse)
+	require(phyloscannerR)
+	require(igraph)
 	
+	#
+	#	construct potential transmission networks
+	#	need at least 50% of windows in which two pairs have patristic distance <2.5%
+	#	
+	infile <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715', 'MRC_phscnetworks_allpairs_by_distance_190715.rda')
+	load(infile)
+	linked.group 	<- control$linked.group 
+	linked.no 		<- control$linked.no 
+	linked.yes 		<- control$linked.yes 	
+	neff.cut 		<- control$neff.cut			
+	dnet <- dc %>% 
+			filter( CATEGORISATION==linked.group &  TYPE==linked.yes & N_EFF>neff.cut) %>%
+			select(-c(CATEGORICAL_DISTANCE, K, K_EFF, N, N_EFF))
+	dnet <- dnet %>% filter(SCORE>0.5)
+	#	define potential transmission network membership
+	if(verbose) cat('\nReconstruct transmission networks among linked pairs, n=',nrow(dnet))
+	tmp <- dnet %>% select(H1, H2)			
+	tmp <- igraph:::graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc <- tibble(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)
+	rtc <- rtc %>% 
+			group_by(CLU) %>% 
+			summarise( CLU_SIZE:=length(ID) ) %>% 
+			arrange(desc(CLU_SIZE)) %>%
+			ungroup() %>%
+			mutate( IDCLU:=seq_along(CLU_SIZE) ) %>%
+			inner_join(rtc, by='CLU') %>%
+			select(-CLU)	
+	#	add info on edges: network membership
+	setnames(rtc, c('ID'), c('H1'))
+	dnet <- dnet %>% inner_join(rtc, by='H1')
+	rtc <- rtc %>% select(-CLU_SIZE)
+	setnames(rtc, c('H1'), c('H2'))
+	dnet <- dnet %>% inner_join(rtc, by=c('H2','IDCLU'))
+	#	tabulate size of potential transmission networks
+	dnet %>% select(IDCLU, CLU_SIZE) %>% distinct() %>% count(CLU_SIZE)
+	
+	#
+	#	to each potential transmission network add close controls
+	#
+	
+	indir <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715')
+	batch.regex <- '^ptyr([0-9]+)_.*'
+	outfile <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715', 'MRC_phscnetworks_closestpairs_by_distance_190715.rda')
+	dquery <- dnet %>% select(H1,H2) %>% gather() %>% select(value) %>% rename(host=value) %>% distinct()
+	
+	
+	linked.group <- control$linked.group 
+	linked.no <- control$linked.no 
+	linked.yes <- control$linked.yes 
+	conf.cut <- control$conf.cut
+	neff.cut <- control$neff.cut	
+	verbose <- TRUE
+	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
+			mutate( PTY_RUN:= as.integer(gsub(batch.regex,'\\1',basename(F))) ) %>%
+			arrange(PTY_RUN)	
+	
+	if(verbose) cat('\nFound phylogenetic relationship files, n=', nrow(infiles))
+	if(verbose) cat('\nProcessing files...')
+	
+	dcls <- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{		
+		if(verbose)	cat('\nReading ', infiles$F[i])
+		tmp	<- load( infiles$F[i] )
+		#	ensure we have multinomial output in workspace
+		if(!'dwin'%in%tmp)
+			stop('Cannot find object "dwin". Check that Analyze.trees was run with multinomial=TRUE.')
+		#	ensure IDs are characters
+		if(!all(c( 		class( dwin$host.1 )=='character',
+						class( dwin$host.2 )=='character'
+				)))
+			stop('host.1 or host.2 not of character. This is unexpected, contact maintainer.')		
+		#	calculate average patristic distance
+		dwin <- dwin %>% select(host.1,host.2,patristic.distance)
+		dwin <- dwin %>% 
+				rename(host.1=host.2, host.2=host.1) %>% 
+				bind_rows(dwin) %>% 
+				rename(host=host.1) %>%
+				inner_join(dquery, by='host')
+		dcl <- dwin %>% 
+				group_by(host, host.2) %>% 
+				summarise(PDM= mean(patristic.distance)) %>%
+				arrange(PDM) %>%
+				top_n(10, -PDM)
+		#	save
+		dcls[[i]] <- dcl				
+	}		
+	dcls <- do.call('rbind', dcls)
+	save(dcls, file=outfile)
 }
 
 pty.MRC.stage1.generate.read.alignments<- function()
