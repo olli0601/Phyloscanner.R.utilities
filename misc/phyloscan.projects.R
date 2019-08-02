@@ -6816,11 +6816,13 @@ project.Bezemer.NLintroductions.trees<- function()
 	if(0)
 	{
 		infile	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_OR.csv'
+		infile	<- '~/Dropbox (SPH Imperial College)/2017_NL_Introductions/seq_info/Geneflow/NONB_flowinfo_plusB_OR.csv'
 		df	<- as.data.table(read.csv(infile, stringsAsFactors=FALSE))
 		
 		for(x in c('SAMPLING_LOC','BORN_LOC','INFECTED_LOC'))
 		{
 			set(df, which(grepl('HTF|HTM', df$GENDER_TRMGROUP) & df[[x]]=='NL'), x, 'NLHSX'   )
+			set(df, which(grepl('DU', df$GENDER_TRMGROUP) & df[[x]]=='NL'), x, 'NLIDU'   )
 			set(df, which(grepl('MSM', df$GENDER_TRMGROUP) & df[[x]]=='NL'), x, 'NLMSM'   )
 			set(df, which(df[[x]]=='NL'), x, 'NLOTH'   )			
 		}
@@ -6839,6 +6841,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted'
 		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
 		infiles <- list.files(indir, pattern='newick$')
+		infiles <- list.files(indir, pattern='polB.*newick$')
 		for(i in seq_along(infiles))
 		{
 			cat("Opening tree number ",i, " file name ",file.path(indir,infiles[i]),'\n', sep="")			
@@ -6862,14 +6865,16 @@ project.Bezemer.NLintroductions.trees<- function()
 		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/phyloscanner_190718'
 		tmpdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands'
 		infiles <- list.files(indir, pattern='newick$')
+		infiles <- list.files(indir, pattern='polB.*newick$')
 		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
 		
 		cmds <- lapply(seq_along(infiles), function(i)
 			{
 				infile <- file.path(indir, infiles[i])
-				outputString <- file.path(outdir,gsub('\\.newick','',basename(infile),'_samp_'))
+				outputString <- paste0(gsub('\\.newick','',basename(infile)),'_samp_')				
 				cmd <- paste0('Rscript ',prog.phyloscanner_analyse_trees,' ',infile,' ',outputString)
-				cmd <- paste0(cmd,' s,0 -m g -x "[A-Z]*[0-9]*.*_samp([A-Z]*)_born[A-Z]*_inf[A-Z]*_.*" -v -ow -rda')
+				cmd <- paste0(cmd,' s,0 -m 1e-5 -x "[A-Z]*[0-9]*.*_samp([A-Z]*)_born[A-Z]*_inf[A-Z]*_.*" -v 1 -ow -rda')
+				cmd <- paste0(cmd, '\nmv ',paste0(gsub('\\.newick','',basename(infile)),'_samp_'),'* ','"',outdir,'"','\n')
 			})
 	
 		# 	submit array job to HPC
@@ -6878,7 +6883,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		hpc.nproc		<- 1						# number of processors on node
 		hpc.walltime	<- 23						# walltime
 		hpc.q			<- "pqeelab"				# PBS queue
-		hpc.mem			<- "6gb" 					# RAM				
+		hpc.mem			<- "12gb" 					# RAM				
 		hpc.array		<- length(cmds)	# number of runs for job array	
 		pbshead		<- "#!/bin/sh"
 		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
@@ -6893,7 +6898,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
 		cat(pbshead)
 		#	make array job
-		for(i in 1:length(cmds))
+		for(i in 1:length(cmds))		
 			cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
 		cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
 		cmd		<- paste(pbshead,cmd,sep='\n')	

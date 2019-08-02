@@ -230,6 +230,157 @@ couples.stats.phyloscanner.1.8.0	<- function()
 	
 }
 
+
+#' Collect initial data set for Melodie
+networks.make.data.190726<- function()
+{
+	require(tidyverse)
+	
+	infile <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_190706.rda'
+	load(infile)
+	
+	#	select transmission networks
+	idclus <- c(5, 24, 26, 31, 78, 87, 106, 458, 459, 463)
+	
+	#	get pairs of individuals in transmission networks
+	tmp <- dnet %>% 
+			filter(IDCLU %in% idclus) %>% 
+			select(-c(CATEGORISATION, TYPE, SCORE, H1_SEX, H1_SAMPLING_YEAR, H2_SEX, H2_SAMPLING_YEAR)) %>% 
+			distinct() %>%
+			arrange(IDCLU, H1, H2)
+	#	make all pairwise combinations of individuals
+	dnet2 <- tmp %>% select( -c(CLU_SIZE,PTY_RUN) ) %>%
+			gather('variable','host',H1,H2) %>%
+			select( -variable ) %>%
+			arrange(IDCLU,host) %>%
+			distinct() %>%
+			group_by(IDCLU) 
+	dnet2 <- as.data.table(dnet2)[, {
+				tmp <- as.data.table(t(combn(host, 2)))
+				setnames(tmp, c('V1','V2'), c('H1','H2'))
+				tmp
+			}, by='IDCLU']
+	dnet2 <- as_tibble(dnet2) %>% 
+			filter(H1<H2)	
+	dnet2 <- dnet2 %>% 
+			full_join( tmp %>% select(PTY_RUN,IDCLU) %>% distinct(), by='IDCLU')
+	
+	
+	
+			
+	#	go back to PTY_RUN data to extract window information
+	idruns <- sort( unique( dnet2$PTY_RUN ) )
+	indir <- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706'
+	infiles <- tibble(F=list.files(indir, pattern='workspace.rda$',full.names=TRUE)) %>%
+				mutate(PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*$','\\1',basename(F)))) %>%
+				filter(PTY_RUN %in% idruns)	
+	dwin <- lapply( seq_len(nrow(infiles)), function(i){
+				cat('\nprocess', infiles$F[i])
+				load( infiles$F[i] )								
+				dprs <- dnet2 %>% filter(PTY_RUN==infiles$PTY_RUN[i])
+				ans <- vector('list',0)
+				for(j in seq_len(nrow(dprs)))
+					for(k in seq_along(phyloscanner.trees))
+					{
+						dc	<- phyloscanner.trees[[k]][['classification.results']][['classification']]
+						#	extract topology statistics
+						dc	<- dc %>% 
+								filter( (host.1==dprs$H1[j] & host.2==dprs$H2[j]) | 
+										(host.2==dprs$H1[j] & host.1==dprs$H2[j])	) %>%
+								rename( H1:= host.1, H2:=host.2) 
+						tmp <- dc %>% 
+								filter(H1>H2) %>%
+								rename(H1:=H2, H2:=H1, paths12:=paths21, paths21:=paths12, nodes1:=nodes2, nodes2:=nodes1) %>%
+								mutate(ancestry:= gsub('tmp$','anc',gsub('Tmp$','Anc',gsub('anc$','desc',gsub('Anc$','Desc',gsub('desc$','tmp',gsub('Desc$','Tmp',ancestry)))))))
+						dc <- dc %>% 
+								filter(H1<H2) %>%
+								bind_rows(tmp) %>%
+								inner_join(dprs[j,], by=c('H1','H2'))
+						
+						#	extract tip to tip distances
+						tmp	<- c( phyloscanner.trees[[k]][['tips.for.hosts']][[dprs$H1[j]]], phyloscanner.trees[[k]][['tips.for.hosts']][[dprs$H2[j]]])
+						if(length(tmp)>0 && nrow(dc)>0)
+						{
+							tmp	<- ape:::keep.tip(phyloscanner.trees[[k]][['tree']], tmp)
+							tmp	<- adephylo:::distTips( tmp )
+							tmp	<- as.matrix(tmp)
+							tmp	<- as_tibble(melt(tmp, as.is=TRUE, varnames=c('H1_TAXA','H2_TAXA'), value.name = "PD"))
+							#	calculate mean tip to tip distance between taxa from male and female
+							tmp	<- tmp	%>%
+									mutate(	H1= gsub('^([^_]+).*','\\1', H1_TAXA),
+											H2= gsub('^([^_]+).*','\\1', H2_TAXA) ) %>%
+									filter( H1<H2) %>%
+									summarise(MPD=mean(PD)) %>%
+									as.double()
+							tmp	<- dc %>%
+									mutate(	MPD:= tmp, 
+											MPD_STD:= tmp/phyloscanner.trees[[k]][['normalisation.constant']],
+											W_FROM:= phyloscanner.trees[[k]][['window.coords']][['start']],
+											W_TO:= phyloscanner.trees[[k]][['window.coords']][['end']])				
+							# return 
+							ans[[length(ans)+1L]]	<- tmp
+						}				
+					}
+				ans <- do.call('rbind',ans)
+				ans
+			})
+	dwin <- do.call('rbind',dwin)
+	#	 for each pair only keep results from run with most windows
+	tmp <- dwin %>% 
+			group_by(IDCLU, PTY_RUN, H1, H2) %>% 
+			summarise(N= length(W_FROM)) %>%
+			group_by(IDCLU, H1, H2) %>%
+			summarise(PTY_RUN:= PTY_RUN[which.max(N)[1]])
+	dwin <- tmp %>% inner_join(dwin, by=c('IDCLU','H1','H2','PTY_RUN')) 	
+	#	add pairwise combinations without phyloscanner evaluation as
+	#	missing
+	dwin <- dnet2 %>% 
+			select(-PTY_RUN) %>% 
+			distinct() %>%
+			full_join(dwin, by=c('IDCLU','H1','H2')) 
+	
+	#	get most likely transmission chain for selected transmission networks
+	dchain <- dchain %>% filter( IDCLU %in% idclus) 
+
+	#	get most likely transmission networks
+	dnet <- dnet %>% filter( IDCLU %in% idclus)
+	
+	#	get meta-data for individuals
+	hivc.db.Date2numeric<- function( x )
+	{
+		if(!class(x)%in%c('Date','character'))	return( x )
+		x	<- as.POSIXlt(x)
+		tmp	<- x$year + 1900
+		x	<- tmp + round( x$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )
+		x	
+	}
+	
+	dmeta <- dnet2 %>% select(H1,H2) %>% gather() %>% distinct() %>% rename(AID=value) %>% select(-key)	 
+	dmeta <- as_tibble(read.csv("~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv", stringsAsFactors=FALSE)) %>%
+			select(ID,AID) %>% 
+			distinct() %>%
+			right_join(dmeta, by='AID') %>%
+			rename(RID:=ID)
+	stopifnot( 0==dmeta %>% filter(is.na(RID)) %>% nrow() )	
+	infile <- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/180322_sampling_by_gender_age.rda'
+	load(infile)	
+	dmeta <- dmeta %>% 
+			left_join(as_tibble(rd), by='RID') %>% 
+			select(RID, AID, PID, SEX, BIRTHDATE, LASTNEGDATE, FIRSTPOSDATE, VISIT, DATE, COMM_NUM_A, ARVSTARTDATE, FIRSTSELFREPORTART, EST_DATEDIED) %>%
+			rename(VISIT_ROUND:= VISIT, VISIT_DATE:= DATE)
+	tmp <- as_tibble(read.csv('~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data shared with consortium/Pangea_Rakai_RCCS_Metadata_11Dec2015.csv', stringsAsFactors=FALSE)) %>%
+			select(studyid, Pangea.id, sampleDate) %>%
+			rename(RID:= studyid, PID:= Pangea.id, SEQ_DATE:=sampleDate) %>%
+			mutate(SEQ_DATE=hivc.db.Date2numeric(SEQ_DATE))
+	dmeta <- dmeta %>% left_join(tmp, by=c('RID','PID'))
+ 	dmeta <- dmeta %>% select(-c(RID,PID))
+	
+	#	save
+	outfile <- '~/Box Sync/OR_Work/MSCs/2019_Melodie/data/Rakai_phscnetworks_190706_selected_for_networkinference.rda'
+	save(dnet, dchain, dwin, dmeta, file=outfile)
+	
+}
+
 #' Extract the phyloscanner summary stats for each individual to estimate infection times
 participants.phyloscanner.summarystats<- function()
 {

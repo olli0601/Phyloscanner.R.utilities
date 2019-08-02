@@ -414,6 +414,38 @@ phsc.migrate.transmission.networks<- function()
 	print(p2)
 	dev.off()
 	
+	
+	# plot all networks
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu <- idclus[i]
+				di <- copy(dmeta)
+				setnames(di, 'ID', 'H')
+				df <- dnet %>% 
+						filter(IDCLU == idclu) %>%
+						select(-c(H1_SEX,H2_SEX))		
+				control<- list()
+				control$point.size = 10
+				control$edge.gap = 0.04
+				control$edge.size = 2
+				control$curvature = -0.2
+				control$arrow = arrow(length = unit(0.04, "npc"), type = "open")
+				control$curv.shift = 0.06
+				control$label.size = 3
+				control$node.label = "H" 
+				control$node.fill = "SEX"
+				control$node.shape = NA_character_
+				control$node.shape.values = c(`NA` = 16)
+				control$node.fill.values = c(F = "hotpink2", M = "steelblue2")
+				control$threshold.linked = 0.6
+				p <- plot.network(df, di, control)					
+				p	
+			})
+	pdf(file= gsub('\\.rda','_trmnetwork_all.pdf',infile), w=8, h=8)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+
 }
 
 

@@ -486,6 +486,7 @@ Munich.phyloscanner.190715.get.phylo.relationships<- function()
 		tree.dir <- file.path(HOME,'M190715_phsc_output')
 		tmpdir	<- file.path(HOME,"M190715_phsc_work")
 		outdir	<- file.path(HOME,'M190715_phscrelationships_025_50')
+		outdir	<- file.path(HOME,'M190715_phscrelationships_010_20')
 		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
 				
 	}
@@ -497,7 +498,7 @@ Munich.phyloscanner.190715.get.phylo.relationships<- function()
 	control$alignment.file.regex = NULL
 	control$blacklist.underrepresented = FALSE	
 	control$count.reads.in.parsimony = TRUE
-	control$distance.threshold <- '0.025 0.05'
+	control$distance.threshold <- '0.01 0.02'
 	control$do.dual.blacklisting = FALSE					
 	control$duplicate.file.directory = NULL
 	control$duplicate.file.regex = NULL

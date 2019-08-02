@@ -25,6 +25,7 @@ pty.MRC.stage1.find.pairs.in.networks<- function()
 pty.MRC.stage2.identify.potential.networks<- function()
 {
 	require(tidyverse)
+	require(data.table)
 	require(phyloscannerR)
 	require(igraph)
 	
@@ -78,9 +79,7 @@ pty.MRC.stage2.identify.potential.networks<- function()
 	indir <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715')
 	batch.regex <- '^ptyr([0-9]+)_.*'
 	outfile <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715', 'MRC_phscnetworks_closestpairs_by_distance_190715.rda')
-	dquery <- dnet %>% select(H1,H2) %>% gather() %>% select(value) %>% rename(host=value) %>% distinct()
-	
-	
+	dquery <- dnet %>% select(H1,H2) %>% gather() %>% select(value) %>% rename(host=value) %>% distinct()		
 	linked.group <- control$linked.group 
 	linked.no <- control$linked.no 
 	linked.yes <- control$linked.yes 
@@ -89,11 +88,9 @@ pty.MRC.stage2.identify.potential.networks<- function()
 	verbose <- TRUE
 	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
 			mutate( PTY_RUN:= as.integer(gsub(batch.regex,'\\1',basename(F))) ) %>%
-			arrange(PTY_RUN)	
-	
+			arrange(PTY_RUN)		
 	if(verbose) cat('\nFound phylogenetic relationship files, n=', nrow(infiles))
-	if(verbose) cat('\nProcessing files...')
-	
+	if(verbose) cat('\nProcessing files...')	
 	dcls <- vector('list', nrow(infiles))
 	for(i in seq_len(nrow(infiles)))
 	{		
@@ -124,7 +121,200 @@ pty.MRC.stage2.identify.potential.networks<- function()
 	}		
 	dcls <- do.call('rbind', dcls)
 	save(dcls, file=outfile)
+	#	end of pre-processing, continue
+	infile <- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_190715', 'MRC_phscnetworks_closestpairs_by_distance_190715.rda')
+	load(infile)
+	dcls <- dcls %>% 
+			group_by(host, host.2) %>% 
+			summarise(PDM= mean(PDM)) %>%
+			arrange(PDM) %>%
+			top_n(10, -PDM)
+	dnet <- dnet %>% 
+			select(IDCLU,CLU_SIZE,H1,H2) %>% 
+			gather('variable','host',-IDCLU,-CLU_SIZE) %>%
+			select(-variable) %>%
+			distinct() %>%
+			arrange(IDCLU)			
+	dcntrl <- dnet %>% 
+			full_join(dcls, by='host') %>%
+			group_by(IDCLU, CLU_SIZE) %>% 
+			filter(!host.2 %in% host) %>% 
+			select(-host) %>%
+			group_by(IDCLU, host.2) %>%
+			summarise(PDM= mean(PDM)) %>%			
+			arrange(IDCLU,PDM) %>%
+			top_n(4, -PDM) %>%
+			select(IDCLU, host.2) %>%
+			rename(host= host.2) %>%
+			mutate(CONTROL= 'yes')
+	dnet <- dnet %>% 
+			select(IDCLU, host) %>%
+			mutate(CONTROL= 'no') %>%
+			bind_rows(dcntrl) %>%
+			group_by(IDCLU) %>%
+			arrange(IDCLU,CONTROL)
+	#	add BAM files	
+	infile	<- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage1_input','phsc_runs_MRC_stage1_n2531_181026.csv')	
+	outfile	<- file.path('/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live','MRCPopSample_phsc_stage2_input','phsc_runs_MRC_stage2_n825_190719.csv')	
+	dbam	<- as_tibble(read.csv(infile, stringsAsFactors=FALSE)) %>%
+			select(IND,BAM) %>%
+			distinct()
+	pty.runs <- dnet %>% 
+			rename(PTY_RUN:= IDCLU, IND:=host) %>%
+			inner_join(dbam, by='IND')
+	#	write csv file
+	write.csv(pty.runs, file=outfile)
 }
+
+pty.MRC.stage2.make.reference.alignment<- function()
+{
+	require(ape)
+	require(big.phylo)
+	# new LANL 2019 subtype consensus sequences
+	infile <- '~/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/2019_New_ConsensusGenomesOneEach_GeneCut.fasta'
+	outfile <- '~/git/phyloscanner/phyloscannerR/inst/extdata/HIV1_LANL_2019_consensus_seqs.fasta'
+	seq <- read.dna(infile, format='fasta')	
+	seq <- seq[c(	"B.FR.83.HXB2_LAI_IIIB_BRU_K03455", "CON_A1(172)", "CON_A2(4)", "CON_A3(3)",                              
+					"A4.CD.97.97CD_KTB13_AM000054", "CON_A6(42)", "CON_B(1204)", "CON_C(720)",                             
+					"CON_D(71)", "CON_F1(39)", "CON_F2(9)", "CON_G(79)",                              
+					"CON_H(9)", "CON_J(6)", "CON_K(3)", "CON_OF_CONS"),]
+	seq <- big.phylo:::seq.rmgaps(seq, rm.only.col.gaps=1, verbose=0)
+	tmp <- gsub('CON','REF',gsub('\\)','',gsub('\\(','_s',rownames(seq))))
+	tmp[grepl('HXB2',tmp)] <- 'REF_HXB2'
+	tmp[grepl('A4',tmp)] <- 'REF_A4_s1'
+	tmp[grepl('REF_OF_REFS',tmp)] <- 'REF_consensus'	
+	rownames(seq) <- tmp
+	write.dna(seq, file=outfile, format='fasta', colsep='', nbcol=-1)
+}
+
+pty.MRC.stage2.generate.read.alignments<- function()
+{
+	#	set up working environment
+	require(Phyloscanner.R.utilities)
+	require(phyloscannerR)
+	require(data.table)
+	if(1)
+	{
+		HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+		data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'
+		prog.pty		<- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_make_trees.py'
+	}
+	if(0)
+	{
+		HOME			<<- '~/sandbox/DeepSeqProjects'
+		data.dir		<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'
+		prog.pty		<- '/Users/Oliver/git/phylotypes/phyloscanner_make_trees.py'	
+	}	
+	in.dir <- file.path(HOME,'MRCPopSample_phsc_stage2_input')		
+	work.dir <- file.path(HOME,"MRCPopSample_phsc_work")
+	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output")
+	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_oldali")
+	dir.create(in.dir)
+	dir.create(work.dir)
+	dir.create(out.dir)
+	pty.runs <- as.data.table(read.csv(file.path(in.dir, "phsc_runs_MRC_stage2_n825_190719.csv")))
+	pty.runs <- subset(pty.runs, PTY_RUN==130)
+	pty.runs <- unique(pty.runs,by='IND')
+	
+	#
+	#	define phyloscanner input args to generate read alignments
+	#
+	
+	pty.select			<- NA
+	pty.args			<- list(	prog.pty=prog.pty, 
+			prog.mafft='mafft',  
+			data.dir=data.dir, 
+			work.dir=work.dir, 
+			out.dir=out.dir, 
+			alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_AD_B_CPX_v2.fasta"),			
+			alignments.root='REF_CPX_AF460972', 
+			alignments.pairwise.to='REF_B_K03455',
+			#alignments.file=system.file(package='phyloscannerR', file.path('extdata','HIV1_LANL_2019_consensus_seqs.fasta')),
+			#alignments.pairwise.to='REF_HXB2',
+			#alignments.root='REF_consensus', 
+			window.automatic='', 
+			merge.threshold=1, 
+			min.read.count=1, 
+			quality.trim.ends=23, 
+			min.internal.quality=23, 
+			merge.paired.reads=TRUE, 
+			no.trees=TRUE, 
+			dont.check.duplicates=FALSE,
+			dont.check.recombination=TRUE,
+			win=c(800,9400,25,250),				 				
+			keep.overhangs=FALSE,
+			mem.save=0,
+			verbose=TRUE,					
+			select=pty.select	#of 240
+			)	
+	#save(pty.args, file=file.path(in.dir, 'phsc_args_stage2_create_read_alignments.rda'))
+	
+	
+	
+	#
+	#	define bash scripts to generate read alignments for all pairs of batches
+	#
+	
+	#	check which (if any) batches have already been processed, and remove from TODO list
+	tmp			<- data.table(FILE_FASTA=list.files(out.dir, pattern='^ptyr[0-9]+_trees$', full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
+	tmp			<- merge(tmp, tmp[, list(FILE_FASTA_N= length(list.files(FILE_FASTA, pattern='fasta$'))), by='PTY_RUN'], by='PTY_RUN')
+	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
+	pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N))
+	#pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
+	
+	#	search for bam files and references and merge with runs	
+	pty.runs	<- subset(pty.runs, select=c(PTY_RUN, IND))	
+	tmp			<- phsc.find.bam.and.references(pty.args[['data.dir']], regex.person='^([A-Z0-9]+-[A-Z0-9]+)-.*$')	
+	pty.runs	<- merge(pty.runs, tmp, by='IND')
+	#	create UNIX bash scripts
+	pty.runs	<- unique(pty.runs, by=c('PTY_RUN','SAMPLE','BAM'))
+	pty.runs	<- pty.runs[, list(BAM=BAM, REF=REF, SAMPLE=SAMPLE, RENAME_ID=paste0(IND,'-fq',seq_len(length(BAM)))), by=c('PTY_RUN','IND')]
+	setkey(pty.runs, PTY_RUN)		
+	setnames(pty.runs, c('IND','SAMPLE'), c('UNIT_ID','SAMPLE_ID'))
+	pty.c		<- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+	
+	#
+	#	submit jobs to PBS job scheduler
+	#
+	
+	#	define PBS variables
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 71						# walltime
+	hpc.q				<- NA # "pqeelab"				# PBS queue
+	hpc.mem				<- "6gb" 					# RAM	
+	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#	create PBS job array
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(pty.args[['work.dir']], outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))		
+}
+
+
 
 pty.MRC.stage1.generate.read.alignments<- function()
 {
@@ -474,6 +664,131 @@ pty.MRC.stage1.generate.trees<- function()
 	cat(system(cmd, intern= TRUE))	
 }
 
+pty.MRC.stage2.generate.trees<- function()
+{
+	require(data.table)
+	require(Phyloscanner.R.utilities)
+	
+	#	set up working environment	
+	if(1)
+	{
+		HOME			<<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live'
+		data.dir		<- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC'				
+	}
+	if(0)
+	{
+		HOME			<<- '~/sandbox/DeepSeqProjects'
+		data.dir		<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'			
+	}
+	if(1)
+	{
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output')		
+		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output")
+		ali.root		<- 'REF_consensus'
+	}
+	if(0)
+	{
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_oldali')		
+		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_oldali")
+		ali.root		<- 'REF_B_K03455'
+	}
+	
+	
+	
+	#
+	#	generate trees	
+	infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+	infiles[, FO:= gsub('fasta$','tree',FI)]
+	infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+	infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]
+	#	check which (if any) trees have already been processed, and remove from TODO list
+	tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+	infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+	infiles	<- subset(infiles, is.na(FT))	
+	setkey(infiles, PTY_RUN, W_FROM)			
+	#	determine number of taxa per fasta file, and sort alignments by size
+	#	so that trees with smallest size are generated first
+	#tmp		<- infiles[, list(N_TAXA=as.integer(system(paste0('grep -c "^>" ', FI), intern=TRUE))), by=c('FI')]
+	#infiles	<- merge(infiles, tmp, by='FI')
+	#infiles	<- infiles[order(N_TAXA),]	
+	
+	#
+	#	define pbs header, max 10,000 trees (re-start a few times)
+	#	create header first because RAXML call depends on single-core / multi-core
+	#	TODO: 
+	#		30 runs are roughly 10,000 trees
+	#		every time you set up a new job array, select the next 30 runs.   
+	#		For example, the job array will be 151:180
+	#infiles	<- subset(infiles, PTY_RUN%in%c(1101:1400))
+	#infiles	<- subset(infiles, PTY_RUN%in%c(1001:1400))
+	infiles[, CASE_ID2:= seq_len(nrow(infiles))]
+	infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
+	print(infiles)
+	#infiles[, CASE_ID:= ceiling(CASE_ID2/1)]
+	stop()
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 23						# walltime
+	#	TODO:
+	#		run either this block to submit a job array to college machines 
+	#		the choice depends on whether the previous job array on college machines is done, 
+	#		or on whether the previous job array on Oliver's machines is done.
+	if(1)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "2gb" 					# RAM
+		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(0)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM
+		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-AVX','raxmlHPC-PTHREADS-AVX')		#on newer machines with AVX instructions
+	}
+	#
+	#	
+	hpc.array			<- infiles[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#
+	#	create UNIX bash script to generate trees with RAxML
+	#	
+	raxml.args	<- ifelse(hpc.nproc==1, paste0('-m GTRCAT --HKY85 -p 42 -o ', ali.root), paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o ',ali.root))
+	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID','CASE_ID2')]
+	pty.c	<- pty.c[, list(CMD=paste(CMD, collapse='\n')), by='CASE_ID']
+	pty.c[1,cat(CMD)]
+	
+	#
+	#	make array job
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("trs",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(work.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))	
+}
 
 pty.2.infer.phylo.relationships.on.stage2.trees<- function() 
 {
