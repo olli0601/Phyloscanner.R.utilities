@@ -86,10 +86,10 @@ pty.various	<- function()
 	#RakaiFull.phylogeography.181006.flows.wrapper()
 	#Rakai190327.RCCStransmissionflows.inference.age3model()
 	#RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
-	#pty.MRC.stage1.zip.trees()
+	pty.MRC.stage1.zip.trees()
 	#couples.distances.from.trees()
 	#pty.MRC.stage1.find.pairs.in.networks()
-	pty.MRC.stage2.identify.potential.networks()
+	#pty.MRC.stage2.identify.potential.networks()
 }
 
 project.dual.alignments.missing<- function()
@@ -6865,7 +6865,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/phyloscanner_190718'
 		tmpdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands'
 		infiles <- list.files(indir, pattern='newick$')
-		infiles <- list.files(indir, pattern='polB.*newick$')
+		infiles <- list.files(indir, pattern='^G.*newick$')
 		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
 		
 		cmds <- lapply(seq_along(infiles), function(i)
@@ -6883,7 +6883,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		hpc.nproc		<- 1						# number of processors on node
 		hpc.walltime	<- 23						# walltime
 		hpc.q			<- "pqeelab"				# PBS queue
-		hpc.mem			<- "12gb" 					# RAM				
+		hpc.mem			<- "6gb" 					# RAM				
 		hpc.array		<- length(cmds)	# number of runs for job array	
 		pbshead		<- "#!/bin/sh"
 		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")

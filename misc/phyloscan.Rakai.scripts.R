@@ -187,6 +187,42 @@ pty.MRC.stage2.make.reference.alignment<- function()
 	write.dna(seq, file=outfile, format='fasta', colsep='', nbcol=-1)
 }
 
+pty.MRC.stage2.generate.read.alignments.ref.choice<- function()
+{
+	require(data.table)
+	require(ape)
+	
+	indir <- '~/Box Sync/OR_Work/2019/2019_PANGEA_BBosa'
+	infiles <- data.table(F=list.files(indir, pattern='tree$', full.names=TRUE, recursive=TRUE))
+	infiles[, ANA:= basename(dirname(F))]
+	infiles[, W_FROM:= as.integer(gsub('^.*InWindow_([0-9]+)_to.*$','\\1',basename(F)))]
+	
+	dd <- infiles[, {
+				#infile <- infiles[670,F]
+				infile <- F
+				tree <- read.tree(infile)
+				# reroot 2012 files ( I specified inccorrect root )
+				if(any(tree$tip.label=='REF_CPX_AF460972'))
+					tree <- root(tree, 'REF_CPX_AF460972')
+				# plot pdf
+				tip.col <- rep('black', Ntip(tree))
+				tip.col[grepl('REF',tree$tip.label)] <- 'red'
+				outfile <- gsub('\\.tree','_tree.pdf',infile)
+				pdf(outfile, w=10, h=30)
+				plot(tree, tip.col=tip.col, cex=0.5)
+				dev.off()				
+				# calculate distance to root
+				tmp <- node.depth.edgelength(tree)
+				list( DR_MAX= max(tmp), DR_MED=median(tmp) )
+			}, by=c('ANA','W_FROM')]
+	
+	ggplot(dd, aes(x=W_FROM, colour=ANA, y=DR_MED, group=ANA)) + geom_point() + geom_line()
+	outfile <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/pilot_refalignment_LANL2012selected_HKY/dist_to_root_max.pdf'
+	ggsave(file=outfile, w=10, h=6)
+	
+	#
+}
+
 pty.MRC.stage2.generate.read.alignments<- function()
 {
 	#	set up working environment
@@ -207,14 +243,14 @@ pty.MRC.stage2.generate.read.alignments<- function()
 	}	
 	in.dir <- file.path(HOME,'MRCPopSample_phsc_stage2_input')		
 	work.dir <- file.path(HOME,"MRCPopSample_phsc_work")
-	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output")
-	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_oldali")
+	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_HKC")
+	#out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_300")
 	dir.create(in.dir)
 	dir.create(work.dir)
 	dir.create(out.dir)
 	pty.runs <- as.data.table(read.csv(file.path(in.dir, "phsc_runs_MRC_stage2_n825_190719.csv")))
-	pty.runs <- subset(pty.runs, PTY_RUN==130)
-	pty.runs <- unique(pty.runs,by='IND')
+	#pty.runs <- subset(pty.runs, PTY_RUN==130)
+	pty.runs <- unique(pty.runs,by=c('PTY_RUN','IND'))
 	
 	#
 	#	define phyloscanner input args to generate read alignments
@@ -226,14 +262,14 @@ pty.MRC.stage2.generate.read.alignments<- function()
 			data.dir=data.dir, 
 			work.dir=work.dir, 
 			out.dir=out.dir, 
-			alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_AD_B_CPX_v2.fasta"),			
-			alignments.root='REF_CPX_AF460972', 
-			alignments.pairwise.to='REF_B_K03455',
-			#alignments.file=system.file(package='phyloscannerR', file.path('extdata','HIV1_LANL_2019_consensus_seqs.fasta')),
-			#alignments.pairwise.to='REF_HXB2',
-			#alignments.root='REF_consensus', 
+			#alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_AD_B_CPX_v2.fasta"),			
+			#alignments.root='REF_CPX_AF460972', 
+			#alignments.pairwise.to='REF_B_K03455',
+			alignments.file=system.file(package='phyloscannerR', file.path('extdata','HIV1_LANL_2019_consensus_seqs.fasta')),
+			alignments.pairwise.to='REF_HXB2',
+			alignments.root='REF_consensus', 
 			window.automatic='', 
-			merge.threshold=1, 
+			merge.threshold=0, 
 			min.read.count=1, 
 			quality.trim.ends=23, 
 			min.internal.quality=23, 
@@ -241,7 +277,8 @@ pty.MRC.stage2.generate.read.alignments<- function()
 			no.trees=TRUE, 
 			dont.check.duplicates=FALSE,
 			dont.check.recombination=TRUE,
-			win=c(800,9400,25,250),				 				
+			#win=c(800,9400,25,250),
+			win=c(800,9400,30,300),
 			keep.overhangs=FALSE,
 			mem.save=0,
 			verbose=TRUE,					
@@ -260,9 +297,10 @@ pty.MRC.stage2.generate.read.alignments<- function()
 	tmp[, PTY_RUN:= as.integer(gsub('ptyr([0-9]+)_.*','\\1',basename(FILE_FASTA)))]
 	tmp			<- merge(tmp, tmp[, list(FILE_FASTA_N= length(list.files(FILE_FASTA, pattern='fasta$'))), by='PTY_RUN'], by='PTY_RUN')
 	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
-	pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N))
-	#pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
-	
+	#pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N) || FILE_FASTA_N==0)
+	pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
+	#pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N)) 	
+
 	#	search for bam files and references and merge with runs	
 	pty.runs	<- subset(pty.runs, select=c(PTY_RUN, IND))	
 	tmp			<- phsc.find.bam.and.references(pty.args[['data.dir']], regex.person='^([A-Z0-9]+-[A-Z0-9]+)-.*$')	
@@ -284,7 +322,7 @@ pty.MRC.stage2.generate.read.alignments<- function()
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
 	hpc.walltime		<- 71						# walltime
-	hpc.q				<- NA # "pqeelab"				# PBS queue
+	hpc.q				<- "pqeelab"				# PBS queue
 	hpc.mem				<- "6gb" 					# RAM	
 	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
 	#	define PBS header for job scheduler. this will depend on your job scheduler.
@@ -472,6 +510,7 @@ pty.MRC.stage1.zip.trees<- function()
 	if(1)
 	{
 		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage1_output')
+		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_HKC')
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
 		allwin	<- data.table(W_FROM=seq(800,9150,25))
@@ -682,17 +721,19 @@ pty.MRC.stage2.generate.trees<- function()
 	}
 	if(1)
 	{
-		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output')		
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_HKC')		
 		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
-		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output")
+		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_HKC")
 		ali.root		<- 'REF_consensus'
+		tree.args		<- '-m GTRCAT --HKY85'
 	}
 	if(0)
 	{
-		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_oldali')		
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_300')		
 		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
-		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_oldali")
-		ali.root		<- 'REF_B_K03455'
+		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_300")
+		ali.root		<- 'REF_consensus'
+		tree.args		<- '-m GTRCAT --HKY85'
 	}
 	
 	
@@ -733,19 +774,19 @@ pty.MRC.stage2.generate.trees<- function()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 23						# walltime
+	hpc.walltime		<- 171						# walltime
 	#	TODO:
 	#		run either this block to submit a job array to college machines 
 	#		the choice depends on whether the previous job array on college machines is done, 
 	#		or on whether the previous job array on Oliver's machines is done.
-	if(1)		
+	if(0)		
 	{
 		hpc.q			<- NA						# PBS queue
 		hpc.mem			<- "2gb" 					# RAM
 		raxml.pr		<- ifelse(hpc.nproc==1, 'raxmlHPC-SSE3', 'raxmlHPC-PTHREADS-SSE3')	#on older machines without AVX instructions
 	}
 	#		or run this block to submit a job array to Oliver's machines
-	if(0)
+	if(1)
 	{
 		hpc.q			<- "pqeelab"				# PBS queue
 		hpc.mem			<- "6gb" 					# RAM
@@ -771,7 +812,7 @@ pty.MRC.stage2.generate.trees<- function()
 	#
 	#	create UNIX bash script to generate trees with RAxML
 	#	
-	raxml.args	<- ifelse(hpc.nproc==1, paste0('-m GTRCAT --HKY85 -p 42 -o ', ali.root), paste0('-m GTRCAT --HKY85 -T ',hpc.nproc,' -p 42 -o ',ali.root))
+	raxml.args	<- ifelse(hpc.nproc==1, paste0(tree.args,' -p 42 -o ', ali.root), paste0(tree.args,' -T ',hpc.nproc,' -p 42 -o ',ali.root))
 	pty.c	<- infiles[, list(CMD=raxml.cmd(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('CASE_ID','CASE_ID2')]
 	pty.c	<- pty.c[, list(CMD=paste(CMD, collapse='\n')), by='CASE_ID']
 	pty.c[1,cat(CMD)]
