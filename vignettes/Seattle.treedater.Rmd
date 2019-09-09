@@ -1,0 +1,246 @@
+---
+title: "Dating trees with ancestral states (phyloscanner + treedater)"
+author: "Oliver Ratmann"
+date: "2018-10-21"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(width=400)
+``` 
+
+```{css, echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+## Introduction
+This vignette illustrates new code that I added to the `ordev` branch of
+`phyloscanner` in order to date trees in *phyloscanner* format. 
+
+The rationale and steps in the analysis below are as follows:
+
+* Many LANL sequences do not have a sampling date available, but we still like
+  to use them in parsimony-based ancestral state reconstructions
+* We perform parsimony-based ancestral state reconstructions with all LANL
+  sequences using *phyloscanner*
+* Then we remove taxa without sampling dates. We cannot simply use
+  `ape:::drop.tip` because the function returns a new tree structure, and so
+  our previous ancestral state reconstructions are meaningless. Luckily,
+  `phytools` has functionality to drop tips and extract clades of trees with
+  ancestral state reconstructions, though the trees need to be in `SIMMAP`
+  format. So all we need to do is to cast the *phyloscanner* trees into
+  `SIMMAP` format, and then we can drop taxa. The end result is a
+  tree without sampling dates, and with ancestral state reconstructions
+  preserved.
+* The next step is to date the tree, with `treedater`.
+* Since `treedater` keeps the tree topology intact, the edge index in the
+  dated tree is the same as the edge index in the undated tree. This means we
+  can copy the branch lengths of the dated tree into the previous undated tree.
+  The end result is a dated tree, with dropped tips without sampling
+  information, and with ancestral state reconstructions.
+* Now we can extract King County subgraphs, that are dated. These
+  subgraphs correspond to transmission chains that circulate in King County.  
+* Note that we have sampling dates for all sequences from King County, so the
+  above steps retain the entire King County data.
+* The next step will be to perform phylodynamic analysis on the data that
+  corresponds to transmission chains in Seattle.
+
+
+## Getting started
+You need to set the following input arguments:
+ ```{r, include=TRUE, eval=TRUE, echo=TRUE, tidy=TRUE}
+#	
+#	file inputs
+#infile.seqinfo <- '~/Box Sync/OR_Work/Seattle/PHSKC-2019_07_24/sequences_meta.rds'
+#NOTE: new file above not compatible with old data: cannot find sequence ids.
+
+infile.seqinfo <- '~/Box Sync/OR_Work/Seattle/PHSKC-2018-07-09/sequences_meta.rds'	
+indir.trees	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/trees'	
+indir.phsc	<- '~/Box Sync/OR_Work/Seattle/analysis_190723/phyloscanner_HSX'
+```	
+
+Make sure you have the ordev branch of phyloscannerR installed:
+```{r, include=TRUE, eval=TRUE, echo=TRUE, tidy=FALSE}
+#	required packages
+require(data.table) 	
+require(tidyverse) 	
+require(ape) 	
+require(phytools)
+require(treedater)
+require(phyloscannerR)
+	
+#	file inputs
+infiles.trees <- data.table(F=list.files(indir.trees, pattern='rerooted\\.newick$', recursive=TRUE, full.names=TRUE))
+infiles.phsc <- data.table(F=list.files(indir.phsc, pattern='workspace.rda$', full.names=TRUE, recursive=TRUE))	
+
+#	input args needed for tree.dater
+alignment.length <- 1100
+
+#
+# read Seattle sampling data 
+# define initial guess on actual sampling date as midpoint 
+# define upper/lower limits on actual sampling date
+dseq <- readRDS(infile.seqinfo) 
+dseq <- dseq %>% 
+			select(seqID, newnum, type, seqy, seqm) %>%
+			mutate( SEQ_DATE:= seqy + (seqm-1)/12 + 15/365,
+					SEQ_DATE_LOWER:= seqy + (seqm-1)/12,
+					SEQ_DATE_UPPER:= seqy + (seqm-1)/12 + 30/365
+					) %>%
+			select(-seqy, -seqm) %>%
+			rename(TAXA= seqID, PID= newnum, TYPE=type)
+dseq <- as.data.table(dseq)
+```	
+
+##	Code to date a phyloscanner tree
+The following code chunk will:
+
+* load a tree with ancestral states in phyloscanner format
+* remove taxa without sampling dates
+* date the tree
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, tidy=FALSE}
+#
+#	read tree with ancestral state reconstructions in phyloscanner format
+#
+i<- 1
+infile <- infiles.phsc[i,F]	
+load(infile)
+ph <- phyloscanner.trees[[1]][['tree']]
+stopifnot( !any( ph$tip.label=='' ) )
+
+#
+#	drop tips without sequence dates, 
+#	while conserving the ancestral state reconstructions
+#
+
+#	extract taxa names
+dph <- data.table(	TAXA_LABEL=ph$tip.label,
+		TAXA= gsub(	'^(PR/RT-[0-9]+).*','\\1',
+				gsub('^[^_]+___(.*)','\\1',
+				  ph$tip.label)),
+		TAXA_ID= seq_along(ph$tip.label))
+#	add Seattle sequence dates
+dph <- merge(dph, dseq, by='TAXA', all.x=TRUE)
+#	extract GenBank sequence dates from taxa names where possible 
+dph[, GENBANK_ID:= gsub('^([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)$','\\5',TAXA)]
+dph[, GENBANK_SEQDATE:= gsub('^([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)$','\\3',TAXA)]
+set(dph, dph[, which(GENBANK_SEQDATE=='-' | !is.na(SEQ_DATE))],'GENBANK_SEQDATE',NA_character_)	
+set(dph, NULL, 'GENBANK_SEQDATE_LOWER', dph[, as.numeric(GENBANK_SEQDATE) ])
+set(dph, NULL, 'GENBANK_SEQDATE_UPPER', dph[, as.numeric(GENBANK_SEQDATE) + 364/365 ])	
+set(dph, NULL, 'GENBANK_SEQDATE', dph[, as.numeric(GENBANK_SEQDATE) + 1/2 ])
+tmp <- dph[, which(is.na(SEQ_DATE))]
+set(dph, tmp, 'SEQ_DATE', dph[tmp, GENBANK_SEQDATE])
+set(dph, tmp, 'SEQ_DATE_LOWER', dph[tmp, GENBANK_SEQDATE_LOWER])
+set(dph, tmp, 'SEQ_DATE_UPPER', dph[tmp, GENBANK_SEQDATE_UPPER])
+set(dph, NULL, c('GENBANK_SEQDATE','GENBANK_SEQDATE_LOWER','GENBANK_SEQDATE_UPPER'), NULL)	
+#	drop tips 
+dph.old <- subset(dph, select=c(TAXA, SEQ_DATE, SEQ_DATE_LOWER, SEQ_DATE_UPPER))	
+tmp <- subset(dph, is.na(SEQ_DATE))[, TAXA_ID]
+cat('Dropping tips without sampling date from ', infile,' n=', length(tmp), 'of Ntips=', Ntip(ph), '\n')
+ph <- phyloscanner.to.simmap(ph)	
+ph <- phytools:::drop.tip.simmap(ph, ph$tip.label[tmp])
+ph <- simmap.to.phyloscanner(ph)
+
+
+#
+#	date tree
+#	
+
+#	make data.table of sequence sampling times
+dph <- data.table(	TAXA_LABEL=ph$tip.label,
+		TAXA= gsub('^(PR/RT-[0-9]+).*','\\1',
+				gsub('^[^_]+___(.*)','\\1',
+				  ph$tip.label)),
+		TAXA_ID= seq_along(ph$tip.label))
+dph <- merge(dph, dph.old, by= 'TAXA')
+stopifnot( !any(is.na(dph$SEQ_DATE)) )
+dph <- dph[order(TAXA_ID),]
+#	get into format needed for tree.dater	
+sampling.times.init <- dph$SEQ_DATE
+names(sampling.times.init) <- dph$TAXA_LABEL
+sampling.times.bounds <- as.data.frame(subset(dph, select=c(SEQ_DATE_LOWER, SEQ_DATE_UPPER)))
+rownames(sampling.times.bounds) <- dph$TAXA_LABEL		
+colnames(sampling.times.bounds) <- c('lower','upper')
+#	date tree
+ph.dated <- dater(	ph, 
+					sampling.times.init, 
+					alignment.length, 
+					numStartConditions=1, 
+					estimateSampleTimes=sampling.times.bounds )
+stopifnot( all(  ph.dated$tip.label == ph$tip.label ) )
+stopifnot( all( ph.dated$edge == ph$edge ) )
+#	since the tree topology is unchanged, we can copy
+#	the branch lenghts in units of time onto the original tree
+#	that has the ancestral state reconstructions
+ph$edge.length <- ph.dated$edge.length
+```	
+
+Let us also print and save the output:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+#
+#	plot dated tree to spot obvious errors
+#
+outfile <- gsub('workspace\\.rda','annotated_dated_tree.pdf',infile)
+tmp <- vector('list')
+tmp[['tree']] <- ph
+tmp[['tree']][['node.states']] <- tmp[['tree']][['mapped.edge']] <- tmp[['tree']][['maps']] <- NULL
+attr(tmp[['tree']],'map.order') <- NULL
+attr(tmp[['tree']],'class') <- 'phylo'
+tmp[['read.counts']] <- rep(1, Ntip(ph))	
+write.annotated.tree(tmp, outfile, format="pdf", pdf.scale.bar.width = 0.01, pdf.w = 40, pdf.hm = 0.2, verbose = FALSE)
+
+#
+#	save phyloscanner.tree
+#
+outfile <- gsub('workspace\\.rda','annotated_dated_tree.rda',infile)
+save(ph, file=outfile)
+```
+
+##	Code to extract King County subgraphs
+The following code chunk will:
+
+* take a dated tree with ancestral state reconstructions
+* extract all King County subgraphs
+
+```{r, include=TRUE, eval=TRUE, echo=TRUE, tidy=FALSE}
+# phyloscanner label for transmission chains among heterosexual individuals in King County 
+host <- 'KCHSX'
+
+# find the MRCAS of all King County subgraphs 
+mrcas <- which( attr(ph, 'SUBGRAPH_MRCA') )
+mrcas <- mrcas[ attr(ph, 'INDIVIDUAL')[mrcas]==host ]	
+# convert tree to class simmap
+ph <- phyloscanner.to.simmap(ph)
+# extract subgraphs
+subgraphs <- lapply(mrcas, function(mrca) extract.subgraph(ph, mrca))
+subgraphs
+```	
+
+Let us also save the output:
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=TRUE}
+outfile <- gsub('_workspace',paste0('_subgraphs_',host),infile)
+save(subgraphs, file=outfile)
+```
+
+##	Notes
+The vignette was generated with: 
+```{r, include=TRUE, eval=FALSE, echo=TRUE, tidy=FALSE}
+require(rmarkdown) 	
+setwd('~/git/Phyloscanner.R.utilities/vignettes')
+infile <- 'Seattle.treedater.Rmd'
+rmarkdown::render(infile)	
+```		

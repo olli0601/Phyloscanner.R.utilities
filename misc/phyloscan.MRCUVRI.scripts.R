@@ -243,7 +243,7 @@ pty.MRC.stage2.generate.read.alignments<- function()
 	}	
 	in.dir <- file.path(HOME,'MRCPopSample_phsc_stage2_input')		
 	work.dir <- file.path(HOME,"MRCPopSample_phsc_work")
-	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_HKC")
+	out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_250_HKC")
 	#out.dir <- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_300")
 	dir.create(in.dir)
 	dir.create(work.dir)
@@ -277,8 +277,8 @@ pty.MRC.stage2.generate.read.alignments<- function()
 			no.trees=TRUE, 
 			dont.check.duplicates=FALSE,
 			dont.check.recombination=TRUE,
-			#win=c(800,9400,25,250),
-			win=c(800,9400,30,300),
+			win=c(800,9400,25,250),
+			#win=c(800,9400,30,300),
 			keep.overhangs=FALSE,
 			mem.save=0,
 			verbose=TRUE,					
@@ -298,7 +298,7 @@ pty.MRC.stage2.generate.read.alignments<- function()
 	tmp			<- merge(tmp, tmp[, list(FILE_FASTA_N= length(list.files(FILE_FASTA, pattern='fasta$'))), by='PTY_RUN'], by='PTY_RUN')
 	pty.runs	<- merge(pty.runs, tmp, by='PTY_RUN', all.x=1)
 	#pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N) || FILE_FASTA_N==0)
-	pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
+	#pty.runs	<- subset(pty.runs, FILE_FASTA_N==0)
 	#pty.runs	<- subset(pty.runs, is.na(FILE_FASTA_N)) 	
 
 	#	search for bam files and references and merge with runs	
@@ -510,10 +510,11 @@ pty.MRC.stage1.zip.trees<- function()
 	if(1)
 	{
 		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage1_output')
-		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_HKC')
+		indirs	<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_250_HKC')
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
-		allwin	<- data.table(W_FROM=seq(800,9150,25))
+		allwin	<- data.table(W_FROM=seq(800,9150,25))		
+		#allwin	<- data.table(W_FROM=seq(890,9150,30))
 		#allwin	<- data.table(W_FROM=seq(800,9050,125))
 		#indirs	<- '/work/or105/Gates_2014/2015_PANGEA_DualPairsFromFastQIVA/RakaiAll_output_170301_w250_s20_p35_stagetwo/ptyr97_trees'
 		for(i in seq_along(indirs))
@@ -565,7 +566,7 @@ pty.MRC.stage1.zip.trees<- function()
 				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_fasta.zip'))]
 				invisible( zip( tmp, file.path(indir,'tmp42'), flags = "-umr9XTjq") )
 				#	now zip tree files
-				infiles	<- data.table(F=list.files(indir,pattern='ptyr.*tree$',full.names=TRUE))
+				infiles	<- data.table(F=list.files(indir,pattern='^ptyr.*tree$',full.names=TRUE))
 				infiles[, PTY_RUN:= gsub('^ptyr([0-9]+)_.*','\\1',basename(F))]
 				invisible( infiles[, file.rename(F, file.path(indir,'tmp42',basename(F))), by='F'] )
 				tmp		<- infiles[1, file.path(dirname(F),paste0('ptyr',PTY_RUN,'_trees_newick.zip'))]		
@@ -719,14 +720,22 @@ pty.MRC.stage2.generate.trees<- function()
 		HOME			<<- '~/sandbox/DeepSeqProjects'
 		data.dir		<- '~/sandbox/DeepSeqProjects/MRCPopSample_data'			
 	}
-	if(1)
+	if(0)
 	{
-		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_HKC')		
-		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_HKC')
 		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_HKC")
+		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")		
 		ali.root		<- 'REF_consensus'
 		tree.args		<- '-m GTRCAT --HKY85'
 	}
+	if(1)
+	{
+		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_250_HKC')
+		out.dir			<- file.path(HOME,"MRCPopSample_phsc_stage2_output_newali_250_HKC")
+		work.dir		<- file.path(HOME,"MRCPopSample_phsc_work")		
+		ali.root		<- 'REF_consensus'
+		tree.args		<- '-m GTRCAT --HKY85'
+	}	
 	if(0)
 	{
 		in.dir			<- file.path(HOME,'MRCPopSample_phsc_stage2_output_newali_300')		
@@ -774,7 +783,7 @@ pty.MRC.stage2.generate.trees<- function()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 171						# walltime
+	hpc.walltime		<- 123						# walltime
 	#	TODO:
 	#		run either this block to submit a job array to college machines 
 	#		the choice depends on whether the previous job array on college machines is done, 
@@ -1131,6 +1140,279 @@ pty.4.highlysupported.links<- function()
 	rtpd		<- merge(rtpd, red, by=c('ID1','ID2'))
 	rtpd[, PHYSCANNER_DIR_CONSISTENT:= as.integer(PHYSCANNER_DIR==EPID_EVIDENCE_DIR)]
 	rtpd[, table(PHYSCANNER_DIR_CONSISTENT)]
+}
+
+vignetter.make<- function()
+{
+	require(rmarkdown)
+	require(markdowntemplates)
+	
+	setwd('/Users/Oliver/git/phyloscanner/phyloscannerR/vignettes')
+	infile <- 'UVRI.03.reconstruct_transmission_networks.Rmd'
+	rmarkdown::render(infile, output_format='pdf_document')	
+	
+}
+
+pty.MRC.stage2.get.networks<- function()
+{
+	require(tidyverse)
+	require(data.table)	
+	require(RBGL)
+	require(igraph)
+	require(network)
+	require(ggnet)
+	require(phyloscannerR)
+	
+	if(0)
+	{
+		indir <-  '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_phsc'
+		file.pairs <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
+		file.nets <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
+	}	
+	if(1)
+	{
+		indir <-  '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_phsc'
+		file.pairs <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
+		file.nets <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
+	}	
+	
+	#	find all pairs between whom transmission is not excluded
+	control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.6, neff.cut=3)
+	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE)
+	dpl <- copy(tmp$network.pairs)
+	dc <- copy(tmp$relationship.counts)
+	dw <- copy(tmp$windows)
+	save(dpl, dc, dw, file=file.pairs)
+	
+	#	construct networks between pairs	
+	tmp <- find.networks(dc, control=control, verbose=TRUE)
+	dnet <- copy(tmp$transmission.networks)
+	dchain <- copy(tmp$most.likely.transmission.chains)
+	
+	#	construct highly supported pairs
+	conf.cut <- 0.6
+	dconfpairs <- dchain %>% 
+			filter( SCORE_LINKED>conf.cut & pmax(SCORE_DIR_12, SCORE_DIR_21)>conf.cut) %>%
+			select(-c(SCORE_NW_12, SCORE_NW_12, SCORE_NW_AMB))
+	
+	save(dpl, dc, dw, dnet, dchain, dconfpairs, file=file.nets)
+	
+	load(file.nets)
+	setdiff(unique(sort( dnet%>%pull(IDCLU) )), unique(sort( dchain%>%pull(IDCLU) )) )
+	
+	#	34 80 96
+	
+	
+	# plot all networks
+	idclus <- sort(unique(dnet$IDCLU))
+	control<- list()
+	control$point.size = 10
+	control$edge.gap = 0.04
+	control$edge.size = 2
+	control$curvature = -0.2
+	control$arrow = arrow(length = unit(0.04, "npc"), type = "open")
+	control$curv.shift = 0.06
+	control$label.size = 3
+	control$node.label = "H" 
+	control$node.fill = NA_character_
+	control$node.shape = NA_character_
+	control$node.shape.values = c(`NA` = 16)
+	control$node.fill.values = c(`NA` = "steelblue2")
+	control$threshold.linked = 0.6
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu <- idclus[i]
+				df <- dnet %>% 
+						filter(IDCLU == idclu)
+				di <- df %>% 
+						select(H1, H2) %>% 
+						gather('HOST_TYPE','H') %>% 
+						select(-HOST_TYPE) %>%
+						distinct() 				
+				p <- phyloscannerR:::plot.network(df, di, control)					
+				p	
+			})
+	pdf(file= gsub('\\.rda','_trmnetwork_all.pdf',file.nets), w=8, h=8)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+	
+	# plot corresponding most likely chains	
+	pcs		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu <- idclus[i]
+				control$layout <- pns[[i]][['layout']] 
+				df <- dchain %>% 
+						filter(IDCLU == idclu)
+				di <- df %>% 
+						select(H1, H2) %>% 
+						gather('HOST_TYPE','H') %>% 
+						select(-HOST_TYPE) %>%
+						distinct() 
+				p <- phyloscannerR:::plot.chain(df, di, control)					
+				p	
+			})
+	pdf(file= gsub('\\.rda','_mostlikelychains_all.pdf',file.nets), w=8, h=8)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+	
+	# plot phyloscans of all likely pairs
+	hosts <- dw %>% select(H1, H2) %>% 
+			gather('HOST_TYPE','H') %>% 
+			select(-HOST_TYPE) %>%
+			distinct() %>%
+			arrange(H) %>%
+			pull(H)
+	tmp <- copy(dw)
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, dwin=tmp, inclusion = "both")
+	pdf(file= gsub('\\.rda','_phyloscans_all.pdf',file.nets), w=10, h=250)
+	print( tmp$graph )
+	dev.off()
+
+	
+}
+
+pty.MRC.stage2.get.phylo.relationships<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	
+	
+	if(0)
+	{
+		tree.dir <- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage2_output_newali_300_HKC'
+		tmpdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_tmp'
+		outdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage2_output_newali_300_HKC_phsc'
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+				
+	}
+	if(1)
+	{
+		tree.dir <- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage2_output_newali_250_HKC'
+		tmpdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_tmp'
+		outdir	<- '/rds/general/project/ratmann_pangea_analyses_mrc_uvri/live/MRCPopSample_phsc_stage2_output_newali_250_HKC_phsc'
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
+		
+	}
+	
+	
+	#	set phyloscanner variables
+	#	arguments as used for RCCS analysis
+	control	<- list()
+	control$allow.mt <- TRUE				
+	control$alignment.file.directory = NULL 
+	control$alignment.file.regex = NULL
+	control$blacklist.underrepresented = FALSE	
+	control$count.reads.in.parsimony = TRUE
+	control$distance.threshold <- '0.025 0.05'
+	control$do.dual.blacklisting = FALSE					
+	control$duplicate.file.directory = NULL
+	control$duplicate.file.regex = NULL
+	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
+	control$guess.multifurcation.threshold = FALSE
+	control$max.reads.per.host = 50
+	control$min.reads.per.host <- 30
+	control$min.tips.per.host <- 1	
+	control$multifurcation.threshold = 1e-5
+	control$multinomial= TRUE
+	control$norm.constants = NULL
+	control$norm.ref.file.name = system.file('HIV_DistanceNormalisationOverGenome.csv',package='phyloscannerR')
+	control$norm.standardise.gag.pol = TRUE
+	control$no.progress.bars = TRUE
+	control$outgroup.name = "REF_consensus"
+	control$output.dir = outdir
+	control$parsimony.blacklist.k = 20
+	control$prune.blacklist = FALSE
+	control$post.hoc.count.blacklisting <- TRUE
+	control$ratio.blacklist.threshold = 0 
+	control$raw.blacklist.threshold = 10					
+	control$recombination.file.directory = NULL
+	control$recombination.file.regex = NULL
+	control$relaxed.ancestry = TRUE
+	control$sankoff.k = 20
+	control$sankoff.unassigned.switch.threshold = 0
+	control$seed = 42
+	control$splits.rule = 's'
+	control$tip.regex = "^(.*)-fq[0-9]+_read_([0-9]+)_count_([0-9]+)$"
+	control$tree.file.regex = "^ptyr[0-9]+_InWindow_([0-9]+_to_[0-9]+)\\.tree$"
+	control$use.ff = FALSE
+	control$user.blacklist.directory = NULL 
+	control$user.blacklist.file.regex = NULL
+	control$verbosity = 1		
+	
+	
+	#	make bash for many files	
+	df <- tibble(F=list.files(tree.dir))
+	df <- df %>% 
+			mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
+					RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
+			mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
+			spread(TYPE, F) %>%
+			set_names(~ str_to_upper(.))	
+	tmp	<- sort(as.integer(gsub('ptyr([0-9]+)_(.*)','\\1',list.files(outdir, pattern='_workspace.rda$'))))
+	df <- df %>% filter(!RUN%in%tmp)
+	valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+	cmds <- vector('list',nrow(df))
+	for(i in seq_len(nrow(df)))
+	{
+		#	set input args
+		control$output.string <- paste0('ptyr',df$RUN[i])	
+		#	make script
+		tree.input <- file.path(tree.dir, df$TREES_NEWICK[i])
+		cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
+				tree.input, 
+				control,
+				valid.input.args=valid.input.args)
+		cmds[[i]] <- cmd		
+	}	
+	cat(cmds[[100]])
+	
+	#
+	# 	submit array job to HPC
+	#
+	#	make header
+	hpc.load			<- "module load anaconda3/personal"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 23						# walltime
+	if(0)		
+	{
+		hpc.q			<- NA						# PBS queue
+		hpc.mem			<- "36gb" 					# RAM		
+	}
+	#		or run this block to submit a job array to Oliver's machines
+	if(1)
+	{
+		hpc.q			<- "pqeelab"				# PBS queue
+		hpc.mem			<- "6gb" 					# RAM		
+	}
+	hpc.array			<- length(cmds)	# number of runs for job array	
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	#	make array job
+	for(i in 1:length(cmds))
+		cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+	cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(tmpdir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))
 }
 
 
