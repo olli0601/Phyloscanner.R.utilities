@@ -11000,8 +11000,8 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
 		
-		infile.participation.prior.samples	<- "190327_participation_model_samples.rda"
-		infile.sequencing.prior.samples		<- "190327_sequencing_model_samples.rda"
+		infile.participation.prior.samples	<- "190910_participation_age3_mp5_samples.rda"
+		infile.sequencing.prior.samples		<- "190910_sequencing_excART1_age3_ms1_samples.rda"
 		
 		infiles		<- c( "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
 						, "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf65_phylogeography_data_with_inmigrants.rda"
@@ -11023,7 +11023,7 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 							' -s "',file.path(indir,infile.sequencing.prior.samples),'"',
 							' -o ', paste(opt,collapse=''))
 			#	add PBS header
-			tmp	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")			
+			tmp	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q="pqeelab", hpc.mem="12gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")			
 			cmd	<- paste(tmp,cmd,sep='\n')
 			cat(cmd)	
 			#	qsub
@@ -11093,8 +11093,8 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		opts[[8]]	<- opt
 		
 		#opts		<- list(opts[[1]], opts[[2]], opts[[4]])
-		infile.participation.prior.samples	<- "190327_participation_model_samples.rda"
-		infile.sequencing.prior.samples		<- "190327_sequencing_model_samples.rda"		
+		infile.participation.prior.samples	<- "190910_participation_age3_mp5_samples.rda"
+		infile.sequencing.prior.samples		<- "190910_sequencing_excART1_age3_ms1_samples.rda"		
 		infile								<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
 								
 		for(ii in seq_along(opts))

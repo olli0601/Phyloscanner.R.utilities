@@ -1148,7 +1148,7 @@ vignetter.make<- function()
 	require(markdowntemplates)
 	
 	setwd('/Users/Oliver/git/phyloscanner/phyloscannerR/vignettes')
-	infile <- 'UVRI.03.reconstruct_transmission_networks.Rmd'
+	infile <- 'phyloscannerR_reconstruct_transmission_networks.Rmd'
 	rmarkdown::render(infile, output_format='pdf_document')	
 	
 }
