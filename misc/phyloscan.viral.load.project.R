@@ -8,6 +8,21 @@ date2numeric<- function( x )
 }
 
 
+vl.get.eligible.round17<- function()
+{
+	require(data.table)
+	
+	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_elibility.rda"
+	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	load(infile)
+	
+	#	subset to data of interest
+	de	<- as.data.table(eldat)	
+	de	<- subset(de, status%in%c('_Participated','Away','Blood refusal','Missing data','Other','Refused','urine sample'))
+	de	<- subset(de, visit==17)
+	
+}
+
 vl.get.data.round17<- function()
 {
 	require(data.table)
