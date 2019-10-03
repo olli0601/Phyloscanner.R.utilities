@@ -9366,10 +9366,10 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	#	read in all results
 	#
 	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
-	indir	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
+	#indir	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
 	outfile.base	<- paste0(indir,'/190327_sensitivity_')
 	infiles	<- data.table(FI=list.files(indir, pattern='flowsetc'))
-	infiles	<- subset(infiles, grepl('nsweep1e5',FI) & grepl('samcmc190327',FI) & !grepl('^todi',FI) & !grepl('prAreas',FI) & !grepl('beforeSort',FI))
+	infiles	<- subset(infiles, grepl('nsweep1e5',FI) & grepl('samcmc190327',FI) & !grepl('^todi',FI) & !grepl('prAreas',FI) & !grepl('beforeSort|copy',FI))
 	infiles[, OPT:= gsub('.*_opt([0-9]+)_.*','\\1',FI)]
 	infiles[, CONFCUT:= gsub('.*_conf([0-9]+)_.*','\\1',FI)]
 	set(infiles, infiles[,which(grepl('flowsetc',CONFCUT))], 'CONFCUT', '60')
@@ -9382,6 +9382,8 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	infiles[, OPT_UNKMIG:= factor(substring(OPT,5,5), levels=c('0','1'), labels=c('fishing communities','inland communities'))]
 	infiles[, STRAT:= factor(grepl('ByGender',FI), levels=c(FALSE,TRUE), labels=c('overall','by gender'))]
 	
+	which(infiles$FI=='RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt012401_aggregatedFishInland_flowsetc.csv')
+	
 	se	<- vector('list', nrow(infiles))
 	for(i in seq_len(nrow(infiles)))
 	{
@@ -9391,8 +9393,9 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 		set(tmp, NULL, colnames(tmp)[!colnames(tmp)%in%c("TR_TARGETCAT","REC_TARGETCAT","CL","CU","IL","IU","M","STAT","FLOWRATIO_CAT")], NULL)
 		for(x in c('STRAT','CONFCUT','MINDEPTH','OPT_PART','OPT_SEQ','OPT_MIG','OPT_UNKMIG','FI'))
 			set(tmp, NULL, x, infiles[[x]][i])
-		set(tmp, NULL, 'TR_TARGETCAT', tmp[,gsub('^e','external',gsub('^f','fishing',gsub('^i','inland',TR_TARGETCAT)))])
-		set(tmp, NULL, 'REC_TARGETCAT', tmp[,gsub('^e','external',gsub('^f','fishing',gsub('^i','inland',REC_TARGETCAT)))])
+		set(tmp, NULL, 'TR_TARGETCAT', tmp[,gsub('^external|^e','external',gsub('^fishing|^f','fishing',gsub('^inland|^i','inland',TR_TARGETCAT)))])
+		set(tmp, NULL, 'REC_TARGETCAT', tmp[,gsub('^external|^e','external',gsub('^fishing|^f','fishing',gsub('^inland|^i','inland',REC_TARGETCAT)))])
+		set(tmp, NULL, 'FLOWRATIO_CAT', tmp[, gsub('i:M/f:M','inland:M/fishing:M',gsub('i:F/f:F','inland:F/fishing:F',gsub('i/f','inland/fishing',FLOWRATIO_CAT)))])
 		se[[i]]	<- tmp
 		print(colnames(se[[i]]))
 	}
@@ -9409,48 +9412,41 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	#
 	df	<- subset(se, CONFCUT=='60%' & MINDEPTH=='30X' & OPT_MIG=='24 months' & OPT_UNKMIG=='fishing communities')
 	df[, SENS:= paste0(OPT_PART,', ', OPT_SEQ)]
-	tmp	<- df[, which(SENS=='Yes, Yes')]
+	tmp	<- df[, which(SENS=='P:1, S:1')]
 	set(df, tmp, 'SENS', df[tmp, paste0(SENS,' (central)')])
 	tmp	<- 'sampling'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=5)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=7)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
 	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
 	
 	
 	#
@@ -9463,43 +9459,36 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	tmp	<- 'mindepth'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=5)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=7)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
 	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
 	
 	
 	#
@@ -9512,43 +9501,36 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	tmp	<- 'confcut'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=5)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=7)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
 	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
 	
 	
 	#
@@ -9561,43 +9543,36 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	tmp	<- 'timeSinceMigration'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=4)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=5)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=6)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=7)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
 	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=2.25)
 	
 	
 	#
@@ -9610,44 +9585,36 @@ RakaiFull.phylogeography.190327.sensitivity.analyses<- function()
 	tmp	<- 'migrationUknOrigin'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.6)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
 	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=3)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,0.35)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\nestimated transmission flows\namong RCCS communities',x='',colour='') +
+			labs(y='\nestimated transmission flows\namong RCCS communities',x='',fill='') +
 			coord_flip()
 	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=4)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.25)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=1.5)
-	
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.25)	
 }
 
 RakaiFull.phylogeography.190327.highway.corridor<- function()
@@ -10303,7 +10270,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 	#	run MCMC
 	#
 	set.seed(42)
-	pp.n			<- 1e2 #1e4
+	pp.n			<- 1e4
 	pp.burnin		<- 0.9
 	pp.sweeps		<- 1e2
 	mc				<- list()
@@ -10353,40 +10320,6 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 			pdf.height.per.par=1.2, 
 			outfile.base=gsub('\\.rda','',mcmc.file))
 	source.attribution.mcmc.diagnostics(mcmc.file=mcmc.file, control=control)	
-	
-	# 	make data.table in long format and calculate key quantities
-tmp1    <- pars[,{
-			tmp <- min((max(value) - min(value))/2, 700)
-			list(VALUE= exp(-tmp)*sum(exp(tmp+value)))
-		},
-		by=c('VARIABLE','TR_TARGETCAT','REC_TARGETCAT','SAMPLE')]    
-# return sum of all lambda values
-tmp2    <- pars[, {
-			tmp <- min((max(value) - min(value))/2, 700)
-			list(SUM=exp(-tmp)*sum(exp(tmp+value)))
-		},
-		by=c('VARIABLE','SAMPLE')]    
-
-pars <- tmp1[0,]
-if(grepl(control$regex_pars,'LAMBDA'))
-{
-	pars <- rbind(pars, tmp1)
-	pars[, VARIABLE:= 'LAMBDA']
-}
-if(grepl(control$regex_pars,'LOG_LAMBDA'))
-{
-	tmp <- copy(tmp1)
-	set(tmp, NULL, 'VALUE', log(tmp$VALUE))
-	pars <- rbind(pars, tmp)
-}
-if(grepl(control$regex_pars,'PI'))	
-{
-	tmp <- merge(tmp1, tmp2, by=c('VARIABLE','SAMPLE'))
-	tmp[, VALUE:=VALUE/SUM]
-	tmp[, VARIABLE:='PI']
-	set(tmp, NULL, 'SUM', NULL)
-	pars <- rbind(pars, tmp)
-}
 
 	#	collect log lambda values
 	colnames(mc$pars[['LOG_LAMBDA']])	<- paste0('LOG_LAMBDA-',seq_len(ncol(mc$pars[['LOG_LAMBDA']])))
