@@ -11291,27 +11291,24 @@ RakaiFull.phylogeography.190327.flows.wrapper<- function()
 		opt$set.missing.migloc.to.inland	<- 0
 		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
 		opts[[8]]	<- opt	
+		opt									<- list()
+		opt$adjust.sequencing.bias			<- 2
+		opt$adjust.participation.bias		<- 0
+		opt$migration.def.code				<- '24'
+		opt$set.missing.migloc.to.inland	<- 0
+		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
+		opts[[9]]	<- opt
+		opt									<- list()
+		opt$adjust.sequencing.bias			<- 2
+		opt$adjust.participation.bias		<- 1
+		opt$migration.def.code				<- '24'
+		opt$set.missing.migloc.to.inland	<- 0
+		opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
+		opts[[10]]	<- opt			
 		
-		if(0)
-		{
-			opt									<- list()
-			opt$adjust.sequencing.bias			<- 2
-			opt$adjust.participation.bias		<- 0
-			opt$migration.def.code				<- '24'
-			opt$set.missing.migloc.to.inland	<- 0
-			opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-			opts[[9]]	<- opt
-			opt									<- list()
-			opt$adjust.sequencing.bias			<- 2
-			opt$adjust.participation.bias		<- 1
-			opt$migration.def.code				<- '24'
-			opt$set.missing.migloc.to.inland	<- 0
-			opt$set.missing.migloc.to.fishing	<- 1-opt$set.missing.migloc.to.inland
-			opts[[10]]	<- opt			
-		}
-				
-		infile <- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-								
+			
+		opts <- list( opts[[8]] )		
+		infile <- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"				
 		for(ii in seq_along(opts))
 		{
 			#	main command
