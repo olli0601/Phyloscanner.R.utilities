@@ -9898,16 +9898,29 @@ RakaiFull.phylogeography.190327.highway.distancesToHighway<- function()
 
 RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 {	
+	require(data.table)
+	require(phyloflows)
+	
 	indir	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
 	indir2	<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group"
 	indir	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
 	indir2	<- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"
 	
 	infile.inference.data			<- file.path(indir,"RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda")
-	infile.inference.mcmc			<- file.path(indir,"RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda")
+	infile.inference.mcmc			<- file.path(indir,paste0("RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_sweepgrp",1:10,".rda"))
 	infile.subdistricts				<- file.path(indir2,"Raster_HIVandPopcounts.rda")
 	
-	if(0)
+	if(1)
+	{
+		predict.with.infcounts	<- 0
+		predict.inflation		<- 20
+		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
+				infile.inference.mcmc=infile.inference.mcmc, 
+				infile.subdistricts=infile.subdistricts, 
+				predict.with.infcounts=predict.with.infcounts, 
+				predict.inflation=predict.inflation)		
+	}
+	if(1)
 	{
 		predict.with.infcounts	<- 1
 		predict.inflation		<- 20
@@ -9917,7 +9930,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 1
 		predict.inflation		<- 10
@@ -9927,7 +9940,7 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 1
 		predict.inflation		<- 30
@@ -9937,20 +9950,10 @@ RakaiFull.phylogeography.190327.predict.areaflows.wrapper<- function()
 				predict.with.infcounts=predict.with.infcounts, 
 				predict.inflation=predict.inflation)		
 	}
-	if(0)
+	if(1)
 	{
 		predict.with.infcounts	<- 0
 		predict.inflation		<- 10
-		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
-				infile.inference.mcmc=infile.inference.mcmc, 
-				infile.subdistricts=infile.subdistricts, 
-				predict.with.infcounts=predict.with.infcounts, 
-				predict.inflation=predict.inflation)		
-	}
-	if(0)
-	{
-		predict.with.infcounts	<- 0
-		predict.inflation		<- 20
 		RakaiFull.phylogeography.190327.predict.areaflows(	infile.inference.data=infile.inference.data, 
 				infile.inference.mcmc=infile.inference.mcmc, 
 				infile.subdistricts=infile.subdistricts, 
@@ -13339,8 +13342,8 @@ RakaiFull.phylogeography.191001.figure.transmissionflowratio<- function()
 	infiles	<- list.files(indir, pattern='aggregatedFishInland|prAreas')
 	infiles	<- infiles[grepl('conf60',infiles) & grepl('opt112401',infiles) & grepl('flowsetc',infiles) & !grepl('beforeSort|prAreas|copy',infiles) ]
 	
-	df		<- as.data.table(read.csv(file.path(indir, infiles[1]), header=FALSE, stringsAsFactors=FALSE))
-	setnames(df, colnames(df), unname(unlist( df[nrow(df),] )))
+	df		<- as.data.table(read.csv(file.path(indir, infiles[1]), header=TRUE, stringsAsFactors=FALSE))
+	#setnames(df, colnames(df), unname(unlist( df[nrow(df),] )))
 	df[, ANA:='overall']
 	tmp		<- as.data.table(read.csv(file.path(indir, infiles[2])))
 	tmp[, ANA:= as.character(factor(grepl('i\\:M',FLOWRATIO_CAT), levels=c(TRUE,FALSE), labels=c('male to female','female to male')))]
@@ -13352,21 +13355,19 @@ RakaiFull.phylogeography.191001.figure.transmissionflowratio<- function()
 	for(x in c('CL','CU','IL','IU','M'))
 		set(df, NULL, x, as.numeric(df[[x]]))
 	
-	ggplot(df, aes(y=STAT)) + 			
-			geom_vline(xintercept=1, lty=2) +
-			geom_point(aes(x=M), size=2) +
-			geom_errorbarh(aes(xmin=CL, xmax=CU), height=0.6) +
-			scale_x_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
-			labs(x= '\nflows inland->fishing / flows fishing->inland', y='') +
-			coord_cartesian(xlim=c(1/10,10)) +
+	ggplot(df, aes(x=STAT)) +
+			geom_hline(yintercept=1, lty=2) +
+			geom_boxplot(aes(middle=M, upper=IL, lower=IU, ymin=CL, ymax=CU), stat='identity', fill='grey50') +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
+			labs(y= '\nflows inland->fishing / flows fishing->inland', x='') +
+			coord_flip(ylim=c(1/10,10)) +
 			theme_bw() +
 			theme(axis.title.y=element_blank(),
 					axis.text.y=element_blank(),
 					axis.ticks.y=element_blank(),					
 					panel.grid.minor.x=element_blank(),
-					panel.grid.major.y=element_blank())
-	#ggsave(file=file.path(indir,'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_transmissionflows.pdf'), w=7, h=6, useDingbats=FALSE)
-	ggsave(file=file.path(indir,'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_transmissionflows.pdf'), w=7, h=2.5, useDingbats=FALSE)	
+					panel.grid.major.y=element_blank()) 
+	ggsave(file=file.path(indir,'RakaiAll_output_181006_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_transmissionflows.pdf'), w=7, h=1.5, useDingbats=FALSE)	
 }
 
 RakaiFull.phylogeography.190327.migration.datasets<- function()

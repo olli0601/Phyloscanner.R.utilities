@@ -32,23 +32,24 @@ project.dual<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#pty.pipeline.phyloscanner.180302.beehive67.process()
 	#pty.pipeline.phyloscanner.180605.MunichCluster.process()	
-	RakaiFull.phylogeography.190327.flows.wrapper()
+	#RakaiFull.phylogeography.190327.flows.wrapper()
 	#pty.MRC.stage1.generate.trees()
 	#pty.MRC.stage1.zip.trees()
 	#	various   
-	if(0) 
+	if(1) 
 	{		
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=171, hpc.q='pqeelab', hpc.mem="6gb",  hpc.nproc=1, hpc.load="module load anaconda3/personal")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=71, hpc.q=NA, hpc.mem="36gb",  hpc.nproc=1, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		#cmd		<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.walltime=46, hpc.q=NA, hpc.mem="190gb",  hpc.nproc=12, hpc.load="module load intel-suite/2015.1 mpi R/3.3.3 raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools")
 		
-		hpc.load	<- "module load anaconda3/personal"		 
+		#hpc.load	<- "module load anaconda3/personal"		
+		hpc.load	<- "module load R/3.3.3"
 		hpc.select	<- 1						# number of nodes
 		hpc.nproc	<- 1						# number of processors on node
 		hpc.walltime<- 123						# walltime
 		hpc.q		<- "pqeelab"				# PBS queue
-		hpc.mem		<- "6gb" 					# RAM		
+		hpc.mem		<- "12gb" 					# RAM		
 		pbshead		<- "#!/bin/sh"
 		tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
 		pbshead		<- paste(pbshead, tmp, sep = "\n")
@@ -85,8 +86,8 @@ pty.various	<- function()
 	#project.RakaiAll.setup.phyloscanner.170301.stagetwo.preprocessing2()
 	#RakaiFull.phylogeography.181006.flows.wrapper()
 	#Rakai190327.RCCStransmissionflows.inference.age3model()
-	#RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
-	pty.MRC.stage1.zip.trees()
+	RakaiFull.phylogeography.190327.predict.areaflows.wrapper()
+	#pty.MRC.stage1.zip.trees()	
 	#couples.distances.from.trees()
 	#pty.MRC.stage1.find.pairs.in.networks()
 	#pty.MRC.stage2.identify.potential.networks()
