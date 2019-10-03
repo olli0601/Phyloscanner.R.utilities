@@ -8886,23 +8886,22 @@ RakaiFull.phylogeography.190327.predict.areaflows.debug<- function()
 RakaiFull.phylogeography.190327.sensitivity.analyses.prep<- function()
 {
 	require(phyloflows)
-	mcmc.files		<- c(	"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt113601.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf50_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf55_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf70_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min10_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min20_phylogeography_samcmc190327_nsweep1e5_opt112401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt012401.rda",
-							"~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt002401.rda"
-							)
+	indir <- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	indir <- "/rds/general/user/or105/home/WORK/Gates_2014/Rakai"	
 	mcmc.files <- list()
-	mcmc.files[[1]] <- paste0('/rds/general/user/or105/home/WORK/Gates_2014/Rakai/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt202401_sweepgrp',1:10,'.rda')
-	mcmc.files[[2]] <- paste0('/rds/general/user/or105/home/WORK/Gates_2014/Rakai/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt212401_sweepgrp',1:10,'.rda')						
+	mcmc.files[[1]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt012401_sweepgrp',1:10,'.rda'))
+	mcmc.files[[2]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt102401_sweepgrp',1:10,'.rda'))							
+	mcmc.files[[3]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112410_sweepgrp',1:10,'.rda'))
+	mcmc.files[[4]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt110601_sweepgrp',1:10,'.rda'))							
+	mcmc.files[[5]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt111201_sweepgrp',1:10,'.rda'))
+	mcmc.files[[6]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt113601_sweepgrp',1:10,'.rda'))						
+	mcmc.files[[7]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt114801_sweepgrp',1:10,'.rda'))		
+	mcmc.files[[8]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt202401_sweepgrp',1:10,'.rda'))
+	mcmc.files[[9]] <- paste0(file.path(indir,'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt212401_sweepgrp',1:10,'.rda'))						
 	for(i in seq_along(mcmc.files))
 	{
 		mcmc.file		<- mcmc.files[[i]]
-		cat('\nProcessing',mcmc.file)
+		cat('\nProcessing',mcmc.file[1])
 		
 		aggregate.files	<- c( 	gsub('_sweepgrp[0-9]+\\.rda','_aggregatedFishInland.csv',mcmc.file[1]),
 								gsub('_sweepgrp[0-9]+\\.rda','_aggregatedFishInlandByGender.csv',mcmc.file[1]))
