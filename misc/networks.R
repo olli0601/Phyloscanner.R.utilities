@@ -535,3 +535,49 @@ couples.distances.from.trees <- function()
 		unlink(tmpfile2, recursive=TRUE)
 	}
 }
+
+networks.with.high.prop.women<- function()
+{
+	infile			<- "~/sandbox/DeepSeqProjects/RakaiPopSample_data/Dataset_S2.csv"
+	dmeta			<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
+	infile			<- '~/sandbox/DeepSeqProjects/RakaiPopSample_phyloscanner_analysis_190706/Rakai_phscnetworks_190706.rda'
+	load(infile)
+	
+	#	select networks of size > 4 with at most one man 
+	#	or size 4 all women
+	#	extract females 
+	dfem <- dnet %>% 
+			filter(IDCLU%in%c(4, 8, 27, 29, 30, 33, 36, 40, 68)) %>% 
+			select(H1,H2) %>% 
+			gather('key','AID') %>%
+			select(AID) %>%
+			distinct() %>%
+			filter(grepl('F$',AID))
+	#	de-anonymise
+	infile <- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv'
+	da	<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
+	dfem <- dfem %>% left_join(da, by='AID')
+	
+	#	
+	outfile <- '~/Box Sync/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_primary_selection.csv'
+	write.csv(dfem, file=outfile)
+	
+	#	select networks of size > 3 with at most one man 	
+	#	extract females
+	dfem <- dnet %>% 
+			filter(IDCLU%in%c(50, 54, 60, 61, 64, 65, 69, 72 )) %>% 
+			select(H1,H2) %>% 
+			gather('key','AID') %>%
+			select(AID) %>%
+			distinct() %>%
+			filter(grepl('F$',AID))
+	#	de-anonymise
+	infile <- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv'
+	da	<- as_tibble(read.csv(infile, stringsAsFactors=FALSE))
+	dfem <- dfem %>% left_join(da, by='AID')
+	
+	#	
+	outfile <- '~/Box Sync/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_backup_selection.csv'
+	write.csv(dfem, file=outfile)
+	
+}

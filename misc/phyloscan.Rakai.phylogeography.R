@@ -9187,43 +9187,36 @@ RakaiFull.phylogeography.190327.sensitivity.analyses.prediction<- function()
 	tmp	<- 'inflation'
 	#	
 	ggplot( subset(df, STAT=='flows' & STRAT=='overall')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,1)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\npredicted transmission flows\nwithin and between Rakai inland and fishing area',x='',colour='') +
+			labs(y='\npredicted transmission flows\nwithin and between Rakai inland and fishing area',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=6)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_overall.pdf'), w=8, h=7)
 	ggplot( subset(df, STAT=='flows' & STRAT=='by gender')) +
-			geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			geom_boxplot(aes(x=TRM_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=TRM_CAT, colour=SENS), position=position_dodge(0.9)) +
 			scale_y_continuous(labels=scales::percent, expand=c(0,0), lim=c(0,1)) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\npredicted transmission flows\nwithin and between Rakai inland and fishing area',x='',colour='') +
+			labs(y='\npredicted transmission flows\nwithin and between Rakai inland and fishing area',x='',fill='') +
 			coord_flip()
-	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=8)
+	ggsave(file=paste0(outfile.base,tmp,'_flows_byGender.pdf'), w=8, h=7)
 	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='overall')) +
 			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
+			geom_boxplot(aes(x=FLOWRATIO_CAT, middle=M, lower=IL, upper=IU, ymin=CL, ymax=CU, fill=SENS), position=position_dodge(0.9), stat='identity') +
+			#geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			#geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
+			scale_y_log10(expand=c(0,0), breaks=c(1/10,1/4,1/2,1,2,4,10), labels=c('1/10','1/4','1/2','1','2','4','10')) +
 			scale_colour_brewer(palette='Dark2') +
 			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500))
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=2.25)
-	ggplot(subset(df, STAT=='flow_ratio' & STRAT=='by gender')) +
-			geom_hline(yintercept=1, lty=2) +
-			geom_point(aes(y=M, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			geom_errorbar(aes(ymin=CL, ymax=CU, x=FLOWRATIO_CAT, colour=SENS), position=position_dodge(0.9)) +
-			scale_y_log10(expand=c(0,0), breaks=c(1/500, 1/100, 1/50,1/20,1/10,1/4,1/2,1,2,4,10,20,50,100, 500), labels=c('1/500','1/100','1/50','1/20','1/10','1/4','1/2','1','2','4','10','20','50','100','500')) +
-			scale_colour_brewer(palette='Dark2') +
-			theme_bw() +
-			labs(y='\ntransmission flow ratio',x='',colour='') +
-			coord_flip(ylim=c(1/500,500)) 
-	ggsave(file=paste0(outfile.base,tmp,'_flowratio_byGender.pdf'), w=8, h=3.5)
+			labs(y='\ntransmission flow ratio',x='',fill='') +
+			coord_flip(ylim=c(1/10,10))
+	ggsave(file=paste0(outfile.base,tmp,'_flowratio_overall.pdf'), w=8, h=1.75)
 }
 
 RakaiFull.phylogeography.190327.sensitivity.analyses2<- function()
@@ -10317,7 +10310,7 @@ RakaiFull.phylogeography.190327.predict.areaflows<- function(infile.inference.da
 			credibility.interval=0.95, 
 			pdf.plot.all.parameters=TRUE, 
 			pdf.plot.n.worst.case.parameters=0, 
-			pdf.height.per.par=1.2, 
+			pdf.height.per.par=2, 
 			outfile.base=gsub('\\.rda','',mcmc.file))
 	source.attribution.mcmc.diagnostics(mcmc.file=mcmc.file, control=control)	
 
@@ -11717,10 +11710,10 @@ RakaiFull.phylogeography.190327.figure.prevalence.gender<- function()
 	tmp[COMM_TYPE!='fisherfolk', list(SD_M= sd(PM),  SD_F= sd(PF) )]
 }
 
-RakaiFull.phylogeography.190327.figure.flows<- function()
+RakaiFull.phylogeography.191001.figure.flows<- function()
 {
 	infile.inference	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
-	mcmc.file			<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401.rda'
+	mcmc.file			<- paste0('~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_samcmc190327_nsweep1e5_opt112401_sweepgrp',1:10,'.rda')
 	
 	opt									<- list()
 	opt$adjust.sequencing.bias			<- 1
@@ -11773,15 +11766,15 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 		setnames(rtr, 'TR_COMM_NUM_A_MIG_4YR', 'TR_COMM_NUM_A_MIG')
 	}
 	
-	rtr	<- subset(rtr, select=c(	'PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
+	rtr	<- subset(rtr, select=c('PAIRID','TR_RID','TR_COMM_NUM','TR_COMM_NUM_A','TR_COMM_NUM_A_MIG',
 					'TR_SEX','TR_BIRTHDATE','TR_COMM_TYPE','TR_INMIG_LOC','TR_INMIGRATE',
 					'REC_RID','REC_COMM_NUM','REC_COMM_NUM_A',
 					'REC_SEX','REC_BIRTHDATE','REC_COMM_TYPE','REC_INMIGRATE'))
-	
 	# inmigrant status
 	rtr[, TR_INMIGRANT:= as.integer(TR_INMIGRATE!='resident')]
 	rtr[, REC_INMIGRANT:= as.integer(grepl('inmigrant',REC_INMIGRATE))]
 	set(rtr, NULL, 'TR_COMM_NUM_A_MIG', rtr[, gsub('[0-9]+','',TR_COMM_NUM_A_MIG)])
+	
 	#	set unknown origin to either fishing or inland
 	tmp	<- rtr[, which(TR_INMIGRATE=='inmigrant_from_unknown')]
 	if(opt$set.missing.migloc.to.inland)
@@ -11791,7 +11784,7 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 	}		
 	if(opt$set.missing.migloc.to.fishing)
 	{
-		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_fisherfolk')
+		set(rtr, tmp, 'TR_INMIGRATE', 'inmigrant_from_fish')
 		set(rtr, tmp, 'TR_COMM_NUM_A_MIG', 'fmig')
 	}
 	
@@ -11799,35 +11792,88 @@ RakaiFull.phylogeography.190327.figure.flows<- function()
 	# add age 
 	rtr[,TR_AGE_AT_MID:=2013.25-TR_BIRTHDATE]
 	rtr[,REC_AGE_AT_MID:=2013.25-REC_BIRTHDATE]
+	
 	# impute age
 	tmp	<- which(is.na(rtr$TR_AGE_AT_MID))
 	set(rtr, tmp, 'TR_AGE_AT_MID', mean(rtr$TR_AGE_AT_MID[which(!is.na(rtr$TR_AGE_AT_MID))]) )
 	tmp	<- which(is.na(rtr$REC_AGE_AT_MID))
 	set(rtr, tmp, 'REC_AGE_AT_MID', mean(rtr$REC_AGE_AT_MID[which(!is.na(rtr$REC_AGE_AT_MID))]) )
+	
 	# fixup from latest surveillance data
 	set(rtr, rtr[,which(TR_RID=="C036808")], 'TR_AGE_AT_MID', 39.946)	
 	set(rtr, rtr[,which(REC_RID=="G036802")], 'REC_AGE_AT_MID',	44.946)	
 	set(rtr, rtr[, which(REC_RID=="H103745")], 'REC_AGE_AT_MID', 20.42)	
 	set(rtr, rtr[, which(REC_RID=="C121534")],'REC_AGE_AT_MID', 28.549)
+	
 	#	stratify age
 	rtr[, TR_AGE_AT_MID_C:= as.character(cut(TR_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
 	rtr[, REC_AGE_AT_MID_C:= as.character(cut(REC_AGE_AT_MID, breaks=c(10,25,35,65), labels=c('15-24','25-34','35+'), right=FALSE))]
 	stopifnot( nrow(subset(rtr, is.na(TR_AGE_AT_MID_C)))==0 )
 	stopifnot( nrow(subset(rtr, is.na(REC_AGE_AT_MID_C)))==0 )
 	
-	#	build category to match with sampling data tables 
-	rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
-	rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_NUM_A,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
-	#	build transmission flow category 
-	rtr[, REC_TRM_CATEGORY:= paste0(REC_COMM_NUM_A,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
-	rtr[, TR_TRM_CATEGORY:= paste0(TR_COMM_NUM_A_MIG,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	# define TR_COMM_TYPE_F, REC_COMM_TYPE_F (i: inland; f: fishing) 
+	rtr[,TR_COMM_TYPE_F:=substr(TR_COMM_TYPE,1,1)]
+	rtr[substr(TR_COMM_TYPE,1,1)!='f',TR_COMM_TYPE_F:='i']
+	rtr[,REC_COMM_TYPE_F:=substr(REC_COMM_TYPE,1,1)]
+	rtr[substr(REC_COMM_TYPE,1,1)!='f',REC_COMM_TYPE_F:='i']
 	
-	#
+	# define TR_COMM_TYPE_F_MIG (i: inland; f: fishing; e: external) 
+	rtr[,TR_COMM_TYPE_F_MIG:=substr(TR_COMM_NUM_A_MIG,1,1)]
+	rtr[substr(TR_COMM_NUM_A_MIG,1,1)=='a' | substr(TR_COMM_NUM_A_MIG,1,1)=='i'|
+					substr(TR_COMM_NUM_A_MIG,1,1)=='t',TR_COMM_TYPE_F_MIG:='i']
+	
+	#	build category to match with sampling data tables 
+	rtr[, REC_SAMPLING_CATEGORY:= paste0(REC_COMM_TYPE_F,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_SAMPLING_CATEGORY:= paste0(TR_COMM_TYPE_F,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	#	build transmission flow category 
+	rtr[, REC_TRM_CATEGORY:= paste0(REC_COMM_TYPE_F,':',REC_SEX,':',REC_AGE_AT_MID_C,':',REC_INMIGRANT)]
+	rtr[, TR_TRM_CATEGORY:= paste0(TR_COMM_TYPE_F_MIG,':',TR_SEX,':',TR_AGE_AT_MID_C,':',TR_INMIGRANT)]
+	
+	# make all combinations of variables
+	dac <- expand.grid( 	COMM_TYPE_F= sort(unique(c(rtr$REC_COMM_TYPE_F, rtr$TR_COMM_TYPE_F))),
+			SEX=  sort(unique(c(rtr$REC_SEX, rtr$TR_SEX))),
+			AGE_AT_MID_C= sort(unique(c(rtr$REC_AGE_AT_MID_C, rtr$TR_AGE_AT_MID_C))),
+			INMIGRANT= sort(unique(c(rtr$REC_INMIGRANT, rtr$TR_INMIGRANT)))
+	)
+	dac <- as.data.table(dac)  				
+	dac[, CATEGORY:= paste0(COMM_TYPE_F, ':', SEX, ':', AGE_AT_MID_C, ':', INMIGRANT)]  					
+	dac <- as.data.table(expand.grid(TR_CATEGORY= dac$CATEGORY, REC_CATEGORY= dac$CATEGORY))
+	# ignore Male-Male and Female-Female combinations
+	dac <- subset(dac, !(grepl('F',TR_CATEGORY)&grepl('F',REC_CATEGORY)) &
+					!(grepl('M',TR_CATEGORY)&grepl('M',REC_CATEGORY))  
+	)
+	# add transmission categories
+	dac[, REC_TRM_CATEGORY:= REC_CATEGORY]
+	dac[, TR_TRM_CATEGORY:= TR_CATEGORY]  
+	# add inmigrants from external communities
+	tmp <- dac[grepl('1$',TR_CATEGORY)]
+	set(tmp, NULL, 'TR_TRM_CATEGORY', tmp[,gsub('^[f|i]','e',TR_CATEGORY)]) 
+	dac <- rbind(dac, tmp)  
+	# add inmigrants sampled in inland and migrated from fishing
+	tmp <- dac[grepl('1$',TR_CATEGORY) & grepl('^i',TR_CATEGORY)]
+	set(tmp, NULL, 'TR_TRM_CATEGORY', tmp[,gsub('^i','f',TR_CATEGORY)]) 
+	dac <- rbind(dac, tmp)  
+	# add inmigrants sampled in fishing and migrated from inland
+	tmp <- dac[grepl('1$',TR_CATEGORY) & grepl('^f',TR_CATEGORY)]
+	set(tmp, NULL, 'TR_TRM_CATEGORY', tmp[,gsub('^f','i',TR_CATEGORY)]) 
+	dac <- rbind(dac, tmp)  
+	# remove duplicated rows 
+	# TR_SAMPLING_CATEGORY f: F: 15-24: 1 and i: F: 15-24: 1 are all set to e: F: 15-24: 1
+	dac <- unique(dac)
+	setnames(dac, c('TR_CATEGORY', 'REC_CATEGORY'), c('TR_SAMPLING_CATEGORY', 'REC_SAMPLING_CATEGORY'))
+	
 	#	calculate observed number of transmissions
 	#
 	dobs	<- rtr[, list( TRM_OBS=length(unique(PAIRID))), by=c('TR_TRM_CATEGORY','REC_TRM_CATEGORY','TR_SAMPLING_CATEGORY','REC_SAMPLING_CATEGORY')]
-	setkey(dobs, TR_TRM_CATEGORY, REC_TRM_CATEGORY )	
-	dobs[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobs))]
+	dac[, DUMMY:= 1]
+	dobs <- merge(dac, dobs, by=c('TR_TRM_CATEGORY', 'REC_TRM_CATEGORY','TR_SAMPLING_CATEGORY', 'REC_SAMPLING_CATEGORY'), all=TRUE)
+	stopifnot( dobs[, !any(is.na(DUMMY))] )
+	set(dobs, NULL, 'DUMMY', NULL)
+	set(dobs, dobs[, which(is.na(TRM_OBS))], 'TRM_OBS', 0L)
+	
+	#	make PAIR_ID
+	setkey(dobs, TR_TRM_CATEGORY, REC_TRM_CATEGORY,TR_SAMPLING_CATEGORY,REC_SAMPLING_CATEGORY)	
+	dobs[, TRM_CAT_PAIR_ID:= seq_len(nrow(dobs))]		
 	
 	quantiles	<- c('CL'=0.025,'IL'=0.25,'M'=0.5,'IU'=0.75,'CU'=0.975)
 	
@@ -13273,7 +13319,7 @@ RakaiFull.phylogeography.191001.figure.transmissionflowratio<- function()
 {
 	indir	<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run'
 	infiles	<- list.files(indir, pattern='aggregatedFishInland|prAreas')
-	infiles	<- infiles[grepl('conf60',infiles) & grepl('opt112401',infiles) & grepl('flowsetc',infiles) & !grepl('beforeSort|prAreas|copy',infiles) ]
+	infiles	<- infiles[grepl('conf60',infiles) & grepl('opt112401020',infiles) & grepl('flowsetc',infiles) & grepl('prAreas',infiles) & !grepl('beforeSort|copy',infiles) ]
 	
 	df		<- as.data.table(read.csv(file.path(indir, infiles[1]), header=TRUE, stringsAsFactors=FALSE))
 	#setnames(df, colnames(df), unname(unlist( df[nrow(df),] )))

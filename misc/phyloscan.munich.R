@@ -608,6 +608,237 @@ Munich.phyloscanner.190715.get.phylo.relationships<- function()
 	cat(system(cmd, intern= TRUE))
 }
 
+Munich.phyloscanner.190822.get.phyloscans<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	
+	indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
+	outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'
+	
+	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
+			mutate( PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F))) ) %>%
+			arrange(PTY_RUN)	
+	dwins <- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{				
+		tmp	<- load( infiles$F[i] )
+		dwin <- dwin %>% mutate(PTY_RUN:= infiles$PTY_RUN[i])
+		dwins[[i]] <- dwin				
+	}		
+	dwins <- do.call('rbind', dwins)
+	dwins <- dwins %>% filter(grepl('^MC',host.1) & grepl('^MC',host.2))
+	
+	tmp <- dwins %>% 
+			group_by(PTY_RUN,host.1,host.2) %>%
+			summarise(N= length(tree.id)) %>%
+			ungroup() %>%
+			group_by(host.1,host.2) %>%
+			summarise(PTY_RUN= PTY_RUN[which.max(N)])
+	dwins <- dwins %>% right_join(tmp, by=c('host.1','host.2','PTY_RUN'))
+	
+	hosts <- dwins %>% select(host.1,host.2) %>% gather('key','H') %>% select(H) %>% distinct() %>% pull()
+	#hosts <- c('MC-16-01302','MC-16-01663')
+	inclusion <- "both"# "either"
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = inclusion, dwin=dwins)
+	pdf(file=paste0(outfile.base,'_allscans.pdf'), w=15, h=300)
+	print(tmp$graph)
+	dev.off()
+	
+	hosts <- "MC-17-04517"
+	inclusion <- "either"
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = inclusion, dwin=dwins)
+	pdf(file=paste0(outfile.base,'_MC-17-04517scans.pdf'), w=15, h=30)
+	print(tmp$graph)
+	dev.off()
+	
+}
+
+Munich.phyloscanner.190822.get.networks<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	if(1)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'		
+	}
+	if(0)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_025_50'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_25_50'		
+	}
+	
+	outfile <- paste0(outfile.base,'_phscnetworks.rda')
+	control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.6, neff.cut=3)
+	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE)
+	dpl <- copy(tmp$linked.pairs)
+	dc <- copy(tmp$relationship.counts)
+	dw <- copy(tmp$windows)	
+	tmp <- find.networks(dc, control=control, verbose=TRUE)
+	dnet <- copy(tmp$transmission.networks)
+	dchain <- copy(tmp$most.likely.transmission.chains)
+	save(dpl, dc, dw, dnet, dchain, file=outfile)
+	
+	#	
+	# plot all networks
+	idclus <- sort(unique(dnet$IDCLU))
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu <- idclus[i]
+				df <- dnet %>% 
+						filter(IDCLU == idclu)		
+				di <- df %>% 
+						select(H1,H2) %>% 
+						gather('key','H') %>%
+						select(H) %>%
+						distinct()
+				control<- list()
+				control$point.size = 10
+				control$edge.gap = 0.04
+				control$edge.size = 2
+				control$curvature = -0.2
+				control$arrow = arrow(length = unit(0.04, "npc"), type = "open")
+				control$curv.shift = 0.06
+				control$label.size = 3
+				control$node.label = "H" 
+				control$node.fill = NA_character_
+				control$node.shape = NA_character_
+				control$node.shape.values = c(`NA` = 16)
+				control$node.fill.values = c(`NA` = "steelblue2")
+				control$threshold.linked = 0.6
+				p <- plot.network(df, di, control)					
+				p	
+			})
+	pdf(file= gsub('\\.rda','_trmnetwork_all.pdf',outfile), w=12, h=12)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+	
+	#	on Munich network (IDCLU==1)
+	#	if support for direction, plot just that arrow
+	#	otherwise, plot undirected arrow
+	#	use colour scheme for total score
+
+	dlin <- dc %>% 
+			filter(CATEGORISATION=='close.and.adjacent.cat' & TYPE=='close.and.adjacent' & SCORE>0.6 & grepl('^MC',H1) & grepl('^MC',H2)) 
+	ddir <- dc %>% 
+			filter(CATEGORISATION=='close.and.adjacent.and.directed.cat' & SCORE>0.6 & grepl('^MC',H1) & grepl('^MC',H2)) %>% 
+			select(H1,H2,TYPE,SCORE ) %>%
+			rename(DIR_TYPE:=TYPE, DIR_SCORE:=SCORE)
+			
+	tmp <- dlin %>% select(H1, H2) %>% distinct()			
+	tmp <- igraph:::graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+	rtc <- tibble(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)
+	rtc <- rtc %>% 
+			group_by(CLU) %>% 
+			summarise( CLU_SIZE:=length(ID) ) %>% 
+			arrange(desc(CLU_SIZE)) %>%
+			ungroup() %>%
+			mutate( IDCLU:=seq_along(CLU_SIZE) ) %>%
+			inner_join(rtc, by='CLU') %>%
+			select(-CLU)	
+	#	add info on edges: network membership
+	rtc <- rtc %>% rename(H1:=ID)
+	dlin <- dlin %>% inner_join(rtc, by='H1')
+	rtc <- rtc %>% select(-CLU_SIZE)
+	rtc <- rtc %>% rename(H2:=H1)	
+	dlin <- dlin %>% inner_join(rtc, by=c('H2','IDCLU'))	
+	#	add info on edges: if direction strongly supported
+	dlin <- dlin %>% 
+			select(IDCLU, H1,H2,SCORE ) %>%
+			rename(LIN_SCORE:=SCORE)
+	dlin <- dlin %>% left_join(ddir, by=c('H1','H2'))
+	#	plot
+	point.size <- 10
+	edge.gap <- 0.04
+	edge.size <- 2	
+	arrow <- arrow(length = unit(0.04, "npc"), type = "open")	
+	label.size <- 3 
+	node.shape.values <- c(`NA` = 16)
+	node.fill.values <- c(`NA` = "steelblue2")	
+	df <- copy(dlin)
+	layout	<- as_tibble(ggnet2(network(df %>% select(H1,H2) %>% distinct(), directed=FALSE, matrix.type="edgelist"))$data[,c("label", "x", "y")])
+	setnames(layout, c('label','x','y'), c('H1','H1_X','H1_Y'))
+	df		<- df %>% inner_join(layout, by='H1')
+	setnames(layout, c('H1','H1_X','H1_Y'), c('H2','H2_X','H2_Y'))
+	df		<- df %>% inner_join(layout, by='H2')
+	setnames(layout, c('H2','H2_X','H2_Y'),  c('H','X','Y'))
+	layout <- layout %>% 
+			mutate(NODE_FILL='NA', NODE_SHAPE='NA')
+	df <- df %>% 
+			mutate(	EDGETEXT_X:= (H1_X+H2_X)/2,
+					EDGETEXT_Y:= (H1_Y+H2_Y)/2,
+					EDGE_COL:= case_when(is.na(DIR_SCORE) ~ 'edge_col_1', !is.na(DIR_SCORE) ~ 'edge_col_2'),
+					EDGETEXT:= case_when(is.na(DIR_SCORE) ~ paste0(round(100*LIN_SCORE,d=0),'% ---'), !is.na(DIR_SCORE) ~ paste0(round(100*LIN_SCORE),'% ',round(100*DIR_SCORE),'%')),
+					) 
+	#	for edges, move the start and end points on the line between X and Y
+	#	define unit gradient
+	df <- df %>% mutate( MX:= (H2_X - H1_X), MY:= (H2_Y - H1_Y) )
+	tmp		<- sqrt(df$MX*df$MX+df$MY*df$MY)
+	df <- df %>% 
+			mutate( MX:= MX/tmp, MY:= MY/tmp) %>%
+			mutate( H1_X:= H1_X + MX*edge.gap,
+					H1_Y:= H1_Y + MY*edge.gap,
+					H2_X:= H2_X - MX*edge.gap,
+					H2_Y:= H2_Y - MY*edge.gap
+			)
+	#	
+	ggplot() +						
+			geom_segment(data= df%>%filter(EDGE_COL=='edge_col_1'), aes(x=H1_X, xend=H2_X, y=H1_Y, yend=H2_Y, size=edge.size*LIN_SCORE), colour='grey80', lineend="butt") +
+			geom_segment(data= df%>%filter(EDGE_COL=='edge_col_2' & DIR_TYPE=='12'), aes(x=H1_X, xend=H2_X, y=H1_Y, yend=H2_Y, size=edge.size*DIR_SCORE, colour=DIR_SCORE), arrow=arrow, lineend="butt") +
+			geom_segment(data= df%>%filter(EDGE_COL=='edge_col_2' & DIR_TYPE=='21'), aes(x=H2_X, xend=H1_X, y=H2_Y, yend=H1_Y, size=edge.size*DIR_SCORE, colour=DIR_SCORE), arrow=arrow, lineend="butt") +
+			geom_point(data=layout, aes(x=X, y=Y, pch=NODE_SHAPE), colour='steelblue2', size=point.size) +
+			#scale_colour_manual(values=c(node.fill.values, 'edge_col_1'='grey80', 'edge_col_2'='grey40','NA'='grey50')) +
+			scale_colour_gradient(low = "grey50", high = "red") +
+			scale_shape_manual(values=c(node.shape.values, 'NA'=21)) +
+			scale_fill_manual(values=c(node.fill.values, 'NA'='grey50')) +
+			scale_size_identity() +
+			#geom_text(data= df, aes(x=EDGETEXT_X, y=EDGETEXT_Y, label=EDGETEXT), size=label.size) +
+			geom_text(data=layout, aes(x=X, y=Y, label=H)) +
+			theme_void() +
+			labs(colour='direction\nscore') +
+			guides(fill='none',size='none', pch='none')
+	ggsave(file=gsub('\\.rda','_trmnetwork_dir.pdf',outfile), w=12, h=12, useDingbats=FALSE)
+	
+	#	calculate sum of source prob + half dir unclear
+	tmp <- ddir %>% 
+			filter(DIR_TYPE=='12') %>% 
+			group_by(H1) %>%
+			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
+			ungroup() %>%
+			rename(H:= H1)
+	ddirs <- ddir %>% 
+			filter(DIR_TYPE=='21') %>% 
+			group_by(H2) %>%
+			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
+			ungroup() %>%
+			rename(H:= H2) %>%
+			rbind(tmp)
+	tmp	<- dlin %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct()
+	ddirs <- ddirs %>% group_by(H) %>%
+			summarise(SUM_DIR_SCORE= sum(SUM_DIR_SCORE)) %>%
+			ungroup() %>%
+			right_join(tmp, by='H') %>%
+			mutate( SUM_DIR_SCORE=case_when(is.na(SUM_DIR_SCORE)~0, !is.na(SUM_DIR_SCORE)~SUM_DIR_SCORE)) %>%			
+			arrange(SUM_DIR_SCORE)
+	write.csv(ddirs, file=gsub('\\.rda','_trmnetwork_cumsources.csv',outfile))		
+	
+	tmp <- dnet %>% filter(grepl('^MC',H1) & grepl('^MC',H2)) %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct() %>% pull()
+	z<- load('~/duke/2018_MunichCluster/Data_190130/MunichCluster_190822.rda')
+	tmp2 <- unique(subset(pty.runs, grepl('^MC',UNIT_ID), UNIT_ID))[, UNIT_ID]
+	setdiff(tmp2, tmp)
+	#	"MC-17-04517"
+}
+	
 Munich.phyloscanner.190822.get.phylo.relationships<- function()
 {
 	require(tidyverse)
@@ -632,13 +863,14 @@ Munich.phyloscanner.190822.get.phylo.relationships<- function()
 	control$alignment.file.regex = NULL
 	control$blacklist.underrepresented = FALSE	
 	control$count.reads.in.parsimony = TRUE
-	control$distance.threshold <- '0.01 0.02'
+	#control$distance.threshold <- '0.01 0.02'
+	control$distance.threshold <- '0.025 0.05'
 	control$do.dual.blacklisting = FALSE					
 	control$duplicate.file.directory = NULL
 	control$duplicate.file.regex = NULL
 	control$file.name.regex = "^\\D*([0-9]+)_to_([0-9]+)\\D*$"
 	control$guess.multifurcation.threshold = FALSE
-	#control$max.reads.per.host <- 50
+	control$max.reads.per.host <- 100
 	control$min.reads.per.host <- 30
 	control$min.tips.per.host <- 1	
 	control$multifurcation.threshold = 1e-5
@@ -702,7 +934,7 @@ Munich.phyloscanner.190822.get.phylo.relationships<- function()
 	hpc.load			<- "module load anaconda3/personal"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 123						# walltime
+	hpc.walltime		<- 923						# walltime
 	if(0)		
 	{
 		hpc.q			<- NA						# PBS queue
@@ -712,7 +944,7 @@ Munich.phyloscanner.190822.get.phylo.relationships<- function()
 	if(1)
 	{
 		hpc.q			<- "pqeelab"				# PBS queue
-		hpc.mem			<- "6gb" 					# RAM		
+		hpc.mem			<- "12gb" 					# RAM		
 	}
 	hpc.array			<- length(cmds)	# number of runs for job array	
 	pbshead		<- "#!/bin/sh"
