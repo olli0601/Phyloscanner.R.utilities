@@ -1365,7 +1365,7 @@ Munich.phyloscanner.190822.make.alignments<- function()
 	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
 	hpc.select			<- 1						# number of nodes
 	hpc.nproc			<- 1						# number of processors on node
-	hpc.walltime		<- 23						# walltime
+	hpc.walltime		<- 123						# walltime
 	hpc.q				<- "pqeelab"				# PBS queue
 	hpc.mem				<- "6gb" 					# RAM	
 	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	

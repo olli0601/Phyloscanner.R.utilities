@@ -6842,7 +6842,37 @@ project.Bezemer.NLintroductions.trees<- function()
 		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted'
 		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
 		infiles <- list.files(indir, pattern='newick$')
-		infiles <- list.files(indir, pattern='polB.*newick$')
+		#infiles <- list.files(indir, pattern='polB.*newick$')
+		for(i in seq_along(infiles))
+		{
+			cat("Opening tree number ",i, " file name ",file.path(indir,infiles[i]),'\n', sep="")			
+			tree <- read.tree(file.path(indir,infiles[i]))			
+			labels <- data.table(ID=tree$tip.label, TREE_ID= seq_along(tree$tip.label))
+			set(labels, NULL, 'ID', gsub('_samp.*','',labels$ID))
+			labels <- merge(labels, metadata, by='ID', all.x=TRUE)
+			labels[, ID2:= ID]
+			tmp <- labels[, which(!is.na(SAMPLING_LOC))]
+			set(labels, tmp, 'ID2', labels[tmp, paste0(ID,'_samp',SAMPLING_LOC,'_born',BORN_LOC,'_inf',INFECTED_LOC,'_',SAMPLING_DATE)])
+			tree$tip.label <- labels[order(TREE_ID)][, ID2]
+			cat("Writing tree ",file.path(outdir,infiles[i]),'\n', sep="")			
+			write.tree(tree, file.path(outdir,infiles[i]))			
+		}		
+	}
+	
+	#	re-annotate all newick files for KC
+	if(0)
+	{
+		metafile <- '/rds/general/user/or105/home/WORK/DB_Netherlands/NONB_flowinfo_NLbyTrmGroup.csv'
+		metadata <- as.data.table(read.csv(metafile, stringsAsFactors = F))
+		metadata[, SAMPLING_LOC:= gsub('^NL[A-Z]+$','NL', SAMPLING_LOC)]
+		metadata[, BORN_LOC:= gsub('^NL[A-Z]+$','NL', BORN_LOC)]
+		metadata[, INFECTED_LOC:= gsub('^NL[A-Z]+$','NL', INFECTED_LOC)]
+		
+		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted'
+		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
+		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_KCreannotated'
+		infiles <- list.files(indir, pattern='newick$')
+		#infiles <- list.files(indir, pattern='polB.*newick$')
 		for(i in seq_along(infiles))
 		{
 			cat("Opening tree number ",i, " file name ",file.path(indir,infiles[i]),'\n', sep="")			
@@ -6863,7 +6893,9 @@ project.Bezemer.NLintroductions.trees<- function()
 	if(1)
 	{
 		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_reannotated'
+		indir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/trees_ft_rerooted_KCreannotated'
 		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/phyloscanner_190718'
+		outdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands/phyloscanner_191021'
 		tmpdir <- '/rds/general/user/or105/home/WORK/DB_Netherlands'
 		infiles <- list.files(indir, pattern='newick$')
 		infiles <- list.files(indir, pattern='^G.*newick$')
@@ -6882,7 +6914,7 @@ project.Bezemer.NLintroductions.trees<- function()
 		hpc.load		<- "module load anaconda3/personal"	# make third party requirements available	 
 		hpc.select		<- 1						# number of nodes
 		hpc.nproc		<- 1						# number of processors on node
-		hpc.walltime	<- 23						# walltime
+		hpc.walltime	<- 923						# walltime
 		hpc.q			<- "pqeelab"				# PBS queue
 		hpc.mem			<- "6gb" 					# RAM				
 		hpc.array		<- length(cmds)	# number of runs for job array	

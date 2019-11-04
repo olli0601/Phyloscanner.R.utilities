@@ -23,14 +23,33 @@ vl.get.eligible.round17<- function()
 	
 }
 
+vl.age.gender<- function()
+{
+	require(data.table)
+	prjdir	<- '~/Box Sync/OR_Work/2018/2018_RakaiViralLoad'
+	infile	<- file.path(prjdir,'data','191101_data_round17_vl_gps.rda')
+	load( infile )
+	
+	# drop few infecteds with missing VL
+	ds <- subset(ds, HIV_STATUS==0 | (HIV_STATUS==1 & !is.na(VL_COPIES)) )
+	# set VL for uninfected to 0, and VL with undetectable VL to 0
+	set(ds, ds[, which(HIV_STATUS==0)], 'VL_COPIES', 0)
+	set(ds, ds[, which(HIV_STATUS==1 & VL_UNDETECTABLE==1)], 'VL_COPIES', 0)
+	
+}
+
 vl.get.data.round17<- function()
 {
 	require(data.table)
 	prjdir	<- '~/Box Sync/OR_Work/2018/2018_RakaiViralLoad'
 	infile	<- 'data_raw/ViralLoad_Data_Pangea_Ratmann.rda'
 	load( file.path(prjdir, infile) )
+	vl.detectable <- 4e2
+	vl.suppressed <- 1e3
 	
-	# get individuals surveyed in round 17
+	#
+	# subset to survey round 17
+	#
 	ds		<- subset(as.data.table(survey_data), visit==17)
 	# reset dates from Date format to numeric
 	for(x in c('visit_date','lastNegDate','firstPosDate'))
@@ -41,7 +60,9 @@ vl.get.data.round17<- function()
 	setnames(ds, colnames(ds), toupper(colnames(ds)))
 	
 	
-	# merge GPS coordinates to surveyed individuals
+	#
+	# prepare GPS coordinates
+	#
 	dg	<- as.data.table(gpsdat)	
 	# bring dates into common format
 	setnames(dg, colnames(dg), gsub('\\.','_',toupper(colnames(dg))))
@@ -55,43 +76,57 @@ vl.get.data.round17<- function()
 	# make households per date unique
 	dg	<- unique(dg, by=c('HHID','GPS_DATE'))
 	
-	# merge surveyed individuals from round 17. a bit tricky
+	#
+	# add to surveyed individuals the GPS of their households	
+	# 
 	tmp	<- unique(subset(ds, select=c(RCCS_STUDYID, VISIT_DATE, HHID)))
 	tmp	<- merge(tmp, dg, by='HHID', all.x=TRUE)
-	# TODO check households with missing geocodes
+	# some households do not have GPS coordinates
 	ch	<- subset(tmp, is.na(LATITUDE_JITTER) | is.na(LATITUDE_JITTER))
-	write.csv(ch, file=file.path(prjdir,'data/check_missing_coordinates.csv'))
+	if(nrow(ch))
+	{
+		cat('\nNumber of households without GPS coordinates, n=', nrow(ch))
+		write.csv(ch, file=file.path(prjdir,'data/check_missing_coordinates.csv'))
+	}
 	# for every individual, extract house closest in time
 	tmp		<- subset(tmp, !is.na(LATITUDE_JITTER) & !is.na(LATITUDE_JITTER))
 	tmp2	<- tmp[, list(GPS_DATE= GPS_DATE[which.min(abs(GPS_DATE-VISIT_DATE))[1]]), by=c('RCCS_STUDYID','VISIT_DATE')]
 	tmp		<- merge(tmp, tmp2, by=c('RCCS_STUDYID','VISIT_DATE','GPS_DATE'))
 	stopifnot(nrow(tmp)==nrow(tmp2))
-	set(tmp, NULL, c('COMM','HOUSE'), NULL)
-	#	TODO we are losing some individuals here, likely due to missing GPS. double check when above fixed.
-	ds		<- merge(ds, tmp, by=c('RCCS_STUDYID','VISIT_DATE','HHID'))
+	set(tmp, NULL, c('COMM','HOUSE'), NULL)	
+	ds		<- merge(ds, tmp, by=c('RCCS_STUDYID','VISIT_DATE','HHID'), all.x=TRUE)
 	
+	#
 	# extract viral loads from round 17
+	#
 	dvl		<- subset(as.data.table(viralLoads), visit==17)
 	setnames(dvl, colnames(dvl), toupper(colnames(dvl)))
 	setnames(dvl, c('DATE','COPIES','DONEBY'), c('VL_DATE','VL_COPIES','VL_DONEBY'))
 	set(dvl, NULL, 'VL_DATE', date2numeric(dvl[,VL_DATE]))
-	set(dvl, NULL, 'VL_UNDETECTABLE', dvl[, as.integer(VL_COPIES<1000)])
-	# merge surveyed individuals from round 17. a bit tricky
-	tmp	<- unique(subset(ds, select=c(RCCS_STUDYID, VISIT_DATE)))
-	# TODO we are losing some individuals here, could be because of error above. double check when fixed.
-	dvl	<- merge(dvl, tmp, by='RCCS_STUDYID')
-	stopifnot(nrow(dvl)==nrow(unique(dvl, by=c('RCCS_STUDYID','VISIT','VL_DATE'))))
+	stopifnot( !nrow(subset(dvl, is.na(VL_COPIES))) )
+	# define undetectable VL (machine-undetectable)
+	# define suppressed VL (according to WHO criteria)
+	set(dvl, NULL, 'VL_UNDETECTABLE', dvl[, as.integer(VL_COPIES<vl.detectable)])
+	set(dvl, NULL, 'VL_SUPPRESSED', dvl[, as.integer(VL_COPIES<vl.suppressed)])
+	# check if one viral load measurement per person
+	tmp <- dvl[, list(N_VL=length(VL_COPIES)), by='RCCS_STUDYID']
+	stopifnot( !nrow(subset(tmp, N_VL>1)) )	
+	# merge with main data
 	set(dvl, NULL, 'VISIT', dvl[, as.numeric(VISIT)])
-	# ok, one viral load per individual. 
-	# merge viral load with surveillance data.
-	ds	<- merge(ds, dvl, by=c('RCCS_STUDYID','VISIT','VISIT_DATE'), all.x=TRUE)
+	set(dvl, NULL, 'VL_DONEBY', NULL)
+	ds	<- merge(ds, dvl, by=c('RCCS_STUDYID','VISIT'), all.x=TRUE)
 	
 	# check if viral load for all infected
 	ch	<- subset(ds, HIV_STATUS==1 & is.na(VL_COPIES))
-	write.csv(ch, file=file.path(prjdir,'data/check_missing_viralloads.csv'))
+	if(nrow(ch))
+	{
+		cat('\nFound infected individuals without VL measurement, n=',nrow(ch))
+		write.csv(ch, file=file.path(prjdir,'data/check_missing_viralloads.csv'))
+	}
+	ds[, HIV_AND_VL:= as.integer(HIV_STATUS==1 & !is.na(VL_COPIES))]
 	
-	ds	<- subset(ds, HIV_STATUS==0 | (HIV_STATUS==1 & !is.na(VL_COPIES)))
-	save(ds, file=file.path(prjdir,'data/merged_round17_vl_gps.rda'))
+	
+	save(ds, file=file.path(prjdir,'data','191101_data_round17_vl_gps.rda'))
 }
 
 prop.dectectable.viraemia<- function()
