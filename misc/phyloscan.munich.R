@@ -382,7 +382,7 @@ Munich.phyloscan.plots.on.MLE.network.180924<- function()
 	}				
 }
 
-Munich.phyloscanner.190715.zip.trees<- function()
+Munich.phyloscanner.190822.zip.trees<- function()
 {
 	require(data.table)
 	require(Phyloscanner.R.utilities)
@@ -392,7 +392,8 @@ Munich.phyloscanner.190715.zip.trees<- function()
 	if(1)
 	{
 		indirs	<- file.path(HOME,'M190715_phsc_output')
-		indirs	<- file.path(HOME,'M190822_phsc_output')		
+		indirs	<- file.path(HOME,'M190822_phsc_output')
+		indirs	<- file.path(HOME,'M191120_phsc_output')
 		#
 		indirs	<- list.files(indirs, pattern='^ptyr[0-9]+_trees$', full.names=TRUE)
 		allwin	<- data.table(W_FROM=seq(800,9150,25))
@@ -608,7 +609,7 @@ Munich.phyloscanner.190715.get.phylo.relationships<- function()
 	cat(system(cmd, intern= TRUE))
 }
 
-Munich.phyloscanner.190822.get.phyloscans<- function()
+Munich.phyloscanner.190822.plot.phyloscans<- function()
 {
 	require(tidyverse)
 	require(data.table)
@@ -616,9 +617,132 @@ Munich.phyloscanner.190822.get.phyloscans<- function()
 	require(igraph)
 	require(GGally)
 	require(network)
+	require(grid)
 	
-	indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
-	outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'
+	if(0)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'		
+	}
+	if(1)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_phscoutput/M190822up_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_analysis_10_20/190822up_analysis_10_20'		
+	}		
+	if(0)
+	{
+		indir <-  '/Users/Oliver/Box Sync/OR_Work/2018/2018_MunichCluster/191118_phscoutput/M191118_phscrelationships_010_20'
+		outfile.base <- '/Users/Oliver/Box Sync/OR_Work/2018/2018_MunichCluster/191118_analysis_10_20/191118_analysis_10_20'		
+	}
+	
+	
+	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
+			mutate( PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F))) ) %>%
+			arrange(PTY_RUN)	
+	# collect all dwins
+	dwins <- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{				
+		tmp	<- load( infiles$F[i] )
+		dwin <- dwin %>% mutate(PTY_RUN:= infiles$PTY_RUN[i])
+		dwins[[i]] <- dwin				
+	}		
+	dwins <- do.call('rbind', dwins)
+	dwins <- dwins %>% filter(grepl('^MC',host.1) & grepl('^MC',host.2))
+	# keep only info in run with most windows
+	tmp <- dwins %>% 
+			group_by(PTY_RUN,host.1,host.2) %>%
+			summarise(N= length(tree.id)) %>%
+			ungroup() %>%
+			group_by(host.1,host.2) %>%
+			summarise(PTY_RUN= PTY_RUN[which.max(N)])
+	dwins <- dwins %>% right_join(tmp, by=c('host.1','host.2','PTY_RUN'))
+	
+	# plot phyloscans
+	hosts <- dwins %>% select(host.1,host.2) %>% gather('key','H') %>% select(H) %>% distinct() %>% pull()
+	#hosts <- c('MC-16-01302','MC-16-01663')
+	inclusion <- "both"# "either"
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = inclusion, dwin=dwins)
+	pdf(file=paste0(outfile.base,'_allscans.pdf'), w=15, h=300)
+	print(tmp$graph)
+	dev.off()
+	
+	
+	hosts <- "MC-17-04517"
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = "either", dwin=dwins)
+	pdf(file=paste0(outfile.base,'_',hosts,'_scans.pdf'), w=15, h=30)
+	print(tmp$graph)
+	dev.off()
+	
+	hosts <- "MC-16-03259"
+	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = "either", dwin=dwins)
+	pdf(file=paste0(outfile.base,'_',hosts,'_scans.pdf'), w=15, h=10)
+	print(tmp$graph)
+	dev.off()
+	
+	# plot trees  
+	hosts.selected <- c("MC-16-00801","MC-16-03259")
+	tmp <- dwins %>% 
+			filter(host.1%in%hosts.selected & host.2%in%hosts.selected) %>% 
+			select(pty.run) %>%
+			distinct() %>%
+			pull()
+	infile <- infiles %>% filter(PTY_RUN==tmp) %>% pull(F)
+	load(infile)
+	
+	pdf.file <- paste0(outfile.base,'_',paste0(hosts.selected, collapse='_'),'_trees.pdf')	
+	pdf.hm <- 0.1
+	pdf.w <- 50
+	# setup unique colours
+	hosts <- lapply( seq_along(phyloscanner.trees), function(i) levels(attr(phyloscanner.trees[[i]][['tree']],'INDIVIDUAL')) )
+	hosts <- sort(unique(unlist(hosts)))	
+	tree.colours <- scales:::hue_pal(h= c(0, 360) + 15, c = 100, l = 65, h.start = 0, direction = 1)(length(hosts))	  	
+	names(tree.colours) <- hosts
+	# setup colours for selected hosts
+	tree.colours[hosts.selected] <- c('red','blue')	
+	# create plots
+	tree.plots <- lapply( seq_along(phyloscanner.trees), function(i){
+				p <- write.annotated.tree(phyloscanner.trees[[i]], NULL, tree.colours=tree.colours, format="ggplot")
+				p <- p + labs(title=names(phyloscanner.trees)[i])
+				p
+			})
+	# plot
+	pdf.dir <- gsub('\\.pdf','',pdf.file)
+	dir.create(pdf.dir)
+	lapply( seq_along(phyloscanner.trees), function(i){
+				pdf(file=file.path(pdf.dir,paste0(names(phyloscanner.trees)[i],'.pdf')), height= pdf.hm*length(tree.plots[[i]][['tip.label']]), width = pdf.w, limitsize = FALSE)
+				print(tree.plots[[i]])
+				dev.off()
+			}) 
+	tmp <- getwd()
+	setwd(pdf.dir)
+	system(paste0('cpdf *pdf -o "',pdf.file,'"'))	
+	setwd(tmp)
+	unlink(pdf.dir, recursive=TRUE)	
+}
+
+Munich.phyloscanner.190822.plot.trees<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	require(grid)
+	
+	if(0)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'
+		
+	}	
+	if(1)
+	{
+		indir <-  '/Users/Oliver/Box Sync/OR_Work/2018/2018_MunichCluster/191118_phscoutput/M191118_phscrelationships_010_20'
+		outfile.base <- '/Users/Oliver/Box Sync/OR_Work/2018/2018_MunichCluster/191118_analysis_10_20/191118_analysis_10_20'		
+	}
+	
 	
 	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
 			mutate( PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F))) ) %>%
@@ -641,21 +765,265 @@ Munich.phyloscanner.190822.get.phyloscans<- function()
 			summarise(PTY_RUN= PTY_RUN[which.max(N)])
 	dwins <- dwins %>% right_join(tmp, by=c('host.1','host.2','PTY_RUN'))
 	
-	hosts <- dwins %>% select(host.1,host.2) %>% gather('key','H') %>% select(H) %>% distinct() %>% pull()
-	#hosts <- c('MC-16-01302','MC-16-01663')
-	inclusion <- "both"# "either"
-	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = inclusion, dwin=dwins)
-	pdf(file=paste0(outfile.base,'_allscans.pdf'), w=15, h=300)
-	print(tmp$graph)
-	dev.off()
 	
-	hosts <- "MC-17-04517"
-	inclusion <- "either"
-	tmp	<- produce.pairwise.graphs2(NULL, hosts=hosts, inclusion = inclusion, dwin=dwins)
-	pdf(file=paste0(outfile.base,'_MC-17-04517scans.pdf'), w=15, h=30)
-	print(tmp$graph)
-	dev.off()
+	# plot trees  
+	hosts.selected <- c("MC-16-00801","MC-16-03259")
+	tmp <- dwins %>% 
+			filter(host.1%in%hosts.selected & host.2%in%hosts.selected) %>% 
+			select(pty.run) %>%
+			distinct() %>%
+			pull()
+	infile <- infiles %>% filter(PTY_RUN==tmp) %>% pull(F)
+	load(infile)
 	
+	pdf.file <- paste0(outfile.base,'_',paste0(hosts.selected, collapse='_'),'_trees.pdf')	
+	pdf.hm <- 0.1
+	pdf.w <- 50
+	# setup unique colours
+	hosts <- lapply( seq_along(phyloscanner.trees), function(i) levels(attr(phyloscanner.trees[[i]][['tree']],'INDIVIDUAL')) )
+	hosts <- sort(unique(unlist(hosts)))	
+	tree.colours <- scales:::hue_pal(h= c(0, 360) + 15, c = 100, l = 65, h.start = 0, direction = 1)(length(hosts))	  	
+	names(tree.colours) <- hosts
+	# setup colours for selected hosts
+	tree.colours[hosts.selected] <- c('red','blue')	
+	# create plots
+	tree.plots <- lapply( seq_along(phyloscanner.trees), function(i){
+				p <- write.annotated.tree(phyloscanner.trees[[i]], NULL, tree.colours=tree.colours, format="ggplot")
+				p <- p + labs(title=names(phyloscanner.trees)[i])
+				p
+			})
+	# plot
+	pdf.dir <- gsub('\\.pdf','',pdf.file)
+	dir.create(pdf.dir)
+	lapply( seq_along(phyloscanner.trees), function(i){
+				pdf(file=file.path(pdf.dir,paste0(names(phyloscanner.trees)[i],'.pdf')), height= pdf.hm*length(tree.plots[[i]][['tip.label']]), width = pdf.w, limitsize = FALSE)
+				print(tree.plots[[i]])
+				dev.off()
+			}) 
+	tmp <- getwd()
+	setwd(pdf.dir)
+	system(paste0('cpdf *pdf -o "',pdf.file,'"'))	
+	setwd(tmp)
+	unlink(pdf.dir, recursive=TRUE)	
+}
+
+Munich.phyloscanner.190822.update.MC1704517<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	
+	indir.up <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/191118_phscoutput/M191118_phscrelationships_010_20'
+	indir.old <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
+	outdir <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_phscoutput/M190822up_phscrelationships_010_20'	
+	host <- 'MC-17-04517'
+	
+	# in old, update dwin and dc in each workspace.rda for host
+	df <- data.table(F_OLD=list.files(indir.old, pattern='workspace.rda$', full.names=TRUE))
+	df[, PTY_RUN:= gsub('ptyr([0-9]+)_.*','\\1',basename(F_OLD))]
+	tmp <- data.table(F_UP=list.files(indir.up, pattern='workspace.rda$', full.names=TRUE))
+	tmp[, PTY_RUN:= gsub('ptyr([0-9]+)_.*','\\1',basename(F_UP))]
+	df <- merge(df, tmp, by='PTY_RUN')
+	
+	# host only in ptyr9
+	if(0)
+	{
+		for(i in seq_len(nrow(df)))
+		{
+			cat('\nProcess', df[i, F_UP] )
+			load( df[i, F_UP] )
+			z <- dwin %>% filter(host.1==host | host.2==host)
+			print(z)
+		}
+	}
+	
+	# update workspace file
+	i <- 9
+	load( df[i, F_UP] )
+	dwinup <- dwin %>% filter(host.1==host | host.2==host)
+	dcup <- dc %>% filter(host.1==host | host.2==host)
+	z<- load( df[i, F_OLD] )
+	dwin <- dwin %>% filter(!(host.1==host | host.2==host)) %>% rbind(dwinup)
+	dc <- dc %>% filter(!(host.1==host | host.2==host)) %>% rbind(dcup)
+	save(list=z, file=file.path(outdir, df[i, basename(F_OLD)]))
+	
+	# check differences in row number
+	dwinrm <- dwin %>% filter(host.1==host | host.2==host)
+	dwinrm <- dwinrm %>% select(host.1, host.2, tree.id) %>% mutate(STATUS='old') %>% distinct()
+	z <- dwinup %>% select(host.1, host.2, tree.id) %>% mutate(STATUS2='up') %>% distinct() %>% full_join(dwinrm, by=c('host.1','host.2','tree.id'))
+	z %>% filter( is.na(STATUS2))
+}
+
+Munich.phyloscanner.190822.get.core.network.classification<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	
+	if(1)
+	{
+		infile <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_analysis_10_20/190822up_analysis_10_20_phscnetworks.rda'		
+	}
+	
+	load(infile)
+	thresh.near.identical <- 1/1000
+	
+	#	define: core:= individuals close to any other with patristic dist <0.1% and mostly intermingled
+	dc2 <- dc %>% filter(CATEGORISATION=='close.and.adjacent.and.ancestry.cat' & TYPE=='complex.or.no.ancestry') %>%
+			filter(!grepl('CNTRL',H1) & !grepl('CNTRL',H2))
+	df <- dwins %>% 
+			select(host.1, host.2, tree.id, patristic.distance) %>%
+			mutate(near.identical:= as.numeric(patristic.distance<thresh.near.identical)) %>%
+			group_by(host.1,host.2) %>%
+			summarise(prop.near.identical= mean(near.identical)) %>%			
+			rename(H1:=host.1,H2:=host.2) %>%
+			filter(!grepl('CNTRL',H1) & !grepl('CNTRL',H2))
+	dc2 <- dc2 %>% left_join(df, by=c('H1','H2'))
+	
+	#	determine thresholds
+	ggplot(dc2, aes(x=SCORE)) + geom_histogram(breaks=seq(0,1,0.05)) +
+			scale_x_continuous(label=scales:::percent) +
+			theme_bw() +
+			labs(x='\nProportion of viral phylogenies\nin which a pair of individuals had intermingled subgraph topologies', y='')
+	ggsave(file=gsub('\\.rda','_propintermingled.pdf',infile), w=8, h=6)
+	#	--> suggests a good threshold on intermingled might be 0.7
+	ggplot(dc2, aes(x=prop.near.identical)) + geom_histogram(breaks=seq(0,1,0.05)) +
+			scale_x_continuous(label=scales:::percent) +
+			theme_bw() +
+			labs(x='\nProportion of viral phylogenies\nin which a pair of individuals had near identical virus', y='')
+	ggsave(file=gsub('\\.rda','_propidentical.pdf',infile), w=8, h=6)
+	#	--> not so clear. possibly 0.95
+	
+	#	select individuals in core
+	thresh.near.identical.prop <- 0 # does not change anything
+	thresh.complex.or.no.ancestry <- 0.7
+	ind.core <- dc2 %>% filter(SCORE>thresh.complex.or.no.ancestry & prop.near.identical>thresh.complex.or.no.ancestry)
+	ind.core <- ind.core %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct() %>%
+				mutate(CORE:=1L)
+	
+	if(0)
+	{
+		tmp <- dc2 %>% select(H1,H2)
+		tmp <- tmp %>% rename(H1:= H2,H2:=H1) %>% rbind(tmp)
+		tmp <- tmp %>% 
+				group_by(H1) %>% 
+				summarise(N_NEAR_IDENTICAL:= length(H2)) %>%
+				arrange(N_NEAR_IDENTICAL)		
+	}
+		
+	thresh.linked <- 0.59
+	thresh.dir <- 0.6
+	dlin <- dc %>%
+			filter(grepl('^MC',H1) & grepl('^MC',H2)) %>%
+			filter(CATEGORISATION=='close.and.adjacent.cat' & TYPE=='close.and.adjacent' & SCORE>thresh.linked) %>%
+			select(H1,H2)	
+	ddir <- dc %>% right_join(dlin, by=c('H1','H2')) %>%
+			filter(CATEGORISATION=='close.and.adjacent.and.directed.cat' & SCORE>thresh.dir) %>% 
+			select(H1,H2,TYPE,SCORE ) %>%
+			rename(DIR_TYPE:=TYPE, DIR_SCORE:=SCORE)
+	tmp <- ddir %>% 
+			filter(DIR_TYPE=='21') %>% 
+			rename(H1:=H2, H2:=H1) %>% 
+			mutate(DIR_TYPE:='12')
+	ddir <- ddir %>% 
+			filter(DIR_TYPE=='12') %>%
+			rbind(tmp)
+	#	find dead end recipients
+	ind.dead.end.recipients <- ddir %>% filter(! H2 %in% unique(ddir$H1) ) %>%
+			select(H2) %>%
+			distinct() %>%
+			mutate(DEAD_END_RECIPIENTS:=1L) %>%
+			rename(H:=H2)
+	#	find index cases
+	ind.index <- ddir %>% filter(! H1 %in% unique(ddir$H2) ) %>%
+		select(H1) %>%
+		distinct() %>%
+		mutate(INDEX_SOURCES:=1L) %>%
+		rename(H:=H1)
+
+	#	number of phylogenetic links per person, sources, recipients
+	ind.links <- dlin %>% 
+			rename(H1:=H2, H2:=H1) %>% 
+			rbind(dlin) %>% 
+			group_by(H1) %>%
+			summarise(N_PH_LINKS:= length(H2)) %>%
+			ungroup() %>%
+			rename(H:=H1)
+	ind.recipients <- ddir %>% 
+			group_by(H1) %>% 
+			summarise(N_PH_RECIPIENTS:= length(H2)) %>%
+			ungroup() %>%
+			rename(H:=H1)
+	ind.sources <- ddir %>% 
+			group_by(H2) %>% 
+			summarise(N_PH_SOURCES:= length(H1)) %>%
+			ungroup() %>%
+			rename(H:=H2)
+	
+	ind <- dwins %>% select(host.1,host.2) %>% gather('key','H') %>% select(H) %>% distinct()
+	ind <- ind %>% 
+			left_join(ind.core, by='H') %>% 
+			left_join(ind.dead.end.recipients, by='H') %>% 
+			left_join(ind.index, by='H') %>%
+			left_join(ind.links, by='H') %>%
+			left_join(ind.recipients, by='H') %>%
+			left_join(ind.sources, by='H') %>%
+			replace(is.na(.), 0)
+
+	write.csv(ind, file=gsub('\\.rda','_phylocharacterisation.csv',infile), row.names=FALSE)	
+}
+
+Munich.phyloscanner.190822.get.source.probability<- function()
+{
+	require(tidyverse)
+	require(data.table)
+	require(phyloscannerR)
+	require(igraph)
+	require(GGally)
+	require(network)
+	
+	if(1)
+	{
+		infile <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_analysis_10_20/190822up_analysis_10_20_phscnetworks.rda'		
+	}
+	
+	load(infile)
+	
+	ddir <- dc %>% 
+			filter(CATEGORISATION=='close.and.adjacent.and.directed.cat' & SCORE>0.6 & grepl('^MC',H1) & grepl('^MC',H2)) %>% 
+			select(H1,H2,TYPE,SCORE ) %>%
+			rename(DIR_TYPE:=TYPE, DIR_SCORE:=SCORE)
+	
+	#	calculate sum of source prob + half dir unclear
+	tmp <- ddir %>% 
+			filter(DIR_TYPE=='12') %>% 
+			group_by(H1) %>%
+			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
+			ungroup() %>%
+			rename(H:= H1)
+	ddirs <- ddir %>% 
+			filter(DIR_TYPE=='21') %>% 
+			group_by(H2) %>%
+			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
+			ungroup() %>%
+			rename(H:= H2) %>%
+			rbind(tmp)
+	tmp	<- dlin %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct()
+	ddirs <- ddirs %>% group_by(H) %>%
+			summarise(SUM_DIR_SCORE= sum(SUM_DIR_SCORE)) %>%
+			ungroup() %>%
+			right_join(tmp, by='H') %>%
+			mutate( SUM_DIR_SCORE=case_when(is.na(SUM_DIR_SCORE)~0, !is.na(SUM_DIR_SCORE)~SUM_DIR_SCORE)) %>%			
+			arrange(SUM_DIR_SCORE)
+	
+	print(ddirs, n=100)
+	write.csv(ddirs, file=gsub('\\.rda','_trmnetwork_cumsources.csv',infile))			
 }
 
 Munich.phyloscanner.190822.get.networks<- function()
@@ -666,27 +1034,78 @@ Munich.phyloscanner.190822.get.networks<- function()
 	require(igraph)
 	require(GGally)
 	require(network)
+	
+	if(0)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/191118_phscoutput/M191118_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/191118_analysis_10_20/191118_analysis_10_20'		
+	}
 	if(1)
+	{
+		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_phscoutput/M190822up_phscrelationships_010_20'
+		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822up_analysis_10_20/190822up_analysis_10_20'		
+	}	
+	if(0)
 	{
 		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_010_20'
 		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_10_20'		
 	}
-	if(0)
-	{
-		indir <-  '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_phscoutput/M190822_phscrelationships_025_50'
-		outfile.base <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/190822_analysis_10_20/190822_analysis_25_50'		
-	}
 	
-	outfile <- paste0(outfile.base,'_phscnetworks.rda')
-	control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.6, neff.cut=3)
-	tmp <- find.pairs.in.networks(indir, batch.regex='^ptyr([0-9]+)_.*', control=control, verbose=TRUE)
-	dpl <- copy(tmp$linked.pairs)
-	dc <- copy(tmp$relationship.counts)
-	dw <- copy(tmp$windows)	
+		
+	control <- list(	linked.group='close.and.adjacent.cat',
+						linked.no='not.close.or.nonadjacent',
+						linked.yes='close.and.adjacent', 
+						conf.cut=0.6, 
+						neff.cut=3,
+						weight.complex.or.no.ancestry=0.5)	
+	# process phyloscanner runs
+	batch.regex <- '^ptyr([0-9]+)_.*'	
+	infiles	<- tibble(F=list.files(indir, pattern='workspace.rda', full.names=TRUE)) %>%
+			mutate( PTY_RUN:= as.integer(gsub(batch.regex,'\\1',basename(F))) ) %>%
+			arrange(PTY_RUN)		
+	dpls <- vector('list', nrow(infiles))
+	dcs <- vector('list', nrow(infiles))
+	dws <- vector('list', nrow(infiles))
+	for(i in seq_len(nrow(infiles)))
+	{		
+		if(verbose)	cat('\nReading ', infiles$F[i])
+		tmp	<- load( infiles$F[i] )
+		#	ensure we have multinomial output in workspace
+		if(!'dc'%in%tmp)
+			stop('Cannot find object "dc". Check that Analyze.trees was run with multinomial=TRUE.')
+		if(!'dwin'%in%tmp)
+			stop('Cannot find object "dwin". Check that Analyze.trees was run with multinomial=TRUE.')
+		#	find pairs
+		tmp <- find.pairs.in.networks(dwin, dc, control=control, verbose=TRUE)
+		#	store output for each run
+		dpls[[i]] <- copy(tmp$network.pairs)
+		dcs[[i]] <- copy(tmp$relationship.counts)
+		dws[[i]] <- copy(tmp$windows)	
+		gc()
+	}
+	dpl <- do.call('rbind', dpls)
+	dc <- do.call('rbind', dcs)
+	dw <- do.call('rbind', dwins)
+	dpls <- dcs <- dwins <- NULL
+	#	select analysis in which each pair has highest neff
+	if(verbose) cat('\nIf pairs are in several batches, select batch with most deep-sequence phylogenies...')
+	tmp <- dc %>% 
+			filter( CATEGORISATION==control$linked.group & TYPE==control$linked.yes )	%>%
+			group_by(H1,H2) %>%
+			summarise(PTY_RUN= PTY_RUN[which.max(N_EFF)]) %>%
+			ungroup()
+	dc <- tmp %>% left_join(dc, by=c('H1','H2','PTY_RUN'))
+	dw <- tmp %>% left_join(dw, by=c('H1','H2','PTY_RUN'))
+	dpl <- tmp %>% left_join(dpl, by=c('H1','H2','PTY_RUN'))	
+	if(verbose) cat('\nLeft with pairs between whom linkage is not excluded phylogenetically, n=', nrow(dpls))
+	#	find networks among pairs
 	tmp <- find.networks(dc, control=control, verbose=TRUE)
 	dnet <- copy(tmp$transmission.networks)
 	dchain <- copy(tmp$most.likely.transmission.chains)
+	#	save
+	outfile <- paste0(outfile.base,'_phscnetworks.rda')
 	save(dpl, dc, dw, dnet, dchain, file=outfile)
+	
 	
 	#	
 	# plot all networks
@@ -715,7 +1134,7 @@ Munich.phyloscanner.190822.get.networks<- function()
 				control$node.shape.values = c(`NA` = 16)
 				control$node.fill.values = c(`NA` = "steelblue2")
 				control$threshold.linked = 0.6
-				p <- plot.network(df, di, control)					
+				p <- phyloscannerR:::plot.network(df, di, control)					
 				p	
 			})
 	pdf(file= gsub('\\.rda','_trmnetwork_all.pdf',outfile), w=12, h=12)
@@ -723,15 +1142,62 @@ Munich.phyloscanner.190822.get.networks<- function()
 		print(pns[[i]])
 	dev.off()	
 	
+	#	
+	# plot all most likely chains
+	idclus <- sort(unique(dchain$IDCLU))
+	pns		<- lapply(seq_along(idclus), function(i)
+			{
+				idclu <- idclus[i]
+				df <- dchain %>% 
+						filter(IDCLU == idclu)		
+				di <- df %>% 
+						select(H1,H2) %>% 
+						gather('key','H') %>%
+						select(H) %>%
+						distinct()
+				control<- list()
+				control$point.size = 10
+				control$edge.gap = 0.04
+				control$edge.size = 2
+				control$curvature = -0.2
+				control$arrow = arrow(length = unit(0.04, "npc"), type = "open")
+				control$curv.shift = 0.06
+				control$label.size = 3
+				control$node.label = "H" 
+				control$node.fill = NA_character_
+				control$node.shape = NA_character_
+				control$node.shape.values = c(`NA` = 16)
+				control$node.fill.values = c(`NA` = "steelblue2")
+				control$threshold.linked = 0.6
+				p <- phyloscannerR:::plot.chain(df, di, control)					
+				p	
+			})
+	pdf(file= gsub('\\.rda','_mlchain_all.pdf',outfile), w=12, h=12)
+	for(i in seq_along(pns))	
+		print(pns[[i]])
+	dev.off()	
+	
+	
+	
+	
 	#	on Munich network (IDCLU==1)
 	#	if support for direction, plot just that arrow
 	#	otherwise, plot undirected arrow
 	#	use colour scheme for total score
-
+	
+	# 	check linked thresholds for MC-18-01721, so that the individual is included in the plot
+	dc %>% 
+		filter(grepl('^MC',H1) & grepl('^MC',H2)) %>%
+		filter(H1=='MC-18-01721'|H2=='MC-18-01721') %>%
+		filter(CATEGORISATION=='close.and.adjacent.cat' & TYPE=='close.and.adjacent')
+	# 	max score is 0.59
+	
+	thresh.linked <- 0.59
+	thresh.dir <- 0.6
 	dlin <- dc %>% 
-			filter(CATEGORISATION=='close.and.adjacent.cat' & TYPE=='close.and.adjacent' & SCORE>0.6 & grepl('^MC',H1) & grepl('^MC',H2)) 
+			filter(CATEGORISATION=='close.and.adjacent.cat' & TYPE=='close.and.adjacent' & SCORE>thresh.linked & grepl('^MC',H1) & grepl('^MC',H2)) 
 	ddir <- dc %>% 
-			filter(CATEGORISATION=='close.and.adjacent.and.directed.cat' & SCORE>0.6 & grepl('^MC',H1) & grepl('^MC',H2)) %>% 
+			filter(CATEGORISATION=='close.and.adjacent.and.directed.cat' & SCORE>thresh.dir & grepl('^MC',H1) & grepl('^MC',H2)) %>% 
 			select(H1,H2,TYPE,SCORE ) %>%
 			rename(DIR_TYPE:=TYPE, DIR_SCORE:=SCORE)
 			
@@ -807,53 +1273,31 @@ Munich.phyloscanner.190822.get.networks<- function()
 			theme_void() +
 			labs(colour='direction\nscore') +
 			guides(fill='none',size='none', pch='none')
-	ggsave(file=gsub('\\.rda','_trmnetwork_dir.pdf',outfile), w=12, h=12, useDingbats=FALSE)
-	
-	#	calculate sum of source prob + half dir unclear
-	tmp <- ddir %>% 
-			filter(DIR_TYPE=='12') %>% 
-			group_by(H1) %>%
-			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
-			ungroup() %>%
-			rename(H:= H1)
-	ddirs <- ddir %>% 
-			filter(DIR_TYPE=='21') %>% 
-			group_by(H2) %>%
-			summarise(SUM_DIR_SCORE= sum(DIR_SCORE)) %>%
-			ungroup() %>%
-			rename(H:= H2) %>%
-			rbind(tmp)
-	tmp	<- dlin %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct()
-	ddirs <- ddirs %>% group_by(H) %>%
-			summarise(SUM_DIR_SCORE= sum(SUM_DIR_SCORE)) %>%
-			ungroup() %>%
-			right_join(tmp, by='H') %>%
-			mutate( SUM_DIR_SCORE=case_when(is.na(SUM_DIR_SCORE)~0, !is.na(SUM_DIR_SCORE)~SUM_DIR_SCORE)) %>%			
-			arrange(SUM_DIR_SCORE)
-	write.csv(ddirs, file=gsub('\\.rda','_trmnetwork_cumsources.csv',outfile))		
-	
-	tmp <- dnet %>% filter(grepl('^MC',H1) & grepl('^MC',H2)) %>% select(H1,H2) %>% gather('key','H') %>% select(H) %>% distinct() %>% pull()
-	z<- load('~/duke/2018_MunichCluster/Data_190130/MunichCluster_190822.rda')
-	tmp2 <- unique(subset(pty.runs, grepl('^MC',UNIT_ID), UNIT_ID))[, UNIT_ID]
-	setdiff(tmp2, tmp)
-	#	"MC-17-04517"
+	ggsave(file=gsub('\\.rda','_trmnetwork_dir.pdf',outfile), w=12, h=12, useDingbats=FALSE)		
 }
 	
-Munich.phyloscanner.190822.get.phylo.relationships<- function()
+Munich.phyloscanner.190822.make.phyloscanner<- function()
 {
 	require(tidyverse)
 	require(data.table)
 	require(phyloscannerR)
 	
-	if(1)
+	if(0)
 	{
 		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
 		tree.dir <- file.path(HOME,'M190822_phsc_output')
 		tmpdir	<- file.path(HOME,"M190822_phsc_work")
-		outdir	<- file.path(HOME,'M190822_phscrelationships_025_50')
-		#outdir	<- file.path(HOME,'M190822_phscrelationships_010_20')
-		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'
-		
+		outdir	<- file.path(HOME,'M190822_phscrelationships_025_50')		
+		prog.phyloscanner_analyse_trees <- '/rds/general/user/or105/home/libs_sandbox/phyloscanner/phyloscanner_analyse_trees.R'		
+	}
+	if(1)
+	{
+		HOME <<- '/Users/Oliver/Box Sync/OR_Work/2018/2018_MunichCluster'
+		tree.dir <- file.path(HOME,'191118_phscoutput','trees')
+		tmpdir	<- file.path(HOME,'191118_phscoutput',"M191118_phsc_work")
+		outdir	<- file.path(HOME,'191118_phscoutput','M191118_phscrelationships_025_50')
+		outdir	<- file.path(HOME,'191118_phscoutput','M191118_phscrelationships_010_20')
+		prog.phyloscanner_analyse_trees <- '/Users/Oliver/git/phyloscanner/phyloscanner_analyse_trees.R'		
 	}
 	
 	#	set phyloscanner variables	
@@ -863,8 +1307,8 @@ Munich.phyloscanner.190822.get.phylo.relationships<- function()
 	control$alignment.file.regex = NULL
 	control$blacklist.underrepresented = FALSE	
 	control$count.reads.in.parsimony = TRUE
-	#control$distance.threshold <- '0.01 0.02'
-	control$distance.threshold <- '0.025 0.05'
+	control$distance.threshold <- '0.01 0.02'
+	#control$distance.threshold <- '0.025 0.05'
 	control$do.dual.blacklisting = FALSE					
 	control$duplicate.file.directory = NULL
 	control$duplicate.file.regex = NULL
@@ -1280,6 +1724,12 @@ Munich.phyloscanner.190822.make.alignments<- function()
 	#
 	#	set up working environment
 	require(Phyloscanner.R.utilities)
+	if(0)
+	{
+		prog.pty <- '/Users/Oliver/git/phyloscanner/phyloscanner_make_trees.py'
+		HOME <<- '~/Box Sync/OR_Work/2018/2018_MunichCluster'
+		data.dir <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/Data_190130'
+	}
 	if(1)
 	{
 		prog.pty <- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
@@ -1396,7 +1846,135 @@ Munich.phyloscanner.190822.make.alignments<- function()
 	cat(system(cmd, intern= TRUE))		
 }
 
-Munich.phyloscanner.190822.make.trees<- function()
+Munich.phyloscanner.191120.make.alignments<- function()
+{
+	#
+	#	set up working environment
+	require(Phyloscanner.R.utilities)
+	if(0)
+	{
+		prog.pty <- '/Users/Oliver/git/phyloscanner/phyloscanner_make_trees.py'
+		HOME <<- '~/Box Sync/OR_Work/2018/2018_MunichCluster'
+		data.dir <- '~/Box Sync/OR_Work/2018/2018_MunichCluster/Data_190130'
+	}
+	if(1)
+	{
+		prog.pty <- '/rds/general/user/or105/home/phyloscanner/phyloscanner_make_trees.py'
+		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
+		data.dir <- '/rds/general/user/or105/home/WORK/MUNICH/Data_190130'
+	}
+	in.dir			<- file.path(HOME,'M191120_phsc_input')		
+	work.dir		<- file.path(HOME,"M191120_phsc_work")
+	out.dir			<- file.path(HOME,"M191120_phsc_output")	
+	dir.create(in.dir)
+	dir.create(work.dir)
+	dir.create(out.dir)
+	
+	#
+	#	load runs
+	if(1)
+	{
+		load(file.path(in.dir, "MunichCluster_190822.rda"))
+		# loads pty.runs
+	}	
+	#
+	#	search for bam files and references and merge with runs		
+	tmp			<- phsc.find.bam.and.references(data.dir, 
+			regex.person='^([A-Za-z0-9]+-[0-9]+)_.*$',
+			regex.bam="^(.*)\\.bam$",
+			regex.ref="^(.*)\\.fasta$")	
+	setnames(tmp, c('IND','SAMPLE'), c('UNIT_ID','SAMPLE_ID'))
+	tmp2 <- which(!grepl('Control',tmp$UNIT_ID))
+	set(tmp, tmp2, 'UNIT_ID', tmp[tmp2, paste0('MC-',UNIT_ID)])
+	set(tmp, NULL, 'UNIT_ID', tmp[, gsub('Control','CNTRL-', UNIT_ID)])	
+	pty.runs	<- merge(pty.runs, tmp, by=c('UNIT_ID','SAMPLE_ID'))
+	
+	
+	#
+	#	define phyloscanner input args to generate read alignments 
+	#	for each window and each run
+	ptyi		<- seq(2000,5500,25)		
+	pty.c		<- lapply(seq_along(ptyi), function(i)
+			{
+				pty.args			<- list(	prog.pty=prog.pty, 
+						prog.mafft='mafft', 						 
+						data.dir=data.dir, 
+						work.dir=work.dir, 
+						out.dir=out.dir, 
+						alignments.file=system.file(package="Phyloscanner.R.utilities", "HIV1_compendium_B.fasta"),
+						alignments.root='REF_B_K03455', 
+						alignments.pairwise.to='REF_B_K03455',
+						window.automatic= '', 
+						merge.threshold=1, 
+						min.read.count=1, 
+						quality.trim.ends=23, 
+						min.internal.quality=23, 
+						merge.paired.reads=TRUE, 
+						no.trees=TRUE, 
+						dont.check.duplicates=FALSE,
+						dont.check.recombination=TRUE,
+						num.bootstraps=1,
+						all.bootstrap.trees=TRUE,
+						strip.max.len=350, 
+						min.ureads.individual=NA, 
+						win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+						keep.overhangs=FALSE,
+						mem.save=0,
+						verbose=TRUE,					
+						select=NA	
+				)											
+				pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+				pty.c[, W_FROM:= ptyi[i]]
+				pty.c[, PTY_RUN:= as.integer(sub('.*ptyr([0-9])_.*','\\1',CMD))]
+				pty.c
+			})
+	pty.c	<- do.call('rbind', pty.c)	
+	tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
+	tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
+	tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
+	pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)		
+	pty.c	<- subset(pty.c, is.na(FO))		
+	pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+	#pty.c	<- subset(pty.c, W_FROM==2350)
+	#print(pty.c, n=1e3)
+	
+	#	define PBS variables
+	hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
+	hpc.select			<- 1						# number of nodes
+	hpc.nproc			<- 1						# number of processors on node
+	hpc.walltime		<- 123						# walltime
+	hpc.q				<- "pqeelab"				# PBS queue
+	hpc.mem				<- "6gb" 					# RAM	
+	hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+	#	define PBS header for job scheduler. this will depend on your job scheduler.
+	pbshead		<- "#!/bin/sh"
+	tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+	pbshead		<- paste(pbshead, tmp, sep = "\n")
+	tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+	pbshead 	<- paste(pbshead, tmp, sep = "\n")
+	pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+	if(!is.na(hpc.array))
+		pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+	if(!is.na(hpc.q)) 
+		pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+	pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+	cat(pbshead)
+	
+	#	create PBS job array
+	cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+	cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+	cmd		<- paste(pbshead,cmd,sep='\n')	
+	#	submit job
+	outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+	outfile		<- file.path(work.dir, outfile)
+	cat(cmd, file=outfile)
+	cmd 		<- paste("qsub", outfile)
+	cat(cmd)
+	cat(system(cmd, intern= TRUE))		
+}
+
+
+Munich.phyloscanner.191120.make.trees<- function()
 {
 	require(data.table)
 	require(Phyloscanner.R.utilities)
@@ -1408,10 +1986,18 @@ Munich.phyloscanner.190822.make.trees<- function()
 		HOME <<- '/rds/general/user/or105/home/WORK/MUNICH'
 		data.dir <- '/rds/general/user/or105/home/WORK/MUNICH/Data_190130'		
 	}
-	in.dir			<- file.path(HOME,'M190822_phsc_output')		
-	work.dir		<- file.path(HOME,"M190822_phsc_work")
-	out.dir			<- file.path(HOME,"M190822_phsc_output")	
-	
+	if(0)
+	{
+		in.dir			<- file.path(HOME,'M190822_phsc_output')		
+		work.dir		<- file.path(HOME,"M190822_phsc_work")
+		out.dir			<- file.path(HOME,"M190822_phsc_output")			
+	}
+	if(1)
+	{
+		in.dir			<- file.path(HOME,'M191120_phsc_output')		
+		work.dir		<- file.path(HOME,"M191120_phsc_work")
+		out.dir			<- file.path(HOME,"M191120_phsc_output")			
+	}
 	
 	#
 	#	generate trees	

@@ -36,6 +36,17 @@ vl.age.gender<- function()
 	set(ds, ds[, which(HIV_STATUS==0)], 'VL_COPIES', 0)
 	set(ds, ds[, which(HIV_STATUS==1 & VL_UNDETECTABLE==1)], 'VL_COPIES', 0)
 	
+	# 
+	# calculate proportion with VL > x among participants
+	
+	# do general by as characters
+	# then determine sort index
+	# then calculate empirical quantile
+	ds <- ds[order(SEX,VL_COPIES),]
+	ds[VL]
+	
+	ds[, sort(unique(VL_COPIES))]
+	#dv <- data.table(VL:= )
 }
 
 vl.get.data.round17<- function()
