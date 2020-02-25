@@ -32,6 +32,17 @@ femalenetworks.get.outdegree <- function()
 	
 	outfile <- '~/Box Sync/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_outdegrees.csv'
 	write.csv(dg, file=outfile)
+	
+	dfa	<- as.data.table(read.csv("~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv", stringsAsFactors=FALSE))
+	dfa	<- unique(subset(dfa, select=c(ID,AID)))		
+	setnames(dfa, 'ID', 'RID')
+	dg <- merge(dfa, dg, by='AID')
+	
+	rd <- merge(rd, dfa, by='RID')
+	rd <- subset(rd, select=c(RID, AID, SEX, COMM_NUM_A))
+	rd[, COMM_TYPE:= as.character(factor(substr(COMM_NUM_A,1,1)=='f', levels=c(TRUE,FALSE), labels=c('fishing','inland')))]
+	rd <- subset(rd, select=c(AID, COMM_TYPE))
+	
 }
 
 
