@@ -9343,6 +9343,125 @@ RakaiFull.phylogeography.190327.sensitivity.analyses2<- function()
 	
 }
 
+RakaiFull.phylogeography.200214.2dpointprocess.get.data<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(gtools)	#rdirichlet
+	
+	indir					<-  "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run"
+	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+	outdir					<- "~/Box/OR_Work/PANGEA/2020_PANGEA_Jason"
+	
+	
+	#	select data for analysis
+	load(file.path(indir, infile))	
+	dr <- subset(rtr3, select=c(TR_SEX, TR_BIRTHDATE, REC_SEX, REC_BIRTHDATE, POSTERIOR_SCORE_LINKED, POSTERIOR_SCORE_MF, POSTERIOR_SCORE_FM))
+	set.seed(42L)
+	set(dr, NULL, 'TR_BIRTHDATE', dr[,TR_BIRTHDATE + runif(nrow(dr), min=-1, max=1)])
+	set(dr, NULL, 'REC_BIRTHDATE', dr[,REC_BIRTHDATE + runif(nrow(dr), min=-1, max=1)])
+	set(dr, NULL, 'TR_AGE', dr[,2013.0-TR_BIRTHDATE])
+	set(dr, NULL, 'REC_AGE', dr[,2013.0-REC_BIRTHDATE])
+	dr <- subset(dr, !is.na(TR_AGE) & !is.na(REC_AGE))
+	dr <- dr[sample(1:nrow(dr), 250),]
+	set(dr, NULL, c('TR_BIRTHDATE','REC_BIRTHDATE'), NULL)
+	setnames(dr, colnames(dr), gsub('POSTERIOR_','PHYLOSCANNER_',colnames(dr)))
+	write.csv(dr, file=file.path(outdir,'200423_data_not_unlike_real_data.csv'))
+}
+
+RakaiFull.phylogeography.200214.UNAIDS.report.csv<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(gtools)	#rdirichlet
+	
+	indir					<-  "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run"
+	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+	outdir					<- "~/Box/OR_Work/2018/2018_sourcesink_paper/press"
+	
+	
+	#	select data for analysis
+	load(file.path(indir, infile))	
+	setnames(rtr3, 
+			c('TR_COMM_NUM_A_MIG_2YR','TR_COMM_NUM_A','TR_INMIGRATE_2YR','TR_LON_MIG_2YR','TR_LAT_MIG_2YR','REC_LONG','REC_LAT'), 
+			c('TR_COMM_NUM_A','TR_COMM_NUM_A_ORIG','TR_INMIGRATE','TR_X','TR_Y','REC_X','REC_Y'))		
+	rtr4 <- subset(rtr3, select=c(PAIRID, TR_RID, REC_RID, TR_COMM_NUM_A, REC_COMM_NUM_A, TR_COMM_TYPE, REC_COMM_TYPE, TR_SEX, REC_SEX, TR_X, TR_Y, REC_X, REC_Y))
+	set(rtr4, rtr4[, which(REC_COMM_TYPE!='fisherfolk')], 'REC_COMM_TYPE', 'inland')
+	set(rtr4, rtr4[, which(substr(TR_COMM_NUM_A,1,1)%in%c('i','a','t'))], 'TR_COMM_TYPE', 'inland')
+	set(rtr4, rtr4[, which(substr(TR_COMM_NUM_A,1,1)%in%c('e'))], 'TR_COMM_TYPE', 'external')
+	set(rtr4, rtr4[, which(substr(TR_COMM_NUM_A,1,1)%in%c('f'))], 'TR_COMM_TYPE', 'fisherfolk')
+	set(rtr4, rtr4[, which(substr(TR_COMM_NUM_A,1,1)%in%c('u'))], 'TR_COMM_TYPE', 'unknown_source_location')
+	set(rtr4, NULL, c('TR_COMM_NUM_A','REC_COMM_NUM_A','TR_RID','REC_RID','TR_SEX','REC_SEX'), NULL)
+	write.csv(rtr4, row.names=FALSE, file=file.path(outdir,'200513_Ratmann_LancetHIV2020_Figure3A_data.csv'))
+}
+
+RakaiFull.phylogeography.200214.GPflows.get.data<- function()
+{
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(ggmap)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	require(gtools)	#rdirichlet
+	
+	indir					<-  "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run"
+	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
+	outdir					<- "~/Box/OR_Work/2020/2020_group_meetings/200317_GP_for_flows"
+	
+	
+	#	select data for analysis
+	load(file.path(indir, infile))	
+	setnames(rtr3, 
+			c('TR_COMM_NUM_A_MIG_2YR','TR_COMM_NUM_A','TR_INMIGRATE_2YR','TR_LON_MIG_2YR','TR_LAT_MIG_2YR','REC_LONG','REC_LAT'), 
+			c('TR_COMM_NUM_A','TR_COMM_NUM_A_ORIG','TR_INMIGRATE','TR_X','TR_Y','REC_X','REC_Y'))		
+	rtr4 <- subset(rtr3, select=c(PAIRID, TR_RID, REC_RID, TR_COMM_NUM_A, REC_COMM_NUM_A, TR_SEX, REC_SEX, TR_X, TR_Y, REC_X, REC_Y))
+	
+	#	exclude transmission within communities
+	rtr4 <- subset(rtr4, TR_COMM_NUM_A!=REC_COMM_NUM_A)
+	#	98 transmissions
+	
+	#	exclude in-migrations from external location and unknown locations
+	rtr4 <- subset(rtr4, !grepl('umig|emig',TR_COMM_NUM_A))
+	#	70 transmissions
+	
+	rtr4 <- subset(rtr4, select=-c(TR_RID, REC_RID,TR_COMM_NUM_A, REC_COMM_NUM_A))
+	
+	#	jitter longitude latitude slightly so that arrows don t overlap
+	set(rtr4, NULL, 'TR_X', rtr4[, TR_X + rnorm(nrow(rtr4), 0, sd=1e-5)])
+	set(rtr4, NULL, 'TR_Y', rtr4[, TR_Y + rnorm(nrow(rtr4), 0, sd=1e-5)])
+	set(rtr4, NULL, 'REC_X', rtr4[, REC_X + rnorm(nrow(rtr4), 0, sd=1e-5)])
+	set(rtr4, NULL, 'REC_Y', rtr4[, REC_Y + rnorm(nrow(rtr4), 0, sd=1e-5)])	
+	
+	#	save data 
+	save(zm, rtr4, file=file.path(outdir, 'transmission_flows_between_comms.rda') )
+	
+	#	plot data
+	curvature	<- -0.2	
+	arrow		<- arrow(length=unit(0.03, "npc"), type="closed", angle=15)
+	ggmap(zm) +	
+			geom_curve(	data=rtr4, 
+					aes(x=TR_X, xend=REC_X, y=TR_Y, yend=REC_Y), 
+					curvature=curvature, arrow=arrow, lineend="butt") +
+			coord_cartesian() +
+			scale_size_identity() +
+			labs(x='', y='') +
+			theme(legend.position='bottom', legend.box = "vertical") + 
+			guides(size='none', colour='none') 
+	ggsave(file=file.path(outdir,'transmission_flows_between_comms.pdf'), w=7, h=7, useDingbats=FALSE)		
+}
+
 RakaiFull.phylogeography.200214.figure.flows.inland.fishing<- function()
 {
 	require(data.table)
@@ -10985,8 +11104,8 @@ RakaiFull.phylogeography.190327.data.eligibility.participation.sequenced<- funct
 {
 	require(data.table)
 	
-	infile					<- "~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_elibility.rda"
-	outfile.base			<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/"
+	infile					<- "~/Box/OR_Work/PANGEA/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/rakai_elibility.rda"
+	outfile.base			<- "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run/"
 	load(infile)
 	
 	#	subset to data of interest
@@ -11698,7 +11817,7 @@ RakaiFull.phylogeography.190327.figure.transmissionflows.on.map<- function()
 	require(RColorBrewer)
 	require(gtools)	#rdirichlet
 	
-	indir					<-  "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run"
+	indir					<-  "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run"
 	infile					<- "RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda"
 	outfile.base			<- file.path(indir, gsub('_phylogeography_data_with_inmigrants.rda','',infile))
 	load(file.path(indir, infile))

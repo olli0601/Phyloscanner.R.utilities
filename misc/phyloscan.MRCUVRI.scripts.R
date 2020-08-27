@@ -166,6 +166,47 @@ pty.MRC.stage2.identify.potential.networks<- function()
 	write.csv(pty.runs, file=outfile)
 }
 
+pty.MRC.stage3.assortativity<- function()
+{
+	ass <- function(m)
+	{
+		m <- m / sum(m)
+		total.sources <- apply(m, 1, sum)
+		total.recipients <- apply(m, 2, sum)				
+		ans <- sum( diag(m) ) - sum( total.sources * total.recipients ) 
+		ans <- ans / (1 - sum(total.sources * total.recipients))
+		ans
+	}
+	
+	#	sources in rows, recipients in cols	
+	m <- matrix(c(50,50,50,50), 2, 2)
+	ass(m)
+	#	0
+	m <- matrix(c(200,0,0,0), 2, 2)
+	ass(m)
+	#	NaN
+	m <- matrix(c(100,0,0,100), 2, 2)
+	ass(m)
+	#	1
+	m <- matrix(c(0,100,100,0), 2, 2)
+	ass(m)
+	#	-1
+	
+	#	all the same assortativiy, but
+	#	epidemiologic very different meaning
+	m <- matrix(c(10,20,10,30), 2, 2)
+	ass(m)
+	#	0.08
+	m <- matrix(c(30,20,10,10), 2, 2)
+	ass(m)
+	#	0.08
+	m <- matrix(c(10,10,20,30), 2, 2)
+	ass(m)
+	#	0.08
+	
+	
+}
+
 pty.MRC.stage2.make.reference.alignment<- function()
 {
 	require(ape)
@@ -217,7 +258,7 @@ pty.MRC.stage2.generate.read.alignments.ref.choice<- function()
 			}, by=c('ANA','W_FROM')]
 	
 	ggplot(dd, aes(x=W_FROM, colour=ANA, y=DR_MED, group=ANA)) + geom_point() + geom_line()
-	outfile <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/pilot_refalignment_LANL2012selected_HKY/dist_to_root_max.pdf'
+	outfile <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/pilot_refalignment_LANL2012selected_HKY/dist_to_root_max.pdf'
 	ggsave(file=outfile, w=10, h=6)
 	
 	#
@@ -1153,6 +1194,36 @@ vignetter.make<- function()
 	
 }
 
+pty.MRC.stage3.evaluate.distances <- function()
+{
+	require(tidyverse)
+	file.nets <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'
+	load(file.nets)
+	
+	#	calculate mean subgraph distance between any pair
+	tmp <- dw %>% group_by(PTY_RUN, H1, H2) %>% 
+		summarize(MPD:= mean(PATRISTIC_DISTANCE),
+					  MPDA := mean(PATRISTIC_DISTANCE[ADJACENT])) %>%
+		ungroup()
+
+	#	select pairs in networks between whom a link is not rejected
+	tmp <- dnet %>% filter(TYPE=='not.close.or.nonadjacent' & SCORE<0.6) %>%
+			select(PTY_RUN, H1, H2) %>%
+			left_join(tmp, by=c('PTY_RUN','H1','H2'))	
+	
+	
+	dnet %>% select(PTY_RUN, H1, H2, IDCLU, CLU_SIZE) %>%
+			distinct() %>%
+			left_join(tmp, by=c('PTY_RUN','H1','H2')) %>%
+			mutate(CLU_CAT:= cut(CLU_SIZE, breaks=c(1,2,5,10,20))) %>%
+			group_by(CLU_CAT) %>%
+			summarise(MPDA_MEDIAN:= quantile(MPDA, p=0.5),
+					MPDA_CL:= quantile(MPDA, p=0.25),
+					MPDA_CU:= quantile(MPDA, p=0.75)) %>%
+			ungroup()
+
+}
+
 pty.MRC.stage2.get.networks<- function()
 {
 	require(tidyverse)
@@ -1165,15 +1236,15 @@ pty.MRC.stage2.get.networks<- function()
 	
 	if(0)
 	{
-		indir <-  '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_phsc'
-		file.pairs <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
-		file.nets <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
+		indir <-  '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_phsc'
+		file.pairs <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
+		file.nets <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_300_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
 	}	
 	if(1)
 	{
-		indir <-  '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_phsc'
-		file.pairs <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
-		file.nets <- '/Users/Oliver/Box Sync/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
+		indir <-  '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_phsc'
+		file.pairs <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscallpairs_190827.rda'
+		file.nets <- '/Users/or105/Box/OR_Work/2019/2019_PANGEA_BBosa/MRCPopSample_phsc_stage2_output_newali_250_HKC_analysis/MRCUVRI_phscnetworks_190827.rda'		
 	}	
 	
 	#	find all pairs between whom transmission is not excluded
