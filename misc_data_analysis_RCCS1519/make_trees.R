@@ -29,28 +29,28 @@ if(length(args_line) > 0)
   args_dir[['job_tag']] <- args_line[[10]]
 } 
 
+setwd( paste0(args_dir[['out_dir']],'_',args_dir[['job_tag']] ))
 # make pty.runs
 # find bam files
 pty.runs <- data.table(SAMPLE_ID=list.files(args_dir[['data_dir']], pattern='bam$',recursive = TRUE))
 pty.runs[,SAMPLE_ID:=paste0(args_dir[['data_dir']],SAMPLE_ID)]
-
+pty.runs = pty.runs[grepl('remap',SAMPLE_ID) & !grepl('PreDedup',SAMPLE_ID),]
 
 # find pangea id per bam file
-mapping_rccs <- readRDS('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
-map_bam_to_pangeaid <- subset(mapping_rccs,select=c('PANGEA_ID','F'))
-map_bam_to_pangeaid <- unique(map_bam_to_pangeaid[grep('bam$',`F`)])
+# mapping_rccs <- readRDS('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
+mapping_rccs <- readRDS(file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200422_PANGEA2_RCCS_selected_samples.rds'))
+map_bam_to_pangeaid <- subset(mapping_rccs,select=c('PANGEA_ID','REMAP_BAM'))
 map_bam_to_pangeaid[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
-mapping_mrc <- readRDS('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
-tmp <- subset(mapping_mrc,select=c('PANGEA_ID','F'))
-tmp <- unique(tmp[grep('bam$',`F`)])
+# mapping_mrc <- readRDS('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
+mapping_mrc <- readRDS('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200422_PANGEA2_MRCUVRI_selected_samples.rds')
+tmp <- subset(mapping_mrc,select=c('PANGEA_ID','REMAP_BAM'))
 tmp[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
 map_bam_to_pangeaid = rbind(map_bam_to_pangeaid, tmp)
-pty.runs = merge(pty.runs, map_bam_to_pangeaid, by.x='SAMPLE_ID',by.y='F',all.x=T)
+pty.runs = merge(pty.runs, map_bam_to_pangeaid, by.x='SAMPLE_ID',by.y='REMAP_BAM',all.x=T)
 # remove if pangea id not found 
-# pty.runs[is.na(PANGEA_ID)]
-# 2284
+cat(nrow(pty.runs[is.na(PANGEA_ID)]), ' PANGEA IDs are NA, remove \n')
+# 2774  PANGEA IDs are NA, remove 
 pty.runs = pty.runs[!is.na(PANGEA_ID)]
-pty.runs = pty.runs[grepl('remap',SAMPLE_ID) & !grepl('PreDedup',SAMPLE_ID),]
 
 # separate directory in sample id
 pty.runs[,SAMPLE_ID:=gsub(args_dir[['data_dir']],'',SAMPLE_ID)]
@@ -59,6 +59,8 @@ pty.runs[,SAMPLE_ID:=gsub(args_dir[['data_dir']],'',SAMPLE_ID)]
 # pty.runs[,SAMPLE_ID:=basename(SAMPLE_ID)]
 # pty.runs <- pty.runs[FOLDER!='PANGEA_RCCS_comparisonstudy']
 # pty.runs[,PID:=sub('(.*-.*)-.*',"\\1",SAMPLE_ID)]
+
+
 
 # add UNIT_ID to pty.runs
 id.dt <- data.table(read.csv(file.path(args_dir[['data_dir']],'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')))
@@ -71,24 +73,23 @@ id.dt <- rbind(id.dt,tmp)
 id.dt <- unique(id.dt)
 colnames(id.dt) = c("UNIT_ID","SEX","PANGEA_ID")
 pty.runs <- merge(pty.runs, id.dt, by="PANGEA_ID",all.x=T)
-# pty.runs[is.na(UNIT_ID)]
-# 115
+cat(nrow(pty.runs[is.na(UNIT_ID)]), ' Person IDs are NA, remove \n')
+# 92  Person IDs are NA, remove 
 pty.runs <- pty.runs[!is.na(UNIT_ID)]
 
+
 # anonymisation
-tmp=unique(subset(pty.runs,select='UNIT_ID'))
-setkey(tmp, UNIT_ID)
-tmp[,RENAME_ID:=seq_len(nrow(tmp))]
-tmp[,RENAME_ID:=formatC(RENAME_ID, width=floor(log10(nrow(tmp))) +1, flag="0")]
-tmp[,RENAME_ID:=paste0('AID',RENAME_ID)]
-pty.runs <- merge(pty.runs, tmp, by='UNIT_ID',all.x=T)
+aid = read.csv('important_anonymisation_keys_210119.csv')
+aid = subset(data.table(aid),select=c('PT_ID','AID'))
+setnames(aid,c('PT_ID','AID'),c('UNIT_ID','RENAME_ID'))
+pty.runs <- merge(pty.runs, aid, by='UNIT_ID',all.x=T)
 pty.runs[,FQ:=seq_len(length(SAMPLE_ID)), by='RENAME_ID']
 pty.runs[,FQ:=paste0('fq',FQ)]
 pty.runs[,RENAME_ID:= paste0(RENAME_ID,'-',FQ)]
 pty.runs[,FQ:=NULL]
 
+
 # load clusters of close pairs and redefine IDCLU
-setwd( paste0(args_dir[['out_dir']],'_',args_dir[['job_tag']] ))
 load(args_dir[['infile']])  
 tmp2 = unique(subset(df,select=c('CLU_SIZE','IDCLU')))
 setkey(tmp2, CLU_SIZE)
@@ -103,7 +104,6 @@ cat(max(rtc$IDCLU),' clusters of ',length(unique(rtc$ID)), ' individuals, the te
     unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
     'individuals appear in more than one clusters','\n')
 # 808  clusters of  2364  individuals, the ten largest cluster sizes are  17 18 21 22 26 37 38 45 50 55 ,  150 individuals appear in more than one clusters 
-
 
 #	add couples that are not a close pair
 load(file.path(args_dir[['script_dir']],'RakaiPangeaMetaData_v2.rda'))
@@ -141,8 +141,7 @@ setkey(rtc,IDCLU)
 cat(max(rtc$IDCLU),' clusters of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ', 
     unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
     'individuals appear in more than one clusters','\n')
-# 1162  clusters of  3258  individuals, the ten largest cluster sizes are  22 22 24 30 33 43 53 53 55 69 ,  271 individuals appear in more than one clusters 
-
+# 1059  clusters of  3032  individuals, the ten largest cluster sizes are  21 22 22 30 31 42 49 50 52 66 ,  242 individuals appear in more than one clusters 
 
 #	merge up to 8 individuals into the same phyloscanner run
 tn	<- 8
@@ -162,19 +161,16 @@ tmp$PTY_RUN2 = 0
 tmp[c(tmp2,max(tmp2):nrow(tmp)),PTY_RUN2:=1]
 tmp[,PTY_RUN2:=cumsum(PTY_RUN2)]
 # check
-# sum(tmp[,cumsum(PTY_SIZE),by='PTY_RUN2']$V1 !=tmp$PTY_SIZE2)
+stopifnot(sum(tmp[,cumsum(PTY_SIZE),by='PTY_RUN2']$V1 !=tmp$PTY_SIZE2)==0)
 tmp[,PTY_SIZE2:=max(PTY_SIZE2),by='PTY_RUN2']
 tmp[,PTY_RUN2:=PTY_RUN2+1]
 set(tmp,NULL,c('PTY_RUN', 'PTY_SIZE'),NULL)
 setnames(tmp,c('PTY_RUN2', 'PTY_SIZE2'), c('PTY_RUN', 'PTY_SIZE'))
-# check
-# range(tmp$PTY_SIZE)
-# 5-69
 rtc = merge(rtc,tmp,by=c('IDCLU', 'CLU_SIZE'))
 
 #	for all individuals in a cluster
 #	find 3 closest others
-setwd( paste0(args_dir[['out_dir']],'_',args_dir[['job_tag']] ))
+
 if(file.exists('average_distance_perpair.rds')){
   ddist = readRDS('average_distance_perpair.rds')
 }else{
@@ -227,14 +223,15 @@ rtc[,PTY_SIZE:=length(ID),by='PTY_RUN']
 cat(max(rtc$IDCLU),' clusters of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ', 
     unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
     'individuals appear in more than one clusters','\n')
-# 1154  clusters of  3460  individuals, the ten largest cluster sizes are  25 25 27 33 36 46 56 56 58 72 ,  3412 individuals appear in more than one clusters 
+# 1059  clusters of  3253  individuals, the ten largest cluster sizes are  24 25 25 33 34 45 52 53 55 69 ,  3096 individuals appear in more than one clusters 
 tmp = unique(subset(rtc,select=c('PTY_RUN','PTY_SIZE')))
 table(tmp$PTY_SIZE)
-# 8   9  10  11  12  13  14  15  16  17  20  22  23  25  27  33  36  46  56  58  72
-# 38  22  13   7  93   4  41   2   1  23 174   1   1   3   1   1   1   1   2   1  1
+# 6   8   9  10  11  12  13  14  15  17  19  20  22  23  24  25  33  34  45  52 
+# 1  38  26  14   7  84   6  38   1  16   1 159   1   1   2   2   1   1   1   1 
+# 53  55  69 
+# 1   1   1 
 save(rtc,pty.runs,file='phyloscanner_inputs.rda')
 
-load('phyloscanner_inputs.rda')
 
 
 
