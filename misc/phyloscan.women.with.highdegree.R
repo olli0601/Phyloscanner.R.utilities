@@ -22,9 +22,9 @@ femalenetworks.get.outdegree <- function()
 	dg <- dg[, list(OUTDEGREE_S=sum(OUTDEGREE_S), OUTDEGREE_N=sum(OUTDEGREE_N)), by='AID']
 	
 	#	load selected individuals
-	df <- as.data.table(read.csv('~/Box Sync/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_primary_selection.csv', stringsAsFactors=FALSE))
+	df <- as.data.table(read.csv('~/Box/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_primary_selection.csv', stringsAsFactors=FALSE))
 	df[, SELECT:='primary']
-	tmp <- as.data.table(read.csv('~/Box Sync/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_backup_selection.csv', stringsAsFactors=FALSE))
+	tmp <- as.data.table(read.csv('~/Box/OR_Work/2019/2019_RCCS_high_risk_women/191011_femaleonly_backup_selection.csv', stringsAsFactors=FALSE))
 	tmp[, SELECT:='backup']
 	df <- rbind(df,tmp)
 	set(df, NULL, c('X','SEX'), NULL)	
@@ -48,7 +48,7 @@ femalenetworks.get.outdegree <- function()
 
 RakaiFull.analyze.trmpairs.femaleoutdegrees<- function()
 {
-	infile				<- '~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
+	infile				<- '~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run/todi_pairs_171122_cl25_d50_prior23_min30_networksallpairs.rda'		
 	outfile.base		<- gsub('_networksallpairs.rda','',infile)		
 	
 	confidence.cut		<- 0.6

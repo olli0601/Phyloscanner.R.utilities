@@ -5326,12 +5326,12 @@ RakaiFull.phylogeography.190327.gender.mobility.data<- function(infile.inference
 		x	
 	}
 	
-	infile.counts		<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/190327_sampling_by_gender_age.rda"
-	infile.anymisedcom	<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
-	infile.map			<- '~/Dropbox (SPH Imperial College)/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_googlemap.rda'
+	infile.counts		<- "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/190327_sampling_by_gender_age.rda"
+	infile.anymisedcom	<- '~/Box/OR_Work/PANGEA/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_anonymized_IDs.csv'
+	infile.map			<- '~/Box/OR_Work/PANGEA/Rakai Pangea Meta Data/Data for Fish Analysis Working Group/PANGEA_Rakai_community_googlemap.rda'
 	if(is.null(infile.inference))
 	{
-		infile.inference<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_withmetadata.rda"		
+		infile.inference<- "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_withmetadata.rda"		
 	}
 	outfile.base		<- gsub('171122|170704','190327',gsub('_withmetadata.rda','',infile.inference))
 	
@@ -9371,8 +9371,47 @@ RakaiFull.phylogeography.200214.2dpointprocess.get.data<- function()
 	dr <- dr[sample(1:nrow(dr), 250),]
 	set(dr, NULL, c('TR_BIRTHDATE','REC_BIRTHDATE'), NULL)
 	setnames(dr, colnames(dr), gsub('POSTERIOR_','PHYLOSCANNER_',colnames(dr)))
-	write.csv(dr, file=file.path(outdir,'200423_data_not_unlike_real_data.csv'))
+	write.csv(dr, file=file.path(outdir,'200423_data_not_unlike_real_data.csv'))	
 }
+
+RakaiFull.phylogeography.200928.2dpointprocess.get.data<- function()
+{
+	
+	require(data.table)
+	require(scales)
+	require(ggplot2)
+	require(grid)
+	require(gridExtra)
+	require(RColorBrewer)
+	
+	infile.inference<- "~/Box/OR_Work/PANGEA/Rakai Fish Analysis/full_run/RakaiAll_output_170704_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_withmetadata.rda"
+	
+	load(infile.inference)	
+	setkey(rtp, MALE_RID, FEMALE_RID)
+	rtp[, PAIRID:= seq_len(nrow(rtp))]
+	rtp <- subset(rtp, !is.na(IDCLU), select=c(FEMALE_RID, MALE_RID, PTY_RUN, IDCLU, POSTERIOR_SCORE_LINKED, POSTERIOR_SCORE_MF, POSTERIOR_SCORE_FM, NETWORK_SCORE_MF, NETWORK_SCORE_FM, FEMALE_BIRTHDATE, MALE_BIRTHDATE))
+	rtp <- subset(rtp, !is.na(MALE_BIRTHDATE) & !is.na(FEMALE_BIRTHDATE))
+	rtp[, NETWORK_SCORE_LINKED_DIR_UNCLEAR:= POSTERIOR_SCORE_LINKED - NETWORK_SCORE_MF - NETWORK_SCORE_FM]
+	# add age 
+	rtp[,MALE_AGE_AT_MID:=2013.25-MALE_BIRTHDATE]
+	rtp[,FEMALE_AGE_AT_MID:=2013.25-FEMALE_BIRTHDATE]
+	set.seed(42)
+	set(rtp, NULL, 'MALE_AGE_AT_MID', rtp[,MALE_AGE_AT_MID + runif(nrow(rtp), min=-1, max=1)])
+	set(rtp, NULL, 'FEMALE_AGE_AT_MID', rtp[,FEMALE_AGE_AT_MID + runif(nrow(rtp), min=-1, max=1)])
+	# make anonymous RID
+	tmp <- unique(subset(rtp, select=FEMALE_RID))
+	tmp[, FEMALE_AID:= paste0('F_',sample(nrow(tmp)))]
+	rtp <- merge(rtp, tmp, by='FEMALE_RID')
+	tmp <- unique(subset(rtp, select=MALE_RID))
+	tmp[, MALE_AID:= paste0('M_',sample(nrow(tmp)))]
+	rtp <- merge(rtp, tmp, by='MALE_RID')
+	set(rtp, NULL, c('MALE_RID','FEMALE_RID','PTY_RUN','IDCLU','FEMALE_BIRTHDATE','MALE_BIRTHDATE'), NULL)
+	
+	write.csv(rtp, row.names=FALSE, file=file.path(outdir,'200928_data_not_unlike_real_data.csv'))
+	
+}
+
+
 
 RakaiFull.phylogeography.200214.UNAIDS.report.csv<- function()
 {
