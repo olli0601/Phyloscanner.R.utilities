@@ -4,6 +4,8 @@ library(tidyverse)
 library(seqinr)
 
 rkuvri.make.anonymised.id <- function(){
+  #' input person ids, return ananymise ids 
+  
   # file names
   outfile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
@@ -31,6 +33,9 @@ rkuvri.make.anonymised.id <- function(){
 
 rkuvri.make.phyloscanner.input.samples <- function()
 {
+  #' input person ids, selected samples, ananymise ids
+  #' returns a data table summarising person id and bam files 
+  #' 
 	# file names
 	data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 	out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
@@ -100,11 +105,13 @@ rkuvri.make.phyloscanner.input.samples <- function()
 
 rkuvri.make.phyloscanner.input.runs <- function()
 {
+  #' input clusters, couples, and three closest persons for each cluster
+  #' return a data table allocating each person to a run
+  
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
   out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
 	potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
 	infile.potential.networks <- file.path(potential.networks.analysis.dir, 'clusters.rda')
-	infile.average.distance.per.pair <- file.path(potential.networks.analysis.dir, 'average_distance_perpair.rds')
 	infile.clostest.three.per.cluster <- file.path(potential.networks.analysis.dir, 'closest_3_percluster.rds')
 	infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
 	
@@ -187,39 +194,38 @@ rkuvri.make.phyloscanner.input.runs <- function()
   #	for all individuals in a cluster
   #	find 3 closest others
 	
-	if(file.exists(infile.average.distance.per.pair)){
-		ddist = readRDS(infile.average.distance.per.pair)
-	}else{
-	  infile.average.distance.per.pair.per.window <- file.path(potential.networks.analysis.dir, 'distance_overall_method2_sequence_level_v4.rda')
-		load(infile.average.distance.per.pair.per.window)
-		ddist = subset(distance,select=c('TAXA1','TAXA2'))
-		ddist$DIST = rowMeans(distance[,3:ncol(distance)],na.rm = T)
-		setnames(id.dt, colnames(id.dt),paste0(colnames(id.dt),'1'))
-		ddist = merge(ddist, id.dt, by.x='TAXA1', by.y='PANGEA_ID1',all.x=T)
-		setnames(id.dt, colnames(id.dt),gsub('1','2',colnames(id.dt)))
-		ddist = merge(ddist, id.dt, by.x='TAXA2', by.y='PANGEA_ID2',all.x=T)
-		setnames(id.dt, colnames(id.dt),gsub('2','',colnames(id.dt)))
-		ddist <- ddist[,list(DIST=mean(DIST)),by=c('UNIT_ID1','UNIT_ID2')]
-		saveRDS(ddist,file=infile.average.distance.per.pair) 
-	}
-	
-  #
 	if(file.exists(infile.clostest.three.per.cluster)){
-		dcl =readRDS(infile.clostest.three.per.cluster)
+	  dcl =readRDS(infile.clostest.three.per.cluster)
 	}else{
-		dcl <- rtc[,{
-					tmp = ddist[UNIT_ID1 %in% ID, c('UNIT_ID2','DIST')]
-					tmp2 = ddist[UNIT_ID2 %in% ID, c('UNIT_ID1','DIST')]
-					tmp = rbind(tmp,tmp2,use.names=F)
-					colnames(tmp) = c('UNIT_ID','DIST')
-					tmp = tmp[!UNIT_ID%in% ID,]
-					tmp = tmp[,list(mean(DIST)),by='UNIT_ID']
-					tmp=tmp[order(V1),]
-					list(ID_CLOSE1=tmp$UNIT_ID[nrow(tmp)],DISTANCE1=tmp$V1[nrow(tmp)],
-							ID_CLOSE2=tmp$UNIT_ID[nrow(tmp)-1],DISTANCE2=tmp$V1[nrow(tmp)-1],
-							ID_CLOSE3=tmp$UNIT_ID[nrow(tmp)-2],DISTANCE3=tmp$V1[nrow(tmp)-2])
-				},by=c('CLU_SIZE','IDCLU')]
-		saveRDS(dcl,file=infile.clostest.three.per.cluster)
+	  infile.average.distance.per.pair <- file.path(potential.networks.analysis.dir, 'average_distance_perpair.rds')
+	  if(file.exists(infile.average.distance.per.pair)){
+	    ddist = readRDS(infile.average.distance.per.pair)
+	  }else{
+	    infile.average.distance.per.pair.per.window <- file.path(potential.networks.analysis.dir, 'distance_overall_method2_sequence_level_v4.rda')
+	    load(infile.average.distance.per.pair.per.window)
+	    ddist = subset(distance,select=c('TAXA1','TAXA2'))
+	    ddist$DIST = rowMeans(distance[,3:ncol(distance)],na.rm = T)
+	    setnames(id.dt, colnames(id.dt),paste0(colnames(id.dt),'1'))
+	    ddist = merge(ddist, id.dt, by.x='TAXA1', by.y='PANGEA_ID1',all.x=T)
+	    setnames(id.dt, colnames(id.dt),gsub('1','2',colnames(id.dt)))
+	    ddist = merge(ddist, id.dt, by.x='TAXA2', by.y='PANGEA_ID2',all.x=T)
+	    setnames(id.dt, colnames(id.dt),gsub('2','',colnames(id.dt)))
+	    ddist <- ddist[,list(DIST=mean(DIST)),by=c('UNIT_ID1','UNIT_ID2')]
+	    saveRDS(ddist,file=infile.average.distance.per.pair) 
+	  }
+	  dcl <- rtc[,{
+	    tmp = ddist[UNIT_ID1 %in% ID, c('UNIT_ID2','DIST')]
+	    tmp2 = ddist[UNIT_ID2 %in% ID, c('UNIT_ID1','DIST')]
+	    tmp = rbind(tmp,tmp2,use.names=F)
+	    colnames(tmp) = c('UNIT_ID','DIST')
+	    tmp = tmp[!UNIT_ID%in% ID,]
+	    tmp = tmp[,list(mean(DIST)),by='UNIT_ID']
+	    tmp=tmp[order(V1),]
+	    list(ID_CLOSE1=tmp$UNIT_ID[nrow(tmp)],DISTANCE1=tmp$V1[nrow(tmp)],
+	         ID_CLOSE2=tmp$UNIT_ID[nrow(tmp)-1],DISTANCE2=tmp$V1[nrow(tmp)-1],
+	         ID_CLOSE3=tmp$UNIT_ID[nrow(tmp)-2],DISTANCE3=tmp$V1[nrow(tmp)-2])
+	  },by=c('CLU_SIZE','IDCLU')]
+	  saveRDS(dcl,file=infile.clostest.three.per.cluster)
 	}
 	
   # add the 3 closest individuals to each cluster
@@ -249,8 +255,8 @@ rkuvri.make.phyloscanner.input.runs <- function()
   # 1   1   1 
 	
 	# write processed samples 
-	cat('\nWriting to file ', paste0(out.base,'phyloscanner_inputs.rda') )
-	save(rtc,pty.runs,file=paste0(out.base,'phyloscanner_inputs.rda'))
+	cat('\nWriting to file ', paste0(out.base,'phscinput_runs.rds') )
+	saveRDS(rtc, file=paste0(out.base,'phscinput_runs.rds'))
 		
 }
 

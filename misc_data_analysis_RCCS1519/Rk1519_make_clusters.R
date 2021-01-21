@@ -7,15 +7,19 @@ library(igraph)
 library(dplyr)
 library(pammtools)# plot stepribbon
 
+
 rkuvri.make.subsequences <- function()
 {
+  #' break sequences into subsequences by windows
+  #' it takes sequences and break them into overlapping windows of length 500 and defines batches for distance calculation
+  
   # break sequences into windows and batches
   window_size <- 500
   batch_size <- 100
   
   # file names
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
+  # out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
   potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
   infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
 
@@ -60,8 +64,10 @@ rkuvri.make.subsequences <- function()
   
 }
 
-# define match score for each position
+
 is.match <- function(x,y){
+  #' returns match score for each position
+  #' @param x,y two nucleotides at one positions
   if(x %in% c('a','g','c','t') & y %in% c('a','g','c','t')){
     if(x==y){
       ans = 1
@@ -101,7 +107,10 @@ is.match <- function(x,y){
 
 rkuvri.make.distance<- function()
 {
-  # calculate distances in parallel
+  #'  calculate length of valid sequences, total match scores, percentage of matches of pair of sequences in one batch and in one window
+  #' it inputs the subsequence and batch info, and returns a data.table with distances
+  
+  
   if(1)
   {
     args_dir <- list()
@@ -133,7 +142,7 @@ rkuvri.make.distance<- function()
   infile.subsequence <- file.path(args_dir[['out_dir']], paste0('subsequence_window_', args_dir[['windowi']], '.fasta'))
   
   #	read sequences	
-   sq<- read.fasta(infile.subsequence)
+  sq<- read.fasta(infile.subsequence)
   
   #	prepare and select batch
   dfo <- readRDS(infile.batch)
@@ -179,9 +188,9 @@ rkuvri.make.distance<- function()
   
 }
 
-#	function to make PBS header
 make.PBS.header <- function(hpc.walltime=47, hpc.select=1, hpc.nproc=1, hpc.mem= "6gb", hpc.load= "module load anaconda3/personal", hpc.q="pqeelab", hpc.array=1 )
 {	
+  #'  function to make PBS header
   pbshead <- "#!/bin/sh"
   tmp <- paste("#PBS -l walltime=", hpc.walltime, ":59:00", sep = "")
   pbshead <- paste(pbshead, tmp, sep = "\n")
@@ -202,7 +211,8 @@ make.PBS.header <- function(hpc.walltime=47, hpc.select=1, hpc.nproc=1, hpc.mem=
 
 
 rkuvri.submit.make.distance <- function(){
-  # write script to calculate distance
+  #' write script to calculate distance
+  
   window_size <- 500
   batch_size <- 100
   
@@ -264,6 +274,10 @@ rkuvri.submit.make.distance <- function(){
 }
 
 rkuvri.collect.distance.per.person.pair <- function(){
+  #' input similarities per batch and per window
+  #' combine similarities to one data.table for each window 
+  #' summarise basic infomations per window and clean by removing invalid pairs
+  
   batch_size <- 100
   windown <- 99
   
@@ -299,13 +313,19 @@ rkuvri.collect.distance.per.person.pair <- function(){
     distancei[,WINDOW:=k]
     
     # save combined results per window
-    save(distancei,metai,file=paste0(base,'_results.rda'))
+    save(distancei,metai,file=paste0(infile.dist.base[w],'_results.rda'))
     gc()
   }
 }
 
 
 rkuvri.find.threshold.from.couples<- function(){
+  #' input couples, sequences, person ids, similarity results, 
+  #' take similarity data for couples, fit bimodal distributions to similarities, define the threshold
+  #' the most useful output would be threshold files
+  #' Note: eligible sequences should satisfy length >= 250, have person id
+  #' eligible pairs of sequences should not be the same person
+  
   # file names
   window_size <- 500
   windown <- 99
@@ -375,7 +395,7 @@ rkuvri.find.threshold.from.couples<- function(){
   unique(tmp_couple)
   tmp_couple  <- tmp_couple[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
   
-  # calculate similaritiesof pairs among couples on each window
+  # calculate similarities of pairs among couples on each window
   for (i in 1:windown) {
     # similarity per window
     cat('\n process window ',i , '\n')
@@ -663,6 +683,11 @@ rkuvri.find.threshold.from.couples<- function(){
 
 
 rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function(){
+  #' input couples, sequences, person ids, consensus sequences info (or depth info), similarity results, thresholds
+  #' returns average similarities and supports per pair of sequences
+  #' Note: eligible sequences should satisfy length >= 250, have person id, have >250 high depth positions
+  #' eligible pairs of sequences should not be the same person
+  #' 
   window_size <- 500
   method <- 2
   windown <- 99 
@@ -677,8 +702,8 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
   infile.rccs <- file.path(data.dir,'PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
   infile.mrc <- file.path(data.dir,'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
+  infile.depth <- file.path(data.dir,'210121_RCCSMRC_depth.rda')
   infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'results.rda'))
-  infile.depth <- file.path(out.dir,'rccs_mrc_depth.rda')
   if(method == 1){
     infile.threshold <- file.path(potential.networks.analysis.dir,paste0('threshold_dip_indep_exp5.rda'))
   }else if(method == 2){
@@ -746,7 +771,11 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   
   
   # consensus sequence depth
-  if(!file.exists(infile.depth)){
+  if(file.exists(infile.depth)){
+    # load depth
+    load(infile.depth)
+  }else{
+    # read consensus sequences 
     mapping_rccs <- readRDS(infile.rccs)
     dconsensus <- subset(mapping_rccs,select=c('PANGEA_ID','CONSENSUS','F'))
     dconsensus <- unique(dconsensus[CONSENSUS!="",])
@@ -762,6 +791,7 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
     dconsensus <- merge(dconsensus, tmp, by='pangea_id', all.y=T)
     dconsensus <- unique(dconsensus)
     
+    # valid lengths and high depth position lengths in consensus sequences
     ddepth = data.table()
     for (i in seq_len(nrow(dconsensus))) {
       if(i %% 100 == 1 | i==nrow(dconsensus)){
@@ -782,12 +812,8 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
       }, by = c('WINDOW', 'START', 'END')]
       ddepth <- rbind(ddepth, tmp_df)
     }
-    
+    #
     save(ddepth,file = infile.depth)
-    
-  }else{
-    # load depth
-    load(file.path(out.dir,'rccs_mrc_depth.rda'))
   }
   
 
@@ -802,7 +828,7 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   ddepth_select_w[,HD:=1]
   ddepth_select_w <- data.table::dcast(ddepth_select_w, PANGEA_ID~WINDOW, value.var='HD')
   
-  # histogram of number of windows with high depth
+  # plot histogram of number of windows with high depth
   tmp = data.table(V=rowSums(!is.na(ddepth_select_w[,2:100])))
   ggplot(tmp,aes(V)) +
     geom_histogram() +
@@ -872,6 +898,10 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
 }
 
 rkuvri.make.close.pairs.and.clusters <- function(){
+  #' input couples, sequences, person ids, consensus sequence info, distances and supports per sequence pair
+  #' classify sequence pair, and thus individual pairs, to be close or distant, and break individuals into close clusters
+  #' main output would be close pairs of individuals and clusters
+  #' Note: eligible pairs further requires at least 4 windows have >=250 high-depth positions 
   window_size <- 500
   windown <- 99 
   method <- 2
@@ -927,6 +957,7 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   close_pairs[,pt_id2:= as.character(pt_id2)]
   
   # save close pairs
+  cat('Write close pairs to ',file.path(potential.networks.analysis.dir,'close_pairs.rda'),'...\n')
   save(close_pairs,file=file.path(potential.networks.analysis.dir,'close_pairs.rda'))
   
   # load(file.path(potential.networks.analysis.dir,'close_pairs.rda'))
@@ -1078,7 +1109,9 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   rtc[,IDCLU:=IDCLU + max(df$IDCLU)-1]
   df = rbind(rtc,df)
   
+  cat('Write clusters to ',file.path(potential.networks.analysis.dir,'clusters.rda'),'...\n')
   save(df,file = file.path(potential.networks.analysis.dir,'clusters.rda'))
+  
   length(unique(df$ID))
   tmp = unique(subset(df,select=c('IDCLU','CLU_SIZE')))
   setkey(tmp, IDCLU)
@@ -1101,6 +1134,11 @@ rkuvri.make.close.pairs.and.clusters <- function(){
 
 
 rkuvri.validate.classification <- function(){
+  #' input tree distances, hxb2 to map, sequences, average distance per pair (or thresholds and distances per window to calculate it)
+  #' input depths, couples, person ids, close pairs, distances per pair
+  #' not necessary for making clusters
+  #' validates the classification and thresholds
+  #' 
   window_size <- 500
   windown <- 99
   length_cutoff <- 250
@@ -1115,11 +1153,11 @@ rkuvri.validate.classification <- function(){
   infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
   infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
   infile.tree.distance <- file.path(data.dir ,'HIV_DistanceNormalisationOverGenome.csv')
+  infile.average.distance <- file.path(potential.networks.analysis.dir,'average_distance.rds')
   infile.hxb2 <- file.path(data.dir ,'HIV1_COM_2015_genome_DNA_ALL.fasta')
-  infile.close.pairs <- file.path(data.dir,'close_pairs.rda')
+  infile.close.pairs <- file.path(potential.networks.analysis.dir,'close_pairs.rda')
   infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'results.rda'))
-  infile.support <- file.path(potential.networks.analysis.dir ,paste0('support_overall_method', method,'_sequence_level_processed_v4.rda'))
-  infile.depth <- file.path(out.dir,'rccs_mrc_depth.rda')
+  infile.depth <- file.path(data.dir,'210121_RCCSMRC_depth.rda')
   if(method == 1){
     infile.threshold <- file.path(potential.networks.analysis.dir,'threshold_dip_indep_exp5.rda')
   }else if(method == 2){
@@ -1129,7 +1167,7 @@ rkuvri.validate.classification <- function(){
   }
 
   
-  ##### plot threshold against distance (tree/ average)
+  ### plot threshold vs distances per window
   # load tree-based distance
   tree_distance <- read.csv(infile.tree.distance)
   tree_distance <- data.table(tree_distance)
@@ -1167,17 +1205,21 @@ rkuvri.validate.classification <- function(){
   }
   
   # average distance per window
-  load(infile.support)
-  average_distance <-  distance%>%
-    summarise_if(is.numeric, mean, na.rm = TRUE)
+  if(file.exists(infile.average.distance)){
+    ans <- as.data.table(readRDS(infile.average.distance))
+  }else{
+    load(infile.distance)
+    average_distance <-  distance%>%
+      summarise_if(is.numeric, mean, na.rm = TRUE)
+    
+    load(infile.threshold)
+    ans <- data.table(THRES=threshold$`50%`,
+                      DISTM=matrix(average_distance[1:windown],ncol=1))
+    saveRDS(ans,file = file.path(potential.networks.analysis.dir,'average_distance.rds'))
+  }
 
-  load(infile.threshold)
-  ans <- data.table(THRES=threshold$`50%`,
-                    DISTM=matrix(average_distance[1:windown],ncol=1))
-  saveRDS(ans,file = file.path(potential.networks.analysis.dir,'average_distance.rds'))
   
   # compare distance and threshold
-  # ans <- as.data.table(readRDS(file.path(potential.networks.analysis.dir,'average_distance.rds')))
   ans[, DISTT:=tree_distance_per_window]
   colnames(ans) <- c('threshold','average distance','tree distance')
   ans[, window:=seq_len(nrow(ans))]
@@ -1198,6 +1240,7 @@ rkuvri.validate.classification <- function(){
   ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('distance_vs_threshold_method', method,'.pdf')),width = 6, height = 6)
   
   
+  ### check the corresponding tree distance of thresholds in pol 
   # create a function mapping distance to tree distance
   y=seq(0.01,0.05,0.005)
   x=c(0.022,0.031,0.036,0.041,0.044,0.048,0.051,0.054,0.056)
@@ -1212,6 +1255,7 @@ rkuvri.validate.classification <- function(){
     return(res)
   }
   
+  load(infile.threshold)
   thres = 1-threshold$`50%`
   thres_map = sapply(thres,function(x)f(x,coefs))
   
@@ -1224,7 +1268,7 @@ rkuvri.validate.classification <- function(){
   # distance
   # 0.01615810 0.02545088 0.02954131 
   quantile(thres_map[start_pol_win:end_pol_win],probs=c(0.025,0.5,0.975))
-  # tree
+  # tree distance
   # 0.009986778 0.011284782 0.013984869
   
   
@@ -1240,7 +1284,6 @@ rkuvri.validate.classification <- function(){
                                    by=c('WINDOW')]
   ddepth_select_w[,HD:=1]
   ddepth_select_w <- data.table::dcast(ddepth_select_w, PANGEA_ID~WINDOW, value.var='HD')
-  
   
   
   # map alignments to studyid
@@ -1340,10 +1383,8 @@ rkuvri.validate.classification <- function(){
   saveRDS(df_window_summary, file=file.path(potential.networks.analysis.dir,paste0('distance_distribution_perwindow_bycoupleclose_method', method,'.rds')))
   
   
-  # df_window_summary <- readRDS(potential.networks.analysis.dir,paste0('distance_distribution_perwindow_bycoupleclose_method', method,'.rds'))
-  # 
-  # plot similarity distributions over windows by couple and close
-  # and plot threshold
+  # df_window_summary <- readRDS(file.path(potential.networks.analysis.dir,paste0('distance_distribution_perwindow_bycoupleclose_method', method,'.rds')))
+  # plot similarity distributions over windows by couple and close and thresholds
   
   ggplot(df_window_summary)+
     geom_step(aes(x=POS,y=`0.5`,col=factor(CLOSE))) +
