@@ -52,7 +52,6 @@ rkuvri.make.phyloscanner.input.samples <- function()
 	set(id.dt, NULL, 'sex', NULL)
 	
 	# add anonymised ids
-	# TODO where exactly is this stored?
 	aid <- as.data.table(read.csv(infile.ind.anonymised, stringsAsFactors = FALSE))
 	aid <- subset(data.table(aid),select=c('PT_ID','AID'))
 	setnames(aid,c('PT_ID','AID'),c('UNIT_ID','RENAME_ID'))
