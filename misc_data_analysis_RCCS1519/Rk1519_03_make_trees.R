@@ -287,9 +287,13 @@ rkuvri.make.phyloscanner.input.runs <- function()
  	#	52  54  55  70
   	#	1   1   1   1
 	
+	# combine with sample info
+	setnames(rtc, 'ID', 'UNIT_ID')
+	pty.runs <- merge(rtc, pty.runs, by='UNIT_ID')
+	
 	# write processed samples 
 	cat('\nWriting to file ', paste0(out.base,'phscinput_runs.rds') )
-	saveRDS(rtc, file=paste0(out.base,'phscinput_runs.rds'))		
+	saveRDS(pty.runs, file=paste0(out.base,'phscinput_runs.rds'))		
 }
 
 
