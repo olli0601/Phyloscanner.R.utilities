@@ -113,8 +113,8 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	require(data.table)
 	require(tidyverse)
 	
-  	data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-  	out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'	
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'	
 	potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
 	infile.potential.networks <- file.path(potential.networks.analysis.dir, 'clusters.rda')
 	infile.clostest.three.per.cluster <- file.path(potential.networks.analysis.dir, 'closest_3_percluster.rds')
@@ -123,7 +123,7 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	# load data on individuals, sample locations, and rename ids 
 	pty.runs <- readRDS(paste0(out.base,'phscinput_samples.rds'))
 	
-  	# load potential transmission networks of close pairs and redefine IDCLU
+  # load potential transmission networks of close pairs and redefine IDCLU
 	load( infile.potential.networks )  
 	tmp <- unique(subset(df,select=c('CLU_SIZE','IDCLU')))
 	setkey(tmp, CLU_SIZE)
@@ -135,7 +135,7 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ', 
 			unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
 			'individuals appear in more than one clusters','\n')
-  	# 808  potential transmission networks of  2364  individuals, the ten largest cluster sizes are  17 18 21 22 26 37 38 45 50 55 ,  150 individuals appear in more than one clusters 
+  # 808  potential transmission networks of  2364  individuals, the ten largest cluster sizes are  17 18 21 22 26 37 38 45 50 55 ,  150 individuals appear in more than one clusters 
 	
 	#
 	#	add couples that are not a close pair and redefine IDCLU
@@ -191,9 +191,9 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ', 
 			unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
 			'individuals appear in more than one clusters','\n')
-  	# 1059  potential transmission networks of  3032  individuals, the ten largest cluster sizes are  22 22 23 31 31 43 49 51 52 67 ,  277 individuals appear in more than one clusters 
+  # 1059  potential transmission networks of  3032  individuals, the ten largest cluster sizes are  22 22 23 31 31 43 49 51 52 67 ,  277 individuals appear in more than one clusters 
 	
-  	#	merge up to 8 individuals into the same phyloscanner run
+  #	merge up to 8 individuals into the same phyloscanner run
 	tn	<- 8
 	tmp	<- unique(subset(rtc, select=c(IDCLU, CLU_SIZE)))
 	tmp[, PTY_RUN:= IDCLU]
@@ -217,22 +217,18 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	setnames(tmp,c('PTY_RUN2', 'PTY_SIZE2'), c('PTY_RUN', 'PTY_SIZE'))
 	rtc <- merge(rtc,tmp,by=c('IDCLU', 'CLU_SIZE'))
 	
-  	#	for all individuals in a cluster
-  	#	find 3 closest others
+  #	for all individuals in a cluster
+  #	find 3 closest others
 	
 	if(file.exists(infile.clostest.three.per.cluster))
 	{
 	  dcl <- readRDS(infile.clostest.three.per.cluster)
-	}
-	else
-	{
+	}else{
 	  infile.average.distance.per.pair <- file.path(potential.networks.analysis.dir, 'average_distance_perpair.rds')
 	  if(file.exists(infile.average.distance.per.pair))
 	  {
 	    ddist <- readRDS(infile.average.distance.per.pair)
-	  }
-	  else
-	  {
+	  }else{
 	    infile.average.distance.per.pair.per.window <- file.path(potential.networks.analysis.dir, 'distance_overall_method2_sequence_level_v4.rda')
 	    load(infile.average.distance.per.pair.per.window)
 	    ddist <- subset(distance,select=c('TAXA1','TAXA2'))
@@ -289,11 +285,148 @@ rkuvri.make.phyloscanner.input.runs <- function()
 	
 	# combine with sample info
 	setnames(rtc, 'ID', 'UNIT_ID')
-	pty.runs <- merge(rtc, pty.runs, by='UNIT_ID')
+	pty.runs <- merge(rtc, pty.runs, by='UNIT_ID',all.x=T)
+	
 	
 	# write processed samples 
 	cat('\nWriting to file ', paste0(out.base,'phscinput_runs.rds') )
 	saveRDS(pty.runs, file=paste0(out.base,'phscinput_runs.rds'))		
+}
+
+
+rkuvri.make.alignments<- function()
+{
+  #
+  #	set up working environment
+  require(Phyloscanner.R.utilities)
+  
+  # file names
+  prog.pty <- '~/phyloscanner/phyloscanner_make_trees.py'
+  HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
+  in.dir <- file.path(HOME,'210122_phsc_input')		
+  work.dir <- file.path(HOME,"210122_phsc_work")
+  out.dir <- file.path(HOME,"210122_phsc_output")	
+  dir.create(in.dir)
+  dir.create(work.dir)
+  dir.create(out.dir)
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  infile.runs <- paste0(HOME,'210120_RCCSUVRI_phscinput_runs.rds')
+  infile.consensus.Kenya <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
+  infile.consensus.Uganda <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA')
+  infile.consensus.Tanzania <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
+  infile.consensus <- infile.consensus.Tanzania
+
+  # load runs
+  pty.runs <- readRDS(infile.runs)
+ 
+  # clean taxa names 
+  # infile.consensus.Kenya .tre not fasta
+  for (i in c(infile.consensus.Tanzania,infile.consensus.Uganda)) {
+    consensus_seq<- readLines(i)
+    consensus_seq_names <- consensus_seq[grepl('>',consensus_seq)]
+    consensus_seq_names <- gsub('>','',consensus_seq_names)
+    
+    if(any(!grepl('REF_',consensus_seq_names))){
+      consensus_seq_names <- paste0('REF_',consensus_seq_names)
+      consensus_seq[grepl('>',consensus_seq)] <- paste0('>',consensus_seq_names)
+      writeLines(consensus_seq,con = i)
+    }
+  }
+  
+  # take hxb2
+  consensus_seq <- readLines(infile.consensus)
+  consensus_seq_names <- consensus_seq[grepl('>',consensus_seq)]
+  consensus_seq_names <- gsub('>','',consensus_seq_names)
+  hxb2 <- consensus_seq_names[grepl('HXB2',consensus_seq_names)]
+  
+  
+  # adapt format
+  pty.runs[ID_TYPE=='control',UNIT_ID:=paste0('CNTRL-',UNIT_ID)]
+  pty.runs[ID_TYPE=='control',RENAME_ID:=paste0('CNTRL-',RENAME_ID)]
+  pty.runs[,BAM:=paste0(data.dir,SAMPLE_ID,'.bam')]
+  pty.runs[,REF:=paste0(data.dir,SAMPLE_ID,'_ref.fasta')]
+  #
+  #	define phyloscanner input args to generate read alignments 
+  #	for each window and each run
+  ptyi <- seq(2000,5500,25)		
+  pty.c	<- lapply(seq_along(ptyi), function(i)
+  {
+    pty.args <- list(prog.pty=prog.pty, 
+                        prog.mafft='mafft', 						 
+                        data.dir=data.dir, 
+                        work.dir=work.dir, 
+                        out.dir=out.dir, 
+                        alignments.file=infile.consensus,
+                        alignments.root='REF_A4.CD.97.97CD_KTB13_AM000054',#VRL 24-FEB-2006 
+                        alignments.pairwise.to=hxb2,
+                        window.automatic= '', 
+                        merge.threshold=1, 
+                        min.read.count=1, 
+                        quality.trim.ends=23, 
+                        min.internal.quality=23, 
+                        merge.paired.reads=TRUE, 
+                        no.trees=TRUE, 
+                        dont.check.duplicates=FALSE,
+                        dont.check.recombination=TRUE,
+                        num.bootstraps=1,
+                        all.bootstrap.trees=TRUE,
+                        strip.max.len=350, 
+                        min.ureads.individual=NA, 
+                        win=c(ptyi[i],ptyi[i]+250,25,250),				 				
+                        keep.overhangs=FALSE,
+                        mem.save=0,
+                        verbose=TRUE,					
+                        select=NA	
+    )											
+    pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+    pty.c[, W_FROM:= ptyi[i]]
+    # pty.c[, PTY_RUN:= as.integer(sub('.*ptyr([0-9])_.*','\\1',CMD))]
+    pty.c
+  })
+  pty.c	<- do.call('rbind', pty.c)	
+  # tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
+  # tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
+  # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
+  # pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)		
+  # pty.c	<- subset(pty.c, is.na(FO))		
+  pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+  #pty.c	<- subset(pty.c, W_FROM==2350)
+  #print(pty.c, n=1e3)
+  
+  #	define PBS variables
+  hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
+  hpc.select			<- 1						# number of nodes
+  hpc.nproc			<- 1						# number of processors on node
+  hpc.walltime		<- 123						# walltime
+  hpc.q				<- "pqeelab"				# PBS queue
+  hpc.mem				<- "6gb" 					# RAM	
+  hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+  #	define PBS header for job scheduler. this will depend on your job scheduler.
+  pbshead		<- "#!/bin/sh"
+  tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+  pbshead		<- paste(pbshead, tmp, sep = "\n")
+  tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+  pbshead 	<- paste(pbshead, tmp, sep = "\n")
+  pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+  if(!is.na(hpc.array))
+    pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+  if(!is.na(hpc.q)) 
+    pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+  pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+  cat(pbshead)
+  
+  #	create PBS job array
+  cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+  cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+  cmd		<- paste(pbshead,cmd,sep='\n')	
+  #	submit job
+  outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+  outfile		<- file.path(work.dir, outfile)
+  cat(cmd, file=outfile)
+  cmd 		<- paste("qsub", outfile)
+  cat(cmd)
+  cat(system(cmd, intern= TRUE))		
 }
 
 
