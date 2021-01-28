@@ -299,6 +299,8 @@ rkuvri.make.alignments<- function()
   #
   #	set up working environment
   require(Phyloscanner.R.utilities)
+  library(data.table)
+  library(seqinr)
   
   # file names
   prog.pty <- '~/phyloscanner/phyloscanner_make_trees.py'
@@ -306,52 +308,68 @@ rkuvri.make.alignments<- function()
   in.dir <- file.path(HOME,'210122_phsc_input')		
   work.dir <- file.path(HOME,"210122_phsc_work")
   out.dir <- file.path(HOME,"210122_phsc_output")	
+  package.dir <- file.path(.libPaths(),'Phyloscanner.R.utilities')
   dir.create(in.dir)
   dir.create(work.dir)
   dir.create(out.dir)
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
   potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
   infile.runs <- paste0(HOME,'210120_RCCSUVRI_phscinput_runs.rds')
-  infile.consensus.Kenya <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
-  infile.consensus.Uganda <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA')
-  infile.consensus.Tanzania <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
-  infile.consensus <- infile.consensus.Tanzania
+  infile.consensus.tree <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
+  infile.consensus <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA')
+  infile.consensus.oneeach <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
+  # infile.consensus <- infile.consensus.Tanzania
+  infile.hxb2.package <- file.path(package.dir,'HIV1_compendium_AD_B_CPX_v2.fasta')
 
   # load runs
   pty.runs <- readRDS(infile.runs)
  
   # clean taxa names 
-  # infile.consensus.Kenya .tre not fasta
-  for (i in c(infile.consensus.Tanzania,infile.consensus.Uganda)) {
-    consensus_seq<- readLines(i)
-    consensus_seq_names <- consensus_seq[grepl('>',consensus_seq)]
-    consensus_seq_names <- gsub('>','',consensus_seq_names)
+  for (i in c(infile.consensus,  infile.consensus.oneeach)) {
+    consensus_seq<- read.fasta(i)
+    consensus_seq_names <- names(consensus_seq)
     
     if(any(!grepl('REF_',consensus_seq_names))){
       consensus_seq_names <- paste0('REF_',consensus_seq_names)
-      consensus_seq[grepl('>',consensus_seq)] <- paste0('>',consensus_seq_names)
-      writeLines(consensus_seq,con = i)
+      write.fasta(sequences=consensus_seq,
+                  names=consensus_seq_names,
+                  nbchar = 60,
+                  file.out=i)
     }
   }
   
+  # load sequence
+  consensus_seq <- read.fasta(infile.consensus)
+  consensus_seq_oneeach <- read.fasta(infile.consensus.oneeach)
+  tmp = sapply(consensus_seq_oneeach,function(x){any(sapply(consensus_seq, function(y){identical(as.character(x)[as.character(x)!='-'],as.character(y)[as.character(y)!='-'])}))})
+  consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),c(names(tmp[tmp==T]),'REF_CON_OF_CONS'))]
+  consensus_seq <- c(consensus_seq, consensus_seq_oneeach)
+  
   # take hxb2
-  consensus_seq <- readLines(infile.consensus)
-  consensus_seq_names <- consensus_seq[grepl('>',consensus_seq)]
-  consensus_seq_names <- gsub('>','',consensus_seq_names)
-  hxb2 <- consensus_seq_names[grepl('HXB2',consensus_seq_names)]
-  
-  
+  hxb2 <- grep('HXB2',names(consensus_seq),value = T)
+  hxb2_seq <- consensus_seq[[hxb2]]
+
+  # compare
+  package_seq <- read.fasta(infile.hxb2.package)
+  package_hxb2_seq <- package_seq[[1]]
+  package_hxb2_seq <- as.character(package_hxb2_seq)[as.character(package_hxb2_seq)!='-']
+  hxb2_seq <- as.character(hxb2_seq)[as.character(hxb2_seq)!='-']
+  stopifnot(all(hxb2_seq==package_hxb2_seq))
+ 
   # adapt format
   pty.runs[ID_TYPE=='control',UNIT_ID:=paste0('CNTRL-',UNIT_ID)]
   pty.runs[ID_TYPE=='control',RENAME_ID:=paste0('CNTRL-',RENAME_ID)]
   pty.runs[,BAM:=paste0(data.dir,SAMPLE_ID,'.bam')]
   pty.runs[,REF:=paste0(data.dir,SAMPLE_ID,'_ref.fasta')]
+  setkey(pty.runs,PTY_RUN,RENAME_ID)
   #
   #	define phyloscanner input args to generate read alignments 
   #	for each window and each run
-  ptyi <- seq(2000,5500,25)		
+  ptyi <- seq(800,9400,25)		
   pty.c	<- lapply(seq_along(ptyi), function(i)
   {
+    cat('---------------------------------------------------------------- \n')
+    print(i)
     pty.args <- list(prog.pty=prog.pty, 
                         prog.mafft='mafft', 						 
                         data.dir=data.dir, 
@@ -390,9 +408,11 @@ rkuvri.make.alignments<- function()
   # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
   # pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)		
   # pty.c	<- subset(pty.c, is.na(FO))		
-  pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
+  # pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
   #pty.c	<- subset(pty.c, W_FROM==2350)
   #print(pty.c, n=1e3)
+  pty.c[, CASE_ID:= rep(1:4900,times=ceiling(nrow(pty.c)/4900))[1:nrow(pty.c)]]
+  pty.c[, JOB_ID:= rep(1:ceiling(nrow(pty.c)/4900),each=4900)[1:nrow(pty.c)]]
   
   #	define PBS variables
   hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
@@ -401,7 +421,7 @@ rkuvri.make.alignments<- function()
   hpc.walltime		<- 123						# walltime
   hpc.q				<- "pqeelab"				# PBS queue
   hpc.mem				<- "6gb" 					# RAM	
-  hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array	
+  hpc.array			<- pty.c[, max(CASE_ID)]	# number of runs for job array
   #	define PBS header for job scheduler. this will depend on your job scheduler.
   pbshead		<- "#!/bin/sh"
   tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
@@ -417,16 +437,20 @@ rkuvri.make.alignments<- function()
   cat(pbshead)
   
   #	create PBS job array
-  cmd		<- pty.c[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
-  cmd		<- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
-  cmd		<- paste(pbshead,cmd,sep='\n')	
-  #	submit job
-  outfile		<- gsub(':','',paste("readali",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
-  outfile		<- file.path(work.dir, outfile)
-  cat(cmd, file=outfile)
-  cmd 		<- paste("qsub", outfile)
-  cat(cmd)
-  cat(system(cmd, intern= TRUE))		
+  for (i in 1:pty.c[, max(JOB_ID)]) {
+    tmp<-pty.c[JOB_ID==i,]
+    cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+    cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]			
+    cmd<-paste(pbshead,cmd,sep='\n')	
+    #	submit job
+    outfile<-gsub(':','',paste("readali",paste0('job',i),paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+    outfile<-file.path(work.dir, outfile)
+    cat(cmd, file=outfile)
+    cmd<-paste("qsub", outfile)
+    cat(cmd)
+    cat(system(cmd, intern= TRUE))
+  }
+
 }
 
 
