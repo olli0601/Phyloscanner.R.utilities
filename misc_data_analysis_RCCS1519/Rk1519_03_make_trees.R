@@ -355,7 +355,16 @@ rkuvri.make.alignments<- function()
   package_hxb2_seq <- as.character(package_hxb2_seq)[as.character(package_hxb2_seq)!='-']
   hxb2_seq <- as.character(hxb2_seq)[as.character(hxb2_seq)!='-']
   stopifnot(all(hxb2_seq==package_hxb2_seq))
- 
+  
+  # take root
+  tmp <- names(consensus_seq)
+  tmp <- gsub('REF_','',tmp)
+  tmp <- lapply(strsplit(tmp, split = '[.]'), as.numeric)
+  tmp <- lapply(tmp, function(x)x[!is.na(x)])
+  tmp2 <- unlist(lapply(tmp, function(x)x[x>1000 & x<2021]))
+  root.seq <- which(sapply(tmp, function(x){min(tmp2) %in% x}))[1]  
+  root.seq <- names(consensus_seq)[root.seq]
+  
   # adapt format
   pty.runs[ID_TYPE=='control',UNIT_ID:=paste0('CNTRL-',UNIT_ID)]
   pty.runs[ID_TYPE=='control',RENAME_ID:=paste0('CNTRL-',RENAME_ID)]
@@ -376,7 +385,7 @@ rkuvri.make.alignments<- function()
                         work.dir=work.dir, 
                         out.dir=out.dir, 
                         alignments.file=infile.consensus,
-                        alignments.root='REF_A4.CD.97.97CD_KTB13_AM000054',#VRL 24-FEB-2006 
+                        alignments.root=root.seq,
                         alignments.pairwise.to=hxb2,
                         window.automatic= '', 
                         merge.threshold=1, 
@@ -403,6 +412,7 @@ rkuvri.make.alignments<- function()
     pty.c
   })
   pty.c	<- do.call('rbind', pty.c)	
+  setkey(pty.c,PTY_RUN,W_FROM)
   # tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
   # tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
   # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
@@ -448,7 +458,7 @@ rkuvri.make.alignments<- function()
     cat(cmd, file=outfile)
     cmd<-paste("qsub", outfile)
     cat(cmd)
-    cat(system(cmd, intern= TRUE))
+    # cat(system(cmd, intern= TRUE))
   }
 
 }

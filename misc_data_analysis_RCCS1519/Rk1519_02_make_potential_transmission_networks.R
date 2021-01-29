@@ -242,7 +242,7 @@ rkuvri.submit.make.distance <- function(){
                           hpc.select=1, 
                           hpc.nproc=1, 
                           hpc.mem= "5gb", 
-                          hpc.load= "module load anaconda3/personal\nsource activate Renv", 
+                          hpc.load= "module load anaconda3/personal\nsource activate MakePotentialSubpgraphs", 
                           hpc.array= jobn,
                           hpc.q = NA)
   
@@ -678,7 +678,20 @@ rkuvri.find.threshold.from.couples<- function(){
   threshold = data.table(do.call(rbind, threshold))
   save(threshold, file = file.path(potential.networks.analysis.dir,paste0('threshold_median_indep_exp5.rda')))
   
+  # plot threshold
+  load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+  tmp <- data.table(threshold)
+  tmp[,WSTART:=windows_start]
   
+  ggplot(tmp,aes(x=WSTART,y=`50%`,ymin=`2.5%`,ymax=`97.5%`))+
+    geom_line()+
+    geom_ribbon(alpha=0.6)+
+    theme_bw()+
+    labs(x='\n genomic positions',y='threshold \n')+
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0.05), labels = scales::percent)
+  
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('threshold_over_positions.pdf')),width = 6, height = 4)
 }
 
 
@@ -927,6 +940,15 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   df = df[DATA >=4,]
   cat(nrow(df),' pairs of sequences left after requiring at least 4 overlapping windows with data \n')
   
+  ggplot(df,aes(PROP))+
+    geom_histogram()+
+    theme_bw()+
+    labs(x='\n propotions','counts of sequence pairs')+
+    scale_x_continuous(expand = c(0,0), labels = scales::percent) +
+    scale_y_continuous(expand = c(0,0)) +
+    coord_cartesian(ylim=c(0,1e4))
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_support.pdf'),width = 6, height = 4)
+  
   # take close pairs
   df =df[PROP >= 0.8]
   cat(nrow(df),' pairs of sequences left after requiring 80% windows indicating close \n' )
@@ -1130,6 +1152,15 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   
   # save histogram of cluster sizes
   ggsave(file.path(potential.networks.analysis.dir,'plots','cluster_size_plot.pdf'),width = 10, height = 4)
+  
+  ggplot(tmp,aes(CLU_SIZE)) +
+    geom_histogram(binwidth = 2)+
+    labs(x='cluster sizes') +
+    theme_bw() + 
+    scale_x_continuous(expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0.05))
+  
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_cluster_size.pdf'),width = 6, height = 4)
 }
 
 
