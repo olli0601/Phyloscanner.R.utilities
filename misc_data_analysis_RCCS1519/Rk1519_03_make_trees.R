@@ -405,7 +405,7 @@ rkuvri.make.alignments<- function()
                         quality.trim.ends=23, 
                         min.internal.quality=23, 
                         merge.paired.reads=TRUE, 
-                        discard.improper.pairs=1,
+                        discard.improper.pairs=TRUE,
                         no.trees=TRUE, 
                         dont.check.duplicates=FALSE,
                         dont.check.recombination=TRUE,
