@@ -422,7 +422,9 @@ rkuvri.find.threshold.from.couples<- function(){
   
   # save 
   save(ans, file = file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))  
-  
+  tmp <- unique(ans,select=c( 'pt_id1', 'pt_id2','WINDOW'))
+  tmp <- unique(tmp)
+  tmp <- tmp[,length(WINDOW),by=c('pt_id1', 'pt_id2')]
   # make stan data
   # load(file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))
   similarity <- list()
@@ -529,34 +531,61 @@ rkuvri.find.threshold.from.couples<- function(){
   #  range(ans$PERC)
   #  -0.4453817  0.0000000
   
-  # plot fit to similarities
-  for (i in 1:windown) {
-    cat('process window ',i, '\n')
-    x <- seq(-0.45,0,length.out = 90 +1)
-    df_plot_fit <- data.table(x=x,
-                              c1 = df[VAR=='theta' & WIN ==i,]$`50%` * dnorm(x, df[VAR=='mu[1]' & WIN ==i,]$`50%`, df[VAR=='sigma[1]' & WIN ==i,]$`50%`),
-                              c2 = (1-df[VAR=='theta' & WIN ==i,]$`50%`) *dnorm(x, df[VAR=='mu[2]' & WIN ==i,]$`50%`, df[VAR=='sigma[2]' & WIN ==i,]$`50%`))
-    max_hist=  max(hist(ans[WINDOW==i,]$PERC,plot=F, breaks = seq(-0.45,0,length.out = 30 + 1), right = FALSE)$counts)
-    scale <- max_hist/max(c(df_plot_fit$c1,df_plot_fit$c2))
-    g = ggplot(ans[WINDOW==i,],aes(x=PERC))+
-      geom_histogram(alpha=0.6)+
-      geom_line(data=df_plot_fit, aes(x,c1 * scale), color='red') +
-      geom_line(data=df_plot_fit, aes(x,c2 * scale), color='blue') +
-      scale_x_continuous(breaks = seq(-0.45, 0,length.out = 30 + 1))+
-      theme_bw() +
-      labs(x="log similarities", y="counts")+ggtitle(paste0(windows_start[i], ' - ', windows_end[i]))+
-      theme(axis.text.x=element_text(angle=45, hjust=1))
-    
-    plot_list[[i]] = ggplotGrob(g)
-  }
+  tmp <- dcast(df, WIN~VAR, value.var='50%')
+  setnames(tmp,'WIN','WINDOW')
+  tmp <- merge(tmp, ans[,list(NOBS=length(PERC)),by=c('WINDOW')],by='WINDOW')
+  ans[,WINDOW:=as.integer(WINDOW)]
+  bw <- 0.45/30
+  tmp <- tmp[,{
+    logsim=seq(-0.45,0,length.out=101)
+    y1=bw * NOBS * theta * dnorm(logsim,`mu[1]`,`sigma[1]`)
+    y2=bw * NOBS * (1-theta) * dnorm(logsim,`mu[2]`,`sigma[2]`)
+    list(X=logsim,Y1=y1,Y2=y2)
+  },by='WINDOW']
+   
   
-  # create dir to save plots related to network analysis
-  dir.create(file.path(potential.networks.analysis.dir,'plots'))
+  g <- ggplot(ans, aes(PERC))+
+    geom_histogram(binwidth = bw)+
+    geom_line(tmp,mapping=aes(x=X,y=Y1))+
+    geom_line(tmp,mapping=aes(x=X,y=Y2))+
+    facet_wrap(~factor(WINDOW,1:length(windows_start), paste0(windows_start,' - ',windows_end)),ncol = 8,scales = 'free') +
+    theme_bw()+
+    labs(x='log similarity scores') +
+    scale_x_continuous(expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0.05))+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA))
+    ggsave(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),g,width = 12, height= 16)
+  # # plot fit to similarities
+  # for (i in 1:windown) {
+  #   cat('process window ',i, '\n')
+  #   x <- seq(-0.45,0,length.out = 90 +1)
+  #   df_plot_fit <- data.table(x=x,
+  #                             c1 = df[VAR=='theta' & WIN ==i,]$`50%` * dnorm(x, df[VAR=='mu[1]' & WIN ==i,]$`50%`, df[VAR=='sigma[1]' & WIN ==i,]$`50%`),
+  #                             c2 = (1-df[VAR=='theta' & WIN ==i,]$`50%`) *dnorm(x, df[VAR=='mu[2]' & WIN ==i,]$`50%`, df[VAR=='sigma[2]' & WIN ==i,]$`50%`))
+  #   max_hist=  max(hist(ans[WINDOW==i,]$PERC,plot=F, breaks = seq(-0.45,0,length.out = 30 + 1), right = FALSE)$counts)
+  #   scale <- max_hist/max(c(df_plot_fit$c1,df_plot_fit$c2))
+  #   g = ggplot(ans[WINDOW==i,],aes(x=PERC))+
+  #     geom_histogram(alpha=0.6)+
+  #     geom_line(data=df_plot_fit, aes(x,c1 * scale), color='red') +
+  #     geom_line(data=df_plot_fit, aes(x,c2 * scale), color='blue') +
+  #     scale_x_continuous(breaks = seq(-0.45, 0,length.out = 30 + 1))+
+  #     theme_bw() +
+  #     labs(x="log similarities", y="counts")+ggtitle(paste0(windows_start[i], ' - ', windows_end[i]))+
+  #     theme(axis.text.x=element_text(angle=45, hjust=1))
+  #   
+  #   plot_list[[i]] = ggplotGrob(g)
+  # }
+  # 
+  # # create dir to save plots related to network analysis
+  # dir.create(file.path(potential.networks.analysis.dir,'plots'))
   # save histogram and fitted plots
-  pdf(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),
-      width = 30, height= 45)
-  do.call("grid.arrange", c(plot_list,ncol= 5))
-  dev.off()
+  # pdf(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),
+  #     width = 30, height= 45)
+  # do.call("grid.arrange", c(plot_list,ncol= 5))
+  # dev.off()
   
   
   # plot quantiles of fits
@@ -1268,7 +1297,7 @@ rkuvri.validate.classification <- function(){
          color='type') +
     scale_color_manual(values=c('tree distance'='royalblue3','average distance'='006400')) +
     theme(legend.position='bottom')
-  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('distance_vs_threshold_method', method,'.pdf')),width = 6, height = 6)
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('distance_vs_threshold_method', method,'.pdf')),width = 6, height = 4)
   
   
   ### check the corresponding tree distance of thresholds in pol 

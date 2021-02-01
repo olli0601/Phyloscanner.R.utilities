@@ -315,7 +315,7 @@ rkuvri.make.alignments<- function()
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
   potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
   infile.runs <- paste0(HOME,'210120_RCCSUVRI_phscinput_runs.rds')
-  infile.consensus.tree <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
+  # infile.consensus.tree <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
   infile.consensus <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA')
   infile.consensus.oneeach <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
   # infile.consensus <- infile.consensus.Tanzania
@@ -323,33 +323,43 @@ rkuvri.make.alignments<- function()
 
   # load runs
   pty.runs <- readRDS(infile.runs)
+  
+  # remove same bam files per run
+  setorder(pty.runs,PTY_RUN,-ID_TYPE,UNIT_ID)
+  tmp <- pty.runs[,duplicated(SAMPLE_ID),by='PTY_RUN']
+  tmp <- tmp[,which(V1)]
+  pty.runs <- pty.runs[-tmp,]
+  tmp <- pty.runs[,length(SAMPLE_ID)-length(unique(SAMPLE_ID)),by='PTY_RUN']
+  stopifnot(all(tmp$V1==0))
  
   # clean taxa names 
-  for (i in c(infile.consensus,  infile.consensus.oneeach)) {
-    consensus_seq<- read.fasta(i)
-    consensus_seq_names <- names(consensus_seq)
-    
-    if(any(!grepl('REF_',consensus_seq_names))){
-      consensus_seq_names <- paste0('REF_',consensus_seq_names)
-      write.fasta(sequences=consensus_seq,
-                  names=consensus_seq_names,
-                  nbchar = 60,
-                  file.out=i)
-    }
-  }
+  consensus_seq_oneeach<- read.fasta(infile.consensus.oneeach)
+  dn <- data.table(RAW_NAME=names(consensus_seq_oneeach)) 
+  dn[,NUM:=as.numeric(gsub(".*\\((.*)\\).*", "\\1", RAW_NAME))]
+  dn[,NAME:=gsub('\\(.*?\\)', '', RAW_NAME)]
+  names(consensus_seq_oneeach) <- dn$NAME
+  consensus_seq<- read.fasta(infile.consensus)
   
-  # load sequence
-  consensus_seq <- read.fasta(infile.consensus)
-  consensus_seq_oneeach <- read.fasta(infile.consensus.oneeach)
+  # compare two sets of consensus, and combine
   tmp = sapply(consensus_seq_oneeach,function(x){any(sapply(consensus_seq, function(y){identical(as.character(x)[as.character(x)!='-'],as.character(y)[as.character(y)!='-'])}))})
-  consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),c(names(tmp[tmp==T]),'REF_CON_OF_CONS'))]
-  consensus_seq <- c(consensus_seq, consensus_seq_oneeach)
+  consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),c(names(tmp[tmp==T]),'CON_OF_CONS'))]
+  opn <- grep('^CON_N$|^CON_O$|^CON_P$|CONSENSUS_N$|CONSENSUS_O$|CONSENSUS_P$',names(consensus_seq_oneeach),value=T)
+  consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),opn)]
+  consensus_seq_all <- c(consensus_seq, consensus_seq_oneeach)
+  
+  # save
+  names(consensus_seq_all) <- paste0('REF_',names(consensus_seq_all))
+  infile.consensus.all <- file.path(in.dir,'ConsensusGenomes.fasta')
+  write.fasta(sequences=consensus_seq_all,
+              names=names(consensus_seq_all),
+              nbchar = 60,
+              file.out=infile.consensus.all)
   
   # take hxb2
   hxb2 <- grep('HXB2',names(consensus_seq),value = T)
   hxb2_seq <- consensus_seq[[hxb2]]
 
-  # compare
+  # compare hxb2 
   package_seq <- read.fasta(infile.hxb2.package)
   package_hxb2_seq <- package_seq[[1]]
   package_hxb2_seq <- as.character(package_hxb2_seq)[as.character(package_hxb2_seq)!='-']
@@ -357,13 +367,14 @@ rkuvri.make.alignments<- function()
   stopifnot(all(hxb2_seq==package_hxb2_seq))
   
   # take root
-  tmp <- names(consensus_seq)
-  tmp <- gsub('REF_','',tmp)
-  tmp <- lapply(strsplit(tmp, split = '[.]'), as.numeric)
-  tmp <- lapply(tmp, function(x)x[!is.na(x)])
-  tmp2 <- unlist(lapply(tmp, function(x)x[x>1000 & x<2021]))
-  root.seq <- which(sapply(tmp, function(x){min(tmp2) %in% x}))[1]  
-  root.seq <- names(consensus_seq)[root.seq]
+  # tmp <- names(consensus_seq)
+  # tmp <- gsub('REF_','',tmp)
+  # tmp <- lapply(strsplit(tmp, split = '[.]'), as.numeric)
+  # tmp <- lapply(tmp, function(x)x[!is.na(x)])
+  # tmp2 <- unlist(lapply(tmp, function(x)x[x>1000 & x<2021]))
+  # root.seq <- which(sapply(tmp, function(x){min(tmp2) %in% x}))[1]  
+  # root.seq <- names(consensus_seq)[root.seq]
+  root.seq <-grep('^REF_CON_M$|REF_CONSENSUS_M$|^REF_CON_H$|REF_CONSENSUS_H$', names(consensus_seq_all),value = T)
   
   # adapt format
   pty.runs[ID_TYPE=='control',UNIT_ID:=paste0('CNTRL-',UNIT_ID)]
@@ -371,6 +382,7 @@ rkuvri.make.alignments<- function()
   pty.runs[,BAM:=paste0(data.dir,SAMPLE_ID,'.bam')]
   pty.runs[,REF:=paste0(data.dir,SAMPLE_ID,'_ref.fasta')]
   setkey(pty.runs,PTY_RUN,RENAME_ID)
+  
   #
   #	define phyloscanner input args to generate read alignments 
   #	for each window and each run
@@ -388,11 +400,12 @@ rkuvri.make.alignments<- function()
                         alignments.root=root.seq,
                         alignments.pairwise.to=hxb2,
                         window.automatic= '', 
-                        merge.threshold=1, 
+                        merge.threshold=0, 
                         min.read.count=1, 
                         quality.trim.ends=23, 
                         min.internal.quality=23, 
                         merge.paired.reads=TRUE, 
+                        discard.improper.pairs=1,
                         no.trees=TRUE, 
                         dont.check.duplicates=FALSE,
                         dont.check.recombination=TRUE,
