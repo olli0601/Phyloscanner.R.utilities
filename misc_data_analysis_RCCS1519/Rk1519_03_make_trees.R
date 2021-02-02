@@ -396,7 +396,7 @@ rkuvri.make.alignments<- function()
                         data.dir=data.dir, 
                         work.dir=work.dir, 
                         out.dir=out.dir, 
-                        alignments.file=infile.consensus,
+                        alignments.file=infile.consensus.all,
                         alignments.root=root.seq,
                         alignments.pairwise.to=hxb2,
                         window.automatic= '', 
@@ -471,10 +471,144 @@ rkuvri.make.alignments<- function()
     cat(cmd, file=outfile)
     cmd<-paste("qsub", outfile)
     cat(cmd)
-    # cat(system(cmd, intern= TRUE))
+    # if(i==1|i==pty.c[, max(JOB_ID)]){cat(system(cmd, intern= TRUE))}
   }
 
 }
+
+cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=1, hpc.q=NA, hpc.load=HPC.CX1.IMPERIAL.LOAD, hpc.array=NA)
+{
+  wrap<- "#!/bin/sh"
+  tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
+  wrap<- paste(wrap, tmp, sep='\n')		
+  tmp	<- paste("#PBS -l select=",hpc.select,":ncpus=",hpc.nproc,":mem=",hpc.mem,sep='')
+  wrap<- paste(wrap, tmp, sep='\n')
+  wrap<- paste(wrap, "#PBS -j oe", sep='\n')
+  if(!is.na(hpc.array))
+    wrap<- paste(wrap, "\n#PBS -J 1-", hpc.array, sep='')
+  if(!is.na(hpc.q))
+    wrap<- paste(wrap, "\n#PBS -q",hpc.q, sep='')
+  wrap<- paste(wrap, hpc.load, sep='\n')
+  wrap
+}
+
+cmd.raxml<- function(infile.fasta, outfile=paste(infile.fasta,'.newick',sep=''), pr=PR.RAXML, pr.args='-m GTRCAT --HKY85 -p 42')
+{		
+  cmd<- paste("#######################################################
+  # start: RAXML
+  #######################################################\n",sep='')
+  cmd<- paste(cmd,"CWD=$(pwd)\n",sep='')
+  cmd<- paste(cmd,"echo $CWD\n",sep='')	
+  tmpdir.prefix	<- paste('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+  tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+  tmp.in			<- basename(infile.fasta)
+  tmp.out			<- basename(outfile)	
+  cmd<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+  cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
+  cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
+  if(grepl('ng',pr)){
+    cmd<- paste(cmd, pr,' ',pr.args,' --msa ', tmp.in,' --tree ', tmp.out,'\n', sep='')
+  }else{
+    cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,' -n ', tmp.out,'\n', sep='') 
+  }
+  cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
+  cmd<- paste(cmd, 'mv RAxML_bestTree.',basename(outfile),' "',outfile,'"\n',sep='')
+  cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
+  cmd<- paste(cmd, 'mv ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
+  cmd<- paste(cmd,'cd $CWD\n', sep='')
+  cmd<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
+  cmd<- paste(cmd, "#######################################################
+  # end: RAXML
+  #######################################################\n",sep='')
+  cmd
+}
+
+cmd.hpccaller<- function(outdir, outfile, cmd)
+{
+  if( nchar( Sys.which("qsub") ) )
+  {
+    file<- paste(outdir,'/',outfile,'.qsub',sep='')
+    cat(paste("\nwrite HPC script to",file,"\n"))
+    cat(cmd,file=file)
+    cmd<- paste("qsub",file)
+    cat( cmd )
+    cat( system(cmd, intern=TRUE) )
+    Sys.sleep(1)
+  }
+  else
+  {
+    file<- paste(outdir,'/',outfile,'.sh',sep='')
+    cat(paste("\nwrite Shell script to\n",file,"\nNo 'qsub' function detected to submit the shell script automatically.\nStart this shell file manually\n"))
+    cat(cmd,file=file)
+    # Sys.chmod(file, mode = "777")		
+  }
+}
+rkuvri.make.trees<- function() 
+{
+  require(data.table)
+  #
+  #	produce trees
+  #
+  hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+  # lightweight run
+  if(1)	
+  {
+    hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
+  }
+  # midweight run 
+  if(0)	
+  {
+    hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 23; hpc.mem<- "1850mb"; hpc.q<- NA
+  }
+  # heavyweight run 
+  if(0)	
+  {
+    # hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 71; hpc.mem<- "5900mb"; hpc.q<- "pqeelab"
+    hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 71; hpc.mem<- "63850mb"; hpc.q<- NA
+  }
+  
+  HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
+  raxml.pr			<- ifelse(hpc.nproc==1, 'raxml-ng', 'raxml-ng-mpi')	
+  raxml.args			<- ifelse(hpc.nproc==1, '--model GTR+F+R6 --seed 42 --outgroup REF_CON_H', 
+                         paste0('--model GTR+F+R6 --threads ',hpc.nproc,' -seed 42 --outgroup REF_CON_H'))
+  in.dir				<- file.path(HOME,'210122_phsc_output')		
+  out.dir				<- in.dir
+  work.dir			<- file.path(HOME,"210122_phsc_work")
+  
+  infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+  infiles[, FO:= gsub('fasta$','tree',FI)]
+  infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
+  infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
+  # tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
+  # tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
+  # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
+  # infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
+  # infiles	<- subset(infiles, is.na(FT))	
+  setkey(infiles, PTY_RUN, W_FROM)	
+  
+  infiles	<- subset(infiles, PTY_RUN<=14)
+  # infiles	<- subset(infiles, PTY_RUN>=399)
+  print(infiles)	 		
+  
+  df<- infiles[, list(CMD=cmd.raxml(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
+  df[, ID:=ceiling(seq_len(nrow(df))/5)]
+  df<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+  
+  #df[1, cat(CMD)]
+  #stop()
+  invisible(df[,{
+    cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
+    cmd <- paste(cmd,'module load anaconda3/personal \n source activate phylo' ,sep='\n')
+    cmd	<- paste(cmd,CMD,sep='\n')
+    cat(cmd)							
+    outfile	<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
+    cmd.hpccaller(work.dir, outfile, cmd)
+    #stop()
+  }, by=c('ID')])
+}
+
+
+
 
 
 
