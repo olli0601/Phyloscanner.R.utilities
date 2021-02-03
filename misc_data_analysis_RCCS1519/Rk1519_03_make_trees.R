@@ -301,6 +301,7 @@ rkuvri.make.alignments<- function()
   require(Phyloscanner.R.utilities)
   library(data.table)
   library(seqinr)
+  library(DECIPHER)
   
   # file names
   prog.pty <- '~/phyloscanner/phyloscanner_make_trees.py'
@@ -345,8 +346,14 @@ rkuvri.make.alignments<- function()
   consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),c(names(tmp[tmp==T]),'CON_OF_CONS'))]
   opn <- grep('^CON_N$|^CON_O$|^CON_P$|CONSENSUS_N$|CONSENSUS_O$|CONSENSUS_P$',names(consensus_seq_oneeach),value=T)
   consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),opn)]
-  consensus_seq_all <- c(consensus_seq, consensus_seq_oneeach)
+  # consensus_seq_all <- c(consensus_seq, consensus_seq_oneeach)
   
+  # align
+  # tmp <- msa(DNAStringSet(do.call(c,lapply(consensus_seq_all,function(x)paste(x,collapse = '')))),method="Muscle",type='dna')
+  tmp <- AlignProfiles(DNAStringSet(do.call(c,lapply(consensus_seq,function(x)paste(x,collapse = '')))),
+                       DNAStringSet(do.call(c,lapply(consensus_seq_oneeach,function(x)paste(x,collapse = '')))))
+  consensus_seq_all <- as.list(tmp)
+  consensus_seq_all <- lapply(consensus_seq_all,function(x){as.character(x)})
   # save
   names(consensus_seq_all) <- paste0('REF_',names(consensus_seq_all))
   infile.consensus.all <- file.path(in.dir,'ConsensusGenomes.fasta')
@@ -355,9 +362,11 @@ rkuvri.make.alignments<- function()
               nbchar = 60,
               file.out=infile.consensus.all)
   
+  consensus_seq_all <- read.fasta(infile.consensus.all) 
+  
   # take hxb2
-  hxb2 <- grep('HXB2',names(consensus_seq),value = T)
-  hxb2_seq <- consensus_seq[[hxb2]]
+  hxb2 <- grep('HXB2',names(consensus_seq_all),value = T)
+  hxb2_seq <- consensus_seq_all[[hxb2]]
 
   # compare hxb2 
   package_seq <- read.fasta(infile.hxb2.package)
@@ -507,7 +516,7 @@ cmd.raxml<- function(infile.fasta, outfile=paste(infile.fasta,'.newick',sep=''),
   cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
   cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
   if(grepl('ng',pr)){
-    cmd<- paste(cmd, pr,' ',pr.args,' --msa ', tmp.in,' --tree ', tmp.out,'\n', sep='')
+    cmd<- paste(cmd, pr,' ',pr.args,' --msa ', tmp.in,'\n', sep='')
   }else{
     cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,' -n ', tmp.out,'\n', sep='') 
   }
@@ -549,7 +558,7 @@ rkuvri.make.trees<- function()
   #
   #	produce trees
   #
-  hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9"
+  hpc.load			<- "module load intel-suite/2015.1 mpi"
   # lightweight run
   if(1)	
   {
@@ -569,7 +578,7 @@ rkuvri.make.trees<- function()
   
   HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
   raxml.pr			<- ifelse(hpc.nproc==1, 'raxml-ng', 'raxml-ng-mpi')	
-  raxml.args			<- ifelse(hpc.nproc==1, '--model GTR+F+R6 --seed 42 --outgroup REF_CON_H', 
+  raxml.args			<- ifelse(hpc.nproc==1, '--model GTR+F+R6 --threads 1 --seed 42 --outgroup REF_CON_H', 
                          paste0('--model GTR+F+R6 --threads ',hpc.nproc,' -seed 42 --outgroup REF_CON_H'))
   in.dir				<- file.path(HOME,'210122_phsc_output')		
   out.dir				<- in.dir
