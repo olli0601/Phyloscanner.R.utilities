@@ -320,3 +320,74 @@ phsc.cmd.phyloscanner.one.resume<- function(prefix.infiles, pty.args)
 	cmd
 }
 
+
+#' @export
+cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=1, hpc.q=NA, hpc.load=HPC.CX1.IMPERIAL.LOAD, hpc.array=NA)
+{
+  wrap<- "#!/bin/sh"
+  tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
+  wrap<- paste(wrap, tmp, sep='\n')		
+  tmp	<- paste("#PBS -l select=",hpc.select,":ncpus=",hpc.nproc,":mem=",hpc.mem,sep='')
+  wrap<- paste(wrap, tmp, sep='\n')
+  wrap<- paste(wrap, "#PBS -j oe", sep='\n')
+  if(!is.na(hpc.array))
+    wrap<- paste(wrap, "\n#PBS -J 1-", hpc.array, sep='')
+  if(!is.na(hpc.q))
+    wrap<- paste(wrap, "\n#PBS -q",hpc.q, sep='')
+  wrap<- paste(wrap, hpc.load, sep='\n')
+  wrap
+}
+
+#' @export
+#' @title Produce a single iqtree shell command. 
+#' @return	Character string
+cmd.iqtree<- function(infile.fasta, outfile=paste(infile.fasta,'.phy',sep=''), pr=PR, pr.args='-m GTRCAT --HKY85 -p 42')
+{		
+  cmd<- paste("#######################################################
+  # start: RAXML
+  #######################################################\n",sep='')
+  cmd<- paste(cmd,"CWD=$(pwd)\n",sep='')
+  cmd<- paste(cmd,"echo $CWD\n",sep='')	
+  tmpdir.prefix	<- paste('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+  tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+  tmp.in			<- basename(infile.fasta)
+  tmp.out			<- basename(outfile)	
+  cmd<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+  cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
+  cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
+  cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,'\n', sep='') 
+  cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
+  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',paste0(outfile,'.iqtree'),'"\n',sep='')
+  cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
+  cmd<- paste(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
+  cmd<- paste(cmd,'cd $CWD\n', sep='')
+  cmd<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
+  cmd<- paste(cmd, "#######################################################
+  # end: RAXML
+  #######################################################\n",sep='')
+  cmd
+}
+
+#create high performance computing qsub file and submit
+#' @export
+cmd.hpccaller<- function(outdir, outfile, cmd)
+{
+  if( nchar( Sys.which("qsub") ) )
+  {
+    file<- paste(outdir,'/',outfile,'.qsub',sep='')
+    cat(paste("\nwrite HPC script to",file,"\n"))
+    cat(cmd,file=file)
+    cmd<- paste("qsub",file)
+    cat( cmd )
+    cat( system(cmd, intern=TRUE) )
+    Sys.sleep(1)
+  }
+  else
+  {
+    file<- paste(outdir,'/',outfile,'.sh',sep='')
+    cat(paste("\nwrite Shell script to\n",file,"\nNo 'qsub' function detected to submit the shell script automatically.\nStart this shell file manually\n"))
+    cat(cmd,file=file)
+    Sys.chmod(file, mode = "777")
+  }
+}
+
