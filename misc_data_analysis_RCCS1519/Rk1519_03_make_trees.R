@@ -521,7 +521,11 @@ cmd.raxml<- function(infile.fasta, outfile=paste(infile.fasta,'.newick',sep=''),
     cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,' -n ', tmp.out,'\n', sep='') 
   }
   cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
-  cmd<- paste(cmd, 'mv RAxML_bestTree.',basename(outfile),' "',outfile,'"\n',sep='')
+  if(grepl('ng',pr)){
+    cmd<- paste(cmd, 'mv ',basename(outfile),' "',outfile,'"\n',sep='')
+  }else{
+    cmd<- paste(cmd, 'mv RAxML_bestTree.',basename(outfile),' "',outfile,'"\n',sep='')
+  }
   cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
   cmd<- paste(cmd, 'mv ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
   cmd<- paste(cmd,'cd $CWD\n', sep='')
@@ -549,7 +553,7 @@ cmd.hpccaller<- function(outdir, outfile, cmd)
     file<- paste(outdir,'/',outfile,'.sh',sep='')
     cat(paste("\nwrite Shell script to\n",file,"\nNo 'qsub' function detected to submit the shell script automatically.\nStart this shell file manually\n"))
     cat(cmd,file=file)
-    # Sys.chmod(file, mode = "777")		
+    Sys.chmod(file, mode = "777")
   }
 }
 rkuvri.make.trees<- function() 
@@ -585,7 +589,7 @@ rkuvri.make.trees<- function()
   work.dir			<- file.path(HOME,"210122_phsc_work")
   
   infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
-  infiles[, FO:= gsub('fasta$','tree',FI)]
+  infiles[, FO:= gsub('fasta$','raxml.bestTree',FI)]
   infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
   infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
   # tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
