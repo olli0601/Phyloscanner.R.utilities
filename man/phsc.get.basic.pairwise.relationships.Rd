@@ -4,8 +4,12 @@
 \alias{phsc.get.basic.pairwise.relationships}
 \title{Calculate basic pairwise relationships}
 \usage{
-phsc.get.basic.pairwise.relationships(df, trmw.close.brl, trmw.distant.brl,
-  verbose = TRUE)
+phsc.get.basic.pairwise.relationships(
+  df,
+  trmw.close.brl,
+  trmw.distant.brl,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{df}{data.table to which basic pairwise relationships will be added. Must contain columns with name 'ADJACENT','TYPE_RAW','PATRISTIC_DISTANCE','PATHS_12','PATHS_21'.}

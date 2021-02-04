@@ -4,9 +4,17 @@
 \alias{phsc.plot.windowsummaries.for.pairs}
 \title{Plot window summaries for pairs of individuals}
 \usage{
-phsc.plot.windowsummaries.for.pairs(plot.select, rpw2, rplkl2, plot.file,
-  cols = NULL, group = NA, widths = unit(c(4, 6), "null"),
-  heights = unit(c(2, 3.5, 4, 5), "null"), height = 9)
+phsc.plot.windowsummaries.for.pairs(
+  plot.select,
+  rpw2,
+  rplkl2,
+  plot.file,
+  cols = NULL,
+  group = NA,
+  widths = unit(c(4, 6), "null"),
+  heights = unit(c(2, 3.5, 4, 5), "null"),
+  height = 9
+)
 }
 \arguments{
 \item{plot.select}{Select pairs for plotting. This is specified as a data.table with columns PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, LABEL. Each pair has assigned a label that is used as title.}

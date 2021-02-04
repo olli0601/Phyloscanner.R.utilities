@@ -4,8 +4,11 @@
 \alias{phsc.cmd.process.phyloscanner.output.in.directory}
 \title{Generate bash commands to process phyloscanner output}
 \usage{
-phsc.cmd.process.phyloscanner.output.in.directory(tmp.dir, file.patients,
-  pty.args)
+phsc.cmd.process.phyloscanner.output.in.directory(
+  tmp.dir,
+  file.patients,
+  pty.args
+)
 }
 \arguments{
 \item{tmp.dir}{Directory with phyloscanner output.}

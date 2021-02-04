@@ -4,8 +4,14 @@
 \alias{phsc.get.pairwise.relationships.posterior}
 \title{Calculate marginal posterior probability for two individuals being in a particular relationship state}
 \usage{
-phsc.get.pairwise.relationships.posterior(df, n.type = 2, n.obs = 3,
-  n.type.dir = n.type, n.obs.dir = n.obs, confidence.cut = 0.5)
+phsc.get.pairwise.relationships.posterior(
+  df,
+  n.type = 2,
+  n.obs = 3,
+  n.type.dir = n.type,
+  n.obs.dir = n.obs,
+  confidence.cut = 0.5
+)
 }
 \arguments{
 \item{df}{Input data.table}

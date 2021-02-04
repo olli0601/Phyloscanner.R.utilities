@@ -4,8 +4,12 @@
 \alias{raxml.cmd}
 \title{Generate bash commands to generate phylogenies with RAxML}
 \usage{
-raxml.cmd(infile.fasta, outfile = paste(infile.fasta, ".newick", sep =
-  ""), pr = "raxmlHPC-SSE3", pr.args = "-m GTRCAT --HKY85 -p 42")
+raxml.cmd(
+  infile.fasta,
+  outfile = paste(infile.fasta, ".newick", sep = ""),
+  pr = "raxmlHPC-SSE3",
+  pr.args = "-m GTRCAT --HKY85 -p 42"
+)
 }
 \arguments{
 \item{infile.fasta}{Full path name to input fasta file.}

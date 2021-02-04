@@ -4,8 +4,14 @@
 \alias{phsc.find.linked.pairs}
 \title{Find pairs of individuals between whom linkage is not excluded phylogenetically}
 \usage{
-phsc.find.linked.pairs(indir, batch.regex = "^ptyr([0-9]+)_.*",
-  conf.cut = 0.6, neff.cut = 3, verbose = TRUE, dmeta = NULL)
+phsc.find.linked.pairs(
+  indir,
+  batch.regex = "^ptyr([0-9]+)_.*",
+  conf.cut = 0.6,
+  neff.cut = 3,
+  verbose = TRUE,
+  dmeta = NULL
+)
 }
 \arguments{
 \item{indir}{Full directory path to output of phyloscanner runs}

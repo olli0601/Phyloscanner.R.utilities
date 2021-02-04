@@ -4,10 +4,16 @@
 \alias{phsc.read.trees}
 \title{Read short read trees}
 \usage{
-phsc.read.trees(prefix.infiles, prefix.run = "ptyr",
-  regexpr.trees = "Subtrees_r_.*\\\\.rda$", prefix.wfrom = "Window_",
-  prefix.wto = "Window_[0-9]+_to_", save.file = NA, resume = FALSE,
-  zip = FALSE)
+phsc.read.trees(
+  prefix.infiles,
+  prefix.run = "ptyr",
+  regexpr.trees = "Subtrees_r_.*\\\\.rda$",
+  prefix.wfrom = "Window_",
+  prefix.wto = "Window_[0-9]+_to_",
+  save.file = NA,
+  resume = FALSE,
+  zip = FALSE
+)
 }
 \arguments{
 \item{prefix.infiles}{Full path name identifying likely transmissions summary files}

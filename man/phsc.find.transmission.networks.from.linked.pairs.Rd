@@ -4,8 +4,13 @@
 \alias{phsc.find.transmission.networks.from.linked.pairs}
 \title{Find phylogenetic transmission networks}
 \usage{
-phsc.find.transmission.networks.from.linked.pairs(rtp, rplkl,
-  conf.cut = conf.cut, neff.cut = neff.cut, verbose = TRUE)
+phsc.find.transmission.networks.from.linked.pairs(
+  rtp,
+  rplkl,
+  conf.cut = conf.cut,
+  neff.cut = neff.cut,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{rtp}{Pairs of individuals between whom linkage is not excluded, stored as data.table.}

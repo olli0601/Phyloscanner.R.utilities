@@ -4,8 +4,12 @@
 \alias{phsc.plot.phyloscan}
 \title{Plot phyloscan}
 \usage{
-phsc.plot.phyloscan(rpw2, id.cols = c("ID1", "ID2"), ylim = NULL,
-  cols.typet = NULL)
+phsc.plot.phyloscan(
+  rpw2,
+  id.cols = c("ID1", "ID2"),
+  ylim = NULL,
+  cols.typet = NULL
+)
 }
 \arguments{
 \item{rpw2}{data.table containing the basic phyloscanner statistics for each genomic window.}

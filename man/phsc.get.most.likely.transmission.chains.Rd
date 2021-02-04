@@ -4,8 +4,7 @@
 \alias{phsc.get.most.likely.transmission.chains}
 \title{Reconstruct most likely transmission chains}
 \usage{
-phsc.get.most.likely.transmission.chains(rtnn, verbose = 0,
-  method = "Edmonds")
+phsc.get.most.likely.transmission.chains(rtnn, verbose = 0, method = "Edmonds")
 }
 \arguments{
 \item{rtn}{data.table with network scores for all individuals that could form a network. Must contain columns 'ID1','ID2','IDCLU','GROUP','TYPE','POSTERIOR_SCORE','KEFF'.}

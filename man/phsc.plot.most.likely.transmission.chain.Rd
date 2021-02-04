@@ -4,13 +4,24 @@
 \alias{phsc.plot.most.likely.transmission.chain}
 \title{Plot most likely transmission chain}
 \usage{
-phsc.plot.most.likely.transmission.chain(df, di, point.size = 10,
-  edge.gap = 0.04, edge.size = 0.4, curvature = -0.2,
+phsc.plot.most.likely.transmission.chain(
+  df,
+  di,
+  point.size = 10,
+  edge.gap = 0.04,
+  edge.size = 0.4,
+  curvature = -0.2,
   arrow = arrow(length = unit(0.04, "npc"), type = "open"),
-  curv.shift = 0.08, label.size = 3, node.label = "ID",
-  node.shape = NA_character_, node.fill = NA_character_,
-  node.shape.values = NA_integer_, node.fill.values = NA_character_,
-  threshold.linked = NA_real_, layout = NULL)
+  curv.shift = 0.08,
+  label.size = 3,
+  node.label = "ID",
+  node.shape = NA_character_,
+  node.fill = NA_character_,
+  node.shape.values = NA_integer_,
+  node.fill.values = NA_character_,
+  threshold.linked = NA_real_,
+  layout = NULL
+)
 }
 \arguments{
 \item{df}{data.table with the following columns 'IDCLU','ID1', 'ID2', 'TYPE','KEFF','LKL_MAX','POSTERIOR_SCORE'}

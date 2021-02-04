@@ -4,21 +4,26 @@
 \alias{phsc.plot.windowassignments.by.runs}
 \title{Compare window assignments by different phyloscanner runs}
 \usage{
-phsc.plot.windowassignments.by.runs(rplkl2, plot.file, plot.prob.select,
-  cols.run, cols = NULL, group = NA, height = 40)
+phsc.plot.windowassignments.by.runs(
+  rplkl2,
+  plot.file,
+  plot.prob.select,
+  cols.run,
+  cols = NULL,
+  group = NA,
+  height = 40
+)
 }
 \arguments{
 \item{rplkl2}{Posterior probability assignments for pairs of individuals. This is specified as a data.table with columns RUN, PTY_RUN, MALE_SANGER_ID, FEMALE_SANGER_ID, TYPE, KEFF, POSTERIOR_ALPHA, POSTERIOR_BETA}
 
 \item{plot.file}{Name of output file}
 
-\item{cols}{Colours for phyloscanner runs. This is specified as a named vector which must not be missing.}
+\item{cols}{Colours for relationship types. This is specified as a named vector, which can be null.}
 
 \item{group}{Relationship group name. This is used to define default colours if cols==NULL.}
 
 \item{height}{Total height of pdf in inches. This is overwritten if group is specified.}
-
-\item{cols}{Colours for relationship types. This is specified as a named vector, which can be null.}
 }
 \value{
 Plots to file.
