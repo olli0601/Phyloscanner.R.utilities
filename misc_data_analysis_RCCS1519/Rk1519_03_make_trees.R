@@ -324,7 +324,7 @@ rkuvri.make.alignments<- function()
 
   # load runs
   pty.runs <- readRDS(infile.runs)
-  
+  max.per.run <- 4900
   # remove same bam files per run
   setorder(pty.runs,PTY_RUN,-ID_TYPE,UNIT_ID)
   tmp <- pty.runs[,duplicated(SAMPLE_ID),by='PTY_RUN']
@@ -443,8 +443,8 @@ rkuvri.make.alignments<- function()
   # pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
   #pty.c	<- subset(pty.c, W_FROM==2350)
   #print(pty.c, n=1e3)
-  pty.c[, CASE_ID:= rep(1:4900,times=ceiling(nrow(pty.c)/4900))[1:nrow(pty.c)]]
-  pty.c[, JOB_ID:= rep(1:ceiling(nrow(pty.c)/4900),each=4900)[1:nrow(pty.c)]]
+  pty.c[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(pty.c)/max.per.run))[1:nrow(pty.c)]]
+  pty.c[, JOB_ID:= rep(1:ceiling(nrow(pty.c)/max.per.run),each=max.per.run)[1:nrow(pty.c)]]
   
   #	define PBS variables
   hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
@@ -483,6 +483,19 @@ rkuvri.make.alignments<- function()
     # if(i==1|i==pty.c[, max(JOB_ID)]){cat(system(cmd, intern= TRUE))}
   }
 
+  library(ape)
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
+  dir.create(file.path(p,'plots'))
+  files <-list.files(p)
+  files <- grep('fasta$',files,value = T)
+  for (i in 1:length(files)) {
+    tmp <- read.dna(file.path(p,files[i]),format = 'fasta')
+    pdf(file.path(p,'plots',gsub('.fasta','_alignment.pdf',files[i])),width = 10, height = 10)
+    checkAlignment(tmp)
+    dev.off()
+  }
+  
 }
 
 
@@ -493,9 +506,9 @@ rkuvri.make.trees<- function()
   #
   #	produce trees
   #
-  hpc.load			<- "module load intel-suite/2015.1 mpi"
+  # hpc.load			<- "module load intel-suite/2015.1 mpi"
   # lightweight run
-  if(1)	
+  if(0)	
   {
     hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 3; hpc.mem<- "1850mb"; hpc.q<- NA
   }
@@ -512,15 +525,16 @@ rkuvri.make.trees<- function()
   }
   
   HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
-  raxml.pr <- 'iqtree'
-  raxml.args			<- ifelse(hpc.nproc==1, '-m GTR+F+R6 -ntmax 1 -seed 42 -o REF_CON_H', 
+  max.per.run <- 4900
+  iqtree.pr <- 'iqtree'
+  iqtree.args			<- ifelse(hpc.nproc==1, '-m GTR+F+R6 -ntmax 1 -seed 42 -o REF_CON_H', 
                          paste0('-m GTR+F+R6 -ntmax ',hpc.nproc,' -seed 42 --o REF_CON_H'))
   in.dir				<- file.path(HOME,'210122_phsc_output')		
   out.dir				<- in.dir
   work.dir			<- file.path(HOME,"210122_phsc_work")
   
   infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
-  infiles[, FO:= gsub('fasta$','phy',FI)]
+  infiles[, FO:= gsub('.fasta$','',FI)]
   infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
   infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
   # tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
@@ -534,21 +548,58 @@ rkuvri.make.trees<- function()
   # infiles	<- subset(infiles, PTY_RUN>=399)
   print(infiles)	 		
   
-  df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=raxml.pr, pr.args=raxml.args)), by=c('PTY_RUN','W_FROM')]
-  df[, ID:=ceiling(seq_len(nrow(df))/5)]
+  df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
+  df[, ID:=ceiling(seq_len(nrow(df))/4)]
   df<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
   
-  #df[1, cat(CMD)]
-  #stop()
-  invisible(df[,{
-    cmd	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=hpc.load)
-    cmd <- paste(cmd,'module load anaconda3/personal \n source activate phylo' ,sep='\n')
-    cmd	<- paste(cmd,CMD,sep='\n')
-    cat(cmd)							
-    outfile	<- paste("srx1",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),sep='.')
-    cmd.hpccaller(work.dir, outfile, cmd)
-    #stop()
-  }, by=c('ID')])
+  #	create PBS job array
+  if(nrow(df) > max.per.run){
+    df[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(df)/max.per.run))[1:nrow(df)]]
+    df[, JOB_ID:= rep(1:ceiling(nrow(df)/max.per.run),each=max.per.run)[1:nrow(df)]]
+    set(df, ID, NULL, NULL)
+  }else{
+    setnames(df, 'ID', 'CASE_ID')
+    df[, JOB_ID:=1]
+  }
+  
+  pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
+
+
+  for (i in 1:df[, max(JOB_ID)]) {
+    tmp<-df[JOB_ID==i,]
+    hpc.array <- nrow(tmp)
+    cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+    cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+    tmp <- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+    tmp <- paste(tmp,'module load anaconda3/personal \n source activate phylo' ,sep='\n')
+    cmd<-paste(tmp,cmd,sep='\n')	
+    #	submit job
+    outfile	<- paste("srx",paste0('job',i),paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.')
+    outfile<-file.path(work.dir, outfile)
+    cat(cmd, file=outfile)
+    cmd<-paste("qsub", outfile)
+    cat(cmd)
+  }
+  
+  library(tidyverse)
+  library(ggtree)
+  
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
+  files <-list.files(p)
+  files <- grep('treefile$',files,value = T)
+  for (i in 1:length(files)) {
+    tmp <- read.tree(file.path(p,files[i]))
+    tmp <- groupOTU(tmp, grep('REF_',tmp$tip.label,value = T))
+    g <- ggtree(tmp,aes(color=group)) +  theme_tree2() + 
+      geom_tiplab(align=TRUE, linesize=.5) +
+      theme_bw()+
+      theme(legend.position = 'bottom',legend.direction = 'horizontal',legend.box = 'horizontal')+
+      scale_color_manual(breaks = c('1','2'),
+                         labels=c('target','reference'),
+                         values=c("#0072B2","#D55E00"))
+    ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 6,height = 10)
+  }
 }
 
 

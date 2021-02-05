@@ -341,10 +341,10 @@ cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HP
 #' @export
 #' @title Produce a single iqtree shell command. 
 #' @return	Character string
-cmd.iqtree<- function(infile.fasta, outfile=paste(infile.fasta,'.phy',sep=''), pr=PR, pr.args='-m GTRCAT --HKY85 -p 42')
+cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTRCAT --HKY85 -p 42')
 {		
   cmd<- paste("#######################################################
-  # start: RAXML
+  # start: IQTREE
   #######################################################\n",sep='')
   cmd<- paste(cmd,"CWD=$(pwd)\n",sep='')
   cmd<- paste(cmd,"echo $CWD\n",sep='')	
@@ -355,41 +355,17 @@ cmd.iqtree<- function(infile.fasta, outfile=paste(infile.fasta,'.phy',sep=''), p
   cmd<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
   cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
   cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
-  cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in,'\n', sep='') 
+  cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n', sep='') 
   cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
   cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n',sep='')
   cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n',sep='')
-  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.log'),' "',dirname(outfile),'"\n',sep='')
   cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
   cmd<- paste(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
   cmd<- paste(cmd,'cd $CWD\n', sep='')
   cmd<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
   cmd<- paste(cmd, "#######################################################
-  # end: RAXML
+  # end: IQTREE
   #######################################################\n",sep='')
   cmd
-}
-
-#create high performance computing qsub file and submit
-#' @export
-cmd.hpccaller<- function(outdir, outfile, cmd)
-{
-  if( nchar( Sys.which("qsub") ) )
-  {
-    file<- paste(outdir,'/',outfile,'.qsub',sep='')
-    cat(paste("\nwrite HPC script to",file,"\n"))
-    cat(cmd,file=file)
-    cmd<- paste("qsub",file)
-    cat( cmd )
-    cat( system(cmd, intern=TRUE) )
-    Sys.sleep(1)
-  }
-  else
-  {
-    file<- paste(outdir,'/',outfile,'.sh',sep='')
-    cat(paste("\nwrite Shell script to\n",file,"\nNo 'qsub' function detected to submit the shell script automatically.\nStart this shell file manually\n"))
-    cat(cmd,file=file)
-    Sys.chmod(file, mode = "777")
-  }
 }
 

@@ -6,7 +6,7 @@
 \usage{
 cmd.iqtree(
   infile.fasta,
-  outfile = paste(infile.fasta, ".phy", sep = ""),
+  outfile = infile.fasta,
   pr = PR,
   pr.args = "-m GTRCAT --HKY85 -p 42"
 )
