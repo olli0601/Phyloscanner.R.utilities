@@ -331,6 +331,7 @@ phsc.bam.get.length.and.pos.of.mergedreads<- function(bam.file.name, error.stric
 	dlen
 }
 
+
 #' @export
 hivc.db.Date2numeric<- function( x )
 {
