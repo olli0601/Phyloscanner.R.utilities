@@ -2,6 +2,7 @@
 
 export(cmd.hpcwrapper.cx1.ic.ac.uk)
 export(cmd.iqtree)
+export(hivc.db.Date2numeric)
 export(phsc.bam.get.length.and.pos.of.mergedreads)
 export(phsc.cmd.bam.calculate.read.distribution)
 export(phsc.cmd.phyloscanner.multi)
