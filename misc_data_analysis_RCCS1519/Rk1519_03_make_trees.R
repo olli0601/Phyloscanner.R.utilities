@@ -627,31 +627,32 @@ rkuvri.make.trees<- function()
   dir.create(file.path(p,'plots'))
     # input
   set.seed(42)
-  infile.sdate <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
   infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
-  infile.sdate2 <- '~/Rakai_phyloscanner_170704_assemblystatus.rda'
+  infile.ind.rccs <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.mrc <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
   infile.phscinput <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds'
   
   # load sampling date
   ds <- readRDS(infile.phscinput)
-  load(infile.sdate)
-  load(infile.sdate2)
-  dsdt <- as.data.table(subset(neuroData,select=c(studyid, Pangea.id, sampleDate)))
-  dsdt2 <- unique(subset(dc,select=c('RID','PID','SAMPLE_DATE'))) 
-  dsdt <- rbind(dsdt, dsdt2, use.names=F)
-  dsdt[,studyid:=paste0('RK-',studyid)]
-  dsdt[,Pangea.id:=paste0('RCCS_',Pangea.id)]
+  dsdt <- data.table(read.csv(infile.ind.rccs))
+  dsdt <- subset(dsdt, select=c('pt_id','visit_dt','pangea_id'))
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- subset(tmp, select=c('pt_id','visit_dt','pangea_id'))
+  dsdt <- rbind(dsdt, tmp)
+  setnames(dsdt, colnames(dsdt), toupper(colnames(dsdt)))
   tmp <- subset(data.table(read.csv(infile.ind.anonymised)),select=c('PT_ID', 'AID'))
-  dsdt <- merge(dsdt, tmp, by.x='studyid', by.y='PT_ID')
-  setnames(dsdt, c('Pangea.id','sampleDate','AID'),c('PANGEA_ID','SAMPLE_DATE', 'ID'))
-  dsdt <- dsdt[!is.na(SAMPLE_DATE),]
-  dsdt <- merge(dsdt, subset(ds,select=c('RENAME_ID','PANGEA_ID')),by='PANGEA_ID')
-  
+  dsdt <- merge(dsdt, tmp, by='PT_ID',all.y=T)
+  setnames(dsdt, 'VISIT_DT','SAMPLE_DATE')
+  dsdt[grepl('^RK-', PT_ID), PANGEA_ID:=paste0('RCCS_', PANGEA_ID)]
+  dsdt[grepl('^MRC-', PT_ID), PANGEA_ID:=paste0('MRCUVRI_', PANGEA_ID)]
+  dsdt <- merge(dsdt, subset(ds,select=c('RENAME_ID','PANGEA_ID')),by='PANGEA_ID',all.x=T)
+  dsdt <- dsdt[!is.na(RENAME_ID)]
+  dsdt[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
   #
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
   blen <- c()
-  age_root <- matrix(nrow = length(files), ncol = 14)
+  age_root <- matrix(nrow = length(files), ncol = 6)
   
   palD <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
   palA <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "A")
@@ -666,6 +667,7 @@ rkuvri.make.trees<- function()
   }
   
   for (i in 1:length(files)) {
+    # get sampling dates
     cat('processing ',i,'out of ', length(files),'file \n')
     tmptr <- read.tree(file.path(p,files[i]))
     tmpdf <- data.table(TAXA=tmptr$tip.label)
@@ -681,22 +683,28 @@ rkuvri.make.trees<- function()
     set(tmp, NULL, 'SAMPLE_DATE', NULL)
     tmp[,SAMPLE_DATE:=NA_character_]
     tmp[grepl('\\.',AID), SAMPLE_DATE:=sapply(strsplit(AID,'\\.'),
-                              function(x){
-                                n <- x[2:3]
-                                n <- n[!grepl('\\D',n)]
-                                return(n)
-    })]
-    tmp[,SAMPLE_DATE:=as.Date(paste0('01.07.',SAMPLE_DATE),'%d.%m.%y')]
+                                              function(x){
+                                                n <- x[2:3]
+                                                n <- n[!grepl('\\D',n)]
+                                                return(n)
+                                              })]
+    id <- which(lengths(strsplit(tmp$SAMPLE_DATE,''))==2)
+    tmp[id,SAMPLE_DATE:=ifelse(as.numeric(SAMPLE_DATE)<20,paste0('20',SAMPLE_DATE),paste0('19',SAMPLE_DATE))]
+    tmp[!is.na(SAMPLE_DATE),SAMPLE_DATE:=paste(SAMPLE_DATE,7,1,sep='-')]
+    tmp[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
     tmpdf <- tmpdf[grepl('AID',AID)]
     tmpdf <- rbind(tmpdf,tmp)
-    cat(tmpdf[,sum(!is.na(SAMPLE_DATE))],' out of ', nrow(tmpdf) ,' taxa have known sampling dates \n')
-    dr <- copy(tmp)
-    dr <- dr[!is.na(SAMPLE_DATE)]
-    dr[,lower:=SAMPLE_DATE-181]
-    dr[,upper:=SAMPLE_DATE+183]
+    cat(tmpdf[,sum(!is.na(SAMPLE_DATE))],' out of ', nrow(tmpdf) ,' taxa have known sampling dates \n',
+        tmpdf[,length(unique(SAMPLE_DATE))],' unique dates \n')
+    dr <- copy(tmpdf)
+    dr[grepl('AID',AID),lower:=SAMPLE_DATE]
+    dr[grepl('AID',AID),upper:=SAMPLE_DATE]
+    dr[!grepl('AID',AID),lower:=SAMPLE_DATE-181]
+    dr[!grepl('AID',AID),upper:=SAMPLE_DATE+182]
+    dr[,lower:=hivc.db.Date2numeric(lower)]
+    dr[,upper:=hivc.db.Date2numeric(upper)]
     
-    
-    
+    # assign color to nodes
     tmpid <- unique(subset(tmpdf,select=c('AID')))
     tmpid[,REF:=!grepl('^AID_',AID)]
     tmpid[REF==T,color:= palD(sum(tmpid[,REF]))]
@@ -704,26 +712,19 @@ rkuvri.make.trees<- function()
     setkey(tmpid, AID)
     dd <- merge(tmpdf, tmpid, by='AID',all.x=T)
     
-
-    # order by tree
     sts <- dd$SAMPLE_DATE
     sts <- hivc.db.Date2numeric(sts)
     sts <- setNames(sts, dd$TAXA)
+    
     tmp <- data.table(TAXA=tmptr$tip.label,N=seq_len(length(tmptr$tip.label)))
-    
-    dr[,lower:=hivc.db.Date2numeric(lower)]
-    dr[,upper:=hivc.db.Date2numeric(upper)]
-    
-        
     dd <- merge(dd,tmp,by='TAXA',all.x=T)
     setkey(dd,N)
-    dd <- data.frame(dd)
+    dd <- data.frame(dd)  
     
     # 
     tmpfa <- read.fasta(file.path(p,gsub('treefile$','fasta',files[i])))
     tmplen <- unique(lengths(tmpfa))
     stopifnot(length(tmplen)==1)
-    
     
     # droptips
     tmp <- dd[is.na(dd$SAMPLE_DATE),]$TAXA
@@ -731,107 +732,54 @@ rkuvri.make.trees<- function()
     dd2 <- dd[!is.na(dd$SAMPLE_DATE),]
     stopifnot(all(sort(dd2$TAXA)==sort(tmptr2$tip.label)))
     sts <- sts[!is.na(sts)]
-     
+    dr2 <- dr[!is.na(SAMPLE_DATE),]
+    sts.df <- subset(dr2,select=c('lower','upper'))
+    sts.df <- data.frame(sts.df)
+    row.names(sts.df) <- dr2$TAXA
     
-    # date tree
-    # tmptrd <- dater(tmptr2, sts=sts , s = tmplen, clock='strict', numStartConditions = 0)
-    # Error in mgcv::pcls(M) : initial parameters not feasible
-    # tmptrd <- dater(tmptr2, sts=sts , s = tmplen, clock='strict', numStartConditions = 1)
+    stopifnot(sort(row.names(sts.df)) == sort(names(sts)))
     tmptr2 <- unroot(tmptr2)
-
-    # while(TRUE){
-    #   df <- try(dater(tmptr2, sts=sts,s = tmplen, clock='strict'), silent=TRUE)
-    #   if(!is(df, 'try-error')) break
-    # }
-    # 
-    # tmptrd <- df
+    tmptrd <- dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 1,estimateSampleTimes=sts.df)
+    fit <- rootToTipRegressionPlot(tmptrd)
+    outliers <- outlierTips( tmptrd)
+    cat(nrow(outliers[outliers$q < 0.05,]),'outliers \n')
     
-    tmptrd <- dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 1,estimateSampleTimes=subset(dr,select=c('')))
-    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6007745/#:~:text=Genomic%20HIV%2D1%20substitution%20rates,subtype%20C%20dataset%202%20(Fig.
-    # not good fit
-    outliers <- outlierTips( tmptrd , alpha = 0.20) 
-    cat(nrow(outliers[outliers$q < 0.20,]),'outliers \n')
-    # Root to tip regression predicts a substition rate less than zero. Tree may be poorly rooted or there may be small temporal signal.
-    # hist(outliers$q)
-    tmptr3 <- drop.tip( tmptr2, rownames(outliers[outliers$q < 0.20,]) )
-    tmptr3 <- unroot(tmptr3)
-    tmptrdr <- dater(tmptr3, sts, tmplen, clock='uncorrelated', ncpu = 1)
-    rct <- relaxedClockTest( tmptr3, sts, tmplen, ncpu = 1 ) 
-    tmptrd2 <- dater( tmptr3, sts,tmplen, clock='strict' )
-   
-    age_root[i] <- c(tmptrdr$timeOfMRCA,
-                     tmptrdr$timeToMRCA,
-                     length(tmptrdr$tip.lables),
-                     length(tmptrdr$edge_lls),
-                     tmptrdr$adjusted.mean.rate,
-                     tmptrdr$mean.rate,
-                     tmptrdr$coef_of_variation,
-                     tmptrd2$timeOfMRCA,
-                     tmptrd2$timeToMRCA,
-                     length(tmptrd2$tip.lables),
-                     length(tmptrd2$edge_lls),
-                     tmptrd2$adjusted.mean.rate,
-                     tmptrd2$mean.rate,
-                     tmptrd2$coef_of_variation
-    )
-                    
-
+    age_root[i,] <- c(tmptrd$adjusted.mean.rate,
+                      tmptrd$mean.rate,
+                      tmptrd$timeOfMRCA,
+                      tmptrd$timeToMRCA ,
+                      tmptrd$Nnode ,
+                      tmptrd$coef_of_variation)
+    
     mrsd <- as.Date(max(dd$SAMPLE_DATE,na.rm=T))
     blen <- c(blen, sum(tmptr$edge.length))
-
-    # g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(dd,select=c('TAXA','color')) + aes(color=I(color)) +
-    #   theme_tree2()+
-    #   theme_bw()+
-    #   geom_tiplab(size=1) +
-    #   theme(legend.position = 'none')+
-    #   scale_y_continuous(expand = c(0,0.05)) 
-    # branches <- list(A=1,B=2,C=3)
-    # groupOTU(tmptr,branches)
-    # eval(parse(text=paste0("tmp = list(",paste( paste0("'",dd$TAXA,"'='", dd$AID,"'"), collapse = ','),")")))
-    # # eval(parse(text=paste0("tmp = list(",paste( paste0dd$TAXA,"=", dd$AID), collapse = ','),")")))
-    # tmptr <- groupOTU(tmptr,tmp)
-    # 
-
-
-    # g <- ggtree(tmptr,mrsd=mrsd)+
-    #   theme_tree2()+
-    #   theme_bw()+
-    #   geom_tiplab(aes(color=group),size=1) +
-    #   theme(legend.position = 'none')+
-    #   scale_color_manual(values=eval(parse(text=paste0("c(",paste( paste0("'",dd$TAXA,"'='", dd$color,"'"), collapse = ','),")"))))+
-    #   scale_y_continuous(expand = c(0,0.05)) 
+    
     g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(dd,select=c('TAXA','color')) +
       theme_tree2()+
       theme_bw()+
-      geom_tiplab(aes(fill=I(color)),color='black', geom = "label",label.size = 0, label.padding = unit(0.15, "lines")) +
+      geom_nodepoint(aes(fill=I(color), color=I(color)))+
+      geom_tiplab(size=1) +
       theme(legend.position = 'none')+
       scale_y_continuous(expand = c(0,0.2))
     ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 25,height = 60,limitsize = F)
-    
-    # g <- ggtree(tmptrd2) %<+% subset(dd,select=c('TAXA','color')) + aes(color=I(color)) +
-    #   theme_tree2() +
-    #   geom_tiplab(size=1) +
-    #   theme_bw()+
-    #   theme(legend.position = 'none')+
-    #   scale_y_continuous(expand = c(0,0.05))  
-    
-  
   }
-  saveRDS(blen,file.path(p,'plots','branchlen.rds'))
+  save(blen,age_root,file=file.path(p,'plots','treeinfo.rda'))
   
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr1_trees'
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
   files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
   files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  tmp <- readRDS(file.path(p,'plots','branchlen.rds'))
+  tmp <- load(file.path(p,'plots','treeinfo.rda'))
   ans <- data.table(start=files, blen = tmp,run=1)
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr400_trees'
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
   files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
   files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  tmp2 <- readRDS(file.path(p,'plots','branchlen.rds'))
+  tmp2 <- load(file.path(p,'plots','treeinfo.rda'))
   ans <- rbind(ans,data.table(start=files, blen = tmp2 , run=400))
   
   g <- ggplot(ans,aes(start,blen,color=factor(run))) +
@@ -842,163 +790,6 @@ rkuvri.make.trees<- function()
     scale_x_continuous(expand = c(0,0.05))+
     scale_y_continuous(expand = c(0,0.05))
   ggsave(file.path(p,'plots','branchlen.pdf'),g,width = 6,height = 4)
-  
-  
-  
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
-  # # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
-  # infile.sdate <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
-  # load(infile.sdate)
-  # files <-list.files(p)
-  # files <- grep('treefile$',files,value = T)
-  # 
-  # # mrsd
-  # infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
-  # # dsdt <- as.data.table(subset(neuroData,select=c(studyid, Pangea.id, sampleDate)))
-  # # tmp <- dsdt[,length(sampleDate),by='studyid']
-  # # dsdt[studyid %in% tmp[V1>1,studyid]]
-  # dsdt <- as.data.table(unique(subset(neuroData,select=c(studyid, sampleDate))))
-  # dsdt[,studyid:=paste0('RK-',studyid)]
-  # tmp <- subset(data.table(read.csv(infile.ind.anonymised)),select=c('PT_ID', 'AID'))
-  # dsdt <- merge(dsdt, tmp, by.x='studyid', by.y='PT_ID')
-  # dsdt <- subset(dsdt, select=c('sampleDate','AID'))
-  # setnames(dsdt, c('sampleDate','AID'),c('SAMPLE_DATE', 'ID'))
-  # dsdt[,ID:=as.character(ID)]
-  # dsdt[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
-  # dsdt <- dsdt[!is.na(SAMPLE_DATE),]
-  # 
-  # # dirs <- list.dirs('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/')
-  # # dirs <- grep('trees$',dirs,value = T)
-  # # dirs <- dirs[-c(7,10)]
-  # # ksdate <- c()
-  # # for (d in dirs) {
-  # #   files <-list.files(d)
-  # #   files <- grep('treefile$',files,value = T)
-  # #   tmp <- read.tree(file.path(d,files[1]))
-  # #   tmpdf <- data.table(ID=tmp$tip.label)
-  # #   tmpdf[,CID:=sapply(strsplit(ID,'-'),function(x)x[1])]
-  # #   tmpdf[,CID:=gsub('CNTRL-|REF_','',CID)]
-  # #   tmpdf[,CID:=as.character(CID)]
-  # #   ksdate <- c(ksdate, sum(tmpdf[grepl('AID',CID), unique(CID)] %in% dsdt$ID))
-  # # }
-  # 
-  # # tmp = ls()
-  # # sapply(tmp, function(x){
-  # #   ans = get(x)
-  # #   print(str(x))
-  # #   sum(grepl('samp',colnames(ans)))})
-  # 
-  # load('~/Rakai_phyloscanner_170704_assemblystatus.rda')
-  # dsdt2 <- unique(subset(dc,select=c('RID','PID','SAMPLE_DATE')))
-  # dsdt2[,RID:=paste0('RK-',RID)]
-  # tmp <- subset(data.table(read.csv(infile.ind.anonymised)),select=c('PT_ID', 'AID'))
-  # dsdt2 <- merge(dsdt2, tmp, by.x='RID', by.y='PT_ID')
-  # dsdt2 <- subset(dsdt2, select=c('SAMPLE_DATE','AID'))
-  # setnames(dsdt2, 'AID', 'ID')
-  # dsdt2[,ID:=as.character(ID)]
-  # dsdt2[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
-  # dsdt2 <- dsdt2[!is.na(SAMPLE_DATE),]
-  # tmp <- dsdt2[,length(SAMPLE_DATE),by='ID']
-  # tmp[V1>1]
-  # tmp = dsdt2[ID %in% tmp[V1>1,unique(ID)]]
-  # 
-  # 
-  # dirs <- list.dirs('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/')
-  # dirs <- grep('trees$',dirs,value = T)
-  # dirs <- dirs[-c(7,10)]
-  # ksdate <- c()
-  # for (d in dirs) {
-  #   files <-list.files(d)
-  #   files <- grep('treefile$',files,value = T)
-  #   tmp <- read.tree(file.path(d,files[1]))
-  #   tmpdf <- data.table(ID=tmp$tip.label)
-  #   tmpdf[,CID:=sapply(strsplit(ID,'-'),function(x)x[1])]
-  #   tmpdf[,CID:=gsub('CNTRL-|REF_','',CID)]
-  #   tmpdf[,CID:=as.character(CID)]
-  #   ksdate <- c(ksdate, sum(tmpdf[grepl('AID',CID), unique(CID)] %in% dsdt$ID))
-  # }
-  # 
-  # blen <- c()
-  # # # only years
-  # # HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
-  # # in.dir <- file.path(HOME,'210122_phsc_input')		
-  # # infile.consensus <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA')
-  # # consensus_seq <- read.fasta(infile.consensus)
-  # # tmpdf <- data.table(ID=names(consensus_seq))
-  # # tmp <- lapply(strsplit(tmpdf$ID, split = '[.]'), as.numeric)
-  # # tmp <- lapply(tmp, function(x)x[!is.na(x)])
-  # # tmp <- lapply(tmp, function(x)x[x>1000 & x<2021])
-  # # tmp <- lapply(tmp, function(x)ifelse(length(x)==0,NA,x))
-  # # tmpdf[, SAMPLE_DATE:=unlist(tmp)]
-  # # tmpdf[,ID:=paste0('REF_',ID)]
-  # # dsdt <- rbind(dsdt, tmpdf)
-  # palD <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
-  # palA <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "A")
-  # 
-  # for (i in 1:length(files)) {
-  #   tmp <- read.tree(file.path(p,files[i]))
-  #   tmpdf <- data.table(ID=tmp$tip.label)
-  #   tmpdf[,CID:=sapply(strsplit(ID,'-'),function(x)x[1])]
-  #   tmpdf[,CID:=gsub('CNTRL-|REF_','',CID)]
-  #   tmpdf[,CID:=as.character(CID)]
-  #   # tmpdf[grepl('AID',CID), unique(CID)] %in% dsdt$ID
-  #   tmpdf <- merge(tmpdf, dsdt,by.x='CID', by.y='ID')
-  #   tmpdf <- unique(tmpdf)
-  #   # mrsd <- tmpdf[,max(SAMPLE_DATE,na.rm = T)]
-  #   blen <- c(blen, sum(tmp$edge.length))
-  #   # tmp <- groupOTU(tmp, grep('REF_',tmp$tip.label,value = T))
-  # 
-  #   
-  #   tmpid <- data.table(ID=unique(sapply(strsplit(tmp$tip.label,split = '-'), function(x){x[1]})))
-  #   setkey(tmpid, ID)
-  #   tmpid[,REF:=grepl('^REF_',ID)]
-  #   tmpid[REF==T,color:= palD(sum(tmpid[,REF]))]
-  #   tmpid[REF==F,color:= palA(nrow(tmpid)-sum(tmpid[,REF]))]
-  #   dd <- data.table(taxa=tmp$tip.label,ID=sapply(strsplit(tmp$tip.label,split = '-'), function(x){x[1]}),N=seq_len(length(tmp$tip.label)))
-  #   dd <- merge(dd,tmpid,by='ID',all=T)
-  #   setkey(dd,N)
-  #   dd <- merge(dd,tmpdf,by='ID',all=T)    
-  #   dd <- data.frame(dd)
-  #   td <- dater( tre, sts =sts , s = 250, clock='strict', omega0=.0015)
-  #   
-  #   g <- ggtree(tmp, mrsd=mrsd) %<+% dd +
-  #     geom_tree(aes(color=I(color))) +
-  #     # theme_tree2() + 
-  #     # geom_tiplab(align=TRUE, linesize=.5) +
-  #     geom_tiplab(size=1) +
-  #     theme_bw()+
-  #     theme(legend.position = 'none')+
-  #     scale_color_viridis_d()+
-  #     scale_y_continuous(expand = c(0,0.05))  
-  #   
-  #   ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 25,height = 90,limitsize = F)
-  # }
-  # saveRDS(blen,file.path(p,'plots','branchlen.rds'))
-  # 
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
-  # files <-list.files(p)
-  # files <- grep('treefile$',files,value = T)
-  # files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
-  # files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  # tmp <- readRDS(file.path(p,'plots','branchlen.rds'))
-  # ans <- data.table(start=files, blen = tmp,run=1)
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
-  # files <-list.files(p)
-  # files <- grep('treefile$',files,value = T)
-  # files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
-  # files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  # tmp2 <- readRDS(file.path(p,'plots','branchlen.rds'))
-  # ans <- rbind(ans,data.table(start=files, blen = tmp2 , run=400))
-  # 
-  # g <- ggplot(ans,aes(start,blen,color=factor(run))) +
-  #   geom_point()+
-  #   geom_line() +
-  #   labs(x='\n genome position',y='branch length\n ',color='run') +
-  #   theme_bw()+
-  #   scale_x_continuous(expand = c(0,0.05))+
-  #   scale_y_continuous(expand = c(0,0.05))
-  # ggsave(file.path(p,'plots','branchlen.pdf'),g,width = 6,height = 4)
-  # 
 
 }
 
