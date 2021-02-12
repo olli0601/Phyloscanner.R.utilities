@@ -306,28 +306,23 @@ rkuvri.make.alignments<- function()
   # file names
   prog.pty <- '~/phyloscanner/phyloscanner_make_trees.py'
   HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
-  # in.dir <- file.path(HOME,'210122_phsc_input')		
-  # work.dir <- file.path(HOME,"210122_phsc_work")
-  # out.dir <- file.path(HOME,"210122_phsc_output")	
-  in.dir <- file.path(HOME,'210208_phsc_input')		
-  work.dir <- file.path(HOME,"210208_phsc_work")
-  out.dir <- file.path(HOME,"210208_phsc_output")	
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  in.dir <- file.path(HOME,'210211_phsc_input')		
+  work.dir <- file.path(HOME,"210211_phsc_work")
+  out.dir <- file.path(HOME,"210211_phsc_output")	
   package.dir <- file.path(.libPaths(),'Phyloscanner.R.utilities')
   dir.create(in.dir)
   dir.create(work.dir)
   dir.create(out.dir)
-  use.both.consensus <- FALSE
-  
-  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  use.both.consensus <- TRUE # false options is out of date
   infile.runs <- paste0(HOME,'210120_RCCSUVRI_phscinput_runs.rds')
+  infile.consensus.oneeach <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
+  infile.hxb2.package <- file.path(package.dir,'HIV1_compendium_AD_B_CPX_v2.fasta')
   if(use.both.consensus){
     # infile.consensus.tree <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_Tree.tre')
     infile.consensus <- file.path(in.dir,'UgandaKenyaTanzaniaGenomes_GeneCut_TreeOrder.FASTA') 
   }
-  infile.consensus.oneeach <- file.path(in.dir,'2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
-  # infile.consensus <- infile.consensus.Tanzania
-  infile.hxb2.package <- file.path(package.dir,'HIV1_compendium_AD_B_CPX_v2.fasta')
   
   # load runs
   pty.runs <- readRDS(infile.runs)
@@ -347,6 +342,8 @@ rkuvri.make.alignments<- function()
   dn[,NUM:=as.numeric(gsub(".*\\((.*)\\).*", "\\1", RAW_NAME))]
   dn[,NAME:=gsub('\\(.*?\\)', '', RAW_NAME)]
   names(consensus_seq_oneeach) <- dn$NAME
+  
+  # remove sequences
   if(use.both.consensus){
     consensus_seq<- read.fasta(infile.consensus)
     # compare two sets of consensus, and combine
@@ -357,9 +354,15 @@ rkuvri.make.alignments<- function()
   }
   opn <- grep('^CON_N$|^CON_O$|^CON_P$|CONSENSUS_N$|CONSENSUS_O$|CONSENSUS_P$',names(consensus_seq_oneeach),value=T)
   consensus_seq_oneeach <- consensus_seq_oneeach[setdiff(names(consensus_seq_oneeach),opn)]
-  # consensus_seq_all <- c(consensus_seq, consensus_seq_oneeach) 
+
+  # filter sequences
+  if(use.both.consensus){
+     sample_date <- as.numeric(sapply(strsplit(names( consensus_seq),split='\\.'),function(x)x[3]))
+     id <- which(sample_date<=2010|sample_date>=1990)
+     consensus_seq<- consensus_seq[names(consensus_seq)[id]]
+  }
   
-  # align
+  # save to file
   if(use.both.consensus){
     infile.consensus.all <- file.path(in.dir,'ConsensusGenomes.fasta')
     if(!file.exists(infile.consensus.all)){
@@ -368,7 +371,6 @@ rkuvri.make.alignments<- function()
                            DNAStringSet(do.call(c,lapply(consensus_seq_oneeach,function(x)paste(x,collapse = '')))))
       consensus_seq_all <- as.list(tmp)
       consensus_seq_all <- lapply(consensus_seq_all,function(x){as.character(x)})
-      # save
       names(consensus_seq_all) <- paste0('REF_',names(consensus_seq_all))
       write.fasta(sequences=consensus_seq_all,
                   names=names(consensus_seq_all),
@@ -402,13 +404,6 @@ rkuvri.make.alignments<- function()
   stopifnot(all(hxb2_seq==package_hxb2_seq))
   
   # take root
-  # tmp <- names(consensus_seq)
-  # tmp <- gsub('REF_','',tmp)
-  # tmp <- lapply(strsplit(tmp, split = '[.]'), as.numeric)
-  # tmp <- lapply(tmp, function(x)x[!is.na(x)])
-  # tmp2 <- unlist(lapply(tmp, function(x)x[x>1000 & x<2021]))
-  # root.seq <- which(sapply(tmp, function(x){min(tmp2) %in% x}))[1]  
-  # root.seq <- names(consensus_seq)[root.seq]
   root.seq <-grep('^REF_CON_M$|REF_CONSENSUS_M$|^REF_CON_H$|REF_CONSENSUS_H$', names(consensus_seq_all),value = T)
   
   # adapt format
@@ -461,14 +456,6 @@ rkuvri.make.alignments<- function()
   })
   pty.c	<- do.call('rbind', pty.c)	
   setkey(pty.c,PTY_RUN,W_FROM)
-  # tmp		<- data.table(FO=list.files(out.dir, pattern='ptyr.*fasta$', recursive=TRUE, full.names=TRUE))
-  # tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FO)))]
-  # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FO)))]
-  # pty.c	<- merge(pty.c, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)		
-  # pty.c	<- subset(pty.c, is.na(FO))		
-  # pty.c[, CASE_ID:= seq_len(nrow(pty.c))]
-  #pty.c	<- subset(pty.c, W_FROM==2350)
-  #print(pty.c, n=1e3)
   pty.c[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(pty.c)/max.per.run))[1:nrow(pty.c)]]
   pty.c[, JOB_ID:= rep(1:ceiling(nrow(pty.c)/max.per.run),each=max.per.run)[1:nrow(pty.c)]]
   
@@ -509,19 +496,19 @@ rkuvri.make.alignments<- function()
     # if(i==1|i==pty.c[, max(JOB_ID)]){cat(system(cmd, intern= TRUE))}
   }
 
-  # library(ape)
-  # # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
-  # dir.create(file.path(p,'plots'))
-  # files <-list.files(p)
-  # files <- grep('fasta$',files,value = T)
-  # for (i in 1:length(files)) {
-  #   tmp <- read.dna(file.path(p,files[i]),format = 'fasta')
-  #   pdf(file.path(p,'plots',gsub('.fasta','_alignment.pdf',files[i])),width = 10, height = 10)
-  #   par(cex=0.5)
-  #   checkAlignment(tmp)
-  #   dev.off()
-  # }
+  library(ape)
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr1_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr400_trees'
+  dir.create(file.path(p,'plots'))
+  files <-list.files(p)
+  files <- grep('fasta$',files,value = T)
+  for (i in 1:length(files)) {
+    tmp <- read.dna(file.path(p,files[i]),format = 'fasta')
+    pdf(file.path(p,'plots',gsub('.fasta','_alignment.pdf',files[i])),width = 10, height = 10)
+    par(cex=0.5)
+    checkAlignment(tmp)
+    dev.off()
+  }
   
 }
 
@@ -533,7 +520,6 @@ rkuvri.make.trees<- function()
   #
   #	produce trees
   #
-  # hpc.load			<- "module load intel-suite/2015.1 mpi"
   # lightweight run
   if(0)	
   {
@@ -555,23 +541,15 @@ rkuvri.make.trees<- function()
   max.per.run <- 4900
   iqtree.pr <- 'iqtree'
   iqtree.args			<- ifelse(hpc.nproc==1, '-m GTR+F+R6 -ntmax 1 -seed 42 -o REF_CON_H', 
-                         paste0('-m GTR+F+R6 -ntmax ',hpc.nproc,' -seed 42 --o REF_CON_H'))
-  # in.dir				<- file.path(HOME,'210122_phsc_output')		
-  # out.dir				<- in.dir
-  # work.dir			<- file.path(HOME,"210122_phsc_work")
-  in.dir				<- file.path(HOME,'210208_phsc_output')		
+                         paste0('-m GTR+F+R6 -ntmax ',hpc.nproc,' -seed 42 -o REF_CON_H'))
+  in.dir				<- file.path(HOME,'210211_phsc_output')		
   out.dir				<- in.dir
-  work.dir			<- file.path(HOME,"210208_phsc_work")
+  work.dir			<- file.path(HOME,"210211_phsc_work")
   
   infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
   infiles[, FO:= gsub('.fasta$','',FI)]
   infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
   infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
-  # tmp		<- data.table(FT=list.files(out.dir, pattern='^ptyr.*tree$', full.names=TRUE, recursive=TRUE))
-  # tmp[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FT)))]
-  # tmp[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FT)))]
-  # infiles	<- merge(infiles, tmp, by=c('PTY_RUN','W_FROM'), all.x=1)
-  # infiles	<- subset(infiles, is.na(FT))	
   setkey(infiles, PTY_RUN, W_FROM)	
   
   # infiles	<- subset(infiles, PTY_RUN<=14)
@@ -619,18 +597,25 @@ rkuvri.make.trees<- function()
   library(viridis)
   library(treedater)
 
-  # directory 
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr1_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr400_trees'
-  dir.create(file.path(p,'plots'))
-    # input
+  # files
   set.seed(42)
+  args <- commandArgs(trailingOnly = TRUE)
+  print(args)
+  method <- as.numeric(args[1])
+  # method <- 1
+  # 1 include consensus with A or D
+  # 2 include all consensus
+  # 3 include  all consensus and local A/D between 1990-2010
+  # 4 include all consensus and local between 1990-2010
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr1_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr400_trees'
+  dir.create(file.path(p,'plots'))
   infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
   infile.ind.rccs <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
   infile.ind.mrc <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
   infile.phscinput <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds'
+  infile.consensus <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_input/ConsensusGenomes.fasta'
+  infile.consensus.oneeach <- file.path('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_input/2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
   
   # load sampling date
   ds <- readRDS(infile.phscinput)
@@ -648,12 +633,37 @@ rkuvri.make.trees<- function()
   dsdt <- merge(dsdt, subset(ds,select=c('RENAME_ID','PANGEA_ID')),by='PANGEA_ID',all.x=T)
   dsdt <- dsdt[!is.na(RENAME_ID)]
   dsdt[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
+  
+  # consensus sampling dates
+  consensus_seq_all <- read.fasta(infile.consensus)
+  consensus_seq_oneeach <- read.fasta(infile.consensus.oneeach)
+  consensus_seq_oneeach_names <- names(consensus_seq_oneeach)
+  consensus_seq_oneeach_names <- gsub('\\(.*?\\)', '', consensus_seq_oneeach_names)
+  dsdt_con <- data.table(TAXA=names(consensus_seq_all))
+  dsdt_con[,RENAME_ID:=gsub('REF_','',TAXA)]
+  dsdt_con[,AID:=RENAME_ID]
+  dsdt_con[grepl('\\.',AID), SAMPLE_DATE:=sapply(strsplit(AID,'\\.'),
+                                            function(x){
+                                              n <- x[2:3]
+                                              n <- n[!grepl('\\D',n)]
+                                              return(n)
+                                            })]
+  id <- which(lengths(strsplit(dsdt_con$SAMPLE_DATE,''))==2)
+  dsdt_con[id,SAMPLE_DATE:=ifelse(as.numeric(SAMPLE_DATE)<20,paste0('20',SAMPLE_DATE),paste0('19',SAMPLE_DATE))]
+  dsdt_con[!is.na(SAMPLE_DATE),SAMPLE_DATE:=paste(SAMPLE_DATE,7,1,sep='-')]
+  dsdt_con[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
+  dsdt_con[,LOCAL:=!AID %in% consensus_seq_oneeach_names]
+  dsdt_con <- dsdt_con[!is.na(SAMPLE_DATE)]
+  dsdt_con[LOCAL==T,ST:=sapply(strsplit( AID,'\\.'),function(x)x[1])]
+  dsdt_con[LOCAL==F,ST:=gsub('_|\\-','\\.',AID)]
+  dsdt_con[LOCAL==F,ST:=sapply(strsplit( ST,split = '\\.'),function(x)x[2])]
+  dsdt_con[,unique(ST)]
+  dsdt_con[,INCLU_AD:=grepl('A|D',ST)]
   #
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
   blen <- c()
   age_root <- matrix(nrow = length(files), ncol = 6)
-  
   palD <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
   palA <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "A")
   
@@ -667,7 +677,7 @@ rkuvri.make.trees<- function()
   }
   
   for (i in 1:length(files)) {
-    # get sampling dates
+    # load tree
     cat('processing ',i,'out of ', length(files),'file \n')
     tmptr <- read.tree(file.path(p,files[i]))
     tmpdf <- data.table(TAXA=tmptr$tip.label)
@@ -676,33 +686,7 @@ rkuvri.make.trees<- function()
     tmpdf[!grep('REF_',TAXA),RENAME_ID:=gsub('^([A-Z]+[0-9]+-[a-z]+[0-9]+)_.*','\\1',RENAME_ID)]
     tmpdf[,AID:=RENAME_ID]
     tmpdf[!grep('REF_',TAXA),AID:=gsub('^([A-Z]+[0-9]+)-.*','\\1',RENAME_ID)]    
-    tmpdf <- merge(tmpdf, subset(dsdt,select=c('RENAME_ID','SAMPLE_DATE')), by='RENAME_ID',all.x=T)
-    tmp <- tmpdf[is.na(SAMPLE_DATE),]
-    cat(nrow(tmp[grepl('AID',AID),]), ' target has no sample dates \n')
-    tmp <- tmp[!grepl('AID',AID)]
-    set(tmp, NULL, 'SAMPLE_DATE', NULL)
-    tmp[,SAMPLE_DATE:=NA_character_]
-    tmp[grepl('\\.',AID), SAMPLE_DATE:=sapply(strsplit(AID,'\\.'),
-                                              function(x){
-                                                n <- x[2:3]
-                                                n <- n[!grepl('\\D',n)]
-                                                return(n)
-                                              })]
-    id <- which(lengths(strsplit(tmp$SAMPLE_DATE,''))==2)
-    tmp[id,SAMPLE_DATE:=ifelse(as.numeric(SAMPLE_DATE)<20,paste0('20',SAMPLE_DATE),paste0('19',SAMPLE_DATE))]
-    tmp[!is.na(SAMPLE_DATE),SAMPLE_DATE:=paste(SAMPLE_DATE,7,1,sep='-')]
-    tmp[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
-    tmpdf <- tmpdf[grepl('AID',AID)]
-    tmpdf <- rbind(tmpdf,tmp)
-    cat(tmpdf[,sum(!is.na(SAMPLE_DATE))],' out of ', nrow(tmpdf) ,' taxa have known sampling dates \n',
-        tmpdf[,length(unique(SAMPLE_DATE))],' unique dates \n')
-    dr <- copy(tmpdf)
-    dr[grepl('AID',AID),lower:=SAMPLE_DATE]
-    dr[grepl('AID',AID),upper:=SAMPLE_DATE]
-    dr[!grepl('AID',AID),lower:=SAMPLE_DATE-181]
-    dr[!grepl('AID',AID),upper:=SAMPLE_DATE+182]
-    dr[,lower:=hivc.db.Date2numeric(lower)]
-    dr[,upper:=hivc.db.Date2numeric(upper)]
+    
     
     # assign color to nodes
     tmpid <- unique(subset(tmpdf,select=c('AID')))
@@ -710,40 +694,62 @@ rkuvri.make.trees<- function()
     tmpid[REF==T,color:= palD(sum(tmpid[,REF]))]
     tmpid[REF==F,color:= palA(nrow(tmpid)-sum(tmpid[,REF]))]
     setkey(tmpid, AID)
-    dd <- merge(tmpdf, tmpid, by='AID',all.x=T)
     
-    sts <- dd$SAMPLE_DATE
+    # filter
+    tmp <- tmpdf[grep('REF_',TAXA),]
+    tmpdf <- tmpdf[!grep('REF_',TAXA),]
+    if(method==1){
+      tmp_dsdt_con <- dsdt_con[LOCAL==F & INCLU_AD==T,]
+    }else if(method==2){
+      tmp_dsdt_con <- dsdt_con[LOCAL==F,]
+    }else if(method==3){
+      tmp_dsdt_con <- dsdt_con[LOCAL==F|(LOCAL==T & INCLU_AD==T),]
+    }else if(method==4){
+      tmp_dsdt_con <- copy(dsdt)
+    }else{
+      stop('method should take values from 1 to 4')
+    }
+    tmp <- merge(tmp, subset(tmp_dsdt_con,select=c('RENAME_ID','SAMPLE_DATE')),  by='RENAME_ID')
+    tmpdf <- merge(tmpdf, subset(dsdt,select=c('RENAME_ID','SAMPLE_DATE')),  by='RENAME_ID',all.x=T)
+    tmpdf <- rbind(tmpdf, tmp)
+    cat(nrow(tmpdf[is.na(SAMPLE_DATE)]), ' rows has no sample dates \n')
+  
+    # set sample time 
+    dr <- copy(tmpdf)
+    dr[grepl('AID',AID),lower:=SAMPLE_DATE]
+    dr[grepl('AID',AID),upper:=SAMPLE_DATE]
+    dr[!grepl('AID',AID),lower:=as.Date(paste(substr(SAMPLE_DATE,1,4),1,1,sep = '-'))]
+    dr[!grepl('AID',AID),upper:=as.Date(paste(substr(SAMPLE_DATE,1,4),12,31,sep = '-'))]
+    dr[,lower:=hivc.db.Date2numeric(lower)]
+    dr[,upper:=hivc.db.Date2numeric(upper)]
+    sts <- tmpdf$SAMPLE_DATE
     sts <- hivc.db.Date2numeric(sts)
-    sts <- setNames(sts, dd$TAXA)
-    
-    tmp <- data.table(TAXA=tmptr$tip.label,N=seq_len(length(tmptr$tip.label)))
-    dd <- merge(dd,tmp,by='TAXA',all.x=T)
-    setkey(dd,N)
-    dd <- data.frame(dd)  
+    sts <- setNames(sts, tmpdf$TAXA)
     
     # 
     tmpfa <- read.fasta(file.path(p,gsub('treefile$','fasta',files[i])))
     tmplen <- unique(lengths(tmpfa))
     stopifnot(length(tmplen)==1)
     
-    # droptips
-    tmp <- dd[is.na(dd$SAMPLE_DATE),]$TAXA
-    tmptr2 <- drop.tip(tmptr,tmp)
-    dd2 <- dd[!is.na(dd$SAMPLE_DATE),]
-    stopifnot(all(sort(dd2$TAXA)==sort(tmptr2$tip.label)))
-    sts <- sts[!is.na(sts)]
-    dr2 <- dr[!is.na(SAMPLE_DATE),]
-    sts.df <- subset(dr2,select=c('lower','upper'))
+    # drop tips
+    tmptr2 <- drop.tip(tmptr,setdiff(tmptr$tip.label,c(tmpdf$TAXA,'REF_CON_H')))
+    sts.df <- subset(dr,select=c('lower','upper'))
     sts.df <- data.frame(sts.df)
-    row.names(sts.df) <- dr2$TAXA
-    
+    row.names(sts.df) <- dr$TAXA
     stopifnot(sort(row.names(sts.df)) == sort(names(sts)))
-    tmptr2 <- unroot(tmptr2)
+
+    # root    
+    tmptr2 <- root(tmptr2, 'REF_CON_H')
+    tmptr2 <- drop.tip(tmptr2,'REF_CON_H')
+    
+    # 
     tmptrd <- dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 1,estimateSampleTimes=sts.df)
+    cat('save root to tip regression plot \n')
+    pdf(file.path(p,'plots',paste0('s',method,'_',gsub('.treefile','_rttreg.pdf',files[i]))),g,width = 6,height = 4,limitsize = F)
     fit <- rootToTipRegressionPlot(tmptrd)
+    dev.off()
     outliers <- outlierTips( tmptrd)
     cat(nrow(outliers[outliers$q < 0.05,]),'outliers \n')
-    
     age_root[i,] <- c(tmptrd$adjusted.mean.rate,
                       tmptrd$mean.rate,
                       tmptrd$timeOfMRCA,
@@ -751,19 +757,20 @@ rkuvri.make.trees<- function()
                       tmptrd$Nnode ,
                       tmptrd$coef_of_variation)
     
+    # plot
     mrsd <- as.Date(max(dd$SAMPLE_DATE,na.rm=T))
     blen <- c(blen, sum(tmptr$edge.length))
     
-    g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(dd,select=c('TAXA','color')) +
+    g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(tmpid,select=c('TAXA','color')) +
+      geom_tippoint(aes(fill=I(color), color=I(color)))+
       theme_tree2()+
       theme_bw()+
-      geom_nodepoint(aes(fill=I(color), color=I(color)))+
       geom_tiplab(size=1) +
       theme(legend.position = 'none')+
       scale_y_continuous(expand = c(0,0.2))
-    ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 25,height = 60,limitsize = F)
+    ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 10,height = 24,limitsize = F)
   }
-  save(blen,age_root,file=file.path(p,'plots','treeinfo.rda'))
+  save(blen,age_root,tmptrd,file=file.path(p,'plots',paste0('s',method,'_treeinfo.rda')))
   
   # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
   p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr1_trees'
