@@ -497,8 +497,8 @@ rkuvri.make.alignments<- function()
   }
 
   library(ape)
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr1_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr400_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr1_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr400_trees'
   dir.create(file.path(p,'plots'))
   files <-list.files(p)
   files <- grep('fasta$',files,value = T)
@@ -689,11 +689,12 @@ rkuvri.make.trees<- function()
     
     
     # assign color to nodes
-    tmpid <- unique(subset(tmpdf,select=c('AID')))
-    tmpid[,REF:=!grepl('^AID_',AID)]
-    tmpid[REF==T,color:= palD(sum(tmpid[,REF]))]
-    tmpid[REF==F,color:= palA(nrow(tmpid)-sum(tmpid[,REF]))]
-    setkey(tmpid, AID)
+    tmpid <- subset(tmpdf,select=c('AID','TAXA'))
+    tmp <- unique(subset(tmpid,select=c('AID')))
+    tmp[,REF:=!grepl('^AID',AID)]
+    tmp[REF==T,color:= palD(sum(tmp[,REF]))]
+    tmp[REF==F,color:= palA(nrow(tmp)-sum(tmp[,REF]))]
+    tmpid <- merge(tmpid, tmp, by='AID',all.x=T)
     
     # filter
     tmp <- tmpdf[grep('REF_',TAXA),]
@@ -705,7 +706,7 @@ rkuvri.make.trees<- function()
     }else if(method==3){
       tmp_dsdt_con <- dsdt_con[LOCAL==F|(LOCAL==T & INCLU_AD==T),]
     }else if(method==4){
-      tmp_dsdt_con <- copy(dsdt)
+      tmp_dsdt_con <- copy(dsdt_con)
     }else{
       stop('method should take values from 1 to 4')
     }
@@ -743,9 +744,9 @@ rkuvri.make.trees<- function()
     tmptr2 <- drop.tip(tmptr2,'REF_CON_H')
     
     # 
-    tmptrd <- dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 1,estimateSampleTimes=sts.df)
+    tmptrd <- dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 0,estimateSampleTimes=sts.df,omega0 = 0.001)
     cat('save root to tip regression plot \n')
-    pdf(file.path(p,'plots',paste0('s',method,'_',gsub('.treefile','_rttreg.pdf',files[i]))),g,width = 6,height = 4,limitsize = F)
+    pdf(file.path(p,'plots',paste0('s',method,'_',gsub('.treefile','_rttreg.pdf',files[i]))),width = 6,height = 4)
     fit <- rootToTipRegressionPlot(tmptrd)
     dev.off()
     outliers <- outlierTips( tmptrd)
@@ -758,46 +759,120 @@ rkuvri.make.trees<- function()
                       tmptrd$coef_of_variation)
     
     # plot
-    mrsd <- as.Date(max(dd$SAMPLE_DATE,na.rm=T))
-    blen <- c(blen, sum(tmptr$edge.length))
-    
-    g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(tmpid,select=c('TAXA','color')) +
-      geom_tippoint(aes(fill=I(color), color=I(color)))+
-      theme_tree2()+
-      theme_bw()+
-      geom_tiplab(size=1) +
-      theme(legend.position = 'none')+
-      scale_y_continuous(expand = c(0,0.2))
-    ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 10,height = 24,limitsize = F)
+     if(method==1){
+       mrsd <- max(as.Date(max(dsdt$SAMPLE_DATE,na.rm=T)),as.Date(max(dsdt_con$SAMPLE_DATE,na.rm=T)))
+       blen <- c(blen, sum(tmptr$edge.length))
+       g <- ggtree(tmptr,mrsd=mrsd) %<+% subset(tmpid,select=c('TAXA','color')) +
+        geom_tippoint(aes(fill=I(color), color=I(color)))+
+        theme_tree2()+
+        theme_bw()+
+        geom_tiplab(size=1) +
+        theme(legend.position = 'none')+
+        scale_y_continuous(expand = c(0,0.2))
+      ggsave(file.path(p,'plots',gsub('.treefile','_tree.pdf',files[i])),g,width = 10,height = 30,limitsize = F)
+     }
   }
-  save(blen,age_root,tmptrd,file=file.path(p,'plots',paste0('s',method,'_treeinfo.rda')))
   
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr1_trees'
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr1_trees'
+  if(method==1){
+    save(blen,age_root,file=file.path(p,'plots',paste0('s',method,'_treeinfo.rda')))
+  }else{
+    save(age_root,file=file.path(p,'plots',paste0('s',method,'_treeinfo.rda')))
+  }
+  
+  library(data.table)
+  library(ggplot2)
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr1_trees'
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
   files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
   files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  tmp <- load(file.path(p,'plots','treeinfo.rda'))
-  ans <- data.table(start=files, blen = tmp,run=1)
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210122_phsc_output/ptyr400_trees'
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210208_phsc_output/ptyr400_trees'
-  files <-list.files(p)
-  files <- grep('treefile$',files,value = T)
-  files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
-  files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
-  tmp2 <- load(file.path(p,'plots','treeinfo.rda'))
-  ans <- rbind(ans,data.table(start=files, blen = tmp2 , run=400))
+  ans <- data.table()
+  for (i in 1:4) {
+    load(file.path(p,'plots',paste0('s',i,'_treeinfo.rda')))
+    tmp <- data.table(start=files, blen = blen,
+                      subr=age_root[,1],tmrca=age_root[,3],nnode=age_root[,5], method=i)
+    ans <- rbind(ans, tmp)
+  }
+
   
-  g <- ggplot(ans,aes(start,blen,color=factor(run))) +
+  g <- ggplot(ans,aes(start,tmrca,color=factor(method,1:4, c('A/D consensus','all consensus','all consensus and A/D local consensus', 'all consensus and local consensus')))) +
     geom_point()+
     geom_line() +
-    labs(x='\n genome position',y='branch length\n ',color='run') +
+    labs(x='\n genome position',y='time to most recent common ancester \n ',color='reference sequences') +
+    theme_bw()+
+    scale_x_continuous(expand = c(0,0.05))+
+    scale_y_continuous(expand = c(0,0.05)) 
+  ggsave(file.path(p,'plots','tmrca.pdf'),g,width = 6,height = 4)
+  
+  g <- ggplot(ans[method==4],aes(start,tmrca,color=factor(method,1:4, c('A/D consensus','all consensus','all consensus and A/D local consensus', 'all consensus and local consensus')))) +
+    geom_point()+
+    geom_line() +
+    labs(x='\n genome position',y='time to most recent common ancester \n ',color='reference sequences') +
+    theme_bw()+
+    scale_x_continuous(expand = c(0,0.05))+
+    scale_y_continuous(expand = c(0,0.05)) 
+  ggsave(file.path(p,'plots','tmrca4.pdf'),g,width = 6,height = 4)  
+  ans[,list(CL=quantile(tmrca,0.025),
+            CU=quantile(tmrca,0.975),
+            M=quantile(tmrca,0.5)),by='method']
+  # method       CL       CU        M
+  # 1:      1 1615.208 1983.304 1912.139
+  # 2:      2 1835.966 1977.125 1933.955
+  # 3:      3 1892.995 1980.468 1943.616
+  # 4:      4 1923.706 1976.923 1958.338
+  
+  g <- ggplot(ans,aes(start,nnode,fill=factor(method,1:4, c('A/D consensus','all consensus','all consensus and A/D local consensus', 'all consensus and local consensus')))) +
+    geom_bar(position="dodge", stat="identity")+
+    labs(x='\n genome position',y='number of nodes\n ',fill='reference sequences') +
     theme_bw()+
     scale_x_continuous(expand = c(0,0.05))+
     scale_y_continuous(expand = c(0,0.05))
-  ggsave(file.path(p,'plots','branchlen.pdf'),g,width = 6,height = 4)
+  ggsave(file.path(p,'plots','nnode.pdf'),g,width = 6,height = 4)
+  
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/ptyr400_trees'
+  # files <-list.files(p)
+  # files <- grep('treefile$',files,value = T)
+  # files <- gsub(paste0(gsub('trees$','InWindow',basename(p)),'_'),'',files)
+  # files <- as.numeric(gsub("([0-9]+).*$", "\\1", files))
+  # tmp2 <- load(file.path(p,'plots','treeinfo.rda'))
+  # ans <- rbind(ans,data.table(start=files, blen = tmp2 , run=400))
+  # 
 
+  # g <- ggplot(ans,aes(start,blen,color=factor(run))) +
+  #   geom_point()+
+  #   geom_line() +
+  #   labs(x='\n genome position',y='branch length\n ',color='run') +
+  #   theme_bw()+
+  #   scale_x_continuous(expand = c(0,0.05))+
+  #   scale_y_continuous(expand = c(0,0.05))
+  # ggsave(file.path(p,'plots','branchlen.pdf'),g,width = 6,height = 4)
+  
+  library(data.table)
+  out.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_output/'
+  # p <- 'ptyr1_trees'
+  p <- 'ptyr400_trees'
+  files <-list.files(file.path(out.dir,p),include.dirs = F)
+  df <- data.table(start= seq(800,9400,by=25))
+  tmp <- data.table(fa = grep('fasta$',files,value=T))
+  tmp[, start := as.numeric(gsub(paste0(gsub('trees$','InWindow_',p),'([0-9]+)_.*'),'\\1',fa))]
+  df <- merge(df, tmp, by='start',all.x=T)
+  tmp <- data.table(tr = grep('treefile$',files,value=T))
+  tmp[, start := as.numeric(gsub(paste0(gsub('trees$','InWindow_',p),'([0-9]+)_.*'),'\\1',tr))]
+  df <- merge(df, tmp, by='start',all.x=T)  
+  # 'ptyr1_trees'
+  df[is.na(fa),start]
+  # 7950 9250 9275 9300 9325 9350 9375 9400
+  
+  df[!is.na(fa)&is.na(tr),start]
+  # [1]  975 1050 1075 1175 1275 1375 1475 1650 1675 1750 1775 1825 1850 1875 1925
+  # [16] 1950 1975 2025 2050 2075 2125 2150 2175 2250 2275 2350 2375 4375 5075 5175
+  # [31] 5275 5375 5450 5475 5575 5675 5850 5875 5975 6075 6175 6275 6375 6450 6475
+  # [46] 6550 6575 6650 6675 6775 6875 6975 7075 7150 7175 7250 7275 7375 7450 7475
+  # [61] 7550 7575 7775 7875 8000 8100 8200 8300 8400 8475 8500 8600 8700 8800 8900
+  # [76] 8975 9000 9100 9200
+  
+  # 'ptyr400_trees'  
+  # numeric(0)
 }
 
 
