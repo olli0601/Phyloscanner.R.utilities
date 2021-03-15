@@ -5,6 +5,7 @@ library(ggpubr)
 library(tidyverse)
 library(igraph)
 library(dplyr)
+library(rstan)
 library(pammtools)# plot stepribbon
 
 
@@ -369,11 +370,11 @@ rkuvri.find.threshold.from.couples<- function(){
   dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
   tmp <- dinfo[is.na(pt_id)]
   dinfo <- dinfo[!is.na(pt_id)]
-  tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
-  colnames(tmp2) <- c("pt_id","pangea_id","sex")
-  set(tmp, NULL, c("pt_id","sex"), NULL)
-  tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
-  dinfo <- rbind(dinfo, tmp)
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
   cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
   
   # process couple, map to studyid
@@ -492,6 +493,7 @@ rkuvri.find.threshold.from.couples<- function(){
   save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_fit.rda'))
   
   
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_fit.rda'))
   # check fit 
   rh= c()
   ness= c()
@@ -623,6 +625,9 @@ rkuvri.find.threshold.from.couples<- function(){
   do.call("grid.arrange", c(plot_list,ncol= 5))
   dev.off()
   
+  tmp = df[grep('mu',VAR),]
+  tmp = dcast(tmp, WIN~VAR,value.var = '50%')
+  tmp[,diff:=`mu[2]`-`mu[1]`]
   # mean and sd over windows
   ggplot(df[grep('mu',VAR)],aes(x=WIN))+
     geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), fill = "grey70") +
@@ -721,6 +726,162 @@ rkuvri.find.threshold.from.couples<- function(){
     scale_y_continuous(expand = c(0,0.05), labels = scales::percent)
   
   ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('threshold_over_positions.pdf')),width = 6, height = 4)
+  
+  
+  load(file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))
+  # tmp <- unique(subset(ans,select=c('pt_id1','pt_id2')))
+  # setkey(tmp, pt_id1,pt_id2)
+  # tmp[,ID:=seq_len(nrow(tmp))]
+  # ans <- merge(ans, tmp, by=c('pt_id1','pt_id2'))
+  # setkey(ans,WINDOW, ID)
+  # ans[,length(PERC),by=c('WINDOW','ID')]
+  similarity <- list()
+  index <- list()
+  for (i in seq_len(max(ans$WINDOW))) {
+    anss <- ans[WINDOW==i,]
+    tmp <- unique(subset(anss,select=c('pt_id1','pt_id2')))
+    setkey(tmp, pt_id1,pt_id2)
+    tmp[,ID:=seq_len(nrow(tmp))]
+    anss <- merge(anss, tmp, by=c('pt_id1','pt_id2'))
+    setkey(anss,ID)
+    similarity[[i]] <- log(anss$PERC)
+    index[[i]] <- anss$ID
+  }
+  
+  ndata <- lengths(similarity)
+  # range(unlist(lapply(similarity, range)))
+  
+  stan_data <- list()
+  for (i in seq_len(max(ans$WINDOW))) {
+    stan_data[[i]] <- list()
+    stan_data[[i]]$N <- ndata[i]
+    stan_data[[i]]$indices <- index[[i]] 
+    stan_data[[i]]$N1 <- max(index[[i]] )
+    stan_data[[i]]$y <- similarity[[i]]
+  }
+  
+  save(stan_data, file = file.path(potential.networks.analysis.dir,'stan_data_rdne_threshold.rda'))
+  
+  
+  stan_code <- "
+  data {
+  int<lower = 0> N;
+  int<lower = 0> N1;
+  int indices[N];
+  vector[N] y;
+  
+  }
+
+  parameters {
+    ordered[2] mu;
+    real<lower=0> sigma[2];
+    real<lower=0, upper=1> theta;
+    real rdne[N1,2];
+  }
+
+  model {
+  sigma ~ exponential(5.0);
+  mu ~ normal(0, 1);
+  theta ~ beta(5, 5);
+  rdne[,1] ~ normal(0, 0.1);
+  rdne[,2] ~ normal(0, 0.1);
+  for (n in 1:N)
+     target += log_mix(theta,
+                       normal_lpdf(y[n] | mu[1] + rdne[indices[n],1], sigma[1]),
+                       normal_lpdf(y[n] | mu[2] + rdne[indices[n],2], sigma[2]));
+  }
+
+  "
+
+  fit <- list()
+  for (i in 1:max(ans$WINDOW)) {
+    cat('fit window ', i, '\n')
+    fit[[i]] <- stan(model_code=stan_code,
+                     data=stan_data[[i]],
+                     chains=1, seed=42)
+    
+  }
+  
+  # save fitted model
+  save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_rdne_fit.rda'))
+  
+  load( file.path(potential.networks.analysis.dir,'indep_exp5_rdne2_fit.rda'))
+  # check fit 
+  rh= c()
+  ness= c()
+  tess= c()
+  bess= c()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    pars <- rstan::extract(fit[[i]], pars=names(fit[[i]])[!grepl('lp_',names(fit[[i]]))])
+    pars = do.call(cbind,pars)
+    
+    rh = c(rh,max(summary(fit[[i]])$summary[, "Rhat"]))
+    ness = c(ness,min(summary(fit[[i]])$summary[, "n_eff"]))
+    tess = c(tess,min(apply(pars, 2, ess_tail)))
+    bess = c(bess,min(apply(pars, 2, ess_bulk)))
+  }
+  
+  cat('range of rhat is ',range(rh),'\n')
+  cat('range of ess is ',range(ness),'\n')
+  cat('range of ess_tail is ',range(tess),'\n')
+  cat('range of ess_bulk is ',range(bess),'\n')
+  
+  id_nm <- which(rh>1.1)
+  df = data.table()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    tmp <- fit[[i]]
+    po <- extract(tmp,permuted = F)
+    # traceplot(tmp)
+  }
+  
+
+  library(rstan)
+  library(data.table)
+  # load(file.path(potential.networks.analysis.dir,'indep_exp5_rdne2_fit_w1.rda'))
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_rdne_fit_w1.rda'))
+  po <- extract(fit,permuted = F)
+  po <- po[,1,]
+  po <- po[,1:(ncol(po)-1)]
+  par.names <- dimnames(po)[[2]]
+  po_b <- po[,grep('mu|sigma|theta',par.names)]
+  po_rdne <- po[,grep('rdne',par.names)]
+  po_bt <- po_b
+  po_bt[,1:2] <- exp(po_bt[,1:2])
+  apply(po_bt,2,function(x)quantile(x,c(0.025,0.5,0.975)))
+  # mu[1]     mu[2]    sigma[1]    sigma[2] sigma_mu[1] sigma_mu[2]
+  # 2.5%  0.9479619 0.9554436 0.005113088 0.001620873  0.03791047  0.02708460
+  # 50%   0.9483328 0.9715093 0.005321556 0.002178423  0.04038145  0.02898174
+  # 97.5% 0.9555494 0.9729048 0.005961480 0.005293682  0.04107579  0.04389429
+  # parameters
+  # theta
+  # 2.5%  0.8374205
+  # 50%   0.8582795
+  # 97.5% 0.9325401
+
+  tmp <- apply(po_rdne,2,function(x)quantile(x,c(0.025,0.5,0.975)))
+  tmpa <- grep('rdne',par.names,value=T)
+  tmps <- grep('rdne',par.names,value=T)[which(tmp[1,] * tmp[3,] >0)]
+  tmpd <- data.table(as.numeric(gsub('^rdne\\[([0-9]+),([0-9])\\]$','\\1',tmps)), 
+                     as.numeric(gsub('^rdne\\[([0-9]+),([0-9])\\]$','\\2',tmps)))
+  tmpd <- tmpd[,length(V1),by='V2']
+  tmpd$V1/(length(tmpa)/2)
+  
+  library(bayesplot)
+  library(ggplot2)
+  mcmc_intervals(as.array(fit),pars = grep('rdne[[0-9]+,1]',par.names,value = T))+
+    theme_bw()
+  ggsave('~/rdne1.pdf',width = 6,height = 20)
+  mcmc_intervals(as.array(fit),pars = grep('rdne[[0-9]+,2]',par.names,value = T))+
+    theme_bw()
+  ggsave('~/rdne2.pdf',width = 6,height = 20)
+  
+  print(max(summary(fit)$summary[, "Rhat"]))
+  print(min(summary(fit)$summary[, "n_eff"]))
+  print(min(apply(po, 2, ess_tail)))
+  print(min(apply(po, 2, ess_bulk)))
+  
 }
 
 
@@ -978,6 +1139,15 @@ rkuvri.make.close.pairs.and.clusters <- function(){
     coord_cartesian(ylim=c(0,1e4))
   ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_support.pdf'),width = 6, height = 4)
   
+  tmp <- merge(df,tmp_couple,by=c('pt_id1','pt_id2'))
+  ggplot(tmp,aes(PROP))+
+    geom_histogram()+
+    theme_bw()+
+    labs(x='\n propotions','counts of sequence pairs')+
+    scale_x_continuous(expand = c(0,0.05), labels = scales::percent) +
+    scale_y_continuous(expand = c(0,0.05)) 
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_support_couple.pdf'),width = 6, height = 4)
+  
   # take close pairs
   df =df[PROP >= 0.8]
   cat(nrow(df),' pairs of sequences left after requiring 80% windows indicating close \n' )
@@ -1199,6 +1369,10 @@ rkuvri.validate.classification <- function(){
   #' not necessary for making clusters
   #' validates the classification and thresholds
   #' 
+  #' 
+  library(data.table)
+  library(ggplot2)
+  library(seqinr)
   window_size <- 500
   windown <- 99
   length_cutoff <- 250
