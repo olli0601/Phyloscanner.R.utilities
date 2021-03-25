@@ -256,7 +256,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 		cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')		
 	}
 	if(realignment==TRUE){
-	  cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t mafft --globalpair --maxiterate 1000 "$file" > ${file//.fasta/_v2.fasta',run.id,'_} \n done \n', sep='')
+	  cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t mafft --globalpair --maxiterate 1000 "$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
 	}
 	if(is.na(alignments.file) || is.na(keep.overhangs))
 	{
