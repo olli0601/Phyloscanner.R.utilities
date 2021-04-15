@@ -2055,7 +2055,9 @@ phsc.get.pairwise.relationships.keff.and.neff<- function(df, get.groups, w.slide
 	#	set(rplkl, NULL, x, gsub('_',' ',rplkl[[x]]))
 	setnames(rplkl, 'TYPE_DIR_TODI7x3', 'TYPE_BASIC')
 	#	melt relationship groups
-	rplkl	<- melt(rplkl, measure.vars=c(get.groups,'TYPE_BASIC'), variable.name='GROUP', value.name='TYPE')
+	# rplkl	<- melt(rplkl, measure.vars=c(get.groups,'TYPE_BASIC'), variable.name='GROUP', value.name='TYPE')
+	# get.groups are not col of rplkl
+	rplkl	<- melt(rplkl, measure.vars='TYPE_BASIC', variable.name='GROUP', value.name='TYPE')
 	rplkl	<- subset(rplkl, !is.na(TYPE))
 	#	sum K and KEFF of same relationship state
 	rplkl	<- rplkl[, list(V=sum(V)), by=c('ID1','ID2','GROUP','TYPE','STAT')]
