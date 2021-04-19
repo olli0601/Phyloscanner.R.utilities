@@ -884,7 +884,7 @@ rkuvri.pre.make.alignments.tree<- function()
   
   g <- ggplot(ans[nbg %in% c(50,100,200,300,400,500,'all')],aes(start,tmrca,color=factor(nbg)))+
     geom_smooth()+
-    labs(x='\n genome position',y='time to most recent common ancester \n ',color='background sequences') +
+    labs(x='\n genome position',y='time to most recent common ancestor \n ',color='background sequences') +
     theme_bw()+
     theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
     scale_x_continuous(expand = c(0,0.05))+
@@ -893,7 +893,7 @@ rkuvri.pre.make.alignments.tree<- function()
   
   g <- ggplot(ans[!nbg %in% c(50,100,200,300,400,500)],aes(start,tmrca,color=factor(nbg)))+
     geom_smooth()+
-    labs(x='\n genome position',y='time to most recent common ancester \n ',color='background sequences') +
+    labs(x='\n genome position',y='time to most recent common ancestor \n ',color='background sequences') +
     theme_bw()+
     theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
     scale_x_continuous(expand = c(0,0.05))+
@@ -905,7 +905,7 @@ rkuvri.pre.make.alignments.tree<- function()
   ans <- merge(ans, tmp, by='start')
   g <- ggplot(ans,aes(start,tmrca.y-tmrca.x,color=factor(nbg.x)))+
     geom_smooth()+
-    labs(x='\n genome position',y='difference in time to most recent common ancester \n ',color='reference sequences') +
+    labs(x='\n genome position',y='difference in time to most recent common ancestor \n ',color='reference sequences') +
     theme_bw()+
     theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
     scale_x_continuous(expand = c(0,0.05))+
@@ -938,9 +938,9 @@ rkuvri.make.alignments<-function()
   HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
   potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
-  in.dir <- file.path(HOME,'210308_phsc_input')		
-  work.dir <- file.path(HOME,"210308_phsc_work")
-  out.dir <- file.path(HOME,"210308_phsc_output")	
+  in.dir <- file.path(HOME,'210325_phsc_input')		
+  work.dir <- file.path(HOME,"210325_phsc_work")
+  out.dir <- file.path(HOME,"210325_phsc_output")	
   package.dir <- file.path(.libPaths(),'Phyloscanner.R.utilities')
   dir.create(in.dir)
   dir.create(work.dir)
@@ -986,19 +986,21 @@ rkuvri.make.alignments<-function()
   pty.runs[,BAM:=paste0(data.dir,SAMPLE_ID,'.bam')]
   pty.runs[,REF:=paste0(data.dir,SAMPLE_ID,'_ref.fasta')]
   setkey(pty.runs,PTY_RUN,RENAME_ID)
+  # pty.runs <-  pty.runs[1:2,]
+  # ptyi <- c(850,900)
   
   #	define phyloscanner input args to generate read alignments 
   #	for each window and each run
   # ptyi <- seq(800,9400,25)		
   ptyi <- seq(800,9175,25) # exclude ends
   ptyi <- c( ptyi[ptyi <= 6615-250],6825,6850,ptyi[ptyi >= 7636]) # exclude vloop except 2 windows without gaps
-  
+  # prog.mafft='mafft', 	
   pty.c	<- lapply(seq_along(ptyi), function(i)
   {
     cat('---------------------------------------------------------------- \n')
     print(i)
     pty.args <- list(prog.pty=prog.pty, 
-                     prog.mafft='mafft', 						 
+                     prog.mafft='\" mafft --globalpair --maxiterate 1000 \" ',
                      data.dir=data.dir, 
                      work.dir=work.dir, 
                      out.dir=out.dir, 
@@ -1024,7 +1026,8 @@ rkuvri.make.alignments<-function()
                      mem.save=0,
                      verbose=TRUE,					
                      select=NA,
-                     default.coord=TRUE
+                     default.coord=TRUE,
+                     realignment=TRUE
     )											
     pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
     pty.c[, W_FROM:= ptyi[i]]
@@ -1035,6 +1038,7 @@ rkuvri.make.alignments<-function()
   setkey(pty.c,PTY_RUN,W_FROM)
   pty.c[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(pty.c)/max.per.run))[1:nrow(pty.c)]]
   pty.c[, JOB_ID:= rep(1:ceiling(nrow(pty.c)/max.per.run),each=max.per.run)[1:nrow(pty.c)]]
+  save(pty.c,file='~/ptyc_210325.rda')
   
   #	define PBS variables
   hpc.load			<- "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available	 
@@ -1070,7 +1074,7 @@ rkuvri.make.alignments<-function()
     cat(cmd, file=outfile)
     cmd<-paste("qsub", outfile)
     cat(cmd)
-    if(i==1|i==pty.c[, max(JOB_ID)]){cat(system(cmd, intern= TRUE))}
+    cat(system(cmd, intern= TRUE))
   }
   
   library(ape)
@@ -1091,12 +1095,12 @@ rkuvri.make.alignments<-function()
 gap.rm <- function(){
   library(seqinr)
   HOME ='/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
-  # in.dir	<- file.path(HOME,'210308_phsc_output/ptyr1_trees')	
-  in.dir	<- file.path(HOME,'210308_phsc_output/ptyr404_trees')	
+  # in.dir	<- file.path(HOME,'210319_phsc_output/ptyr1_trees')
+  in.dir	<- file.path(HOME,'210319_phsc_output/ptyr404_trees')
   fa.file <- list.files(in.dir)
   fa.file <- grep('.fasta',fa.file,value = T)
-  # out.dir <- file.path(HOME,'210308_phsc_output_gaprmtr1')	
-  out.dir <- file.path(HOME,'210308_phsc_output_gaprmtr404')	
+  # out.dir <- file.path(HOME,'210319_phsc_output_gaprmtr1')
+  out.dir <- file.path(HOME,'210319_phsc_output_gaprmtr404')
   dir.create(out.dir)
   for (i in 1:length(fa.file)) {
     cat(i,' out of ', length(fa.file),' files \n')
@@ -1112,6 +1116,39 @@ gap.rm <- function(){
   
 }
 
+lgap.rm <- function(){
+  library(seqinr)
+  HOME ='/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  # in.dir	<- file.path(HOME,'210319_phsc_output/ptyr1_trees')
+  in.dir	<- file.path(HOME,'210319_phsc_output/ptyr404_trees')
+  fa.file <- list.files(in.dir)
+  fa.file <- grep('.fasta',fa.file,value = T)
+  # out.dir <- file.path(HOME,'210319_phsc_output_lgaprmtr1')
+  out.dir <- file.path(HOME,'210319_phsc_output_lgaprmtr404')
+  dir.create(out.dir)
+  for (i in 1:length(fa.file)) {
+    cat(i,' out of ', length(fa.file),' files \n')
+    fa = seqinr::read.fasta(file.path(in.dir,fa.file[i]))
+    fa <- do.call(rbind,fa)
+    # dim(fa)
+    fa_gap <- apply(fa, 2, function(x)sum(x=='-'))
+    fa_gap <- fa_gap/nrow(fa)
+    allgap <- fa_gap > 0.95
+    allgap_num <- ave(allgap, cumsum(!allgap), FUN = cumsum)
+    rmid <- c()
+    while(max(allgap_num) >= 6){
+      tmpid <- which.max(allgap_num)[1]
+      tmpid <- seq(tmpid-max(allgap_num)+1,tmpid,by=1)
+      rmid <- c(rmid,tmpid)
+      allgap_num[tmpid] <- 0 
+    }
+    if(length(rmid)>0){fa <- fa[,-rmid]}
+    # dim(fa)
+    write.fasta(split(fa, row(fa)),names = rownames(fa), file.out = file.path(out.dir, fa.file[i]))
+  }
+  
+}
+
 rkuvri.make.trees<- function() 
 {
   require(data.table)
@@ -1120,12 +1157,12 @@ rkuvri.make.trees<- function()
   #	produce trees
   #
   # lightweight run
-  if(1)	
+  if(0)	
   {
     hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
   }
   # midweight run 
-  if(0)	
+  if(1)	
   {
     hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 23; hpc.mem<- "1850mb"; hpc.q<- NA
   }
@@ -1141,27 +1178,21 @@ rkuvri.make.trees<- function()
   iqtree.pr <- 'iqtree'
   iqtree.args			<- ifelse(hpc.nproc==1, '-m GTR+F+R6 -ntmax 1 -seed 42 -o REF_CON_H', 
                           paste0('-m GTR+F+R6 -ntmax ',hpc.nproc,' -seed 42 -o REF_CON_H'))
-  in.dir				<- file.path(HOME,'210308_phsc_output')
+  in.dir				<- file.path(HOME,'210325_phsc_output')
   out.dir				<- in.dir
-  work.dir			<- file.path(HOME,"210308_phsc_work")
-  # in.dir				<- file.path(HOME,'210308_phsc_output_gaprmtr1')
-  # out.dir				<- in.dir
-  # work.dir			<- file.path(HOME,'210308_phsc_work_gaprmtr1')
-  # in.dir				<- file.path(HOME,'210308_phsc_output_gaprmtr404')
-  # out.dir				<- in.dir
-  # work.dir			<- file.path(HOME,'210308_phsc_work_gaprmtr404')
-  # dir.create(work.dir)
+  work.dir			<- file.path(HOME,"210325_phsc_work")
   
-  infiles	<- data.table(FI=list.files(in.dir, pattern='fasta$', full.names=TRUE, recursive=TRUE))
+  infiles	<- data.table(FI=list.files(in.dir, pattern='_v2.fasta$', full.names=TRUE, recursive=TRUE))
   infiles[, FO:= gsub('.fasta$','',FI)]
   infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
   infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
   infiles[is.na(W_FROM),W_FROM:= as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',basename(FI)))]
   setkey(infiles, PTY_RUN, W_FROM)	
   
-  infiles	<- subset(infiles, PTY_RUN<=14)
-  # infiles	<- subset(infiles, PTY_RUN>=399)
-  # print(infiles)	 		
+  # infiles	<- subset(infiles, PTY_RUN<=102) # job1-6
+  # infiles	<- subset(infiles, PTY_RUN>102 & PTY_RUN <=204) # job7-12
+  # infiles	<- subset(infiles, PTY_RUN>204 & PTY_RUN <=307) # job13-18
+  infiles	<- subset(infiles, PTY_RUN>307) # job18-24
   
   df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
   df[, ID:=ceiling(seq_len(nrow(df))/4)]
@@ -1171,7 +1202,8 @@ rkuvri.make.trees<- function()
   if(nrow(df) > max.per.run){
     df[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(df)/max.per.run))[1:nrow(df)]]
     df[, JOB_ID:= rep(1:ceiling(nrow(df)/max.per.run),each=max.per.run)[1:nrow(df)]]
-    set(df, ID, NULL, NULL)
+    # set(df, ID, NULL, NULL)
+    df[,ID:=NULL]
   }else{
     setnames(df, 'ID', 'CASE_ID')
     df[, JOB_ID:=1]
@@ -1211,7 +1243,9 @@ rkuvri.make.trees<- function()
   set.seed(42)
   # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
   # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1/'
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr404/'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr404/'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr404_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210319_phsc_output_lgaprmtr404/'
   dir.create(file.path(p,'plots'))
   infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
   infile.ind.rccs <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
@@ -1364,12 +1398,8 @@ rkuvri.make.trees<- function()
   
   save(blen,age_root,file=file.path(p,'plots',paste0('treeinfo.rda')))
   
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1'
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr404'
-  load(file.path(p,paste0('treeinfo.rda')))
-  
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr404_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/ptyr1_trees'
+
   
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
@@ -1426,32 +1456,90 @@ rkuvri.make.trees<- function()
   ans3 <- copy(ans2)
   ans3[,GAP_REMOVE:='no']
   ans2[,GAP_REMOVE:='yes']
-  ans <- rbind(ans2,ans3)
-  tmp <- dcast(ans,files~GAP_REMOVE,value.var = 'tmrca')
-  tmp[,est_b4_1920:=F]
-  tmp[no<1920,est_b4_1920:=T]
+  ans4 <- rbind(ans2,ans3)
+  ans2[,GAP_REMOVE:='large chunk removed']
+  ans4 <- rbind(ans4,ans2)
+  ans <- copy(ans4)
+  # tmp <- dcast(ans,files~GAP_REMOVE,value.var = 'tmrca')
+  # tmp[,est_b4_1920:=F]
+  # tmp[no<1920,est_b4_1920:=T]
   tmp[,diff:=yes-no]
-  ggplot(tmp,aes(files,diff,color=est_b4_1920))+
+  # ggplot(tmp,aes(files,diff,color=est_b4_1920))+
+  #   geom_point()+
+  #   theme_bw()+
+  #   labs(x='genomic windows', y='differences of TMRCA with and without gaps removed',color='estimates before 1920 with gaps')+
+  #   scale_x_continuous(expand = c(0,0.05))+
+  #   scale_y_continuous(expand = c(0,0.05))+guides(color=guide_legend(nrow=1))+
+  #   theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')
+  # ggsave(file.path(p,'plots','tmrca_diff_gap.pdf'),width = 8,height = 6)
+  
+  g1 <- ggplot(ans,aes(files,tmrca,color=factor(GAP_REMOVE)))+
     geom_point()+
     theme_bw()+
-    labs(x='genomic windows', y='differences of TMRCA with and without gaps removed',color='estimates before 1920 with gaps')+
+    labs(x='genomic windows', y='TMRCA',color='gaps removed')+
     scale_x_continuous(expand = c(0,0.05))+
-    scale_y_continuous(expand = c(0,0.05))+guides(color=guide_legend(nrow=1))+
-    theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')
-  ggsave(file.path(p,'plots','tmrca_diff_gap.pdf'),width = 8,height = 6)
-
-
-
-  ggplot(tmp, aes(x='',y=diff)) +
-    geom_boxplot(outlier.size = 0,width=0.1) +
-    theme_bw()+
-    labs(x='', y='differences of TMRCA with and without gaps removed')+
-    scale_x_discrete(expand = c(0,0.05))+
     scale_y_continuous(expand = c(0,0.05))+
-    geom_hline(yintercept = 0, linetype=2)
+    geom_vline(xintercept=c(6615,7636))+guides(color=guide_legend(nrow=1))+
+    theme(legend.position = 'bottom',legend.direction = 'horizontal',legend.box = 'horizontal')+
+    geom_hline(yintercept = 1920, linetype=2)+
+    facet_grid(PositionsExcised~.)
+  
+  g2 <- ggplot(ans,aes(factor(GAP_REMOVE),tmrca,color=factor(GAP_REMOVE)))+
+    geom_boxplot()+
+    theme_bw()+
+    labs(x='gaps removed', y='')+
+    geom_vline(xintercept=c(6615,7636))+guides(color=guide_legend(nrow=1))+
+    theme(legend.position = 'none',legend.direction = 'horizontal',legend.box = 'horizontal')+
+    geom_hline(yintercept = 1920, linetype=2)+
+    facet_grid(PositionsExcised~.)
+  
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210319_phsc_output/ptyr404_trees'
+  ggarrange(g1,g2, ncol = 2, widths = c(0.6,0.4))%>%
+    ggexport(filename = file.path(p,'plots','tmrca_combined_gap_compare.pdf'),width = 10,height = 6)
+  
+  # 
+  # 
+  # 
+  # ggplot(tmp, aes(x='',y=diff)) +
+  #   geom_boxplot(outlier.size = 0,width=0.1) +
+  #   theme_bw()+
+  #   labs(x='', y='differences of TMRCA with and without gaps removed')+
+  #   scale_x_discrete(expand = c(0,0.05))+
+  #   scale_y_continuous(expand = c(0,0.05))+
+  #   geom_hline(yintercept = 0, linetype=2)
+  # 
+  # ggsave(file.path(p,'plots','tmrca_diff_gap_boxplot.pdf'),width = 2,height = 4)
 
-  ggsave(file.path(p,'plots','tmrca_diff_gap_boxplot.pdf'),width = 2,height = 4)
-
+  
+  # compare run 1 and run 404
+  ans3 <- copy(ans2)
+  ans3[,RUN:=1]
+  ans2[,RUN:=404]
+  ans <- rbind(ans2,ans3)
+  g1 <- ggplot(ans,aes(files,tmrca,color=factor(RUN)))+
+    geom_point()+
+    theme_bw()+
+    labs(x='genomic windows', y='TMRCA',color='run')+
+    scale_x_continuous(expand = c(0,0.05))+
+    scale_y_continuous(expand = c(0,0.05))+
+    geom_vline(xintercept=c(6615,7636))+guides(color=guide_legend(nrow=1))+
+    theme(legend.position = 'bottom',legend.direction = 'horizontal',legend.box = 'horizontal')+
+    geom_hline(yintercept = 1920, linetype=2)+
+    facet_grid(PositionsExcised~.)
+  
+  g2 <- ggplot(ans,aes(factor(RUN),tmrca,color=factor(RUN)))+
+    geom_boxplot()+
+    theme_bw()+
+    labs(x='run', y='TMRCA')+
+    geom_vline(xintercept=c(6615,7636))+guides(color=guide_legend(nrow=1))+
+    theme(legend.position = 'bottom',legend.direction = 'horizontal',legend.box = 'horizontal')+
+    geom_hline(yintercept = 1920, linetype=2)+
+    facet_grid(PositionsExcised~.)
+   
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
+  ggarrange(g1,g2, ncol = 2, widths = c(0.8,0.2))%>%
+    ggexport(filename = file.path(p,'plots','tmrca_combined_compare.pdf'),width = 8,height = 6)
+  
 
   # ggplot(tmp)+
   #   geom_point(aes(files,yes,color='yes'))+
@@ -1468,7 +1556,7 @@ rkuvri.make.trees<- function()
   # g <- ggplot(ans,aes(start,tmrca))+
   #   geom_point()+
   #   geom_line() +
-  #   labs(x='\n genome position',y='time to most recent common ancester \n ') +
+  #   labs(x='\n genome position',y='time to most recent common ancestor \n ') +
   #   theme_bw()+
   #   theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
   #   scale_x_continuous(expand = c(0,0.05))+
@@ -1486,53 +1574,7 @@ rkuvri.make.trees<- function()
     scale_y_continuous(expand = c(0,0.05))
   ggsave(file.path(p,'plots','nnode.pdf'),g,width = 8,height = 6)
   
-  g <- list()
-  # # for all runs in job1
-  # for (i in 1:14) {
-  # for all runs in job last
-  for (i in 399:405) {
-    cat('job ',i,'\n')
-    p <- paste0('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr',i,'_trees')
-    files <-list.files(p)
-    files <- grep('treefile$',files,value = T)
-    ans <- data.table()
-    
-    load(file.path(p,'plots',paste0('treeinfo.rda')))
-    ans <- data.table(files=files, blen = blen,
-                      subr=age_root[,1],tmrca=age_root[,3],nnode=age_root[,5])
-    setkey(ans,files)
-    
-    ans[, PositionsExcised:=F]
-    ans[grepl('PositionsExcised',files),PositionsExcised:=T]
-    ans[,files:=gsub('_PositionsExcised','',files)]
-    ans[,files:=  as.numeric(gsub('.*InWindow_([0-9]+)_.*','\\1', files))]
-    setkey(ans, PositionsExcised,files)
-    tmp <- ans[tmrca<=1920]
-    
-    ptyi <- seq(800,9175,25) # exclude ends
-    ptyi <- c( ptyi[ptyi <= 6615-250],6825,6850,ptyi[ptyi >= 7636]) # exclude vloop except 2 windows without gaps
-    
-    #combine: if position excision exists, use tmrca from it. 
-    # ans2 <- ans[,list(tmrca=tail(tmrca,1)),by='files'] 
-    ans2 <- ans %>%
-      group_by(files) %>%
-      slice(n()) %>%
-      ungroup()
-    
-    # ans2 <- data.table(ans2)
-    
-    print(ans2[ans2$tmrca < 1920,])
-    g[[i]] <- ggplot(ans2,aes(files,tmrca,color=PositionsExcised))+
-      geom_point()+
-      theme_bw()+
-      labs(x='genomic windows', y='TMRCA',color='Positions excised')+
-      scale_x_continuous(expand = c(0,0.05))+
-      scale_y_continuous(expand = c(0,0.05))+
-      geom_vline(xintercept=c(6615,7636))+guides(color=guide_legend(nrow=1))+
-      theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
-      geom_hline(yintercept = 1920, linetype=2)
-    # ggsave(file.path(p,'plots','tmrca_combined.pdf'),width = 8,height = 6)
-  }
+
   
   p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
   # ggarrange(plotlist=g,ncol = 3)%>%
@@ -1540,47 +1582,13 @@ rkuvri.make.trees<- function()
   ggarrange(plotlist=g,ncol = 3)%>%
     ggexport(filename = file.path(p,'plots','tmrca_combined_job_last.pdf') , width = 6*3, height = 4*2)
   
-  alignment_gap_check <- function(dir){
-    # dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
-    # dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1'
-    library(seqinr)
-    library(data.table)
-    library(ggplot2)
-    files <-list.files(dir)
-    files <- grep('fasta$',files,value = T)
-    files_posex <- grepl('PositionsExcised_',files)
-    files_start <- vector(mode='numeric',length = length(files))
-    files_start[which(files_posex==F)]<- as.numeric(gsub('.*InWindow_([0-9]+)_.*', "\\1", files[which(files_posex==F)]))
-    files_start[which(files_posex==T)]<- as.numeric(gsub('.*PositionsExcised_([0-9]+)_.*', "\\1", files[which(files_posex==T)]))
-    
-    df <- data.table()
-    setwd(dir)
-    for (i in 1:length(files)) {
-      fa <- seqinr::read.fasta(files[i])
-      fa <- do.call(rbind,fa)
-      tmp <- data.table(ngap = apply(fa,2,function(x)sum(x=='-')),
-                        ntotal = nrow(fa),
-                        pos=files_start[i],
-                        posex=files_posex[i],
-                        file=files[i])
-      df <- rbind(df,tmp)
-    }
-    df[,ID:=seq_along(ntotal),by=c('pos','posex')]
-    df[,pgap:=ngap/ntotal]
-    df[,allgap:=pgap>0.95]
-    df[,count_allgap:=ave(allgap, cumsum(!allgap), FUN = cumsum), by=c('pos','posex')]
-    
-    
-    tmp <- df[,max(count_allgap), by=c('pos','posex')]
-    setkey(tmp, V1)
-    cat(nrow(tmp[V1>=3]), ' out of ', nrow(tmp), ' windows have large gaps (>=3) \n ')
-    cat(nrow(tmp[V1>=6]), ' out of ', nrow(tmp), ' windows have large gaps (>=6) \n ')
-    return(tmp)
-  }
+
   
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr399_trees'
-  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
+  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210319_phsc_output/ptyr404_trees'
+  # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210319_phsc_output/ptyr1_trees'
   tmp <- alignment_gap_check(p)
+  tmp[posex==T & order(V1),]
+  tmp[posex==F & order(V1),]
   # tmp <- alignment_gap_check('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1')
   ggplot(tmp,aes(pos,V1,color=posex)) +
     geom_point() +
@@ -1593,37 +1601,47 @@ rkuvri.make.trees<- function()
     facet_grid(posex~.)
   ggsave(file.path(p,'plots','gap_vs_win.pdf'),width = 8, height = 6)
   
+  
+  files <-list.files(p)
+  files <- grep('treefile$',files,value = T)
+  ans <- data.table()
+  
+  load(file.path(p,'plots',paste0('treeinfo.rda')))
+  ans <- data.table(start=files, blen = blen,
+                    subr=age_root[,1],tmrca=age_root[,3],nnode=age_root[,5])
+  setkey(ans,start)
+  
+  ans[, PositionsExcised:=F]
+  ans[grepl('PositionsExcised',files),PositionsExcised:=T]
+  ans[,files:=gsub('_PositionsExcised','',files)]
+  ans[,files:=  as.numeric(gsub('.*InWindow_([0-9]+)_.*','\\1', files))]
+  setkey(ans, PositionsExcised,files)
+
+  ans <- merge(ans, tmp, by.x=c('PositionsExcised', 'files'), by.y=c('posex', 'pos'))
+  ans[V1<6, range(tmrca)]
+  ans[V1<6 & tmrca<1920]
+  g <- ggplot(ans,aes(V1,tmrca))+
+    geom_point()+
+    theme_bw()+
+    labs(x='\n lengths of largest consecutive gap per window', y = 'TMRCA')
+  ggsave(file.path(p,'plots','lgap_tmrca.pdf'), g, width = 6,height = 4)
+  
+  # setkey(ans,tmrca)
+  # setkey(ans,V1)
+  setkey(ans, PositionsExcised,files)
+  ans2 <- ans %>%
+    group_by(files) %>%
+    slice(n()) %>%
+    ungroup()
+  ans2 <- data.table(ans2)
+  setkey(ans2,tmrca)
+  setkey(ans2,V1)
+  
   tmp2 <- dcast(tmp,pos~posex,value.var = 'V1')
   tmp2 <- tmp2[!is.na(`TRUE`)]
   tmp2[`FALSE`!=`TRUE`]
   
-  g <- list()
-  # # for all runs in job1
-  # for (i in 1:14) {
-  # for all runs in job last
-  for (i in 399:405) {
-    cat('job ',i,'\n')
-    p <- paste0('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr',i,'_trees')
-    tmp <- alignment_gap_check(p)
-    # tmp <- alignment_gap_check('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1')
-    g[[i]] <- ggplot(tmp,aes(pos,V1,color=posex)) +
-      geom_point() +
-      theme_bw() +
-      labs(x='genomic positions', y='lengths of the largest gap chunks',color='Positions excised')+
-      scale_x_continuous(expand = c(0,0.05))+
-      scale_y_continuous(expand = c(0,0.05))+
-      guides(color=guide_legend(nrow=1))+
-      theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')
-  }
-  
-  p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/ptyr1_trees'
-  # ggarrange(plotlist=g,ncol = 3)%>%
-  #   ggexport(filename = file.path(p,'plots','gap_vs_win_job1.pdf') , width = 6*3, height = 4*5)
-  # 
-  ggarrange(plotlist=g,ncol = 3)%>%
-    ggexport(filename = file.path(p,'plots','gap_vs_win_job_last.pdf') , width = 6*3, height = 4*5)
-  
-  
+
   load(file.path(p,'plots',paste0('treeinfo.rda')))
   files <-list.files(p)
   files <- grep('treefile$',files,value = T)
@@ -1657,10 +1675,10 @@ rkuvri.make.trees<- function()
 
 check.files <- function(dir,p){
   library(data.table)
-  dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output/'
+  dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210319_phsc_output/'
   p <- 'ptyr1_trees'
-  # p <- 'ptyr404_trees'
-  p <- 'ptyr409_trees'
+  p <- 'ptyr404_trees'
+  # p <- 'ptyr409_trees'
   files <-list.files(file.path(dir,p),include.dirs = F)
   excoord <- c(823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069, seq(6615,6811,by=1), seq(7110,7636,by=1),7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886, seq(9400,9719,by=1)) 
   ptyi <- seq(800,9175,25) # exclude ends
@@ -1691,5 +1709,793 @@ check.files <- function(dir,p){
   df[is.na(start)]
 }
 
+alignment_gap <- function(){
+  
+  
+  alignment_gap_check <- function(dir){
+    library(seqinr)
+    library(data.table)
+    library(ggplot2)
+    files <-list.files(dir)
+    files <- grep('ptyr[0-9]+_InWindow_?[A-Za-z]?{16}?_[0-9]+_to_[0-9]+_v2.fasta',files,value = T)
+    files_posex <- grepl('PositionsExcised_',files)
+    files_start <- vector(mode='numeric',length = length(files))
+    files_start[which(files_posex==F)]<- as.numeric(gsub('.*InWindow_([0-9]+)_.*', "\\1", files[which(files_posex==F)]))
+    files_start[which(files_posex==T)]<- as.numeric(gsub('.*PositionsExcised_([0-9]+)_.*', "\\1", files[which(files_posex==T)]))
+    df <- data.table()
+    setwd(dir)
+    for (i in 1:length(files)) {
+      skip_to_next <- FALSE
+      # tryCatch(
+      #   {
+          fa <- seqinr::read.fasta(files[i])
+          fa <- do.call(rbind,fa)
+          tmp <- data.table(ngap = apply(fa,2,function(x)sum(x=='-')),
+                            ntotal = nrow(fa),
+                            pos=files_start[i],
+                            posex=files_posex[i],
+                            file=files[i])
+          df <- rbind(df,tmp)
+      #   }, error = function(e) { skip_to_next <<- TRUE}
+      # )
+      # if(skip_to_next) { next }
+    }
+    df[,ID:=seq_along(ntotal),by=c('pos','posex')]
+    df[,pgap:=ngap/ntotal]
+    df[,allgap:=pgap>0.95]
+    df[,count_allgap:=ave(allgap, cumsum(!allgap), FUN = cumsum), by=c('pos','posex')]
+    
+    
+    tmp <- df[,max(count_allgap), by=c('pos','posex')]
+    setkey(tmp, V1)
+    cat(nrow(tmp[V1>=3]), ' out of ', nrow(tmp), ' windows have large gaps (>=3) \n ')
+    cat(nrow(tmp[V1>=6]), ' out of ', nrow(tmp), ' windows have large gaps (>=6) \n ')
+    return(tmp)
+  }
+  alignment_gaps <- list()
+  output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
+  dirs <- list.files(output.dir)
+  for (i in 1:length(dirs)) {
+    p <- file.path(output.dir,dirs[i])
+    alignment_gaps[[i]] <- alignment_gap_check(p)
+  }
+  save(alignment_gaps,file = '~/alignment_lgaps.rda')
+  
+  
+# p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/ptyr1_trees'
+# tmp <- alignment_gap_check(p)
+# setkey(tmp,V1)
+# tmp[posex==T & order(V1),]
+#   tmp[posex==F & order(V1),]
+#   # tmp <- alignment_gap_check('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210308_phsc_output_gaprmtr1')
+#   ggplot(tmp,aes(pos,V1,color=posex)) +
+#     geom_point() +
+#     theme_bw() +
+#     labs(x='genomic positions', y='lengths of the largest gap chunks',color='Positions excised')+
+#     scale_x_continuous(expand = c(0,0.05))+
+#     scale_y_continuous(expand = c(0,0.05))+
+#     guides(color=guide_legend(nrow=1))+
+#     theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical')+
+#     facet_grid(posex~.)
+#   ggsave(file.path(p,'plots','gap_vs_win.pdf'),width = 8, height = 6)
+#   
+
+}
+
+alignment_tmrca <- function(){
+  
+  tmrca_check <- function(p){
+    library(tidyverse)
+    library(ggtree)
+    library(data.table)
+    library(seqinr)
+    library(ggplot2)
+    library(viridis)
+    library(treeio)
+    library(treedater)
+    library(ape)
+    library(ggpubr)
+    
+    # files
+    set.seed(42)
+    infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
+    infile.ind.rccs <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+    infile.ind.mrc <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/','PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+    infile.phscinput <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds'
+    infile.consensus <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_input/ConsensusGenomes.fasta'
+    infile.consensus.oneeach <- file.path('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210211_phsc_input/2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
+    
+    # load sampling date
+    ds <- readRDS(infile.phscinput)
+    dsdt <- data.table(read.csv(infile.ind.rccs))
+    dsdt <- subset(dsdt, select=c('pt_id','visit_dt','pangea_id'))
+    tmp <- data.table(read.csv(infile.ind.mrc))
+    tmp <- subset(tmp, select=c('pt_id','visit_dt','pangea_id'))
+    dsdt <- rbind(dsdt, tmp)
+    setnames(dsdt, colnames(dsdt), toupper(colnames(dsdt)))
+    tmp <- subset(data.table(read.csv(infile.ind.anonymised)),select=c('PT_ID', 'AID'))
+    dsdt <- merge(dsdt, tmp, by='PT_ID',all.y=T)
+    setnames(dsdt, 'VISIT_DT','SAMPLE_DATE')
+    dsdt[grepl('^RK-', PT_ID), PANGEA_ID:=paste0('RCCS_', PANGEA_ID)]
+    dsdt[grepl('^MRC-', PT_ID), PANGEA_ID:=paste0('MRCUVRI_', PANGEA_ID)]
+    dsdt <- merge(dsdt, subset(ds,select=c('RENAME_ID','PANGEA_ID')),by='PANGEA_ID',all.x=T)
+    dsdt <- dsdt[!is.na(RENAME_ID)]
+    dsdt[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
+    
+    # consensus sampling dates
+    consensus_seq_all <- read.fasta(infile.consensus)
+    consensus_seq_oneeach <- read.fasta(infile.consensus.oneeach)
+    consensus_seq_oneeach_names <- names(consensus_seq_oneeach)
+    consensus_seq_oneeach_names <- gsub('\\(.*?\\)', '', consensus_seq_oneeach_names)
+    dsdt_con <- data.table(TAXA=names(consensus_seq_all))
+    dsdt_con[,RENAME_ID:=gsub('REF_','',TAXA)]
+    dsdt_con[,AID:=RENAME_ID]
+    dsdt_con[grepl('\\.',AID), SAMPLE_DATE:=sapply(strsplit(AID,'\\.'),
+                                                   function(x){
+                                                     n <- x[2:3]
+                                                     n <- n[!grepl('\\D',n)]
+                                                     return(n)
+                                                   })]
+    id <- which(lengths(strsplit(dsdt_con$SAMPLE_DATE,''))==2)
+    dsdt_con[id,SAMPLE_DATE:=ifelse(as.numeric(SAMPLE_DATE)<20,paste0('20',SAMPLE_DATE),paste0('19',SAMPLE_DATE))]
+    dsdt_con[!is.na(SAMPLE_DATE),SAMPLE_DATE:=paste(SAMPLE_DATE,7,1,sep='-')]
+    dsdt_con[,SAMPLE_DATE:=as.Date(SAMPLE_DATE)]
+    dsdt_con[,LOCAL:=!AID %in% consensus_seq_oneeach_names]
+    dsdt_con <- dsdt_con[!is.na(SAMPLE_DATE)]
+    dsdt_con[LOCAL==T,ST:=sapply(strsplit( AID,'\\.'),function(x)x[1])]
+    dsdt_con[LOCAL==F,ST:=gsub('_|\\-','\\.',AID)]
+    dsdt_con[LOCAL==F,ST:=sapply(strsplit( ST,split = '\\.'),function(x)x[2])]
+    dsdt_con[,unique(ST)]
+    dsdt_con[,INCLU_AD:=grepl('A|D',ST)]
+    #
+    files <-list.files(p)
+    files <- grep('treefile$',files,value = T)
+    blen <- c()
+    age_root <- matrix(nrow = length(files), ncol = 6)
+    palA <- viridis_pal(alpha = 1, begin = 0, end = 1, direction = 1, option = "A")
+    
+    hivc.db.Date2numeric<- function( x )
+    {
+      if(!class(x)%in%c('Date','character'))	return( x )
+      x	<- as.POSIXlt(x)
+      tmp	<- x$year + 1900
+      x	<- tmp + round( x$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )
+      x	
+    }
+    
+
+    for (i in 1:length(files)) {
+      # load tree
+      cat('processing ',i,'out of ', length(files),'file \n')
+      tmptr <- read.tree(file.path(p,files[i]))
+      tmpdf <- data.table(TAXA=tmptr$tip.label)
+      tmpdf[,RENAME_ID:=TAXA]
+      tmpdf[,RENAME_ID:=gsub('CNTRL-|REF_','',RENAME_ID)]
+      tmpdf[!grep('REF_',TAXA),RENAME_ID:=gsub('^([A-Z]+[0-9]+-[a-z]+[0-9]+)_.*','\\1',RENAME_ID)]
+      tmpdf[,AID:=RENAME_ID]
+      tmpdf[!grep('REF_',TAXA),AID:=gsub('^([A-Z]+[0-9]+)-.*','\\1',RENAME_ID)]    
+      
+      
+      # assign color to nodes
+      tmpid <- subset(tmpdf,select=c('AID','TAXA'))
+      tmp <- unique(subset(tmpid,select=c('AID')))
+      tmp[,REF:=!grepl('^AID',AID)]
+      tmp[REF==T,color:= rep('#D3D3D3',sum(tmp[,REF]))]
+      tmp[REF==F,color:= palA(nrow(tmp)-sum(tmp[,REF]))]
+      tmpid <- merge(tmpid, tmp, by='AID',all.x=T)
+      
+      # filter
+      tmp <- tmpdf[grep('REF_',TAXA),]
+      tmpdf <- tmpdf[!grep('REF_',TAXA),]
+      tmp <- merge(tmp, subset(dsdt_con,select=c('RENAME_ID','SAMPLE_DATE')),  by='RENAME_ID')
+      tmpdf <- merge(tmpdf, subset(dsdt,select=c('RENAME_ID','SAMPLE_DATE')),  by='RENAME_ID',all.x=T)
+      tmpdf <- rbind(tmpdf, tmp)
+      cat(nrow(tmpdf[is.na(SAMPLE_DATE)]), ' rows has no sample dates \n')
+      
+      # set sample time 
+      dr <- copy(tmpdf)
+      dr[grepl('AID',AID),lower:=SAMPLE_DATE]
+      dr[grepl('AID',AID),upper:=SAMPLE_DATE]
+      dr[!grepl('AID',AID),lower:=as.Date(paste(substr(SAMPLE_DATE,1,4),1,1,sep = '-'))]
+      dr[!grepl('AID',AID),upper:=as.Date(paste(substr(SAMPLE_DATE,1,4),12,31,sep = '-'))]
+      dr[,lower:=hivc.db.Date2numeric(lower)]
+      dr[,upper:=hivc.db.Date2numeric(upper)]
+      sts <- tmpdf$SAMPLE_DATE
+      sts <- hivc.db.Date2numeric(sts)
+      sts <- setNames(sts, tmpdf$TAXA)
+      
+      # 
+      tmpfa <- read.fasta(file.path(p,gsub('treefile$','fasta',files[i])))
+      tmplen <- unique(lengths(tmpfa))
+      stopifnot(length(tmplen)==1)
+      
+      # drop tips
+      tmptr2 <- drop.tip(tmptr,setdiff(tmptr$tip.label,c(tmpdf$TAXA,'REF_CON_H')))
+      sts.df <- subset(dr,select=c('lower','upper'))
+      sts.df <- data.frame(sts.df)
+      row.names(sts.df) <- dr$TAXA
+      stopifnot(sort(row.names(sts.df)) == sort(names(sts)))
+      tmptr2 <- root(tmptr2, 'REF_CON_H')
+      tmptr2 <- drop.tip(tmptr2,'REF_CON_H')
+      
+      # dater
+      tmptrd <- treedater:::dater(tmptr2, sts=sts,s = tmplen, clock='strict',numStartConditions = 0,estimateSampleTimes=sts.df,omega0 = 0.001)
+      outliers <- outlierTips( tmptrd)
+      cat(nrow(outliers[outliers$q < 0.05,]),'outliers \n')
+      age_root[i,] <- c(tmptrd$adjusted.mean.rate,
+                        tmptrd$mean.rate,
+                        tmptrd$timeOfMRCA,
+                        tmptrd$timeToMRCA ,
+                        tmptrd$Nnode ,
+                        tmptrd$coef_of_variation)
+      
+      tmptr <- rescale_tree(tmptr, branch.length = 'rate')
+      blen <- c(blen, sum(tmptr$edge.length))
+    }
+    return(list(blen,age_root))
+  }
+
+  args <- commandArgs(trailingOnly = TRUE)
+  print(args)
+  num <- as.numeric(args[1])
+  output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
+  dirs <- sort(list.files(output.dir,full.names = T))
+  blen_list <- list()
+  age_root_list <- list()
+  tmp <- tmrca_check(dirs[num])
+  save(tmp,file = file.path(dirs[num],'alignment_tmrcas.rda'))
+    # dirs <- list.files(output.dir,full.names = T)
+  # blen_list <- list()
+  # age_root_list <- list()
+  # for (i in 1:length(dirs)) {
+  #   tmp <- tmrca_check(dirs[i])
+  #   blen_list[[i]] <- tmp$blen
+  #   age_root_list[[i]] <- tmp$age_root
+  # }
+  # save(blen_list,age_root_list,file = '~/alignment_tmrcas.rda')
+  
+  # script
+  cmd <-" #!/bin/sh \n #PBS -l walltime=71:59:00 \n #PBS -l select=1:ncpus=1:ompthreads=1:mem=20gb \n #PBS -j oe \n #PBS -J 1-409 \n #PBS -q pqeelab\n module load anaconda3/personal \n source activate phylo \n cd /rds/general/user/xx4515/home/ \n case $PBS_ARRAY_INDEX in"
+  tmp <- c()
+  for (i in 1:500) {
+    tmp <- paste0(tmp,i,')\n Rscript 210325_tmrcas_check_batch.R ',i, '\n ;; \n')
+  }
+  cmd <- paste0(cmd,' \n ', tmp)
+  cmd <- paste0(cmd, 'esac \n ')
+  #	submit job
+  outfile		<- '~/210325_tmrcas_check_batch.qsub'
+  cat(cmd, file=outfile)
+}
+library(data.table)
+# load('~/alignment_tmrcas.rda')
+load('~/alignment_lgaps.rda')
+alignment_gaps <- rbindlist(alignment_gaps,idcol = T)
+alignment_gaps <- dcast(alignment_gaps, .id + pos ~ posex, value.var='V1')
+tmp <- alignment_gaps[is.na(`TRUE`)]
+setnames(tmp,'FALSE','V1')
+tmp[,`TRUE`:=NULL]
+tmp[,posex:=FALSE]
+alignment_gaps <- alignment_gaps[!is.na(`TRUE`)]
+setnames(alignment_gaps,'TRUE','V1')
+alignment_gaps[,`FALSE`:=NULL]
+alignment_gaps[,posex:=TRUE]
+alignment_gaps <- rbind(alignment_gaps,tmp)
+alignment_gaps <- dcast(alignment_gaps, .id~pos, value.var='V1')
+tmp <- as.matrix(alignment_gaps)
+# apply(tmp, 2, function(x)paste0(round(median(x,na.rm = T),2), '[', round(quantile(x,0.025,na.rm = T)), '-', round(quantile(x,0.975,na.rm = T)), ']'))
+hist(apply(tmp[,2:ncol(tmp)], 1, function(x)max(x,na.rm = T)))
+# [1] 12 21 22 23 28 30 21 15 21 21 30 27 24 30 33 27 21 23 21 21 21 26 24 21 42
+# [26] 21 21 30 30 24 21 21 21 23 27 21 21 21 17 24 21 19 12 21 21 24 21 12 21 15
+# [51] 28 36 24 12 36 28 33 25 33 30 21 36 21 21 30 10 21 33 27 24 24 30 23 21 21
+# [76] 45 24 33 42 27 21 21 21 27 21 17 21 21 35 27 21  9 21 25 33 21 30 21 34 33
+# [101] 22 24 21 26 21 22 21 21 21 16 21 21 18 21 26 12 25 24 28 22 13 21 30 24 15
+# [126] 24 21 33 33 21 36 12 15 21 24 27 63 31 21 36 21 24 21 23 30 39 24 24 27 21
+# [151] 21 25 15 18 23 11 21 24 24 22 18 21 21 18 20 21 21 42 21 33 15 12 21 30 30
+# [176] 12 21 22 15 21 23 23 15 30  9 12 15 22 35 23 15 21 21 27 25 30 21 20 21 21
+# [201] 21 21 24 24 24 24 24 24 19 24 39 24 21 23 30 45 27 10 36 45 19 27 29 33  6
+# [226] 12 18 21 33  9 21 24 31 30 42 21 30 21  8 42 20 30 12  9 10 45 15 33  3 18
+# [251] 25 21 21 12 24 14 30 24 16 21 15 13 33 21 24 39 24 27 19 24  9 30 12 21 30
+# [276] 21 18 11 27 21 20 21 10 21 27 20 29 25 22 18 24 21 12 30 24 27 23 20 30  7
+# [301] 21 27 27 33 21 34 30 24 21 30 21 25 21 21 22 16 15 21 36 24 21 19 24 18 18
+# [326] 31 25 34 21 27 25 31 36 24 21 34 21 23 21 33 27 27 36 27 30 19 24 27 33 23
+# [351] 18 16 21 21 36 22 30 21 30 21 16 42 24 30 25 46 21 75 19 21 36 33 21 21 21
+# [376] 22 36 21 32 21 27 30 30 21 15 45 24 21 39 39 22 27 21 21 31 21 24 30 19 25
+# [401] 26 15 16 21 27 21 30 16 24
 
 
+delete_nonexcised <- function(){
+  require(data.table)
+  
+  # files
+  HOME <<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  treedir <- file.path(HOME,'210325_phsc_output/')
+  df <- data.table(F=list.files(treedir,recursive = T, pattern = '*.treefile'))
+  # which to delete
+  df[,Ex:=grepl('PositionsExcised',F)]
+  df[,base:=basename(F)]
+  df[,dir:=dirname(F)]
+  df[,wfrom:=sub("^ptyr[0-9]+_InWindow_[A-Za-z]?{16}?_?([0-9]+)_to_([0-9]+)_v2\\.treefile$","\\1",base)]
+  df[,wto:=sub("^ptyr[0-9]+_InWindow_[A-Za-z]?{16}?_?([0-9]+)_to_([0-9]+)_v2\\.treefile$","\\2",base)]
+  df[,run:=sub("ptyr([0-9]+)_trees","\\1",dir)]
+  tmp <- dcast(df, run + wfrom + wto ~ Ex, value.var="F")
+  tmp <- data.table(tmp)
+  tmp <- tmp[!is.na(`TRUE`) & !is.na(`FALSE`)]
+  tmp2 <- unique(subset(df,select='dir'))
+  tmp2[,dir:=file.path(treedir,dir)]
+  # delete
+  tmp[,dir:=dirname(`TRUE`)]
+  for (i in 1:nrow(tmp)){
+    cat(system(paste0( 'rm ',file.path(treedir,tmp$`FALSE`[i])),intern = T))
+  }
+  # don't generate trees for those files next time
+}
+make.phyloscanner<- function()
+{
+  require(tidyverse)
+  require(data.table)
+  require(phyloscannerR)
+  
+  HOME <<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  treedir <- file.path(HOME,'210325_phsc_output/')
+  tmpdir	<- file.path(HOME,"210325_phsc_work/")
+  outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05/')
+  prog.phyloscanner_analyse_trees <- '/rds/general/user/xx4515/home/phyloscanner/phyloscanner_analyse_trees.R'
+
+  #	set phyloscanner variables	
+  control	<- list()
+  control$allow.mt <- TRUE				
+  control$alignment.file.directory = NULL 
+  control$alignment.file.regex = NULL
+  control$blacklist.underrepresented = FALSE	
+  control$count.reads.in.parsimony = TRUE
+  control$distance.threshold <- '0.02 0.05'
+  control$do.dual.blacklisting = FALSE					
+  control$duplicate.file.directory = NULL
+  control$duplicate.file.regex = NULL
+  control$file.name.regex = "^(?:.*\\D)?([0-9]+)_to_([0-9]+).*$"
+  control$guess.multifurcation.threshold = FALSE
+  control$max.reads.per.host <- NULL
+  control$min.reads.per.host <- 30
+  control$min.tips.per.host <- 1	
+  control$multifurcation.threshold = 1e-5
+  control$multinomial= TRUE
+  control$norm.constants = NULL
+  control$norm.ref.file.name = "~/normalisation_ByPosition.csv"
+  control$norm.standardise.gag.pol = TRUE
+  control$no.progress.bars = TRUE
+  control$outgroup.name = "REF_CON_H"
+  control$output.dir = outdir
+  control$parsimony.blacklist.k = 15
+  control$prune.blacklist = FALSE
+  control$post.hoc.count.blacklisting <- TRUE
+  control$ratio.blacklist.threshold = 0.01
+  control$raw.blacklist.threshold = 3			
+  control$recombination.file.directory = NULL
+  control$recombination.file.regex = NULL
+  control$relaxed.ancestry = TRUE
+  control$sankoff.k = 15
+  control$sankoff.unassigned.switch.threshold = 0
+  control$seed = 42
+  control$splits.rule = 's'
+  control$tip.regex = '^(.*)-fq[0-9]+_read_([0-9]+)_count_([0-9]+)'
+  control$tree.file.regex = "^(.*)\\.treefile$" # from rscript
+  control$treeFileExtension = '.treefile'
+  control$use.ff = FALSE
+  control$user.blacklist.directory = NULL 
+  control$user.blacklist.file.regex = NULL
+  control$verbosity = 1	
+  
+
+  #	make bash for many files	
+  df <- tibble(F=list.files(treedir))
+  # ,pattern = '*.treefile$')
+  df <- df %>%
+    mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
+           RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
+    # mutate(TYPE:= gsub('^([^\\.]+)\\.[a-z]+$','\\1',TYPE)) %>%
+    mutate(TYPE:= gsub('^[^\\.]+\\.([a-z]+)$','\\1',TYPE)) %>%
+    spread(TYPE, F) %>%
+    set_names(~ str_to_upper(.))
+
+  valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(prog.phyloscanner_analyse_trees)
+  cmds <- vector('list',nrow(df))
+  
+  for(i in seq_len(nrow(df)))
+  {
+    #	set input args
+    control$output.string <- paste0('ptyr',df$RUN[i])
+    #	make script
+    tree.input <- file.path(treedir, df$TREES[i])
+    cmd <- cmd.phyloscanner.analyse.trees(prog.phyloscanner_analyse_trees, 
+                                          tree.input, 
+                                          control,
+                                          valid.input.args=valid.input.args)
+    cmds[[i]] <- cmd		
+  }	
+  cat(cmds[[1]])
+  
+  #
+  # 	submit array job to HPC
+  #
+  #	make header
+  hpc.load			<- "module load anaconda3/personal \n source activate phylo"	# make third party requirements available	 
+  hpc.select			<- 1						# number of nodes
+  hpc.nproc			<- 1						# number of processors on node
+  hpc.walltime		<- 923						# walltime
+  if(0)		
+  {
+    hpc.q			<- NA						# PBS queue
+    hpc.mem			<- "36gb" 					# RAM		
+  }
+  #		or run this block to submit a job array to Oliver's machines
+  if(1)
+  {
+    hpc.q			<- "pqeelab"				# PBS queue
+    hpc.mem			<- "12gb" 					# RAM		
+  }
+  hpc.array			<- length(cmds)	# number of runs for job array	
+  pbshead		<- "#!/bin/sh"
+  tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
+  pbshead		<- paste(pbshead, tmp, sep = "\n")
+  tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
+  pbshead 	<- paste(pbshead, tmp, sep = "\n")
+  pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+  if(!is.na(hpc.array))
+    pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+  if(!is.na(hpc.q)) 
+    pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
+  pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+  cat(pbshead)
+  #	make array job
+  for(i in 1:length(cmds))
+    cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
+  cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
+  cmd		<- paste(pbshead,cmd,sep='\n')	
+  #	submit job
+  outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
+  outfile		<- file.path(tmpdir, outfile)
+  cat(cmd, file=outfile)
+  cmd 		<- paste("qsub", outfile)
+  cat(cmd)
+  cat(system(cmd, intern= TRUE))
+  
+}
+
+make_pairwise_relationship <- function(){
+  
+  require(data.table)
+  library(tidyverse)
+  library(Phyloscanner.R.utilities)
+  # dir
+  HOME <<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05/')
+  files <- list.files(outdir, pattern = '*workspace.rda')
+  setwd(outdir)
+  for(i in 1:length(files)){
+    load(files[i])
+    dwin <- data.table(dwin)
+    # change format
+    colnames(dwin) <- toupper(colnames(dwin))
+    setnames(dwin,c('HOST.1', 'HOST.2','TREE.ID','PATHS12','PATHS21','PATRISTIC.DISTANCE'),c('PAT.1','PAT.2','SUFFIX','PATHS.12','PATHS.21','PATRISTIC_DISTANCE'))
+    dwin <- data.table(dwin)
+    set(dwin, NULL, 'PATRISTIC_DISTANCE', dwin[, as.numeric(PATRISTIC_DISTANCE)])
+    tmp <- data.table(unique(subset(summary.stats,select=c('host.id','tips','reads','tree.id'))))
+    colnames(tmp) <- c('PAT','L','R','SUFFIX')
+    setnames(tmp, colnames(tmp)[1:3], paste0(colnames(tmp)[1:3],'.1'))
+    dwin <- merge(dwin, tmp, by=c('PAT.1','SUFFIX'),all.x=T)
+    setnames(tmp, colnames(tmp)[1:3], gsub('1','2',colnames(tmp)[1:3]))
+    dwin <- merge(dwin, tmp, by=c('PAT.2','SUFFIX'),all.x=T)
+    dwin[,SUFFIX:=gsub('ptyr[0-9]+_InWindow_','',SUFFIX)]
+    dwin[,SUFFIX:=gsub('_v2','',SUFFIX)]
+    setnames(dwin,c('L.1','L.2','R.1','R.2'),c('PAT.1_TIPS','PAT.2_TIPS','PAT.1_READS','PAT.2_READS'))
+    set(dwin, NULL, 'W_FROM', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\1', SUFFIX))])
+    set(dwin, NULL, 'W_TO', dwin[, as.integer(gsub('[^0-9]*([0-9]+)_to_([0-9]+).*','\\2', SUFFIX))])
+    dwin[,TYPE:= paste0(BASIC.CLASSIFICATION,'_',CATEGORICAL.DISTANCE)]
+    
+    # generate rda
+    trmw.min.reads= args$minReadsPerHost
+    trmw.min.tips=args$minTipsPerHost
+    trmw.close.brl=args$distanceThreshold[1]
+    trmw.distant.brl=args$distanceThreshold[2]
+    prior.keff=3
+    prior.neff=4
+    prior.calibrated.prob=0.66
+    relationship.types	<- c('TYPE_PAIR_DI2','TYPE_PAIR_TO','TYPE_PAIR_TODI2x2','TYPE_PAIR_TODI2','TYPE_DIR_TODI2','TYPE_NETWORK_SCORES','TYPE_CHAIN_TODI')
+    relationship.types <- c(relationship.types, 'TYPE_ADJ_NETWORK_SCORES','TYPE_ADJ_DIR_TODI2')
+    prior.keff.dir=2
+    prior.neff.dir=3
+    verbose=TRUE
+    tmp		<- Phyloscanner.R.utilities:::phsc.get.pairwise.relationships.likelihoods(dwin, trmw.min.reads, trmw.min.tips, trmw.close.brl, trmw.distant.brl, prior.keff, prior.neff, prior.calibrated.prob, relationship.types, prior.keff.dir=prior.keff.dir, prior.neff.dir=prior.neff.dir)
+    dwin	<- copy(tmp$dwin)
+    rplkl	<- copy(tmp$rplkl)
+    outfile <- file.path(outdir,gsub("_workspace.rda","_pairwise_relationships.rda",files[i]))
+    cat('\nwrite to file', outfile,'...')
+    save(dwin, rplkl, file=outfile)
+    cat('\n')
+  }
+}
+
+preprocess.phyloscanneroutput.based.on.strongsupport<- function()
+{
+  require(data.table)	
+  require(igraph)
+  require(sna)
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05/'
+  outfile	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05/Cluster_strongsupport.rda'
+  
+  conf.cut	<- 0.6
+  neff.cut	<- 3
+  
+  if(0)
+  {
+    linked.group	<- 'TYPE_PAIR_TODI2'
+    linked.type.yes	<- 'linked'
+    linked.type.no	<- 'unlinked'
+    scores.group	<- 'TYPE_NETWORK_SCORES'
+    scores.type.no	<- c('ambiguous','not close/disconnected') 
+    dir.group		<- 'TYPE_DIR_TODI2'		
+  }
+  if(1)
+  {
+    close.group		<- 'TYPE_PAIR_DI2'
+    close.type.yes	<- 'close'
+    close.type.no	<- 'distant'
+    linked.group	<- 'TYPE_CHAIN_TODI'
+    linked.type.yes	<- 'chain'
+    linked.type.no	<- 'distant'	
+    scores.group	<- 'TYPE_ADJ_NETWORK_SCORES'
+    scores.type.no	<- c('ambiguous','not close/disconnected')
+    dir.group		<- 'TYPE_ADJ_DIR_TODI2'
+  }
+  
+  
+  
+  #
+  #	from every phyloscanner run, select pairs that are most frequently linked 
+  #	by: distance, distance + topology
+  infiles	<- data.table(F=list.files(indir, pattern='*pairwise_relationships.rda$', full.names=TRUE))
+  infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+  setkey(infiles, PTY_RUN)
+  rtp.todi2<- infiles[, {
+     load(F)
+    #	all pairs that are not decisively unlinked based on "close.group"
+    rtp		<- subset(rplkl, 	GROUP==close.group & 
+                     TYPE==close.type.yes &
+                     ((POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE))>=conf.cut,
+                   c(ID1, ID2))
+    ans		<- merge(rtp, subset(rplkl, GROUP==close.group & TYPE==close.type.yes), by=c('ID1','ID2'), all.x=1)
+    #	all pairs that are not decisively unlinked based on ML likely transmission pairs by distance + topology
+    rtp		<- subset(rplkl, 	GROUP==linked.group & 
+                     TYPE==linked.type.yes &
+                     ((POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE))>=conf.cut,
+                   c(ID1, ID2))
+    rtp		<- merge(rtp, subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes), by=c('ID1','ID2'), all.x=1)
+    ans		<- rbind(ans, rtp)				
+    ans[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1) / (POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]						
+    ans				
+  }, by=c('PTY_RUN')]		
+  rtp.todi2	<- subset(rtp.todi2, POSTERIOR_SCORE>0)
+  set(rtp.todi2, NULL, 'GROUP', rtp.todi2[, as.character(GROUP)])	
+  #
+  #	prepare all dwin and rplkl and save separately
+  rplkl	<- infiles[, {
+    load(F)
+    rplkl			
+  }, by='PTY_RUN']
+  rpw		<- infiles[, {
+    load(F)
+    dwin			
+  }, by='PTY_RUN']
+  #	melt rpw
+  rpw			<- melt(rpw, variable.name='GROUP', value.name='TYPE', measure.vars=grep('^TYPE_',colnames(rpw),value = T))
+  set(rpw, NULL, 'ID_R_MAX', rpw[, pmax(ID1_R,ID2_R)])
+  set(rpw, NULL, 'ID_R_MIN', rpw[, pmin(ID1_R,ID2_R)])		
+  #
+  #	re-arrange to ID1<ID2
+  tmp			<- subset(rplkl, ID1>ID2)
+  setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+  set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+  rplkl		<- rbind(subset(rplkl, !(ID1>ID2)), tmp)
+  tmp			<- subset(rpw, ID1>ID2)
+  setnames(tmp, c('ID1','ID2','ID1_L','ID1_R','ID2_L','ID2_R','PATHS_12','PATHS_21'), c('ID2','ID1','ID2_L','ID2_R','ID1_L','ID1_R','PATHS_21','PATHS_12'))
+  set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+  rpw			<- rbind(subset(rpw, !(ID1>ID2)), tmp)
+  tmp			<- subset(rtp.todi2, ID1>ID2)
+  setnames(tmp, c('ID1','ID2'), c('ID2','ID1'))
+  set(tmp, NULL, 'TYPE', tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',TYPE)))])
+  rtp.todi2	<- rbind(subset(rtp.todi2, !(ID1>ID2)), tmp)	
+  
+  #	select runs with highest neff
+  setkey(rplkl, ID1, ID2, PTY_RUN, GROUP, TYPE)	# sort to make sure same run selected in case of tie
+  tmp			<- rplkl[ GROUP==linked.group & TYPE==linked.type.yes, list(PTY_RUN=PTY_RUN[which.max(NEFF)]), by=c('ID1','ID2')]
+  rplkl		<- merge(rplkl, tmp, by=c('ID1','ID2','PTY_RUN'))
+  rpw			<- merge(rpw, tmp, by=c('ID1','ID2','PTY_RUN'))
+  rtp.todi2	<- merge(rtp.todi2, tmp, by=c('ID1','ID2','PTY_RUN'))
+  #	save
+  save(rtp.todi2, rplkl, rpw, file=gsub('\\.rda','_allwindows.rda',outfile))
+  
+  
+  #
+  #	prepare just the dwin and rplkl that we need for further linkage analysis of the pairs 
+  #	this is all pairs for whom unlinked is not decisive
+  #
+  tmp			<- unique( subset(rtp.todi2, select=c(ID1, ID2, PTY_RUN)) )
+  rplkl		<- merge(rplkl, tmp, by=c('ID1','ID2','PTY_RUN'))
+  rpw			<- merge(rpw, tmp, by=c('ID1','ID2','PTY_RUN'))
+  # save(rp, rd, rh, ra, rs, rtp.todi2, rplkl, rpw, file=outfile)
+  save(rtp.todi2, rplkl, rpw, file=outfile)
+  
+  
+  
+  #
+  #	construct max prob network among all possible pairs regardless of gender
+  #	above NEFF cut
+  rtn		<- subset(rtp.todi2, GROUP==linked.group & TYPE==linked.type.yes & NEFF>neff.cut)
+  #	get transmission chains with igraph, to speed up calculations later
+  tmp		<- subset(rtn, select=c(ID1, ID2))			
+  tmp		<- graph.data.frame(tmp, directed=FALSE, vertices=NULL)
+  rtc		<- data.table(ID=V(tmp)$name, CLU=clusters(tmp, mode="weak")$membership)	
+  tmp2	<- rtc[, list(CLU_SIZE=length(ID)), by='CLU']
+  setkey(tmp2, CLU_SIZE)
+  tmp2[, IDCLU:=rev(seq_len(nrow(tmp2)))]
+  rtc			<- subset( merge(rtc, tmp2, by='CLU'))
+  rtc[, CLU:=NULL]
+  setkey(rtc, IDCLU)
+  #	add info on edges
+  setnames(rtc, c('ID'), c('ID1'))
+  rtn		<- merge(rtn, rtc, by='ID1')
+  rtc[, CLU_SIZE:=NULL]
+  setnames(rtc, c('ID1'), c('ID2'))
+  rtn		<- merge(rtn, rtc, by=c('ID2','IDCLU'))
+  tmp		<- subset(rtn, select=c(ID1, ID2, PTY_RUN, IDCLU, CLU_SIZE))
+  #	add posterior mean for network types
+  tmp2	<- c('ID1','ID2','PTY_RUN')
+  tmp		<- merge(tmp, subset(rplkl, GROUP==scores.group), by=tmp2)
+  tmp		<- merge(tmp, tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1) ), by=c('ID1','ID2','PTY_RUN')], by=c('ID1','ID2','PTY_RUN','TYPE'))
+  rtn		<- rbind(tmp, rtn)
+  #	generate maximum branch transmission network
+  rtn		<- subset(rtn, GROUP==scores.group)
+  rtnn	<- Phyloscanner.R.utilities:::phsc.get.most.likely.transmission.chains(rtn, verbose=0)	
+  #	for TYPE=='ambiguous', this has the cols:
+  #	POSTERIOR_SCORE 	posterior prob direction ambiguous before self-consistence
+  #	MX_PROB_12			total posterior prob supporting  1 to 2 including 50% ambiguous AFTER self-consistence
+  #	MX_PROB_21			total posterior prob supporting  2 to 1 including 50% ambiguous AFTER self-consistence
+  #	MX_KEFF_21 			total KEFF supporting  2 to 1 including 50% ambiguous before self-consistence 
+  #	MX_KEFF_12 			total KEFF supporting  1 to 2 including 50% ambiguous before self-consistence  
+  #	LINK_12 			if there is a directed edge from 1 to 2 in max edge credibility network
+  #	LINK_21				if there is a directed edge from 2 to 1 in max edge credibility network
+  #	where self-consistence means that 12 xor 21 are set to zero
+  rtnn	<- subset(rtnn, TYPE=='ambiguous', select=c(ID1, ID2, PTY_RUN, IDCLU, POSTERIOR_SCORE, MX_PROB_12, MX_PROB_21, MX_KEFF_21, MX_KEFF_12, LINK_12, LINK_21))
+  #
+  #	work out prob for linkage in max prob network, when 'inconsistent direction' is ignored
+  rtnn[, POSTERIOR_SCORE_LINKED_MECN:= pmax(MX_PROB_12,MX_PROB_21) + 0.5*POSTERIOR_SCORE]
+  set(rtnn, NULL, c('POSTERIOR_SCORE','MX_PROB_12','MX_PROB_21'), NULL)
+  #
+  #	merge POSTERIOR_SCORE_LINKED on max prob network
+  #	rationale: this describes prob of linkage. here, any 'inconsistent direction' is still considered as prob for linkage 	
+  tmp		<- subset(rplkl, GROUP==linked.group & TYPE==linked.type.yes, c(ID1,ID2,PTY_RUN,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
+  tmp[, POSTERIOR_SCORE_LINKED:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+  set(tmp, NULL, c('POSTERIOR_ALPHA','POSTERIOR_BETA','N_TYPE'), NULL)
+  rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+  #	merge POSTERIOR_SCORE_12 POSTERIOR_SCORE_21 (direction) on max prob network
+  #	this is considering in denominator 12 + 21 before reducing probs to achieve self-consistency
+  #	rationale: decide on evidence for direction based on comparing only the flows in either direction, 12 vs 21
+  tmp		<- subset(rplkl, GROUP==dir.group, c(ID1,ID2,PTY_RUN,TYPE,POSTERIOR_ALPHA,POSTERIOR_BETA,N_TYPE))
+  tmp[, POSTERIOR_SCORE:= (POSTERIOR_ALPHA-1)/(POSTERIOR_ALPHA+POSTERIOR_BETA-N_TYPE)]
+  set(tmp, NULL, c('POSTERIOR_ALPHA','POSTERIOR_BETA','N_TYPE'), NULL)
+  set(tmp, NULL, 'TYPE', tmp[, paste0('POSTERIOR_SCORE_',TYPE)])
+  tmp		<- dcast.data.table(tmp, ID1+ID2+PTY_RUN~TYPE, value.var='POSTERIOR_SCORE')
+  rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+  #	merge NETWORK_SCORE_12 NETWORK_SCORE_21 on max prob network
+  #	this is considering in denominator 12 + 21 + unclear reducing probs to achieve self-consistency
+  #	same as MX_PROB_12, MX_PROB_21, after the final step below that sets one of the two probs to zero
+  tmp		<- subset(rplkl, GROUP==scores.group, c(ID1,ID2,PTY_RUN,TYPE,POSTERIOR_ALPHA))
+  tmp		<- tmp[, list(TYPE=TYPE, POSTERIOR_SCORE=(POSTERIOR_ALPHA-1)/sum(POSTERIOR_ALPHA-1)), by=c('ID1','ID2','PTY_RUN')]
+  tmp		<- subset(tmp, !TYPE%in%scores.type.no)
+  set(tmp, NULL, 'TYPE', tmp[, paste0('NETWORK_SCORE_',TYPE)])	
+  tmp		<- dcast.data.table(tmp, ID1+ID2+PTY_RUN~TYPE, value.var='POSTERIOR_SCORE')
+  rtnn	<- merge(rtnn, tmp, by=c('ID1','ID2','PTY_RUN'), all.x=TRUE)
+  #	ensure DIR scores and NETWORK_SCORE scores are compatible with self-consistency in maxprobnetwork
+  tmp		<- rtnn[, which(LINK_12==0 & LINK_21==1 & POSTERIOR_SCORE_12>POSTERIOR_SCORE_21)]
+  set(rtnn, tmp, c('POSTERIOR_SCORE_12','NETWORK_SCORE_12'), 0)
+  tmp		<- rtnn[, which(LINK_12==1 & LINK_21==0 & POSTERIOR_SCORE_21>POSTERIOR_SCORE_12)]
+  set(rtnn, tmp, c('POSTERIOR_SCORE_21','NETWORK_SCORE_21'), 0)	
+  rtnn	<- subset(rtnn, LINK_12==1 | LINK_21==1)	
+  #
+  save(rtp.todi2, rplkl, rpw, rtn, rtnn, file=gsub('\\.rda','_networksallpairs.rda',outfile))
+}
+
+make_direction_transmissions <- function(){
+  library(data.table)
+  # dirs
+  indir			<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05/'
+  infile.pairs	<- file.path(indir,'Cluster_strongsupport_allwindows.rda')
+  infile.networks	<- file.path(indir,'Cluster_strongsupport_networksallpairs.rda')
+  infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
+  infile.ind.rccs <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.mrc <- file.path('/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+  infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+  load( infile.pairs )	# loads rtp, rplkl, rpw
+  load( infile.networks )	# loads rtn, rtnn
+  
+  # aid
+  df <- data.table(read.csv(infile.ind.anonymised))
+  tmp <- rbind(data.table(read.csv(infile.ind.rccs)),data.table(read.csv(infile.ind.mrc)))
+  df2 <- merge(subset(df,select=c('PT_ID', 'AID')),subset(tmp,select=c('pt_id','sex')),by.x='PT_ID',by.y='pt_id',all.x=T)
+  df2 <- subset(df2,select=c('AID','sex'))
+  colnames(df2) <- c('ID','SEX')
+  df2 <- unique(df2)
+  
+  # directed pairs
+  conf.cut		<- 0.6				
+  rtnn[, PHYLOSCANNER_CLASSIFY:= NA_character_]
+  set(rtnn, rtnn[, which(is.na(PTY_RUN))], 'PHYLOSCANNER_CLASSIFY', 'insufficient deep sequence data for at least one individual')
+  set(rtnn, rtnn[, which(!is.na(PTY_RUN) & is.na(LINK_12) & is.na(LINK_21))], 'PHYLOSCANNER_CLASSIFY', 'ph unlinked pair')
+  set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED<=conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'unclear if pair ph linked or unlinked')
+  set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction not resolved')
+  set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_12>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction 12')
+  set(rtnn, rtnn[, which(!is.na(POSTERIOR_SCORE_LINKED) & POSTERIOR_SCORE_LINKED>conf.cut & POSTERIOR_SCORE_21>conf.cut)], 'PHYLOSCANNER_CLASSIFY', 'ph linked pair direction 21')
+  
+  # get genders
+  setnames(df2,colnames(df2),paste0(colnames(df2),'1'))
+  rtnn	<- merge(rtnn, df2, by=c('ID1'))
+  setnames(df2,colnames(df2),gsub('1','2',colnames(df2)))
+  rtnn	<- merge(rtnn, df2, by=c('ID2'))
+  setnames(df2,colnames(df2),gsub('2','',colnames(df2)))
+  
+  # get couple data
+  load(infile.couple)
+  couple <- unique(subset(data.table(coupdat), select=c('male.RCCS_studyid', 'female.RCCS_studyid')))
+  couple[, COUPLE:=1]
+  setnames(couple,c('male.RCCS_studyid','female.RCCS_studyid'),c('PT_ID1','PT_ID2'))
+  couple[,PT_ID1:=paste0('RK-',PT_ID1)]
+  couple[,PT_ID2:=paste0('RK-',PT_ID2)]
+  couple[,SEX1:='M']
+  couple[,SEX2:='F']
+  couple <- merge(couple,subset(df,select=c('PT_ID', 'AID')),by.x='PT_ID1', by.y='PT_ID', all.x=T)
+  couple <- merge(couple,subset(df,select=c('PT_ID', 'AID')),by.x='PT_ID2', by.y='PT_ID', all.x=T)
+  set(couple,NULL,c('PT_ID1','PT_ID2'),NULL)
+  setnames(couple,c('AID.x','AID.y'),c('ID1','ID2'))
+  couple[,ID1:=as.character(ID1)]
+  couple[,ID2:=as.character(ID2)]
+  couple <- couple[!is.na(ID1) & !is.na(ID2)]
+  
+  # order ID
+  setnames(rtnn,c('SEX1','SEX2'),c('ID1_SEX','ID2_SEX'))
+  tmp		<- subset(rtnn, ID1_SEX=='F' & ID2_SEX=='M')
+  setnames(tmp, colnames(tmp), gsub('xx','ID2',gsub('ID2','ID1',gsub('ID1','xx',gsub('xx','12',gsub('12','21',gsub('21','xx',colnames(tmp))))))))
+  set(tmp, NULL, 'PHYLOSCANNER_CLASSIFY', tmp[, gsub('xx','12',gsub('12','21',gsub('21','xx',PHYLOSCANNER_CLASSIFY)))])
+  rtnn	<- rbind(subset(rtnn, !(ID1_SEX=='F' & ID2_SEX=='M')), tmp)
+  rtnn[, PAIR_SEX:= paste0(ID1_SEX,ID2_SEX)]
+  unique(rtnn$PHYLOSCANNER_CLASSIFY)
+  
+  # directions
+  rtp		<- subset(rtnn, !grepl('not resolved',PHYLOSCANNER_CLASSIFY))
+  rtp[, table(PAIR_SEX)]
+  
+  # check couple
+  rtp <- merge(rtp, couple, by=c('ID1','ID2'),all.x=T)
+  rtp[!is.na(COUPLE)]
+  
+  # make dobs
+  dobs <- subset(rtp, select=c('ID1','ID2','LINK_12','LINK_21','ID1_SEX','ID2_SEX','COUPLE'))
+  tmp <- dobs[LINK_12==1]
+  tmp <- subset(tmp,select=c('ID1','ID2','ID1_SEX','ID2_SEX','COUPLE'))
+  setnames(tmp,c('ID1','ID2','ID1_SEX','ID2_SEX'), c('TR_ID','REC_ID','TR_SEX','REC_SEX'))
+  dobs <- dobs[LINK_12==0]
+  dobs <- subset(dobs,select=c('ID1','ID2','ID1_SEX','ID2_SEX','COUPLE'))  
+  setnames(dobs,c('ID1','ID2','ID1_SEX','ID2_SEX'), c('REC_ID','TR_ID','REC_SEX','TR_SEX'))
+  dobs <- rbind(dobs, tmp)
+  
+  # check RCCS
+  df3 <- subset(df, select=c('PT_ID','AID'))
+  df3[,RCCS:=grepl('RK-',PT_ID)]
+  df3 <-subset(df3,select=c('AID','RCCS'))
+  dobs <- merge(dobs, df3, by.x='TR_ID',by.y='AID', all.x=T) 
+  dobs <- merge(dobs, df3, by.x='REC_ID',by.y='AID', all.x=T) 
+  setnames(dobs,c('RCCS.x','RCCS.y'),c('TR_RCCS','REC_RCCS'))
+  
+  # get heterosexual 
+  tmp <- dobs[(TR_SEX=='M' & REC_SEX=='F')|(TR_SEX=='F' & REC_SEX=='M')]
+  tmp[TR_RCCS==T & REC_RCCS==T]
+}
