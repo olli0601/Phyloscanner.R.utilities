@@ -1761,7 +1761,6 @@ alignment_gap <- function(){
   }
   save(alignment_gaps,file = '~/alignment_lgaps.rda')
   
-  
 # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/ptyr1_trees'
 # tmp <- alignment_gap_check(p)
 # setkey(tmp,V1)
@@ -1780,6 +1779,85 @@ alignment_gap <- function(){
 #   ggsave(file.path(p,'plots','gap_vs_win.pdf'),width = 8, height = 6)
 #   
 
+  
+  ######
+  library(data.table)
+  load('~/alignment_lgaps.rda')
+  alignment_gaps <- rbindlist(alignment_gaps,idcol = T)
+  alignment_gaps <- dcast(alignment_gaps, .id + pos ~ posex, value.var='V1')
+  tmp <- alignment_gaps[is.na(`TRUE`)]
+  setnames(tmp,'FALSE','V1')
+  tmp[,`TRUE`:=NULL]
+  tmp[,posex:=FALSE]
+  alignment_gaps <- alignment_gaps[!is.na(`TRUE`)]
+  setnames(alignment_gaps,'TRUE','V1')
+  alignment_gaps[,`FALSE`:=NULL]
+  alignment_gaps[,posex:=TRUE]
+  alignment_gaps <- rbind(alignment_gaps,tmp)
+  alignment_gaps <- dcast(alignment_gaps, .id~pos, value.var='V1')
+  tmp <- as.matrix(alignment_gaps)
+  # apply(tmp, 2, function(x)paste0(round(median(x,na.rm = T),2), '[', round(quantile(x,0.025,na.rm = T)), '-', round(quantile(x,0.975,na.rm = T)), ']'))
+  # hist(apply(tmp[,2:ncol(tmp)], 1, function(x)max(x,na.rm = T)))
+  # hist(apply(tmp[,2:ncol(tmp)], 2, function(x)max(x,na.rm = T)))
+  tmpdf <- data.table(melt(t(tmp[,2:ncol(tmp)])))
+  range(tmpdf$value,na.rm=T)
+  library(ggplot2)
+  library(ggpubr)
+  g1 <- ggplot(tmpdf[Var2<=52],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g2 <- ggplot(tmpdf[Var2>52 & Var2 <=52*2],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g3 <- ggplot(tmpdf[Var2>52 * 2 & Var2 <= 52 * 3],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g4 <- ggplot(tmpdf[Var2>52*3 & Var2 <=52*4],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g5 <- ggplot(tmpdf[Var2>52 * 4 & Var2 <=52*5],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g6 <- ggplot(tmpdf[Var2>52 *5& Var2 <=52*6],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g7 <- ggplot(tmpdf[Var2>52 * 6 & Var2 <= 52 * 7],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g8 <- ggplot(tmpdf[Var2>52*7 & Var2 <=52*8],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(0,80))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  arrange <- ggarrange(g1,g2,g3,g4,g5,g6,g7,g8, ncol = 1, nrow = 8)
+  arrange <- annotate_figure(arrange,
+                             left = 'lengths of the largest gap chunk'
+  )
+  ggsave('~/fullrun_lgap.pdf',arrange,width = 10, height = 16, limitsize = F)
+  
+  
 }
 
 alignment_tmrca <- function(){
@@ -1940,8 +2018,6 @@ alignment_tmrca <- function(){
   num <- as.numeric(args[1])
   output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
   dirs <- sort(list.files(output.dir,full.names = T))
-  blen_list <- list()
-  age_root_list <- list()
   tmp <- tmrca_check(dirs[num])
   save(tmp,file = file.path(dirs[num],'alignment_tmrcas.rda'))
     # dirs <- list.files(output.dir,full.names = T)
@@ -1965,42 +2041,86 @@ alignment_tmrca <- function(){
   #	submit job
   outfile		<- '~/210325_tmrcas_check_batch.qsub'
   cat(cmd, file=outfile)
+  
+  
+  #  
+  output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
+  blen_list <- list()
+  age_root_list <- list()
+  for (i in 1:409) {
+    try(
+      {
+      dir <- file.path(output.dir,paste0('ptyr',i,'_trees'))
+      load(file.path(dir,'alignment_tmrcas.rda'))
+      blen_list[[i]] <- tmp[[1]]
+      age_root_list[[i]] <- data.table(tmp[[2]])
+                                       })
+  }
+  
+  ######
+  library(data.table)
+  alignment_tmrcas <- rbindlist(age_root_list,idcol = T)
+  tmpdf <- subset(alignment_tmrcas,select=c('.id','V3'))
+  setnames(tmpdf,c('.id','V3'),c('Var2','value'))
+  range(tmpdf$value,na.rm=T)
+  library(ggplot2)
+  library(ggpubr)
+  g1 <- ggplot(tmpdf[Var2<=52],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g2 <- ggplot(tmpdf[Var2>52 & Var2 <=52*2],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g3 <- ggplot(tmpdf[Var2>52 * 2 & Var2 <= 52 * 3],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g4 <- ggplot(tmpdf[Var2>52*3 & Var2 <=52*4],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g5 <- ggplot(tmpdf[Var2>52 * 4 & Var2 <=52*5],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g6 <- ggplot(tmpdf[Var2>52 *5& Var2 <=52*6],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g7 <- ggplot(tmpdf[Var2>52 * 6 & Var2 <= 52 * 7],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  g8 <- ggplot(tmpdf[Var2>52*7 & Var2 <=52*8],aes(factor(Var2),value))+
+    geom_boxplot()+
+    scale_y_continuous(expand = c(0,0),limits = c(1770,1990))+
+    theme_bw()+
+    labs(x='',y='')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  arrange <- ggarrange(g1,g2,g3,g4,g5,g6,g7,g8, ncol = 1, nrow = 8)
+  arrange <- annotate_figure(arrange,
+                  left = 'TMRCAs'
+  )
+  ggsave('~/fullrun_tmrca.pdf',arrange,width = 10, height = 16, limitsize = F)
+  
 }
-library(data.table)
-# load('~/alignment_tmrcas.rda')
-load('~/alignment_lgaps.rda')
-alignment_gaps <- rbindlist(alignment_gaps,idcol = T)
-alignment_gaps <- dcast(alignment_gaps, .id + pos ~ posex, value.var='V1')
-tmp <- alignment_gaps[is.na(`TRUE`)]
-setnames(tmp,'FALSE','V1')
-tmp[,`TRUE`:=NULL]
-tmp[,posex:=FALSE]
-alignment_gaps <- alignment_gaps[!is.na(`TRUE`)]
-setnames(alignment_gaps,'TRUE','V1')
-alignment_gaps[,`FALSE`:=NULL]
-alignment_gaps[,posex:=TRUE]
-alignment_gaps <- rbind(alignment_gaps,tmp)
-alignment_gaps <- dcast(alignment_gaps, .id~pos, value.var='V1')
-tmp <- as.matrix(alignment_gaps)
-# apply(tmp, 2, function(x)paste0(round(median(x,na.rm = T),2), '[', round(quantile(x,0.025,na.rm = T)), '-', round(quantile(x,0.975,na.rm = T)), ']'))
-hist(apply(tmp[,2:ncol(tmp)], 1, function(x)max(x,na.rm = T)))
-# [1] 12 21 22 23 28 30 21 15 21 21 30 27 24 30 33 27 21 23 21 21 21 26 24 21 42
-# [26] 21 21 30 30 24 21 21 21 23 27 21 21 21 17 24 21 19 12 21 21 24 21 12 21 15
-# [51] 28 36 24 12 36 28 33 25 33 30 21 36 21 21 30 10 21 33 27 24 24 30 23 21 21
-# [76] 45 24 33 42 27 21 21 21 27 21 17 21 21 35 27 21  9 21 25 33 21 30 21 34 33
-# [101] 22 24 21 26 21 22 21 21 21 16 21 21 18 21 26 12 25 24 28 22 13 21 30 24 15
-# [126] 24 21 33 33 21 36 12 15 21 24 27 63 31 21 36 21 24 21 23 30 39 24 24 27 21
-# [151] 21 25 15 18 23 11 21 24 24 22 18 21 21 18 20 21 21 42 21 33 15 12 21 30 30
-# [176] 12 21 22 15 21 23 23 15 30  9 12 15 22 35 23 15 21 21 27 25 30 21 20 21 21
-# [201] 21 21 24 24 24 24 24 24 19 24 39 24 21 23 30 45 27 10 36 45 19 27 29 33  6
-# [226] 12 18 21 33  9 21 24 31 30 42 21 30 21  8 42 20 30 12  9 10 45 15 33  3 18
-# [251] 25 21 21 12 24 14 30 24 16 21 15 13 33 21 24 39 24 27 19 24  9 30 12 21 30
-# [276] 21 18 11 27 21 20 21 10 21 27 20 29 25 22 18 24 21 12 30 24 27 23 20 30  7
-# [301] 21 27 27 33 21 34 30 24 21 30 21 25 21 21 22 16 15 21 36 24 21 19 24 18 18
-# [326] 31 25 34 21 27 25 31 36 24 21 34 21 23 21 33 27 27 36 27 30 19 24 27 33 23
-# [351] 18 16 21 21 36 22 30 21 30 21 16 42 24 30 25 46 21 75 19 21 36 33 21 21 21
-# [376] 22 36 21 32 21 27 30 30 21 15 45 24 21 39 39 22 27 21 21 31 21 24 30 19 25
-# [401] 26 15 16 21 27 21 30 16 24
+
 
 
 delete_nonexcised <- function(){
@@ -2040,7 +2160,9 @@ make.phyloscanner<- function()
   tmpdir	<- file.path(HOME,"210325_phsc_work/")
   # outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05/')
   # sa1
-  outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05_null_min_read/')
+  # outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05_null_min_read/') #no min no max
+  # outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05_30_min_read_100_max_read/') #30 min 100 max
+  outdir	<- file.path(HOME,'210325_phsc_phscrelationships_02_05_null_min_read_100_max_read/') #no min 100 max
   dir.create(outdir)
   prog.phyloscanner_analyse_trees <- '/rds/general/user/xx4515/home/phyloscanner/phyloscanner_analyse_trees.R'
 
@@ -2057,9 +2179,9 @@ make.phyloscanner<- function()
   control$duplicate.file.regex = NULL
   control$file.name.regex = "^(?:.*\\D)?([0-9]+)_to_([0-9]+).*$"
   control$guess.multifurcation.threshold = FALSE
-  control$max.reads.per.host <- NULL
-  # control$min.reads.per.host <- 30 
-  # sa1
+  # control$max.reads.per.host <- NULL
+  control$max.reads.per.host <- 100
+  # control$min.reads.per.host <- 30
   control$min.reads.per.host <- NULL
   control$min.tips.per.host <- 1	
   control$multifurcation.threshold = 1e-5
@@ -2172,7 +2294,10 @@ phsc.migrate.transmission.networks<- function()
   # optional: meta data
   indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05/'
   # sa1
-  # indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read/'
+  # indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read/' #no min no max
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_30_min_read_100_max_read/' #30 min 100 max
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read_100_max_read/' #no min 100 max
+  
   infiles	<- data.table(F=list.files(indir, pattern='*workspace.rda$', full.names=TRUE))
   infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
   setkey(infiles, PTY_RUN)
@@ -2191,7 +2316,9 @@ phsc.migrate.transmission.networks<- function()
   control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.6, neff.cut=3,weight.complex.or.no.ancestry=0.5)
   # save(dca,dwina,file = '~/dcdwina_minread30.rda')
   # save(dca,dwina,file = '~/dcdwina_minreadnull.rda')
-  load('~/dcdwina_minread30.rda')
+  save(dca,dwina,file = '~/dcdwina_minread30_maxread100.rda')
+  # save(dca,dwina,file = '~/dcdwina_minreadnull_maxread100.rda')
+  # load('~/dcdwina_minread30.rda')
   # load('~/dcdwina_minreadnull.rda')
   dca[,CNTRL1:=FALSE]
   dca[,CNTRL2:=FALSE]
@@ -2247,6 +2374,9 @@ analysis_network <- function(){
   # indir			<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05/'
   # # sa1
   indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read/'
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_30_min_read_100_max_read/' #30 min 100 max
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read_100_max_read/' #no min 100 max
+  
   # infile.pairs	<- file.path(indir,'Cluster_strongsupport_allwindows.rda')
   # infile.networks	<- file.path(indir,'Cluster_strongsupport_networksallpairs.rda')
   infile.networks <-  file.path(indir,'Rakai_phscnetworks.rda')
@@ -2394,6 +2524,7 @@ couple.analysis <- function(){
   # load run
   infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
   infile.run='/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_runs.rds'
+  
   pty.runs <- data.table(readRDS(infile.run))
   
   # map id and sequences
@@ -2633,11 +2764,158 @@ couple.analysis <- function(){
   ggsave(filename = '~/compare_link12_score_couple.pdf',width=6,height=4)
   
   
+  dc_couple_1921 <- copy(tmp)
   # tmp[LINKED.x==LINKED.y,`12.x`+`21.x` +complex.or.no.ancestry.x]
   # tmp[LINKED.x==LINKED.y,`12.y`+`21.y` +complex.or.no.ancestry.y]
   # tmp[LINKED.x!=LINKED.y,`12.x`+`21.x` +complex.or.no.ancestry.x]
   # tmp[LINKED.x!=LINKED.y,`12.y`+`21.y` +complex.or.no.ancestry.y]
   
+  require(Phyloscanner.R.utilities)
+  require(phyloscannerR)
+  require(tidyverse)
+
+  dw19_couple <- dw19[COUPLE==1,c('ID1','ID2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE')]
+  aid[,AID:=as.character(AID)]
+  dw19_couple <- merge(dw19_couple, aid,by.x='ID1',by.y='PT_ID',all.x=T)
+  dw19_couple <- merge(dw19_couple, aid,by.x='ID2',by.y='PT_ID',all.x=T)
+  dw19_couple[,X.x:=NULL]
+  dw19_couple[,X.y:=NULL]
+  dw19_couple[,ID1:=NULL]
+  dw19_couple[,ID2:=NULL]
+  setnames( dw19_couple, c('AID.x','AID.y'), c('ID1','ID2'))
+  tmp <- dw19_couple[!(ID1<ID2)]
+  setnames(tmp,c('ID1','ID2'),c('ID2','ID1'))
+  dw19_couple <- unique(rbind(dw19_couple[ID1<ID2],tmp))
+  
+  dw_couple <- dw[COUPLE==1,c('H1','H2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE','PTY_RUN')]
+  setnames( dw_couple, c('H1','H2'), c('ID1','ID2'))  
+  tmp <- dw_couple[,min(PTY_RUN), by=c('ID1','ID2')]
+  dw_couple <-  merge(dw_couple,tmp, by.x=c('ID1','ID2','PTY_RUN'),by.y=c('ID1','ID2','V1'))
+  tmp <- dw_couple[!(ID1<ID2)]
+  setnames(tmp,c('ID1','ID2'),c('ID2','ID1'))
+  dw_couple <- unique(rbind(dw_couple[ID1<ID2],tmp))
+  # dw_couple
+
+  
+  # hosts	<- data.table(PT_ID=unique(c(tmp3$ID1,tmp3$ID2)))
+  # hosts <- merge(hosts, subset(aid,select=c('PT_ID','AID')),by='PT_ID',all.x=T)
+  # hosts <- as.character(unique(hosts$AID))
+  tmp <- dc_couple_1921[LINKED.x==LINKED.y & DIRECTED.x==DIRECTED.y & LINK12.x==LINK12.y,]
+  tmp <- merge(tmp, aid,by.x='ID1',by.y='PT_ID',all.x=T)
+  tmp <- merge(tmp, aid,by.x='ID2',by.y='PT_ID',all.x=T)
+  hosts_same <- unique(c(tmp$AID.x,tmp$AID.y))
+  tmp <-  dc_couple_1921[!(LINKED.x==LINKED.y & DIRECTED.x==DIRECTED.y & LINK12.x==LINK12.y),]
+  tmp <- merge(tmp, aid,by.x='ID1',by.y='PT_ID',all.x=T)
+  tmp <- merge(tmp, aid,by.x='ID2',by.y='PT_ID',all.x=T)
+  hosts_diff <- unique(c(tmp$AID.x,tmp$AID.y))
+  # hosts <- unique(c(tmp3$ID1,tmp3$ID2))
+  
+  # hosts %in% dw19_couple$ID1
+  inclusion <- "both"# "either"
+  setnames(dw19_couple, c('ID1','ID2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE'),
+           c('host.1', 'host.2', 'tree.id', 'basic.classification', 'patristic.distance') )
+  setnames(dw_couple, c('ID1','ID2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE'),
+           c('host.1', 'host.2', 'tree.id', 'basic.classification', 'patristic.distance') )
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_same,dwin=as_tibble(dw19_couple), inclusion = "both")
+  g1s <- tmp$graph
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_same,dwin=as_tibble(dw_couple), inclusion = "both")
+  g2s <- tmp$graph
+  library(ggpubr)
+  # arranges <- ggarrange(g1s, g2s, ncol = 2, nrow = 1)
+  # ggsave('~/couple_consistent_pairwise_plot.pdf',arranges,width = 16, height = 150, limitsize = F)
+  # # ggsave('~/couple_pairwise_plot.pdf',g2,width = 12, height = 300, limitsize = F)
+  # 
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_diff,dwin=as_tibble(dw19_couple), inclusion = "both")
+  g1d <- tmp$graph
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_diff,dwin=as_tibble(dw_couple), inclusion = "both")
+  g2d <- tmp$graph
+  # library(ggpubr)
+  # arranged <- ggarrange(g1d, g2d, ncol = 2, nrow = 1)
+  # ggsave('~/couple_inconsistent_pairwise_plot.pdf',arranged,width = 16, height = 150, limitsize = F)
+  
+  # table( tmp$data$basic.topology )
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_30_min_read_100_max_read/' #30 min 100 max
+  infile.networks <-  file.path(indir,'Rakai_phscnetworks.rda')
+  load(infile.networks)
+  dw <- merge(dw, aid, by.x='H1',by.y='AID',all.x=T)
+  dw <- merge(dw, aid, by.x='H2',by.y='AID',all.x=T)
+  setnames(dw, c('PT_ID.x','PT_ID.y'),c('ID1','ID2'))
+  dw <- merge(dw,couple,by=c('ID1','ID2'),all.x=T)
+  
+  dw_couple <- dw[COUPLE==1,c('H1','H2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE','PTY_RUN')]
+  setnames( dw_couple, c('H1','H2'), c('ID1','ID2'))  
+  tmp <- dw_couple[,min(PTY_RUN), by=c('ID1','ID2')]
+  dw_couple <-  merge(dw_couple,tmp, by.x=c('ID1','ID2','PTY_RUN'),by.y=c('ID1','ID2','V1'))
+  tmp <- dw_couple[!(ID1<ID2)]
+  setnames(tmp,c('ID1','ID2'),c('ID2','ID1'))
+  dw_couple <- unique(rbind(dw_couple[ID1<ID2],tmp))
+  
+  setnames(dw_couple, c('ID1','ID2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE'),
+           c('host.1', 'host.2', 'tree.id', 'basic.classification', 'patristic.distance') )
+  
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_same,dwin=as_tibble(dw_couple), inclusion = "both")
+  g3s <- tmp$graph
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_diff,dwin=as_tibble(dw_couple), inclusion = "both")
+  g3d <- tmp$graph
+  
+  indir	<- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_null_min_read_100_max_read/' #no min 100 max
+  infile.networks <-  file.path(indir,'Rakai_phscnetworks.rda')
+  load(infile.networks)
+  dw <- merge(dw, aid, by.x='H1',by.y='AID',all.x=T)
+  dw <- merge(dw, aid, by.x='H2',by.y='AID',all.x=T)
+  setnames(dw, c('PT_ID.x','PT_ID.y'),c('ID1','ID2'))
+  dw <- merge(dw,couple,by=c('ID1','ID2'),all.x=T)
+  
+  dw_couple <- dw[COUPLE==1,c('H1','H2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE','PTY_RUN')]
+  setnames( dw_couple, c('H1','H2'), c('ID1','ID2'))  
+  tmp <- dw_couple[,min(PTY_RUN), by=c('ID1','ID2')]
+  dw_couple <-  merge(dw_couple,tmp, by.x=c('ID1','ID2','PTY_RUN'),by.y=c('ID1','ID2','V1'))
+  tmp <- dw_couple[!(ID1<ID2)]
+  setnames(tmp,c('ID1','ID2'),c('ID2','ID1'))
+  dw_couple <- unique(rbind(dw_couple[ID1<ID2],tmp))
+  
+  setnames(dw_couple, c('ID1','ID2','TREE_ID','BASIC_CLASSIFICATION','PATRISTIC_DISTANCE'),
+           c('host.1', 'host.2', 'tree.id', 'basic.classification', 'patristic.distance') )
+  
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_same,dwin=as_tibble(dw_couple), inclusion = "both")
+  g4s <- tmp$graph
+  tmp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts_diff,dwin=as_tibble(dw_couple), inclusion = "both")
+  g4d <- tmp$graph
+  
+
+  library(ggpubr)
+  arranges <- ggarrange(g1s + ggtitle('2019 analysis \n '),
+                        g3s + ggtitle('2021 analysis, \n with minreadhost and maxreadhost'), 
+                        g4s + ggtitle('2021 analysis, \n without minreadhost and with maxreadhost'),
+                        g2s + ggtitle('2021 analysis, \n without minreadhost and maxreadhost'), ncol = 4, nrow = 1)
+  ggsave('~/couple_consistent_pairwise_plot.pdf',arranges,width = 20, height = 150, limitsize = F)
+  
+  arranged <- ggarrange(g1d + ggtitle('2019 analysis \n '),
+                        g3d + ggtitle('2021 analysis, \n with minreadhost and maxreadhost'), 
+                        g4d + ggtitle('2021 analysis, \n without minreadhost and with maxreadhost'),
+                        g2d + ggtitle('2021 analysis, \n without minreadhost and maxreadhost'), ncol = 4, nrow = 1)
+  
+  ggsave('~/couple_inconsistent_pairwise_plot.pdf',arranged,width = 20, height = 150, limitsize = F)
+  
+  tmp_same <-  dc_couple_1921[LINKED.x==LINKED.y & DIRECTED.x==DIRECTED.y & LINK12.x==LINK12.y,]
+  tmp_same <-  merge(tmp_same, aid, by.x= 'ID1', by.y='PT_ID',all.x=T)
+  tmp_same <-  merge(tmp_same, aid, by.x= 'ID2', by.y='PT_ID',all.x=T)
+  tmp <- tmp_same[,c('AID.x','AID.y','LINKED.x','LINKED.y','LINKED_SCORE.x','LINKED_SCORE.y',
+                     'DIRECTED.x','DIRECTED.y','DIRECTED_SCORE.x','DIRECTED_SCORE.y',
+                     'LINK12.x','LINK12.y','LINK12_SCORE.x','LINK12_SCORE.y')]
+  write.csv(tmp,'~/couple_consistent_pairwise.csv')
+  
+  tmp_diff <-  dc_couple_1921[!(LINKED.x==LINKED.y & DIRECTED.x==DIRECTED.y & LINK12.x==LINK12.y),]
+  tmp_diff <-  merge(tmp_diff, aid, by.x= 'ID1', by.y='PT_ID',all.x=T)
+  tmp_diff <-  merge(tmp_diff, aid, by.x= 'ID2', by.y='PT_ID',all.x=T)
+  tmp <- tmp_diff[,c('AID.x','AID.y','LINKED.x','LINKED.y','LINKED_SCORE.x','LINKED_SCORE.y',
+                     'DIRECTED.x','DIRECTED.y','DIRECTED_SCORE.x','DIRECTED_SCORE.y',
+                     'LINK12.x','LINK12.y','LINK12_SCORE.x','LINK12_SCORE.y')]
+  write.csv(tmp,'~/couple_inconsistent_pairwise.csv')
+  
+  setkey(tmp, AID.x,AID.y)
+  setkey(tmp_diff, AID.x,AID.y)
+  tmp_diff[c(4,7)]
   # couple plots
   library(ggplot2)
   load('~/dcdwina_minreadnull.rda')
@@ -2743,5 +3021,7 @@ couple.analysis <- function(){
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank())
   ggsave('~/dscore_vs_couple.pdf',width = 10, height = 4)
-  
+ 
+   
 }
+
