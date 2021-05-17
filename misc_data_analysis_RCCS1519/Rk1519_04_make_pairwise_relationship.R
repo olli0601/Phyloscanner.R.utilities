@@ -254,8 +254,30 @@ phsc.transmission.networks<- function()
     make_networks(job_tag)
   }
 }
+# job_tag <- '_02_05_null_min_read'
+# indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships'
+# indir	<- paste0(indir.base,job_tag)
+# load(file.path(indir,'ptyr1_workspace.rda'))
+# dwin[1:10,c('host.1','host.2','tree.id','basic.classification','patristic.distance')]
+# 
+# job_tag <- '_02_05_30_min_read_100_max_read'
+# indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships'
+# indir	<- paste0(indir.base,job_tag)
+# load(file.path(indir,'ptyr1_workspace.rda'))
+# dwin[1:10,c('host.1','host.2','tree.id','basic.classification','patristic.distance')]
+# 
+# job_tag <- '_02_05_null_min_read_100_max_read'
+# indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships'
+# indir	<- paste0(indir.base,job_tag)
+# load(file.path(indir,'ptyr1_workspace.rda'))
+# dwin[1:10,c('host.1','host.2','tree.id','basic.classification','patristic.distance')]
 
-
+# job_tag <- '_02_05_30_min_read_100_max_read'
+# indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships'
+# indir	<- paste0(indir.base,job_tag)
+# load(file.path(indir,'ptyr249_workspace.rda'))
+# tmp <- data.table(dwin)
+# tmp[host.2=='AID1311' & host.1=='AID0719']
 
 couple.analysis <- function(){
   library(data.table)
@@ -713,6 +735,23 @@ couple.analysis <- function(){
     ggsave(paste0('~/compare_2019_2021_all/',hosts[1],'_',hosts[2],'.pdf'),arrange,width = 8, height = 12)
   }
   
+  dt <- copy(dw19_couple)
+  dt[,type:='analysis2019']
+  tmp <- copy(dw_couple)
+  tmp[,type:='analysis2021']
+  dt <- rbind(dt,tmp,fill=T)
+  tmp <- copy(dw_maxhost_couple)
+  tmp[,type:='analysis2021_max']
+  dt <- rbind(dt,tmp,fill=T)
+  tmp <- copy(dw_minmaxhost_couple)
+  tmp[,type:='analysis2021_minmax']
+  dt <- rbind(dt,tmp,fill=T)
+  dt <- dcast(dt,host.1 + host.2 + tree.id~type,value.var = 'basic.classification')
+  dt <- na.omit(dt)  
+  dt <- data.table(dt)
+  dt[analysis2019==analysis2021]
+  dt[analysis2019==analysis2021_max]
+  dt[analysis2019==analysis2021_minmax]
   
   # make couple plots
   library(ggplot2)
@@ -1106,8 +1145,119 @@ imbalanced.reads <- function()
   # tmp1 <- tmp[(H1_MORESAMPLES==T & grepl('anc',basic.classification.x))|(H1_MORESAMPLES==F & grepl('desc',basic.classification.x))]
   # tmp2 <- tmp[(H1_MORESAMPLES==T & grepl('anc',basic.classification.y))|(H1_MORESAMPLES==F & grepl('desc',basic.classification.y))]
   # nrow(tmp2)/nrow(tmp1)
-}
+  
+  ## clinical data
+  # load aid
+  infile.aid19 <- '~/todi_pairs_171122_cl25_d50_prior23_min30_anonymised_RIDs.csv'
+  aid19 <- data.table(read.csv(infile.aid19))
+  aid19[, ID:=paste0('RK-',ID)]
+  dcln <- data.table(read.csv('~/Dataset_S3.csv'))
+  dclnid <- unique(subset(dcln,select=c('MALE_ID','FEMALE_ID','EPID_EVIDENCE_DIR')))
+  dclnid <- merge(dclnid,subset(aid19,select=c('ID','AID')),by.x='MALE_ID',by.y='AID')
+  dclnid <- merge(dclnid,subset(aid19,select=c('ID','AID')),by.x='FEMALE_ID',by.y='AID')
+  dclnid <- merge(dclnid,subset(aid,select=c('PT_ID','AID')),by.x='ID.x',by.y='PT_ID')
+  dclnid <- merge(dclnid,subset(aid,select=c('PT_ID','AID')),by.x='ID.y',by.y='PT_ID')
+  dclnid[,EPID_DIR:='12']
+  dclnid[EPID_EVIDENCE_DIR=='fm',EPID_DIR:='21']
+  # order id 
+  dclnid <- subset(dclnid,select=c('EPID_DIR','AID.x','AID.y'))
+  setnames(dclnid,c('AID.x','AID.y'),c('AID1','AID2'))
+  dclnid[,AID1:=as.character(AID1)]
+  dclnid[,AID2:=as.character(AID2)]
+  tmp <- dclnid[!(AID1<AID2)]
+  setnames(tmp,c('AID1','AID2'),c('AID2','AID1'))
+  tmp[, EPID_DIR:=gsub('xx','21',gsub('21','12',gsub('12','xx',EPID_DIR)))]
+  dclnid <- rbind(dclnid[(AID1<AID2)],tmp)
+  
+  # dcln_dw <- merge(dw,dclnid,by.x=c('host.1','host.2'),by.y=c('AID1','AID2'))
 
+  # load net - no constrains
+  load( infile.networks )
+  dc1 <- unique(dc[CATEGORISATION=='close.and.adjacent.and.ancestry.cat'])
+  dc1[,length(N),by=c('H1','H2')]
+  tmp <- dc1[,list(N_EFF=max(N_EFF)),by=c('H1','H2')]
+  dc1 <- merge(dc1,tmp, by=c('H1','H2','N_EFF'))
+  setkey(dc1, H1, H2, PTY_RUN, TYPE)
+  dc1 <- dc1[,head(.SD, 4),by=c('H1','H2')]
+  dc1 <- data.table(dcast(dc1,  H1 + H2 ~ TYPE, value.var= 'SCORE'))
+  dc1[,LINKAGE_SCORE:=`12`+`21`+complex.or.no.ancestry]
+  dc1[,LINKAGE:=LINKAGE_SCORE>=0.6]
+  dc1[LINKAGE==1,DIRECTED_SCORE:=(`12`+`21`)/LINKAGE_SCORE]
+  dc1[LINKAGE==1,DIRECTED:=DIRECTED_SCORE>=0.6]
+  dc1[DIRECTED==1,LINK12:=`12`>`21`]
+
+  # load net - max read host 100 
+  load( infile.networks2 )
+  dc2 <- unique(dc[CATEGORISATION=='close.and.adjacent.and.ancestry.cat'])
+  dc2[,length(N),by=c('H1','H2')]
+  tmp <- dc2[,list(N_EFF=max(N_EFF)),by=c('H1','H2')]
+  dc2 <- merge(dc2,tmp, by=c('H1','H2','N_EFF'))
+  setkey(dc2, H1, H2, PTY_RUN, TYPE)
+  dc2 <- dc2[,head(.SD, 4),by=c('H1','H2')]
+  dc2 <- data.table(dcast(dc2,  H1 + H2 ~ TYPE, value.var= 'SCORE'))
+  dc2[,LINKAGE_SCORE:=`12`+`21`+complex.or.no.ancestry]
+  dc2[,LINKAGE:=LINKAGE_SCORE>=0.6]
+  dc2[LINKAGE==1,DIRECTED_SCORE:=(`12`+`21`)/LINKAGE_SCORE]
+  dc2[LINKAGE==1,DIRECTED:=DIRECTED_SCORE>=0.6]
+  dc2[DIRECTED==1,LINK12:=`12`>`21`]
+  # 
+  dc <- merge(dc1,dc2,by=c('H1','H2'))
+  
+  # pairs with clinical data
+  dcln_dc <- merge(dc,dclnid,by.x=c('H1','H2'),by.y=c('AID1','AID2'))
+
+  dcln_dc[,EPID_LINK12:=F]  
+  dcln_dc[EPID_DIR=='12',EPID_LINK12:=T]
+  
+  # dcln_dc[LINK12.x==EPID_LINK12]
+  # dcln_dc[LINK12.y==EPID_LINK12]
+  # deal with NA in LINK12 
+  dcln_dc[,LINK12.x:=as.character(LINK12.x)]
+  dcln_dc[,LINK12.y:=as.character(LINK12.y)]
+  dcln_dc[is.na(LINK12.x) & is.na(DIRECTED.x), LINK12.x:='UNLINKED']
+  dcln_dc[is.na(LINK12.x) & DIRECTED.x==F, LINK12.x:='UNDIRECTED']
+  dcln_dc[is.na(LINK12.y) & is.na(DIRECTED.y), LINK12.y:='UNLINKED']
+  dcln_dc[is.na(LINK12.y) & DIRECTED.y==F, LINK12.y:='UNDIRECTED']
+  dcln_dc[,EPID_LINK12:=as.character(EPID_LINK12)]  
+  table(dcln_dc$LINK12.x, dcln_dc$EPID_LINK12)
+  table(dcln_dc$LINK12.y, dcln_dc$EPID_LINK12)
+  dcln_dc[LINK12.x!=EPID_LINK12 & LINK12.y==EPID_LINK12]
+  dcln_dc[LINK12.x==EPID_LINK12 & LINK12.y!=EPID_LINK12]
+  
+  tmp <- unique(subset(dcln_dc,select=c('H1','H2','EPID_DIR')))
+  
+  library(tidyverse)
+  control = list(	yintercept_close=0.025,
+                  yintercept_dist=1.0,
+                  breaks_x=seq(0,1e4,500),
+                  minor_breaks_x=seq(0,1e4,100),
+                  breaks_y=c(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25),
+                  limits_y=c(1e-3,0.4),
+                  fill.topology=c("ancestral"="deepskyblue1","descendant"="deepskyblue4","intermingled"= "#FDB863",'sibling'="#8073AC","other"="grey80"))
+  library(Phyloscanner.R.utilities)
+  library(phyloscannerR)
+  library(tidyverse)
+  library(ggpubr)
+  dir.create('~/compare_downsampling_clinical/')
+  for (i in 1:nrow(tmp)) {
+    cat('processing ',i,' out of ', nrow(tmp), ' pairs \n')
+    hosts <- c(tmp$H1[i],tmp$H2[i])
+    tmpx <- dw1[(host.1==hosts[1] & host.2==hosts[2]) | (host.1==hosts[2] & host.2==hosts[1]),'tree.id']
+    tmpx <- rbind(tmpx, dw2[(host.1==hosts[1] & host.2==hosts[2]) | (host.1==hosts[2] & host.2==hosts[1]),'tree.id'])
+    tmpx <- as.integer(gsub('([0-9]+)_to_([0-9]+)','\\1',tmpx$tree.id))
+    control$limits_x <- range(tmpx) + c(-25,25) # bin width
+    tmpp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts,dwin=as_tibble(dw1), inclusion = "both",control=control)
+    g1<- tmpp$graph +
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+    tmpp	<- produce.pairwise.graphs2(ptrees=NULL, hosts=hosts,dwin=as_tibble(dw2), inclusion = "both",control=control)
+    g2<- tmpp$graph +
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+    arrange <- ggarrange(g1 + ggtitle('2021 analysis, \n without minreadhost and maxreadhost'),
+                         g2 + ggtitle('2021 analysis, \n without minreadhost and with maxreadhost'),
+                         ncol = 1, nrow = 2, common.legend = T, legend='bottom')
+    ggsave(paste0('~/compare_downsampling_clinical/',hosts[1],'_',hosts[2],'_',tmp$EPID_DIR[i],'.pdf'),arrange,width = 8, height = 8)
+  }
+}
 
 
 additional_individual <- function(){
@@ -1337,3 +1487,4 @@ additional_individual <- function(){
   ggsave(paste0('~/test_',hosts[1],'_',hosts[2],'.pdf'),arrange,width = 8, height = 12)
   
 }
+
