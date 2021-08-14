@@ -47,3 +47,4 @@ RoxygenNote: 7.0.2
 URL: https://github.com/olli0601/Phyloscanner.R.utilities
 BugReports: https://github.com/olli0601/Phyloscanner.R.utilities/issues
 VignetteBuilder: knitr
+StagedInstall: no
