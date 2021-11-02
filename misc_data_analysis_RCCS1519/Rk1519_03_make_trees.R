@@ -1720,6 +1720,23 @@ check.files <- function(dir,p){
     df_check <- rbind(df_check,tmp)
   }
   save(df_check,file = file.path(dir,'file_checks.rda'))
+  
+  load(file.path(dir,'file_checks.rda'))
+  df_check2 <- df_check[,{
+    tmp <- table(MISSING_TYPE)
+    list(type = names(tmp), value=as.vector(tmp))
+    }
+    ,by='PTY_RUN']
+  df_check2[type=='FASTA']
+  # NEED FURTHER CHECK
+  df_check[is.na(fa)]
+  df_check[grep('v2.fasta',fa)]
+  df_check[PTY_RUN==1]
+  df_check[PTY_RUN==2]
+  df_check[PTY_RUN==100]
+  df_check[PTY_RUN==200]
+  df_check[PTY_RUN==300]
+  df_check[PTY_RUN==400]
 }
 
 alignment_gap <- function(){
@@ -1737,6 +1754,8 @@ alignment_gap <- function(){
     files_start[which(files_posex==T)]<- as.numeric(gsub('.*PositionsExcised_([0-9]+)_.*', "\\1", files[which(files_posex==T)]))
     df <- data.table()
     setwd(dir)
+    # grep('8850|8875',files)
+    # 270, 271i
     for (i in 1:length(files)) {
       skip_to_next <- FALSE
       # tryCatch(
@@ -1756,6 +1775,10 @@ alignment_gap <- function(){
     df[,ID:=seq_along(ntotal),by=c('pos','posex')]
     df[,pgap:=ngap/ntotal]
     df[,allgap:=pgap>0.95]
+    # tmp[,pgap:=ngap/ntotal]
+    # tmp[,allgap:=pgap>0.95]
+    # tmp[allgap==T]
+    df[allgap==T]
     df[,count_allgap:=ave(allgap, cumsum(!allgap), FUN = cumsum), by=c('pos','posex')]
     
     
@@ -1768,11 +1791,15 @@ alignment_gap <- function(){
   alignment_gaps <- list()
   output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
   dirs <- list.files(output.dir)
+  # which(dirs=="ptyr368_trees")
+  # i <- 300
+  # dir <- p
   for (i in 1:length(dirs)) {
     p <- file.path(output.dir,dirs[i])
     alignment_gaps[[i]] <- alignment_gap_check(p)
   }
   save(alignment_gaps,file = '~/alignment_lgaps.rda')
+  load('~/alignment_lgaps.rda')
   
 # p <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/ptyr1_trees'
 # tmp <- alignment_gap_check(p)
@@ -1794,10 +1821,56 @@ alignment_gap <- function(){
 
   
   ######
+  alignment_gaps <- list()
+  output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
+  dirs <- list.dirs(output.dir,recursive = F,full.names = F)
+  
   library(data.table)
   load('~/alignment_lgaps.rda')
-  alignment_gaps <- rbindlist(alignment_gaps,idcol = T)
-  alignment_gaps <- dcast(alignment_gaps, .id + pos ~ posex, value.var='V1')
+  alignment_gaps <- rbindlist(alignment_gaps,idcol = 'ID')
+  tmp <- data.table(ID=1:length(dirs),PTY_RUN=dirs)
+  tmp[,PTY_RUN:=as.numeric(gsub('ptyr([0-9]+)_trees','\\1',PTY_RUN))]
+  alignment_gaps <- merge(alignment_gaps, tmp,by='ID',all.x=T)
+ 
+  # 1: 220 2150  TRUE 45     297
+  # 2: 220 2175  TRUE 45     297
+  # 3: 246 8625 FALSE 45      32
+  # 4: 386 2175 FALSE 45      78
+  # 5: 386 2175  TRUE 45      78
+  # 6: 366 9175  TRUE 46       6
+  # 7: 368 8625 FALSE 48      61
+  # 8: 368 8650 FALSE 48      61
+  # 9: 368 8675 FALSE 48      61
+  # 10: 368 8700 FALSE 48      61
+  # 11: 368 8725 FALSE 48      61
+  # 12: 368 8750 FALSE 48      61
+  # 13: 368 8800 FALSE 48      61
+  # 14: 368 8825 FALSE 48      61
+  # 15: 137 8775 FALSE 54     221
+  # 16: 137 8800 FALSE 54     221
+  # 17: 137 8825 FALSE 54     221
+  # 18: 368 8875 FALSE 60      61
+  # 19: 137 8850 FALSE 63     221
+  # 20: 368 8850 FALSE 75      61
+  setkey(alignment_gaps,V1) 
+  tail(alignment_gaps,20)
+  # hist(alignment_gaps$V1)
+  tmp <-  alignment_gaps[,sum(V1>6)/length(V1),by='PTY_RUN']
+  # hist(tmp$V1)
+  ggplot(tmp,aes(V1))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmp[PTY_RUN==1]$V1),linetype=2)+
+    geom_vline(aes(xintercept=  tmp[PTY_RUN==404]$V1),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n proportion of the largest \n gap chunk with length >6')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/len_prop_hist.pdf', height=4,width = 6)
+  
+  
+  
+  alignment_gaps <- dcast(alignment_gaps, PTY_RUN + pos ~ posex, value.var='V1')
   tmp <- alignment_gaps[is.na(`TRUE`)]
   setnames(tmp,'FALSE','V1')
   tmp[,`TRUE`:=NULL]
@@ -1807,14 +1880,119 @@ alignment_gap <- function(){
   alignment_gaps[,`FALSE`:=NULL]
   alignment_gaps[,posex:=TRUE]
   alignment_gaps <- rbind(alignment_gaps,tmp)
-  alignment_gaps <- dcast(alignment_gaps, .id~pos, value.var='V1')
+  alignment_gaps <- dcast(alignment_gaps, PTY_RUN~pos, value.var='V1')
   tmp <- as.matrix(alignment_gaps)
   # apply(tmp, 2, function(x)paste0(round(median(x,na.rm = T),2), '[', round(quantile(x,0.025,na.rm = T)), '-', round(quantile(x,0.975,na.rm = T)), ']'))
   # hist(apply(tmp[,2:ncol(tmp)], 1, function(x)max(x,na.rm = T)))
   # hist(apply(tmp[,2:ncol(tmp)], 2, function(x)max(x,na.rm = T)))
   tmpdf <- data.table(melt(t(tmp[,2:ncol(tmp)])))
+  tmpdf2 <- tmpdf[,paste0(round(median(value,na.rm = T),2), ' ( ', paste(round(quantile(value,probs = c(0.025,0.975),na.rm = T)),collapse = ' - '),' ) '),
+        by='Var2']
+  tmpdf2$V1
+  tmpdf3 <- tmpdf[,list(MAX=max(value,na.rm = T),
+                        MIN=min(value,na.rm = T),
+                        M=median(value,na.rm = T)),by='Var2']
+  tmpdf3[Var2==404]
+  tmpdf3[Var2==1]
+  quantile(tmpdf3$MAX,probs = c(0.025,0.5,0.975))
+  quantile(tmpdf3$MIN,probs = c(0.025,0.5,0.975))
+  quantile(tmpdf3$M,probs = c(0.025,0.5,0.975))
+  tmpdf3[Var2==1|Var2==404]
   range(tmpdf$value,na.rm=T)
+  hist(tmpdf3$MAX)
+  hist(tmpdf3$M)
   library(ggplot2)
+  tmpdf3
+  setkey(tmpdf3,MAX)
+  tail(tmpdf3)
+  # 1:  167  45   0 0
+  # 2:  293  45   0 1
+  # 3:  297  45   0 1
+  # 4:    6  46   0 2
+  # 5:  221  63   0 2
+  # 6:   61  75   0 1
+  setkey(tmpdf3,M)
+  tail(tmpdf3)
+  # 1:  406  27   0 3
+  # 2:   44  33   1 3
+  # 3:    7  36   0 3
+  # 4:  408  27   0 4
+  # 5:  409  30   0 4
+  # 6:  407  36   1 4
+  setkey(tmpdf3,MIN)
+  tail(tmpdf3)
+  # 1:  408  27   0 4
+  # 2:  409  30   0 4
+  # 3:  218  15   1 3
+  # 4:  405  27   1 3
+  # 5:   44  33   1 3
+  # 6:  407  36   1 4
+ 
+  tmp <- tmpdf[Var2%in% c(167,293,297,6,221,61),]
+  setkey(tmp, value)
+  tail(tmp,10)
+  # 1: 8725   61    48
+  # 2: 8750   61    48
+  # 3: 8800   61    48
+  # 4: 8825   61    48
+  # 5: 8775  221    54
+  # 6: 8800  221    54
+  # 7: 8825  221    54
+  # 8: 8875   61    60
+  # 9: 8850  221    63
+  # 10: 8850   61    75
+  # 61 looks fine 221 looks wierd...
+
+    
+  ggplot(tmpdf3,aes(MAX))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$MAX),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$MAX),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n maximum length of the largest gap chunks \n in a potential transmission network')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/max_length_hist.pdf', height=4,width = 6)
+  
+  ggplot(tmpdf3,aes(MIN))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$MIN),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$MIN),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n minimum length of the largest gap chunks \n in a potential transmission network')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/min_length_hist.pdf', height=4,width = 6)
+  
+  
+  ggplot(tmpdf3,aes(M))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$M),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$M),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n median length of the largest gap chunks \n in a potential transmission network')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/median_length_hist.pdf', height=4,width = 6)
+  
+  
+  
+  tmp <- alignment_tmrcas[,sum(V3<1920)/length(V3),by='PTY_RUN']
+  # hist(tmp$V1)
+  ggplot(tmpdf,aes(V1))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$V1),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$V1),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n proportion of genome windows \n with TMRCA < 1920')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/tma_prop_hist.pdf', height=4,width = 6)
+  
   library(ggpubr)
   g1 <- ggplot(tmpdf[Var2<=52],aes(factor(Var2),value))+
     geom_boxplot()+
@@ -2071,6 +2249,7 @@ alignment_tmrca <- function(){
   
   
   #  
+  library(data.table)
   output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
   blen_list <- list()
   age_root_list <- list()
@@ -2083,12 +2262,125 @@ alignment_tmrca <- function(){
       age_root_list[[i]] <- data.table(tmp[[2]])
                                        })
   }
-  
+  save(age_root_list,file = '~/alignment_age_root.rda')
   ######
-  library(data.table)
-  alignment_tmrcas <- rbindlist(age_root_list,idcol = T)
-  tmpdf <- subset(alignment_tmrcas,select=c('.id','V3'))
-  setnames(tmpdf,c('.id','V3'),c('Var2','value'))
+  output.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_output/'
+  dirs <- list.dirs(output.dir,recursive = F,full.names = F)
+  library(data.table) 
+  load('~/alignment_age_root.rda')
+
+  for (i in 1:length(age_root_list)){
+    cat("run ID: ",i,'\n')
+    dir <- file.path(output.dir,paste0('ptyr',i,'_trees'))
+    files <-list.files(dir)
+    files <- grep('treefile$',files,value = T)
+    wstart[grep('PositionsExcised',files,invert = T)] <- 
+      as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',files[grep('PositionsExcised',files,invert = T)]))
+    wstart[grep('PositionsExcised',files)] <- 
+      as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',files[grep('PositionsExcised',files)]))
+    try({age_root_list[[i]]$TREEID <- wstart})
+  }
+  
+  alignment_tmrcas <- rbindlist(age_root_list,idcol = 'PTY_RUN')
+  tmp <- alignment_tmrcas[,sum(V3<1920)/length(V3),by='PTY_RUN']
+  # hist(tmp$V1)
+  ggplot(tmp,aes(V1))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmp[PTY_RUN==1]$V1),linetype=2)+
+    geom_vline(aes(xintercept=  tmp[PTY_RUN==404]$V1),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n proportion of genome windows \n with TMRCA < 1920')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/tma_prop_hist.pdf', height=4,width = 6)
+  
+  # alignment_tmrcas <- rbindlist(age_root_list,idcol = 'PTY_RUN',
+  #                           fill = T)
+  # 
+  # alignment_tmrcas[is.na(TREEID),TREEID:=seq_len(length(TREEID)),by='PTY_RUN']
+  tmp <- subset(alignment_tmrcas,select=c('PTY_RUN','V3','TREEID'))
+  setkey(tmp,V3)
+  head( tmp[!is.na(V3)],10)
+  # 1:      12 1774.435   5875
+  # 2:     339 1782.482   5900
+  # 3:      44 1783.953     63
+  # 4:      22 1786.225   5925
+  # 5:     278 1792.346   5925
+  # 6:      97 1793.173   6025
+  # 7:     160 1796.729   5900
+  # 8:     152 1800.825   5900
+  # 9:      64 1802.173   5900
+  # 10:      97 1803.147   5875
+  
+  ptyi <- seq(800,9175,25) # exclude ends
+  ptyi <- c( ptyi[ptyi <= 6615-250],6825,6850,ptyi[ptyi >= 7636]) # exclude vloop except 2 windows without gaps
+  ptyi[62:64]
+  
+  tmpdf <- subset(alignment_tmrcas,select=c('PTY_RUN','V3'))
+  setnames(tmpdf,c('PTY_RUN','V3'),c('Var2','value'))
+  
+  
+  tmpdf2 <- tmpdf[,paste0(round(median(value,na.rm = T),2), ' ( ', paste(round(quantile(value,probs = c(0.025,0.975),na.rm = T)),collapse = ' - '),' ) '),
+                  by='Var2']
+  tmpdf2$V1
+  tmpdf3 <- tmpdf[,list(MAX=max(value,na.rm = T),
+                        MIN=min(value,na.rm = T),
+                        M=median(value,na.rm = T)),by='Var2']
+  quantile(tmpdf3$MAX,probs = c(0.025,0.5,0.975))
+  quantile(tmpdf3$MIN,probs = c(0.025,0.5,0.975))
+  quantile(tmpdf3$M,probs = c(0.025,0.5,0.975))
+  tmpdf3[Var2==1|Var2==404]
+  
+  # hist(tmpdf3$MIN)
+  # hist(tmpdf3$M)
+  
+  
+  # 2.5%      50%    97.5% 
+  # 1983.570 1985.876 1986.397 
+  # 2.5%      50%    97.5% 
+  # 1805.312 1850.443 1886.111 
+  # 2.5%      50%    97.5% 
+  # 1951.912 1957.451 1960.100 
+  # Var2      MAX      MIN        M
+  # 1:    1 1985.633 1854.144 1956.701
+  # 2:  404 1986.309 1866.693 1953.840
+
+    
+    ggplot(tmpdf3,aes(MAX))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$MAX),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$MAX),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n maximum time estimates of common ancestry \n in a potential transmission network')+
+      theme(text = element_text(size = 20))
+  ggsave(filename = '~/max_tma_hist.pdf', height=4,width = 6)
+  
+  ggplot(tmpdf3,aes(MIN))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$MIN),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$MIN),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n minimum time estimates of common ancestry \n in a potential transmission network')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/min_tma_hist.pdf', height=4,width = 6)
+  
+  
+  ggplot(tmpdf3,aes(M))+
+    geom_histogram()+
+    theme_bw()+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==1]$M),linetype=2)+
+    geom_vline(aes(xintercept=  tmpdf3[Var2==404]$M),linetype=2)+
+    scale_y_continuous(expand = c(0,0))+
+    scale_x_continuous(expand = c(0,0))+
+    labs(x='\n median time estimates of common ancestry \n in a potential transmission network')+
+    theme(text = element_text(size = 20))
+  ggsave(filename = '~/median_tma_hist.pdf', height=4,width = 6)
+    
   range(tmpdf$value,na.rm=T)
   library(ggplot2)
   library(ggpubr)
