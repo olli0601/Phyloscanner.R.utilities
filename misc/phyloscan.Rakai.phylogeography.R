@@ -9397,8 +9397,11 @@ RakaiFull.phylogeography.211126.2dpointprocess.get.data<- function()
 	rtp[,MALE_AGE_AT_MID:=2013.25-MALE_BIRTHDATE]
 	rtp[,FEMALE_AGE_AT_MID:=2013.25-FEMALE_BIRTHDATE]
 	set.seed(42)
-	set(rtp, NULL, 'MALE_AGE_AT_MID', rtp[,MALE_AGE_AT_MID + runif(nrow(rtp), min=-1, max=1)])
-	set(rtp, NULL, 'FEMALE_AGE_AT_MID', rtp[,FEMALE_AGE_AT_MID + runif(nrow(rtp), min=-1, max=1)])
+	rtp[,MALE_RD:=runif(1, min=-1, max=1),by='MALE_RID']
+	rtp[,FEMALE_RD:=runif(1, min=-1, max=1),by='FEMALE_RID']
+	rtp[,MALE_AGE_AT_MID:=MALE_AGE_AT_MID + MALE_RD]
+	rtp[,FEMALE_AGE_AT_MID:=FEMALE_AGE_AT_MID + FEMALE_RD]
+	set(rtp,NULL,c('MALE_RD','FEMALE_RD'),NULL)
 	# make anonymous RID
 	tmp <- unique(subset(rtp, select=FEMALE_RID))
 	tmp[, FEMALE_AID:= paste0('F_',sample(nrow(tmp)))]
