@@ -5,6 +5,7 @@ library(ggpubr)
 library(tidyverse)
 library(igraph)
 library(dplyr)
+library(rstan)
 library(pammtools)# plot stepribbon
 
 
@@ -242,7 +243,7 @@ rkuvri.submit.make.distance <- function(){
                           hpc.select=1, 
                           hpc.nproc=1, 
                           hpc.mem= "5gb", 
-                          hpc.load= "module load anaconda3/personal\nsource activate Renv", 
+                          hpc.load= "module load anaconda3/personal\nsource activate MakePotentialSubpgraphs", 
                           hpc.array= jobn,
                           hpc.q = NA)
   
@@ -317,17 +318,11 @@ rkuvri.collect.distance.per.person.pair <- function(){
     gc()
   }
 }
-
-
-rkuvri.find.threshold.from.couples<- function(){
-  #' input couples, sequences, person ids, similarity results, 
-  #' take similarity data for couples, fit bimodal distributions to similarities, define the threshold
-  #' the most useful output would be threshold files
-  #' Note: eligible sequences should satisfy length >= 250, have person id
-  #' eligible pairs of sequences should not be the same person
+rkuvri.pattern.from.ff<- function(){
   
   # file names
   window_size <- 500
+  length_cutoff <- 250
   windown <- 99
   
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
@@ -337,7 +332,7 @@ rkuvri.find.threshold.from.couples<- function(){
   infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
   infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
   infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
-  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'results.rda'))
+  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'_results.rda'))
   
   # load data
   alignment <- read.fasta(file = infile.sequence)
@@ -369,12 +364,113 @@ rkuvri.find.threshold.from.couples<- function(){
   dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
   tmp <- dinfo[is.na(pt_id)]
   dinfo <- dinfo[!is.na(pt_id)]
-  tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
-  colnames(tmp2) <- c("pt_id","pangea_id","sex")
-  set(tmp, NULL, c("pt_id","sex"), NULL)
-  tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
-  dinfo <- rbind(dinfo, tmp)
   cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+  
+  # calculate similarities of pairs among ff on each window
+  i=1
+    # similarity per window
+    cat('\n process window ',i , '\n')
+    load(infile.dist[i])
+    #
+    distancei <- distancei[LENGTH >= length_cutoff,]
+    # add couple
+    setnames(dinfo, colnames(dinfo), paste0(colnames(dinfo),'1'))
+    distancei <- merge(distancei,dinfo, by.x=c('TAXA1'), by.y=c('pangea_id1'), all.x=T) 
+    setnames(dinfo, colnames(dinfo), gsub('1','2',colnames(dinfo)))
+    distancei <- merge(distancei,dinfo, by.x=c('TAXA2'), by.y=c('pangea_id2'), all.x=T) 
+    setnames(dinfo, colnames(dinfo), gsub('2','',colnames(dinfo)))
+    # remove no pt_id
+    distancei <- distancei[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+    # distancei2 <- distancei[COUPLE==1,c('pt_id1','pt_id2','PERC','WINDOW')]
+    distancei <- distancei[sex1!='U' & sex2!='U']
+    distancei[,TYPE:='heterosexual']
+    distancei[sex1=='M' & sex2=='M' ,TYPE:='male-male']
+    distancei[sex1=='F' & sex2=='F',TYPE:='female-female']
+    ggplot(distancei[TYPE!='male-male'],aes(PERC,fill=TYPE))+
+      geom_histogram(alpha=0.6, position = 'identity') +
+      theme_bw() +
+      labs(x= '\n similarity scores', y='count \n', fill="pair type")+
+      theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical',text = element_text(size=20))+
+      scale_x_continuous(expand = c(0,0.05))+
+      scale_y_continuous(expand = c(0,0.05))+guides(fill=guide_legend(nrow=1))
+    ggsave(file.path(potential.networks.analysis.dir,'distance_ff_and_hete.pdf'), width = 6,height = 4)
+    
+    ggplot(distancei[TYPE!='male-male'],aes(PERC,fill=TYPE))+
+      geom_density(alpha=0.6, position = 'identity') +
+      theme_bw() +
+      labs(x= '\n similarity scores', y='count \n', fill="pair type")+
+      theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical',text = element_text(size=20))+
+      scale_x_continuous(expand = c(0,0.05))+
+      scale_y_continuous(expand = c(0,0.05))+guides(fill=guide_legend(nrow=1))
+    ggsave(file.path(potential.networks.analysis.dir,'density_distance_ff_and_hete.pdf'), width = 6,height = 4)
+    
+    kstest <- ks.test(distancei[TYPE=='female-female',]$PERC,distancei[TYPE=='heterosexual',]$PERC)
+    g <- ggplot(distancei[TYPE!='male-male'], aes(PERC,color=TYPE)) + 
+      stat_ecdf(geom = "step")+
+      theme_bw() +
+      labs(x= '\n similarity scores', y='empirical cumulative density \n', color="pair type")+
+      theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical',text = element_text(size=20))+
+      scale_x_continuous(expand = c(0,0.05))+
+      scale_y_continuous(expand = c(0,0.05))+guides(color=guide_legend(nrow=1))
+}
+
+rkuvri.find.threshold.from.couples<- function(){
+  #' input couples, sequences, person ids, similarity results, 
+  #' take similarity data for couples, fit bimodal distributions to similarities, define the threshold
+  #' the most useful output would be threshold files
+  #' Note: eligible sequences should satisfy length >= 250, have person id
+  #' eligible pairs of sequences should not be the same person
+  
+  # file names
+  window_size <- 500
+  windown <- 99
+  
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+  infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
+  infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'_results.rda'))
+  
+  # load data
+  alignment <- seqinr::read.fasta(file = infile.sequence)
+  unique(do.call(c, lapply(alignment, unique)))
+  nsequence <- length(alignment)
+  npos <- unique(lengths(alignment))
+  
+  # windows
+  windows_last_start <- ceiling(npos/100) * 100 - window_size + 1
+  windows_2last_end <- floor(npos/100) * 100
+  windows_start <- seq(1,windows_last_start,100)
+  windows_end <- c(seq(window_size ,windows_2last_end,100),npos)
+  windows <- seq_len(length(windows_start))
+  dw <- data.table(WINDOW=windows,
+                   START=windows_start,
+                   END=windows_end)
+  
+  
+  # map alignments to studyid
+  dinfo <- data.table(pangea_id=names(alignment))
+  id.dt <- data.table(read.csv(infile.ind.rccs))
+  id.dt <- subset(id.dt,select = c("pt_id","sex","pangea_id"))
+  id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- subset(tmp,select = c("pt_id","sex","pangea_id"))
+  tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
+  id.dt <- rbind(id.dt,tmp)
+  id.dt <- unique(id.dt)
+  dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
+  tmp <- dinfo[is.na(pt_id)]
+  dinfo <- dinfo[!is.na(pt_id)]
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
+  cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+  
   
   # process couple, map to studyid
   load(infile.couple)
@@ -394,6 +490,7 @@ rkuvri.find.threshold.from.couples<- function(){
   tmp_couple <- rbind(tmp_couple, tmp)
   unique(tmp_couple)
   tmp_couple  <- tmp_couple[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+  
   
   # calculate similarities of pairs among couples on each window
   for (i in 1:windown) {
@@ -423,8 +520,166 @@ rkuvri.find.threshold.from.couples<- function(){
   # save 
   save(ans, file = file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))  
   
+  infile.rccs <- file.path(data.dir,'PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
+  infile.mrc <- file.path(data.dir,'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
+  
+  mapping_rccs <- readRDS(infile.rccs)
+  dconsensus <- subset(mapping_rccs,select=c('PANGEA_ID','CONSENSUS','F'))
+  dconsensus <- unique(dconsensus[CONSENSUS!="",])
+  dconsensus[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+  mapping_mrc <- readRDS(infile.mrc)
+  tmp <- subset(mapping_mrc,select=c('PANGEA_ID','CONSENSUS','F'))
+  tmp <- unique(tmp[CONSENSUS!="",])
+  tmp[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
+  dconsensus = rbind(dconsensus, tmp)
+  dconsensus[,OLD:=grepl('PANGEA1',`F`)]
+  dconsensus <- unique(subset(dconsensus,select=c('PANGEA_ID','OLD')))
+  tmp = dconsensus[,length(OLD),by='PANGEA_ID']
+  tmp = tmp[V1>1]
+  # if appear in pangea 1 and 2 consider as old
+  tmp[,OLD:=TRUE]
+  tmp[,V1:=NULL]
+  dconsensus <- rbind(dconsensus[!PANGEA_ID%in% tmp$PANGEA_ID], tmp)
+  # calculate similarities of pairs among couples on each window
+  for (i in 1:1) {
+    # similarity per window
+    cat('\n process window ',i , '\n')
+    load(infile.dist[i])
+    #
+    distancei <- distancei[LENGTH >= length_cutoff,]
+    # add couple
+    setnames(dinfo, colnames(dinfo), paste0(colnames(dinfo),'1'))
+    distancei <- merge(distancei,dinfo, by.x=c('TAXA1'), by.y=c('pangea_id1'), all.x=T) 
+    setnames(dinfo, colnames(dinfo), gsub('1','2',colnames(dinfo)))
+    distancei <- merge(distancei,dinfo, by.x=c('TAXA2'), by.y=c('pangea_id2'), all.x=T) 
+    setnames(dinfo, colnames(dinfo), gsub('2','',colnames(dinfo)))
+    
+    # setnames(dconsensus, colnames(dconsensus), paste0(colnames(dconsensus),'1'))
+    # distancei <- merge(distancei,dconsensus, by.x=c('TAXA1'), by.y=c('PANGEA_ID1'), all.x=T) 
+    # setnames(dconsensus, colnames(dconsensus), gsub('1','2',colnames(dconsensus)))
+    # distancei <- merge(distancei,dconsensus, by.x=c('TAXA2'), by.y=c('PANGEA_ID2'), all.x=T) 
+    # setnames(dconsensus, colnames(dconsensus), gsub('2','',colnames(dconsensus)))
+    # remove no pt_id
+    distancei <- distancei[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+    # # distancei[is.na(OLD1)|is.na(OLD2)]
+    # distancei[,RCCS1:=grepl('RK-',pt_id1)]
+    # distancei[,RCCS2:=grepl('RK-',pt_id2)]
+    # # distancei[,length(LENGTH),by=c('OLD1','OLD2')] 
+    # # distancei[,length(LENGTH),by=c('RCCS1','RCCS2')] 
+    # distancei[,TYPE_OLD:='old-new pairs']
+    # distancei[OLD1==T & OLD2==T,TYPE_OLD:='old pairs']
+    # distancei[OLD1==F & OLD2==F,TYPE_OLD:='new pairs']
+    # distancei[,TYPE_RCCS:='RCCS-MRC pairs']
+    # distancei[RCCS1==T & RCCS2==T,TYPE_RCCS:='RCCS pairs']
+    # distancei[RCCS1==F & RCCS2==F,TYPE_RCCS:='MRC pairs']
+    # distancei[,length(LENGTH),by=c('TYPE_OLD','TYPE_RCCS')]
+      
+    load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+    
+    min(distancei$PERC)
+    g <- ggplot(distancei, aes(PERC))+
+      geom_histogram(bins=100)+
+      theme_bw()+
+      labs(x='\n similarity scores', y='count \n') +
+      scale_x_continuous(expand = c(0,0), breaks = seq(0.7,1,by=0.05), limits = c(0.7,1))+
+      scale_y_continuous(expand = c(0,0.05))+
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            strip.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA),
+            text = element_text(size=20))+
+      geom_vline(xintercept = threshold[1,]$`2.5%`, linetype=2)+
+      geom_vline(xintercept = threshold[1,]$`50%`, linetype=1)+
+      geom_vline(xintercept = threshold[1,]$`97.5%`, linetype=2)
+    ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_w1_allpairs.pdf'),g,width = 6,height = 4)
+    
+    g <- ggplot(distancei, aes(PERC))+
+      geom_histogram(bins=100)+
+      theme_bw()+
+      labs(x='\n similarity scores', y='count \n') +
+      scale_x_continuous(expand = c(0,0), breaks = seq(0.7,1,by=0.02), limits = c(0.7,1))+
+      scale_y_continuous(expand = c(0,0.05))+
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            strip.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA),
+            text = element_text(size=20))+
+      geom_vline(xintercept = threshold[1,]$`2.5%`, linetype=2)+
+      geom_vline(xintercept = threshold[1,]$`50%`, linetype=1)+
+      geom_vline(xintercept = threshold[1,]$`97.5%`, linetype=2)+
+      coord_cartesian(xlim = c(0.9,1))
+    ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_w1_allpairs_cutted.pdf'),g,width = 6,height = 4)
+    
+    g <- ggplot(distancei, aes(PERC))+
+      geom_histogram(bins=100)+
+      facet_wrap(~TYPE_OLD,ncol = 3,scales = 'free') +
+      theme_bw()+
+      labs(x='\n similarity scores', y='count \n') +
+      scale_x_continuous(expand = c(0,0), breaks = seq(0.7,1,by=0.05), limits = c(0.7,1))+
+      scale_y_continuous(expand = c(0,0.05))+
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            strip.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA),
+            text = element_text(size=20))+
+      geom_vline(xintercept = threshold[1,]$`2.5%`, linetype=2)+
+      geom_vline(xintercept = threshold[1,]$`50%`, linetype=1)+
+      geom_vline(xintercept = threshold[1,]$`97.5%`, linetype=2)
+    ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_w1_byoldpairs.pdf'),g,width = 12,height = 4)
+    
+    g <- ggplot(distancei, aes(PERC))+
+      geom_histogram(bins=100)+
+      facet_wrap(~TYPE_RCCS,ncol = 3,scales = 'free') +
+      theme_bw()+
+      labs(x='\n similarity scores', y='count \n') +
+      scale_x_continuous(expand = c(0,0), breaks = seq(0.7,1,by=0.05), limits = c(0.7,1))+
+      scale_y_continuous(expand = c(0,0.05))+
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            strip.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA),
+            text = element_text(size=20))+
+      geom_vline(xintercept = threshold[1,]$`2.5%`, linetype=2)+
+      geom_vline(xintercept = threshold[1,]$`50%`, linetype=1)+
+      geom_vline(xintercept = threshold[1,]$`97.5%`, linetype=2)
+    ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_w1_byrccspairs.pdf'),g,width = 12,height = 4)
+    
+
+    
+    
+    
+    
+    # distancei <- merge(distancei,tmp_couple, by=c('pt_id1','pt_id2'), all.x=T)
+    # distancei <- distancei[COUPLE==1,c('pt_id1','pt_id2','PERC','WINDOW')]
+    # if(i==1){
+    #   ans <- distancei
+    # }else{
+    #   ans <- rbind(ans, distancei)
+    # }
+    
+  }
+  
+  tmp <- unique(ans,select=c( 'pt_id1', 'pt_id2','WINDOW'))
+  tmp <- unique(tmp)
+  tmp <- tmp[,length(WINDOW),by=c('pt_id1', 'pt_id2')]
   # make stan data
   # load(file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))
+  q30 = vector('numeric',max(ans$WINDOW))
+  for (i in seq_len(max(ans$WINDOW))) {
+    q30[i] <- quantile(ans[WINDOW==i,]$PERC,probs = 0.3)
+  }
+  load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+  library(ggplot2)
+  library(data.table)
+  threshold[,ID:=1:99]
+  tmp=data.table(ID=1:99,q30=q30)
+ggplot(threshold,aes(ID,`50%`)) +
+  geom_line()+
+  geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`))+
+  geom_line(data = tmp, mapping = aes(ID,q30),color='red',linetype=2)+
+  theme_bw() + labs(x='\n windows',y='threshold\n')
+ggsave(file.path(potential.networks.analysis.dir,paste0('q30_plot.pdf')), width = 6, height = 4)
+
   similarity <- list()
   for (i in seq_len(max(ans$WINDOW))) {
     similarity[[i]] <- ans[WINDOW==i,]$PERC
@@ -446,6 +701,27 @@ rkuvri.find.threshold.from.couples<- function(){
   stan_data$similarity[is.na(stan_data$similarity)] <- -1
   
   # save(stan_data, file = file.path(potential.networks.analysis.dir,'stan_data_threshold.rda'))
+  
+  # library(data.table)
+  tmp <- stan_data$similarity
+  tmp <- data.table(t(tmp[seq(1,99,20),]))
+  colnames(tmp) <- paste0(windows_start[seq(1,99,20)],' - ', windows_end[seq(1,99,20)])
+  tmp <- melt(tmp)
+  tmp <- tmp[value!=-1]
+  
+  g <- ggplot(tmp, aes(value))+
+    geom_histogram()+
+    facet_wrap(~variable,ncol = 2,scales = 'free') +
+    theme_bw()+
+    labs(x='\n similarity scores', y='count \n') +
+    scale_x_continuous(expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0.05))+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA),
+          text = element_text(size=20))
+  ggsave(file.path(potential.networks.analysis.dir,'plots','raw_histogram_distance_couple_per_window_sample5.pdf'),g,width = 8, height= 6)
   
   
   # fit bimodal model to similarities
@@ -490,6 +766,7 @@ rkuvri.find.threshold.from.couples<- function(){
   save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_fit.rda'))
   
   
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_fit.rda'))
   # check fit 
   rh= c()
   ness= c()
@@ -529,34 +806,80 @@ rkuvri.find.threshold.from.couples<- function(){
   #  range(ans$PERC)
   #  -0.4453817  0.0000000
   
-  # plot fit to similarities
-  for (i in 1:windown) {
-    cat('process window ',i, '\n')
-    x <- seq(-0.45,0,length.out = 90 +1)
-    df_plot_fit <- data.table(x=x,
-                              c1 = df[VAR=='theta' & WIN ==i,]$`50%` * dnorm(x, df[VAR=='mu[1]' & WIN ==i,]$`50%`, df[VAR=='sigma[1]' & WIN ==i,]$`50%`),
-                              c2 = (1-df[VAR=='theta' & WIN ==i,]$`50%`) *dnorm(x, df[VAR=='mu[2]' & WIN ==i,]$`50%`, df[VAR=='sigma[2]' & WIN ==i,]$`50%`))
-    max_hist=  max(hist(ans[WINDOW==i,]$PERC,plot=F, breaks = seq(-0.45,0,length.out = 30 + 1), right = FALSE)$counts)
-    scale <- max_hist/max(c(df_plot_fit$c1,df_plot_fit$c2))
-    g = ggplot(ans[WINDOW==i,],aes(x=PERC))+
-      geom_histogram(alpha=0.6)+
-      geom_line(data=df_plot_fit, aes(x,c1 * scale), color='red') +
-      geom_line(data=df_plot_fit, aes(x,c2 * scale), color='blue') +
-      scale_x_continuous(breaks = seq(-0.45, 0,length.out = 30 + 1))+
-      theme_bw() +
-      labs(x="log similarities", y="counts")+ggtitle(paste0(windows_start[i], ' - ', windows_end[i]))+
-      theme(axis.text.x=element_text(angle=45, hjust=1))
-    
-    plot_list[[i]] = ggplotGrob(g)
-  }
+  tmp <- dcast(df, WIN~VAR, value.var='50%')
+  setnames(tmp,'WIN','WINDOW')
+  tmp <- merge(tmp, ans[,list(NOBS=length(PERC)),by=c('WINDOW')],by='WINDOW')
+  ans[,WINDOW:=as.integer(WINDOW)]
+  bw <- 0.45/30
+  tmp <- tmp[,{
+    logsim=seq(-0.45,0,length.out=101)
+    y1=bw * NOBS * theta * dnorm(logsim,`mu[1]`,`sigma[1]`)
+    y2=bw * NOBS * (1-theta) * dnorm(logsim,`mu[2]`,`sigma[2]`)
+    list(X=logsim,Y1=y1,Y2=y2)
+  },by='WINDOW']
+   
   
-  # create dir to save plots related to network analysis
-  dir.create(file.path(potential.networks.analysis.dir,'plots'))
+  g <- ggplot(ans, aes(PERC))+
+    geom_histogram(binwidth = bw)+
+    geom_line(tmp,mapping=aes(x=X,y=Y1))+
+    geom_line(tmp,mapping=aes(x=X,y=Y2))+
+    facet_wrap(~factor(WINDOW,1:length(windows_start), paste0(windows_start,' - ',windows_end)),ncol = 8,scales = 'free') +
+    theme_bw()+
+    labs(x='log similarity scores') +
+    scale_x_continuous(expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0.05))+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA))
+    ggsave(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),g,width = 12, height= 16)
+
+    g <- ggplot(ans[WINDOW%%20==1], aes(PERC))+
+      geom_histogram(binwidth = bw)+
+      geom_line(tmp[WINDOW%%20==1],mapping=aes(x=X,y=Y1))+
+      geom_line(tmp[WINDOW%%20==1],mapping=aes(x=X,y=Y2))+
+      facet_wrap(~factor(WINDOW,1:length(windows_start), paste0(windows_start,' - ',windows_end)),ncol = 2,scales = 'free') +
+      theme_bw()+
+      labs(x='\n log similarity scores', y='count \n') +
+      scale_x_continuous(expand = c(0,0))+
+      scale_y_continuous(expand = c(0,0.05))+
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            strip.background = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA),
+            text = element_text(size=20))
+    ggsave(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep_sample5.pdf'),g,width = 8, height= 6)
+    
+  
+    
+      # # plot fit to similarities
+  # for (i in 1:windown) {
+  #   cat('process window ',i, '\n')
+  #   x <- seq(-0.45,0,length.out = 90 +1)
+  #   df_plot_fit <- data.table(x=x,
+  #                             c1 = df[VAR=='theta' & WIN ==i,]$`50%` * dnorm(x, df[VAR=='mu[1]' & WIN ==i,]$`50%`, df[VAR=='sigma[1]' & WIN ==i,]$`50%`),
+  #                             c2 = (1-df[VAR=='theta' & WIN ==i,]$`50%`) *dnorm(x, df[VAR=='mu[2]' & WIN ==i,]$`50%`, df[VAR=='sigma[2]' & WIN ==i,]$`50%`))
+  #   max_hist=  max(hist(ans[WINDOW==i,]$PERC,plot=F, breaks = seq(-0.45,0,length.out = 30 + 1), right = FALSE)$counts)
+  #   scale <- max_hist/max(c(df_plot_fit$c1,df_plot_fit$c2))
+  #   g = ggplot(ans[WINDOW==i,],aes(x=PERC))+
+  #     geom_histogram(alpha=0.6)+
+  #     geom_line(data=df_plot_fit, aes(x,c1 * scale), color='red') +
+  #     geom_line(data=df_plot_fit, aes(x,c2 * scale), color='blue') +
+  #     scale_x_continuous(breaks = seq(-0.45, 0,length.out = 30 + 1))+
+  #     theme_bw() +
+  #     labs(x="log similarities", y="counts")+ggtitle(paste0(windows_start[i], ' - ', windows_end[i]))+
+  #     theme(axis.text.x=element_text(angle=45, hjust=1))
+  #   
+  #   plot_list[[i]] = ggplotGrob(g)
+  # }
+  # 
+  # # create dir to save plots related to network analysis
+  # dir.create(file.path(potential.networks.analysis.dir,'plots'))
   # save histogram and fitted plots
-  pdf(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),
-      width = 30, height= 45)
-  do.call("grid.arrange", c(plot_list,ncol= 5))
-  dev.off()
+  # pdf(file.path(potential.networks.analysis.dir,'plots','fitted_histogram_distance_couple_per_window_exp5_indep.pdf'),
+  #     width = 30, height= 45)
+  # do.call("grid.arrange", c(plot_list,ncol= 5))
+  # dev.off()
   
   
   # plot quantiles of fits
@@ -594,6 +917,9 @@ rkuvri.find.threshold.from.couples<- function(){
   do.call("grid.arrange", c(plot_list,ncol= 5))
   dev.off()
   
+  tmp = df[grep('mu',VAR),]
+  tmp = dcast(tmp, WIN~VAR,value.var = '50%')
+  tmp[,diff:=`mu[2]`-`mu[1]`]
   # mean and sd over windows
   ggplot(df[grep('mu',VAR)],aes(x=WIN))+
     geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), fill = "grey70") +
@@ -678,6 +1004,332 @@ rkuvri.find.threshold.from.couples<- function(){
   threshold = data.table(do.call(rbind, threshold))
   save(threshold, file = file.path(potential.networks.analysis.dir,paste0('threshold_median_indep_exp5.rda')))
   
+  # plot threshold
+  load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+  tmp <- data.table(threshold)
+  # tmp[,WSTART:=windows_start]
+  tmp[,W:=seq_len(nrow(tmp))]
+  
+  # ggplot(tmp,aes(x=WSTART,y=`50%`,ymin=`2.5%`,ymax=`97.5%`))+
+  ggplot(tmp,aes(x=W,y=`50%`,ymin=`2.5%`,ymax=`97.5%`))+
+    geom_line()+
+    geom_ribbon(alpha=0.6)+
+    theme_bw()+
+    # labs(x='\n genomic positions',y='threshold \n')+
+    labs(x='\n genomic windows',y='threshold \n')+
+    scale_x_continuous(expand = c(0,0),breaks = seq(0,100,by=10)) +
+    scale_y_continuous(expand = c(0,0), labels = scales::percent, limits = c(0.85,1))+
+    theme(text = element_text(size=20))
+    
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('threshold_vs_window.pdf')),width = 6, height = 4)
+  
+  # ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('threshold_over_positions.pdf')),width = 6, height = 4)
+  # 
+  
+  load(file.path(potential.networks.analysis.dir,'distance_couple_per_window.rda'))
+  # tmp <- unique(subset(ans,select=c('pt_id1','pt_id2')))
+  # setkey(tmp, pt_id1,pt_id2)
+  # tmp[,ID:=seq_len(nrow(tmp))]
+  # ans <- merge(ans, tmp, by=c('pt_id1','pt_id2'))
+  # setkey(ans,WINDOW, ID)
+  # ans[,length(PERC),by=c('WINDOW','ID')]
+  similarity <- list()
+  index <- list()
+  for (i in seq_len(max(ans$WINDOW))) {
+    anss <- ans[WINDOW==i,]
+    tmp <- unique(subset(anss,select=c('pt_id1','pt_id2')))
+    setkey(tmp, pt_id1,pt_id2)
+    tmp[,ID:=seq_len(nrow(tmp))]
+    anss <- merge(anss, tmp, by=c('pt_id1','pt_id2'))
+    setkey(anss,ID)
+    similarity[[i]] <- log(anss$PERC)
+    index[[i]] <- anss$ID
+  }
+  
+  ndata <- lengths(similarity)
+  # range(unlist(lapply(similarity, range)))
+  
+  stan_data <- list()
+  for (i in seq_len(max(ans$WINDOW))) {
+    stan_data[[i]] <- list()
+    stan_data[[i]]$N <- ndata[i]
+    stan_data[[i]]$indices <- index[[i]] 
+    stan_data[[i]]$N1 <- max(index[[i]] )
+    stan_data[[i]]$y <- similarity[[i]]
+  }
+  
+  save(stan_data, file = file.path(potential.networks.analysis.dir,'stan_data_rdne_threshold.rda'))
+  
+  
+  stan_code <- "
+  data {
+  int<lower = 0> N;
+  int<lower = 0> N1;
+  int indices[N];
+  vector[N] y;
+  
+  }
+
+  parameters {
+    ordered[2] mu;
+    real<lower=0> sigma[2];
+    real<lower=0, upper=1> theta;
+    real rdne[N1,2];
+  }
+
+  model {
+  sigma ~ exponential(5.0);
+  mu ~ normal(0, 1);
+  theta ~ beta(5, 5);
+  rdne[,1] ~ normal(0, 0.01);
+  rdne[,2] ~ normal(0, 0.01);
+  for (n in 1:N)
+     target += log_mix(theta,
+                       normal_lpdf(y[n] | mu[1] + rdne[indices[n],1], sigma[1]),
+                       normal_lpdf(y[n] | mu[2] + rdne[indices[n],2], sigma[2]));
+  }
+
+  "
+
+  fit <- list()
+  for (i in 1:max(ans$WINDOW)) {
+    cat('fit window ', i, '\n')
+    fit[[i]] <- stan(model_code=stan_code,
+                     data=stan_data[[i]],
+                     chains=1, seed=42,iter = 1e4, warmup = 2e3)
+    
+  }
+  
+  # save fitted model
+  save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_rdne2_fit.rda'))
+  
+  
+  stan_code <- "
+  data {
+  int<lower = 0> N;
+  int<lower = 0> N1;
+  int indices[N];
+  vector[N] y;
+  
+  }
+
+  parameters {
+    ordered[2] mu;
+    real<lower=0> sigma[2];
+    real<lower=0, upper=1> theta;
+    real rdne[N1,2];
+  }
+
+  model {
+  sigma ~ exponential(5.0);
+  mu ~ normal(0, 1);
+  theta ~ beta(5, 5);
+  rdne[,1] ~ normal(0, 0.01);
+  rdne[,2] ~ normal(0, 0.01);
+  for (n in 1:N)
+     target += log_mix(theta,
+                       normal_lpdf(y[n] | mu[1] + rdne[indices[n],1], sigma[1]),
+                       normal_lpdf(y[n] | mu[2] + rdne[indices[n],2], sigma[2]));
+  }
+
+  "
+  
+  fit <- list()
+  for (i in 1:max(ans$WINDOW)) {
+    cat('fit window ', i, '\n')
+    fit[[i]] <- stan(model_code=stan_code,
+                     data=stan_data[[i]],
+                     chains=1, seed=42,iter = 1e4, warmup = 2e3)
+    
+  }
+  
+  # save fitted model
+  save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_rdne2_fit.rda'))
+  
+  
+
+  stan_data <- list()
+  tmp <- ans[,length(PERC),by='WINDOW']
+  stan_data$max_data <- max(tmp$V1)
+  stan_data$N <- tmp$V1
+  stan_data$y <- matrix(-1,nrow = windown,ncol = stan_data$max_data)
+  for (i in 1:windown) {
+    stan_data$y[i,1:stan_data$N[i]] <-  log(ans[WINDOW==i,]$PERC)
+  }
+  stan_data$Nw <- windown
+  stan_data$N_edges <- windown - 1
+  stan_data$node1 <- seq_len(windown-1)
+  stan_data$node2 <- 2:windown
+  save(stan_data, file = file.path(potential.networks.analysis.dir,'stan_data_icar_threshold.rda'))
+  
+  
+  potential.networks.analysis.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100/'
+  load(file.path(potential.networks.analysis.dir,'stan_data_icar_threshold.rda'))
+  threshold_icar_stan <- "
+functions{
+  real icar_normal_lpdf( vector phi, int N, int[] node1, int[] node2){
+    return -0.5 * dot_self(phi[node1] - phi[node2]) + normal_lpdf( sum(phi) | 0, 0.001 * N);
+  }
+}
+data {
+ int<lower = 0> Nw;
+ int<lower = 0> max_data;
+ int<lower = 0> N[Nw];
+ vector[max_data] y[Nw];
+ int<lower=0> N_edges;
+ int<lower=1, upper=Nw> node1[N_edges];  // node1[i] adjacent to node2[i]
+ int<lower=1, upper=Nw> node2[N_edges];  // and node1[i] < node2[i]
+}
+
+parameters {
+  ordered[2] mu;
+  vector<lower=0, upper=1>[Nw] theta;
+  real<lower=0> sigma[2,Nw];
+  vector[Nw] phi[2];
+  real<lower=0> sigma_phi[2];
+}
+transformed parameters {
+  vector[Nw] mu_c[2];
+  for ( i in 1:2){
+    mu_c[i] = sigma_phi[i] * phi[i] + mu[i];
+  }
+}
+model {
+ mu~ normal(0, 1);
+ //sigma_phi~ normal(0, 0.1);
+ sigma_phi~ normal(0, 0.01);
+ theta ~ beta(5, 5);
+ to_vector(to_matrix(sigma)) ~ exponential(5.0);
+ for (i in 1:2){
+  phi[i] ~ icar_normal_lpdf(Nw,node1, node2);
+ }
+ for (w in 1:Nw){
+  for (n in 1:N[w]){
+     target += log_mix(theta[w],
+                     normal_lpdf(y[w, n] | mu_c[1,w], sigma[1,w]),
+                     normal_lpdf(y[w, n] | mu_c[2,w], sigma[2,w]));
+ }
+ }
+}
+"
+
+library(rstan)
+fit <- stan(model_code=threshold_icar_stan,
+                           data=stan_data,
+                           chains=1, seed=42,iter = 3e3, warmup = 1e3)
+# ,
+# control = list(adapt_delta = 0.99,max_treedepth = 15)
+
+# save fitted model
+# save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_icar1_fit.rda'))
+save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_icar2_fit.rda'))
+
+library(rstan)
+potential.networks.analysis.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100/'
+  load( file.path(potential.networks.analysis.dir,'indep_exp5_rdne3_fit.rda'))
+  # check fit 
+  rh= c()
+  ness= c()
+  tess= c()
+  bess= c()
+  windown=99
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    pars <- rstan::extract(fit[[i]], pars=names(fit[[i]])[!grepl('lp_',names(fit[[i]]))])
+    pars = do.call(cbind,pars)
+    
+    rh = c(rh,max(summary(fit[[i]])$summary[, "Rhat"]))
+    ness = c(ness,min(summary(fit[[i]])$summary[, "n_eff"]))
+    tess = c(tess,min(apply(pars, 2, ess_tail)))
+    bess = c(bess,min(apply(pars, 2, ess_bulk)))
+  }
+  
+  cat('range of rhat is ',range(rh),'\n')
+  cat('range of ess is ',range(ness),'\n')
+  cat('range of ess_tail is ',range(tess),'\n')
+  cat('range of ess_bulk is ',range(bess),'\n')
+  save(rh,ness,tess,bess,file = '~/rdne3_ess.rda')
+  
+  load('~/rdne3_ess.rda')
+  hist(ness)
+  lness <- which(ness>=500)
+  id_nm <- which(rh>1.1)
+  # summary(fit[[21]]$summary[, "n_eff"])
+  ans <- list()
+  for (i in lness) {
+    cat('process fit window ', i, '\n')
+    tmp <- fit[[i]]
+    po <- extract(tmp,permuted = F,pars=grep('rdne',names(tmp),value = T))
+    po <- po[,1,]
+    poci <- apply(po,2,function(x)quantile(x,c(0.025,0.5,0.975)))
+    ans[[i]] <- poci
+    # traceplot(tmp)
+  }
+  
+  tmp <- lapply(ans, function(x)sum(x[,1] * x[,3] >0)/ncol(x))
+  tmp <- lapply(tmp, function(x)ifelse(length(x)==0, NA, x))
+  tmp <- do.call(c,tmp)
+  range(tmp,na.rm = T)
+  sum(!is.na(tmp))  
+  library(rstan)
+  library(data.table)
+  # load(file.path(potential.networks.analysis.dir,'indep_exp5_rdne2_fit_w1.rda'))
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_rdne_fit_w1.rda'))
+  # summary(fit)$summary[, "n_eff"]
+  po <- extract(fit,permuted = F)
+  po <- po[,1,]
+  po <- po[,1:(ncol(po)-1)]
+  par.names <- dimnames(po)[[2]]
+  po_b <- po[,grep('mu|sigma|theta',par.names)]
+  po_rdne <- po[,grep('rdne',par.names)]
+  po_bt <- po_b
+  po_bt[,1:2] <- exp(po_bt[,1:2])
+  apply(po_bt,2,function(x)quantile(x,c(0.025,0.5,0.975)))
+  # mu[1]     mu[2]    sigma[1]    sigma[2] sigma_mu[1] sigma_mu[2]
+  # 2.5%  0.9479619 0.9554436 0.005113088 0.001620873  0.03791047  0.02708460
+  # 50%   0.9483328 0.9715093 0.005321556 0.002178423  0.04038145  0.02898174
+  # 97.5% 0.9555494 0.9729048 0.005961480 0.005293682  0.04107579  0.04389429
+  # parameters
+  # theta
+  # 2.5%  0.8374205
+  # 50%   0.8582795
+  # 97.5% 0.9325401
+
+  tmp <- apply(po_rdne,2,function(x)quantile(x,c(0.025,0.5,0.975)))
+  tmpa <- grep('rdne',par.names,value=T)
+  tmps <- grep('rdne',par.names,value=T)[which(tmp[1,] * tmp[3,] >0)]
+  tmpd <- data.table(as.numeric(gsub('^rdne\\[([0-9]+),([0-9])\\]$','\\1',tmps)), 
+                     as.numeric(gsub('^rdne\\[([0-9]+),([0-9])\\]$','\\2',tmps)))
+  tmpd <- tmpd[,length(V1),by='V2']
+  tmpd$V1/(length(tmpa)/2)
+  
+  library(bayesplot)
+  library(ggplot2)
+  mcmc_intervals(as.array(fit),pars = grep('rdne[[0-9]+,1]',par.names,value = T))+
+    theme_bw()
+  ggsave('~/rdne1.pdf',width = 6,height = 20)
+  mcmc_intervals(as.array(fit),pars = grep('rdne[[0-9]+,2]',par.names,value = T))+
+    theme_bw()
+  ggsave('~/rdne2.pdf',width = 6,height = 20)
+  
+  print(max(summary(fit)$summary[, "Rhat"]))
+  print(min(summary(fit)$summary[, "n_eff"]))
+  print(min(apply(po, 2, ess_tail)))
+  print(min(apply(po, 2, ess_bulk)))
+  
+  get_stancode(fit)
+  
+  
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_icar2_fit.rda'))
+  # load(file.path(potential.networks.analysis.dir,'indep_exp5_icar1_fit.rda'))
+  
+  pars <- rstan::extract(fit, pars=names(fit)[!grepl('lp_',names(fit))])
+  pars = do.call(cbind,pars)
+  
+  rh = c(rh,max(summary(fit)$summary[, "Rhat"]))
+  ness = c(ness,min(summary(fit)$summary[, "n_eff"]))
+  tess = c(tess,min(apply(pars, 2, ess_tail)))
+  bess = c(bess,min(apply(pars, 2, ess_bulk)))
   
 }
 
@@ -688,8 +1340,10 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   #' Note: eligible sequences should satisfy length >= 250, have person id, have >250 high depth positions
   #' eligible pairs of sequences should not be the same person
   #' 
+  #' 
+  librar
   window_size <- 500
-  method <- 2
+  method <- 1
   windown <- 99 
   
   # file names
@@ -743,11 +1397,11 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
   tmp <- dinfo[is.na(pt_id)]
   dinfo <- dinfo[!is.na(pt_id)]
-  tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
-  colnames(tmp2) <- c("pt_id","pangea_id","sex")
-  set(tmp, NULL, c("pt_id","sex"), NULL)
-  tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
-  dinfo <- rbind(dinfo, tmp)
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
   cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
   
   # process couple, map to studyid
@@ -893,8 +1547,8 @@ rkuvri.summarise.distance.and.support.per.sequence.pair.per.window <- function()
   }
   
   # save
-  save(distance,file = file.path(potential.networks.analysis.paste0('distance_overall_method', method,'_sequence_level_v4.rda')))
-  save(dclassif,file = file.path(potential.networks.analysis.paste0('support_overall_method', method,'_sequence_level_v4.rda')))
+  save(distance,file = file.path(potential.networks.analysis.dir,paste0('distance_overall_method', method,'_sequence_level_v4.rda')))
+  save(dclassif,file = file.path(potential.networks.analysis.dir.paste0('support_overall_method', method,'_sequence_level_v4.rda')))
 }
 
 rkuvri.make.close.pairs.and.clusters <- function(){
@@ -927,6 +1581,85 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   df = df[DATA >=4,]
   cat(nrow(df),' pairs of sequences left after requiring at least 4 overlapping windows with data \n')
   
+  ggplot(df,aes(PROP))+
+    geom_histogram()+
+    theme_bw()+
+    labs(x='\n proportions of close windows','counts of sequence pairs \n ')+
+    scale_x_continuous(expand = c(0,0), labels = scales::percent) +
+    scale_y_continuous(expand = c(0,0)) +
+    coord_cartesian(ylim=c(0,1e4))+
+    theme(text = element_text(size=20))
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_support.pdf'),width = 6, height = 4)
+  
+  
+  setnames(dinfo, colnames(dinfo), paste0(colnames(dinfo),'1'))
+  tmp <- merge(df,dinfo, by.x=c('TAXA1'), by.y=c('pangea_id1'), all.x=T) 
+  setnames(dinfo, colnames(dinfo), gsub('1','2',colnames(dinfo)))
+  tmp <- merge(tmp,dinfo, by.x=c('TAXA2'), by.y=c('pangea_id2'), all.x=T) 
+  setnames(dinfo, colnames(dinfo), gsub('2','',colnames(dinfo)))
+  
+  tmp2 <- tmp[,list(NSEQ=length(sex1),
+                    NCLOSE=sum(PROP>=0.8)),by=c('pt_id1','pt_id2')]
+  tmp2[,pt_id1:=as.character(pt_id1)]
+  tmp2[,pt_id2:=as.character(pt_id2)]
+  tmp3 <- tmp2[, list(NSEQ=sum(NSEQ),
+                      NCLOSE=sum(NCLOSE)), by = list(pt_id1 = pmin(pt_id1,pt_id2), pt_id2 = pmax(pt_id1,pt_id2))]
+  tmp3 <- tmp3[NSEQ>1,]
+  # ans <- merge(tmp,tmp2,by=c('pt_id1','pt_id2'))
+  # ans <- ans[!is.na(pt_id1) & !is.na(pt_id2)]
+  write.csv(tmp3,file = file.path(potential.networks.analysis.dir,'multiple_sequences.csv'))
+  nrow(tmp3[NCLOSE==0])/nrow(tmp3)
+  nrow(tmp3[NCLOSE==NSEQ])/nrow(tmp3)
+  1- nrow(tmp3[NCLOSE==0])/nrow(tmp3) - nrow(tmp3[NCLOSE==NSEQ])/nrow(tmp3)
+    # remove no pt_id
+  tmp <- tmp[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+
+  tmp <- merge(tmp,tmp_couple, by=c('pt_id1','pt_id2'), all.x=T)
+  ans <- tmp[COUPLE==1,]
+  ans[PROP==0]
+  ans[PROP==1]
+  
+  ans[PROP<0.1]
+  ans[PROP>0.9]
+  # tmp <- merge(tmp,tmp_couple,by=c('pt_id1','pt_id2'))
+  ggplot(ans,aes(PROP))+
+    geom_histogram()+
+    theme_bw()+
+    labs(x='\n proportions of close windows','counts of sequence pairs \n')+
+    scale_x_continuous(expand = c(0,0), labels = scales::percent) +
+    scale_y_continuous(expand = c(0,0.1)) +
+    theme(text = element_text(size=20))
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_support_couple.pdf'),width = 6, height = 4)
+  
+  # # fit bimodal model 
+  # stan_data <- list(y=ans$PROP,N=nrow(ans))
+  # save(stan_data,file = '~/stan_data_prop.rda')
+  # stan_code <- "
+  # data {
+  # int<lower = 0> N;
+  # vector[N] y;
+  # }
+  # 
+  # parameters {
+  #   ordered[2] mu;
+  #   real<lower=0> sigma[2];
+  #   real<lower=0, upper=1> theta;
+  # }
+  # 
+  # model {
+  # sigma[1] ~ exponential(100.0);
+  # sigma[1] ~ exponential(5.0);
+  # mu[1] ~ normal(0, 0.1);
+  # mu[2] ~ normal(1, 0.1);
+  # theta ~ beta(5, 5);
+  # for (n in 1:N)
+  #    target += log_mix(theta,
+  #                      normal_lpdf(y[n] | mu[1], sigma[1]),
+  #                      normal_lpdf(y[n] | mu[2], sigma[2]));
+  # }
+  # "
+  # fit <- stan(model_code=stan_code,data=stan_data,
+  #                  chains=1, seed=42, control = list(max_treedepth = 15))
   # take close pairs
   df =df[PROP >= 0.8]
   cat(nrow(df),' pairs of sequences left after requiring 80% windows indicating close \n' )
@@ -974,6 +1707,7 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   rtc[, CLU:=NULL]
   setkey(rtc, IDCLU)
   rtc
+  # table(tmp$CLU_SIZE)
   
   # take individuals from the largest cluster - 291
   id = rtc[IDCLU==1,]$ID
@@ -1039,10 +1773,68 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   chains <- simplify(chains)
   E(chains)$weight = ifelse(E(chains)$weight > 1,E(chains)$weight/2, E(chains)$weight)
   # clusters(chains, mode='weak')
+  
+  
+  net <- chains
+  V(net)$size <- 3
+  V(net)$frame.color <- "white"
+  V(net)$color <- "orange"
+  V(net)$label <- ""
+  E(net)$arrow.mode <- 0
+  # E(net)$weight <- (E(net)$weight-min(E(net)$weight))/(max(E(net)$weight)-min(E(net)$weight))
+  pdf('~/largest_cluster.pdf',width = 10, height = 8)
+  plot(net)
+  dev.off()
+  
   comm <-cluster_louvain(chains)
   sapply(1:max(comm$membership),function(x)sum(comm$membership==x))
   # 4 18 10 45 11 15 50 26 38 17 16 22  5 14
   df = data.table(PT_ID=comm$names,MEMBERSHIP = comm$membership)
+  
+  # layout_chains <- layout_with_fr(chains)
+  # Pal <- viridis_pal()(max(comm$membership))
+  # communityColors <- Pal[membership(comm)]
+  # pdf('~/largest_cluster_grouped_v1.pdf',width = 10, height = 8)
+  # plot(x = comm, y = chains, edge.width = 1, vertex.size = 3,
+  #      vertex.label = NA, mark.groups = NULL, layout = layout_chains, col = communityColors,
+  #      main = "",
+  #      edge.color = c("darkgrey","#F08080")[crossing(comm, chains) + 1])
+  # dev.off()
+  # 
+  # # https://stackoverflow.com/questions/16390221/how-to-make-grouped-layout-in-igraph
+  # layout.modular <- function(G,c){
+  #   nm <- length(levels(as.factor(c$membership)))
+  #   gr <- 2
+  #   while(gr^2<nm){
+  #     gr <- gr+1
+  #   }
+  #   i <- j <- 0
+  #   for(cc in levels(as.factor(c$membership))){
+  #     F <- delete.vertices(G,c$membership!=cc)
+  #     F$layout <- layout.kamada.kawai(F)
+  #     F$layout <- layout.norm(F$layout, i,i+0.5,j,j+0.5)
+  #     G$layout[c$membership==cc,] <- F$layout
+  #     if(i==gr){
+  #       i <- 0
+  #       if(j==gr){
+  #         j <- 0
+  #       }else{
+  #         j <- j+1
+  #       }
+  #     }else{
+  #       i <- i+1
+  #     }
+  #   }
+  #   return(G$layout)
+  # }
+  # 
+  # chains$layout <- layout.fruchterman.reingold(chains)
+  # chains$layout <- layout.modular(chains,comm)
+  # V(chains)$color <- viridis_pal()(max(comm$membership))[comm$membership]
+  # pdf('~/largest_cluster_grouped_v2.pdf',width = 10, height = 8)
+  # plot(chains,vertex.size = 3,  vertex.label = NA,edge.color = c("darkgrey","#F08080")[crossing(comm, chains) + 1])
+  # dev.off()
+  
   
   #
   df_graph = as_long_data_frame(chains)
@@ -1115,6 +1907,8 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   length(unique(df$ID))
   tmp = unique(subset(df,select=c('IDCLU','CLU_SIZE')))
   setkey(tmp, IDCLU)
+  xtable(t(table(tmp$CLU_SIZE)),align=rep('l',length(unique(tmp$CLU_SIZE))+1))
+  
   
   nrow(close_pairs)
   length(unique(c(unique(close_pairs$pt_id1),unique(close_pairs$pt_id2))))
@@ -1130,6 +1924,104 @@ rkuvri.make.close.pairs.and.clusters <- function(){
   
   # save histogram of cluster sizes
   ggsave(file.path(potential.networks.analysis.dir,'plots','cluster_size_plot.pdf'),width = 10, height = 4)
+  
+  ggplot(tmp,aes(CLU_SIZE)) +
+    geom_histogram(binwidth = 2)+
+    labs(x='\n cluster sizes',y='\n count') +
+    theme_bw() + 
+    scale_x_continuous(expand = c(0,0))+
+    scale_y_continuous(expand = c(0,0.05))+theme(text = element_text(size=20))
+  
+  ggsave(file.path(potential.networks.analysis.dir,'plots','histogram_cluster_size.pdf'),width = 6, height = 4)
+  
+  load(file.path(potential.networks.analysis.dir,'close_pairs.rda'))
+  
+  infile.rccs <- file.path(data.dir,'PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
+  infile.mrc <- file.path(data.dir,'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
+  
+  mapping_rccs <- readRDS(infile.rccs)
+  dconsensus <- subset(mapping_rccs,select=c('PANGEA_ID','CONSENSUS','F'))
+  dconsensus <- unique(dconsensus[CONSENSUS!="",])
+  dconsensus[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+  mapping_mrc <- readRDS(infile.mrc)
+  tmp <- subset(mapping_mrc,select=c('PANGEA_ID','CONSENSUS','F'))
+  tmp <- unique(tmp[CONSENSUS!="",])
+  tmp[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
+  dconsensus = rbind(dconsensus, tmp)
+  dconsensus[,OLD:=grepl('PANGEA1',`F`)]
+  dconsensus <- unique(subset(dconsensus,select=c('PANGEA_ID','OLD')))
+  # tmp = dconsensus[,length(OLD),by='PANGEA_ID']
+  # tmp = tmp[V1>1]
+  # # if appear in pangea 1 and 2 consider as old
+  # tmp[,OLD:=TRUE]
+  # tmp[,V1:=NULL]
+  # dconsensus <- rbind(dconsensus[!PANGEA_ID%in% tmp$PANGEA_ID], tmp)
+  
+  # map alignments to studyid
+  dinfo <- data.table(pangea_id=names(alignment))
+  id.dt <- data.table(read.csv(infile.ind.rccs))
+  id.dt <- subset(id.dt,select = c("pt_id","sex","pangea_id"))
+  id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- subset(tmp,select = c("pt_id","sex","pangea_id"))
+  tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
+  id.dt <- rbind(id.dt,tmp)
+  id.dt <- unique(id.dt)
+  dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
+  tmp <- dinfo[is.na(pt_id)]
+  dinfo <- dinfo[!is.na(pt_id)]
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
+  cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+  
+  dinfo <- merge(dinfo,dconsensus,by.x='pangea_id',by.y='PANGEA_ID',all.x=T)
+  dinfo[,RCCS:=0]
+  dinfo[grepl('RCCS_',pangea_id),RCCS:=1]
+  dinfo[,pangea_id:=NULL]
+  dinfo <- unique(dinfo)
+  tmp = dinfo[,length(OLD),by='pt_id']
+  tmp = tmp[V1>1]
+  # if appear in pangea 1 and 2 consider as old
+  dinfo[pt_id%in%tmp$pt_id,OLD:=TRUE]
+  
+  dinfo[,length(sex),by=c('OLD','RCCS')]
+  dinfo <- unique(dinfo)
+  
+  setnames(dinfo, colnames(dinfo), paste0(colnames(dinfo),'1'))
+  ans <-merge(close_pairs,dinfo, by='pt_id1', all.x=T) 
+  setnames(dinfo, colnames(dinfo), gsub('1','2',colnames(dinfo)))
+  ans <- merge(ans,dinfo, by='pt_id2', all.x=T) 
+  setnames(dinfo, colnames(dinfo), gsub('2','',colnames(dinfo)))
+  tmp1 <- ans[,length(sex1),by=c('OLD1', 'OLD2')]
+  tmp1$V1/2525
+  tmp2 <- ans[,length(sex1),by=c('RCCS1', 'RCCS2')]
+  tmp2$V1/2525
+  tmp3 <- ans[,length(OLD1),by=c('sex1','sex2')]
+  tmp3$V1/2525
+    
+  ms <- read.csv(file.path(potential.networks.analysis.dir,'multiple_sequences.csv'))
+  ms <- data.table(ms)
+  load(file.path(potential.networks.analysis.dir,'close_pairs.rda'))
+  # ms <- subset(ms,select=c('pt_id1','pt_id2','NSEQ','NCLOSE'))
+  tmp <- copy(ms)
+  setnames(tmp,c('pt_id1','pt_id2'),c('pt_id2','pt_id1'))
+  ms <- rbind(ms,tmp)
+  ms <- unique(ms)
+  tmp <- merge(close_pairs,ms,by=c('pt_id1','pt_id2'),all.x=T)
+  tmp <- unique(tmp)
+  tmp2 <- tmp[!is.na(X)]
+  nrow(tmp2[NSEQ==NCLOSE])/nrow(tmp2)
+  nrow(tmp2[NCLOSE==0])/nrow(tmp2)
+  1-  nrow(tmp2[NSEQ==NCLOSE])/nrow(tmp2)-nrow(tmp2[NCLOSE==0])/nrow(tmp2)
+  tmp2[NCLOSE==0]
+  # ms <- read.csv(file.path(potential.networks.analysis.dir,'multiple_sequences.csv'))
+  # ms <- data.table(ms)
+  check <- ms[,length(X),by=c('pt_id1','pt_id2')]
+  check[V1>1]
+  ms[ pt_id1=='RK-E103166' & pt_id2== 'RK-B061788']
 }
 
 
@@ -1139,10 +2031,16 @@ rkuvri.validate.classification <- function(){
   #' not necessary for making clusters
   #' validates the classification and thresholds
   #' 
+  #' 
+  library(data.table)
+  library(ggplot2)
+  library(seqinr)
   window_size <- 500
   windown <- 99
   length_cutoff <- 250
-  method <- 2
+  # method <- 2
+  method <- 1
+  # method <- 3
   
   # file names
   data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
@@ -1156,7 +2054,7 @@ rkuvri.validate.classification <- function(){
   infile.average.distance <- file.path(potential.networks.analysis.dir,'average_distance.rds')
   infile.hxb2 <- file.path(data.dir ,'HIV1_COM_2015_genome_DNA_ALL.fasta')
   infile.close.pairs <- file.path(potential.networks.analysis.dir,'close_pairs.rda')
-  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'results.rda'))
+  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'_results.rda'))
   infile.depth <- file.path(data.dir,'210121_RCCSMRC_depth.rda')
   if(method == 1){
     infile.threshold <- file.path(potential.networks.analysis.dir,'threshold_dip_indep_exp5.rda')
@@ -1227,18 +2125,38 @@ rkuvri.validate.classification <- function(){
   ans <- melt(ans, id.var=c('window','threshold'))
   
   # plot threshold against distances
-  ggplot(ans, aes(as.numeric(threshold), as.numeric(value), label=factor(window), color=factor(variable)))+
+  # ggplot(ans, aes(as.numeric(threshold), as.numeric(value), label=factor(window), color=factor(variable)))+
+  #   geom_point()+
+  #   scale_x_continuous(expand = c(0.05,0.05))   +
+  #   scale_y_continuous(expand = c(0.05,0.05)) +
+  #   theme_bw() +
+  #   labs(x='\n threshold',
+  #        y='distance \n',
+  #        color='type') +
+  #   scale_color_manual(values=c('tree distance'='royalblue3','average distance'='006400'),
+  #                      labels=c('tree distance'='tree-based distance','average distance'='average similarity scores')) +
+  #   theme(legend.position='bottom',text = element_text(size=20))+guides(color=guide_legend(nrow=2,byrow=TRUE))
+  # ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('distance_vs_threshold_method', method,'.pdf')),width = 6, height = 4)
+  # 
+  ggplot(ans[variable=='average distance'], aes(as.numeric(threshold), as.numeric(value), label=factor(window)))+
     geom_point()+
     scale_x_continuous(expand = c(0.05,0.05))   +
     scale_y_continuous(expand = c(0.05,0.05)) +
     theme_bw() +
-    labs(x='threshold',
-         y='distance',
-         color='type') +
-    scale_color_manual(values=c('tree distance'='royalblue3','average distance'='006400')) +
-    theme(legend.position='bottom')
-  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('distance_vs_threshold_method', method,'.pdf')),width = 6, height = 6)
+    labs(x='\n threshold',
+         y='average distance \n') +
+    theme(legend.position='bottom',text = element_text(size=20))+guides(color=guide_legend(nrow=2,byrow=TRUE))
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('average_distance_vs_threshold_method', method,'.pdf')),width = 6, height = 4)
   
+  ggplot(ans[variable=='tree distance'], aes(as.numeric(threshold), as.numeric(value), label=factor(window)))+
+    geom_point()+
+    scale_x_continuous(expand = c(0.05,0.05))   +
+    scale_y_continuous(expand = c(0.05,0.05)) +
+    theme_bw() +
+    labs(x='\n threshold',
+         y='tree-based distance \n') +
+    theme(legend.position='bottom',text = element_text(size=20))+guides(color=guide_legend(nrow=2,byrow=TRUE))
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('tree_distance_vs_threshold_method', method,'.pdf')),width = 6, height = 4)
   
   ### check the corresponding tree distance of thresholds in pol 
   # create a function mapping distance to tree distance
@@ -1299,11 +2217,11 @@ rkuvri.validate.classification <- function(){
   dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
   tmp <- dinfo[is.na(pt_id)]
   dinfo <- dinfo[!is.na(pt_id)]
-  tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
-  colnames(tmp2) <- c("pt_id","pangea_id","sex")
-  set(tmp, NULL, c("pt_id","sex"), NULL)
-  tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
-  dinfo <- rbind(dinfo, tmp)
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
   cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
   
   # process couple, map to studyid
@@ -1385,6 +2303,12 @@ rkuvri.validate.classification <- function(){
   
   # df_window_summary <- readRDS(file.path(potential.networks.analysis.dir,paste0('distance_distribution_perwindow_bycoupleclose_method', method,'.rds')))
   # plot similarity distributions over windows by couple and close and thresholds
+  library(pammtools)# plot stepribbon
+  library(ggplot2)
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  method <- 1
+  method <- 3
+  df_window_summary <- readRDS(file.path(potential.networks.analysis.dir,paste0('distance_distribution_perwindow_bycoupleclose_method', method,'.rds')))
   
   ggplot(df_window_summary)+
     geom_step(aes(x=POS,y=`0.5`,col=factor(CLOSE))) +
@@ -1392,20 +2316,20 @@ rkuvri.validate.classification <- function(){
     guides(col=F)+
     geom_stepribbon(aes(x=POS,ymin=`0.25`, ymax=`0.75`,fill=factor(CLOSE)),alpha=0.6)+
     geom_stepribbon(aes(x=POS,ymin=`0.05`, ymax=`0.95`,fill=factor(CLOSE)),alpha=0.2)+
-    scale_fill_manual(values = c('1'='#C70039',
-                                 '0'='#2E86C1'),
+    scale_fill_manual(values = c('1'='#E77471',
+                                 '0'='#78C7C7'),
                       labels=c('1'='yes',
                                '0'='no')) +
-    scale_color_manual(values = c('1'='#C70039',
-                                  '0'='#2E86C1'),
+    scale_color_manual(values = c('1'='#E77471',
+                                  '0'='#78C7C7'),
                        labels=c('1'='yes',
                                 '0'='no')) +
     theme_bw() +
     theme(strip.background = element_blank(),
           legend.position = 'bottom')+
     labs(x='genome', y='distance',fill='close') +
-    facet_grid(factor(COUPLE,levels = c(0,1), labels = c('not couples','couples'))~.)
-  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('similarity_vs_window_method', method,'.pdf')), width = 6, height = 6)
+    facet_grid(.~factor(COUPLE,levels = c(0,1), labels = c('not couples','couples')))
+  ggsave(file.path(potential.networks.analysis.dir,'plots',paste0('similarity_vs_window_method', method,'.pdf')), width = 8, height = 3)
   
   
   
@@ -1413,3 +2337,811 @@ rkuvri.validate.classification <- function(){
   
   
 }
+
+
+load(file.path(potential.networks.analysis.dir,paste0('distance_overall_method', method,'_sequence_level_v4.rda')))
+load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+tmp <- subset(distance,select=c('TAXA1','TAXA2','PERC1'))
+tmp <- tmp[!is.na(PERC1)]
+
+ggplot(tmp,aes(PERC1))+
+  geom_histogram()+
+  geom_vline(xintercept = threshold[1,]$`2.5%`, linetype=2)+
+  geom_vline(xintercept = threshold[1,]$`50%`, linetype=1)+
+  geom_vline(xintercept = threshold[1,]$`97.5%`, linetype=2)
+
+
+library(data.table)
+
+window_size <- 500
+method <- 2
+windown <- 99 
+
+# file names
+data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
+potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
+infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+infile.rccs <- file.path(data.dir,'PANGEA2_RCCS/200422_PANGEA2_RCCS_mapped_samples.rds')
+infile.mrc <- file.path(data.dir,'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
+infile.depth <- file.path(data.dir,'210121_RCCSMRC_depth.rda')
+infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'results.rda'))
+if(method == 1){
+  infile.threshold <- file.path(potential.networks.analysis.dir,paste0('threshold_dip_indep_exp5.rda'))
+}else if(method == 2){
+  infile.threshold <- file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda'))
+}else if(method == 3){
+  infile.threshold <- file.path(potential.networks.analysis.dir,paste0('threshold_median_indep_exp5.rda'))
+}
+
+# load data
+alignment <- read.fasta(file = infile.sequence)
+unique(do.call(c, lapply(alignment, unique)))
+nsequence <- length(alignment)
+npos <- unique(lengths(alignment))
+
+
+# windows
+windows_last_start <- ceiling(npos/100) * 100 - window_size + 1
+windows_2last_end <- floor(npos/100) * 100
+windows_start <- seq(1,windows_last_start,100)
+windows_end <- c(seq(window_size ,windows_2last_end,100),npos)
+windows <- seq_len(length(windows_start))
+dw <- data.table(WINDOW=windows,
+                 START=windows_start,
+                 END=windows_end)
+
+# map alignments to studyid
+load(infile.couple)
+dinfo <- data.table(pangea_id=names(alignment))
+id.dt <- data.table(read.csv(infile.ind.rccs))
+id.dt <- subset(id.dt,select = c("pt_id","sex","pangea_id"))
+id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
+tmp_rccs2 <- id.dt[,length(pangea_id),by='pt_id']
+tmp_rccs2[V1>1]
+id.dt[pt_id=='RK-K190286']
+### really need to confirm pangeaid and ptid!
+
+# head(id.dt)
+# head(mapping_rccs)
+
+tmp <- data.table(read.csv(infile.ind.mrc))
+tmp <- subset(tmp,select = c("pt_id","sex","pangea_id"))
+tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
+id.dt <- rbind(id.dt,tmp)
+id.dt <- unique(id.dt)
+dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
+tmp <- dinfo[is.na(pt_id)]
+dinfo <- dinfo[!is.na(pt_id)]
+tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+colnames(tmp2) <- c("pt_id","pangea_id","sex")
+set(tmp, NULL, c("pt_id","sex"), NULL)
+tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+dinfo <- rbind(dinfo, tmp)
+cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+tmp = dinfo[,length(pangea_id),by='pt_id']
+tmp = tmp[!is.na(pt_id)]
+table(tmp$V1)
+
+mapping_rccs <- readRDS(infile.rccs)
+dconsensus <- subset(mapping_rccs,select=c('PANGEA_ID','CONSENSUS','F'))
+dconsensus <- unique(dconsensus[CONSENSUS!="",])
+dconsensus[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+mapping_mrc <- readRDS(infile.mrc)
+tmp <- subset(mapping_mrc,select=c('PANGEA_ID','CONSENSUS','F'))
+tmp <- unique(tmp[CONSENSUS!="",])
+tmp[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
+dconsensus = rbind(dconsensus, tmp)
+dconsensus = subset(dconsensus, select=c('PANGEA_ID','F'))
+setnames(dconsensus, c('PANGEA_ID','F'), c('pangea_id','file_name'))
+tmp <-  data.table(pangea_id=names(alignment))
+dconsensus <- merge(dconsensus, tmp, by='pangea_id', all.y=T)
+dconsensus <- unique(dconsensus)
+
+# 
+tmp_rccs <- subset(mapping_rccs,select=c('PANGEA_ID','PID'))
+tmp_rccs <- unique(tmp_rccs)
+tmp_rccs[,length(PANGEA_ID),by='PID']
+
+tmp_mrc <- subset(mapping_mrc,select=c('PANGEA_ID','PT_ID'))
+tmp_mrc <- unique(tmp_mrc)
+tmp = tmp_mrc[,length(PANGEA_ID),by='PT_ID']
+tmp[V1>1]
+# mapping_mrc[PT_ID%in% tmp[V1>1,]$PT_ID]
+mapping_mrc[PT_ID=='MRC-10115']
+
+
+infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
+
+
+# load data
+alignment <- read.fasta(file = infile.sequence)
+nsequence <- length(alignment)
+npos <- unique(lengths(alignment))  
+
+
+explore.bimodal <- function(){
+  library(data.table)
+  window_size <- 500
+  windown <- 99
+  
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+  infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
+  infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'_results.rda'))
+  
+  # load data
+  alignment <- seqinr::read.fasta(file = infile.sequence)
+  unique(do.call(c, lapply(alignment, unique)))
+  nsequence <- length(alignment)
+  npos <- unique(lengths(alignment))
+  
+  # windows
+  windows_last_start <- ceiling(npos/100) * 100 - window_size + 1
+  windows_2last_end <- floor(npos/100) * 100
+  windows_start <- seq(1,windows_last_start,100)
+  windows_end <- c(seq(window_size ,windows_2last_end,100),npos)
+  windows <- seq_len(length(windows_start))
+  dw <- data.table(WINDOW=windows,
+                   START=windows_start,
+                   END=windows_end)
+  
+  
+  # map alignments to studyid
+  dinfo <- data.table(pangea_id=names(alignment))
+  id.dt <- data.table(read.csv(infile.ind.rccs))
+  id.dt <- subset(id.dt,select = c("pt_id","sex","pangea_id"))
+  id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- subset(tmp,select = c("pt_id","sex","pangea_id"))
+  tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
+  id.dt <- rbind(id.dt,tmp)
+  id.dt <- unique(id.dt)
+  dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
+  tmp <- dinfo[is.na(pt_id)]
+  dinfo <- dinfo[!is.na(pt_id)]
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
+  cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+  
+  load(infile.couple)
+  couple <- unique(subset(data.table(coupdat), select=c('male.RCCS_studyid', 'female.RCCS_studyid')))
+  couple[, COUPLE:=1]
+  couple[,male.RCCS_studyid:=paste0('RK-',male.RCCS_studyid)]
+  couple[,female.RCCS_studyid:=paste0('RK-',female.RCCS_studyid)]
+  
+  tmp_couple <- subset(couple,select=c('male.RCCS_studyid','female.RCCS_studyid', 'COUPLE'))
+  tmp <- copy(tmp_couple)
+  setnames(tmp_couple, c('male.RCCS_studyid','female.RCCS_studyid'),c('pt_id1','pt_id2'))
+  setnames(tmp, c('male.RCCS_studyid','female.RCCS_studyid'),c('pt_id2','pt_id1'))
+  tmp_couple[,sex1_couple := 'M']
+  tmp_couple[,sex2_couple := 'F']
+  tmp[,sex1_couple := 'F']
+  tmp[,sex2_couple := 'M']
+  tmp_couple <- rbind(tmp_couple, tmp)
+  unique(tmp_couple)
+  tmp_couple  <- tmp_couple[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+  
+
+  #	load raw genetic distances 
+  # infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_rawgendist.rda"
+  infile <- "~/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_rawgendist.rda"
+  load(infile)		
+  gd		<- subset(gd, grepl('^PG',TAXA) & grepl('^PG',TAXA2))
+  set(gd, NULL, 'TAXA', gd[, gsub('_WTSI.*','',TAXA)])
+  set(gd, NULL, 'TAXA2', gd[, gsub('_WTSI.*','',TAXA2)])	
+  set(gd, NULL, 'TAXA', gd[, gsub('-S[0-9]+$','',TAXA)])
+  set(gd, NULL, 'TAXA2', gd[, gsub('-S[0-9]+$','',TAXA2)])	
+  gd[,TAXA := paste0('RCCS_',TAXA)]
+  gd[,TAXA2 := paste0('RCCS_',TAXA2)]
+  gd <- merge(gd,dinfo,by.x='TAXA',by.y='pangea_id')
+  gd <- merge(gd,dinfo,by.x='TAXA2',by.y='pangea_id')
+  gd <- merge(gd,tmp_couple,by.x=c('pt_id.x','pt_id.y'),by.y=c('pt_id1','pt_id2'))
+  
+  tmp <- gd[,length(CONS_GDRW),by=c('pt_id.x','pt_id.y')]
+  setkey(tmp,V1)
+  sum(tmp$V1!=1)
+ 
+  library(ggplot2)
+  range(gd$CONS_GDRW)
+  ggplot(gd,aes( CONS_GDRW))+
+    geom_histogram(bins = 30)+
+    theme_bw()
+  
+  gd2 <- gd[,list(CONS_GDRW=min(CONS_GDRW)),by=c('pt_id.x','pt_id.y')]
+  ggplot(gd2,aes( CONS_GDRW))+
+    geom_histogram(bins = 30)+
+    theme_bw()
+
+  
+
+  # remove sequence with all n
+  sq		<- alignment
+  sq.n <- unlist(lapply(sq, function(x){sum(x=='?' | x=='-' | x=='n')==10257}))
+  sq.n.names <- names(sq.n[sq.n==TRUE])
+  sq.names <- data.table(TAXA=names(sq))
+  sq.names <- merge(sq.names,dinfo,by.x='TAXA',by.y='pangea_id')
+  couple.sq <- merge(couple,sq.names,by.x='male.RCCS_studyid',by.y='pt_id')
+  couple.sq <- merge(couple.sq,sq.names,by.x='female.RCCS_studyid',by.y='pt_id')
+  dfo <- subset(couple.sq,select=c('TAXA.x','TAXA.y'))
+  names(dfo) <- c('TAXA1','TAXA2')
+  dfo[,BATCH:=1]
+  #	get similarity
+  dfo		<- dfo[,{ 
+    seq1 <- sq[[TAXA1]]
+    seq2 <- sq[[TAXA2]]
+    pos <- which(seq1 !='-' & seq1 !='?' & seq1 !='n' & seq2 !='-' & seq2 !='?' &  seq2 !='n')
+    if (length(pos)==0 ){
+      len <- as.integer(-1.0)
+      match <- -1.0
+    }else{
+      seq1 <- seq1[pos]
+      seq2 <- seq2[pos]
+      len <- length(pos)
+      # cat(TAXA1,'\n',seq1,'\n',TAXA2,'\n',seq2,'\n')
+      match <- sum(sapply(1:length(pos),function(pos){is.match(seq1[pos],seq2[pos])}))
+    }
+    list(LENGTH= len,
+         MATCHES= match)
+  }, by=c('BATCH','TAXA1','TAXA2')]
+  dfo[,PERC:=MATCHES/LENGTH]
+  dfo <- dfo[LENGTH!=-1]
+  # dfo[LENGTH<250]
+  # dfo <- dfo[LENGTH>=250]
+
+  library(ggplot2)  
+  ggplot(dfo,aes( PERC))+
+    geom_histogram(bins = 30)+
+    theme_bw()+
+    labs(x='\n similarity scores')
+  
+  # all pairs 
+  dfo2 <- merge(dfo,dinfo,by.x='TAXA1',by.y='pangea_id',all.x=T)
+  dfo2 <- merge(dfo2,dinfo,by.x='TAXA2',by.y='pangea_id',all.x=T)
+  tmp <- dfo2[,length(BATCH),by=c('pt_id.x','pt_id.y')]
+  setkey(tmp,V1)
+  # dfo2[pt_id.x=='RK-J107144'& pt_id.y=='RK-A107138']
+  dfo2 <- dfo2[,list(PERC=max(PERC)),by=c('pt_id.x','pt_id.y')]
+  library(ggplot2)
+  ggplot(dfo2,aes( PERC))+
+    geom_histogram(bins = 30)+
+    theme_bw()+
+    labs(x='\n similarity scores')+
+    theme(text = element_text(size=20))
+  ggsave(filename = 'similarity_score_hist.pdf',width = 6,height = 4)
+  
+
+  # my_mix2 <- normalmixEM(dfo2$PERC, k = 2)
+  # plot(my_mix2, which = 2)
+  # my_mix2
+  # # $ lambda    : num [1:2] 0.499 0.501
+  # # $ mu        : num [1:2] 0.911 0.982
+  # # $ sigma     : num [1:2] 0.0347 0.0095
+  
+  # pairs in 2019
+  gd[,TAXA.x:=paste0(TAXA,'-',TAXA2)]
+  gd[,TAXA.y:=paste0(TAXA2,'-',TAXA)]
+  dfo3 <- dfo[paste0(TAXA1,'-',TAXA2) %in% gd$TAXA.x|paste0(TAXA2,'-',TAXA1) %in% gd$TAXA.x] 
+  dfo3 <- merge(dfo3,dinfo,by.x='TAXA1',by.y='pangea_id',all.x=T)
+  dfo3 <- merge(dfo3,dinfo,by.x='TAXA2',by.y='pangea_id',all.x=T)
+  dfo3 <- dfo3[,list(PERC=max(PERC)),by=c('pt_id.x','pt_id.y')]
+  ggplot(dfo3,aes( PERC))+
+    geom_histogram(bins = 30)+
+    theme_bw()+
+    labs(x='\n similarity scores')+
+    theme(text = element_text(size=20))
+  ggsave(filename = 'similarity_score_hist2019.pdf',width = 6,height = 4)
+  
+  # my_mix3 <- normalmixEM(dfo3$PERC, k = 2)
+  # plot(my_mix3, which = 2)
+  # my_mix3
+  # # $ lambda    : num [1:2] 0.518 0.482
+  # # $ mu        : num [1:2] 0.901 0.98
+  # # $ sigma     : num [1:2] 0.0306 0.00869
+  # 
+  # ggplot(dfo2, aes(x = PERC)) +
+  #   geom_histogram(binwidth = 0.005) +
+  #   mapply(
+  #     function(mean, sd, lambda, n, binwidth) {
+  #       stat_function(
+  #         fun = function(x) {
+  #           (dnorm(x, mean = mean, sd = sd)) * n * binwidth * lambda
+  #         }
+  #       )
+  #     },
+  #     mean = my_mix2[["mu"]], #mean
+  #     sd = my_mix2[["sigma"]], #standard deviation
+  #     lambda = my_mix2[["lambda"]], #amplitude
+  #     n = length(dfo2$PERC), #sample size
+  #     binwidth = 0.005 #binwidth used for histogram
+  #   )+
+  #   theme_bw()
+  # 
+  # ggplot(dfo3, aes(x = PERC)) +
+  #   geom_histogram(binwidth = 0.005) +
+  #   mapply(
+  #     function(mean, sd, lambda, n, binwidth) {
+  #       stat_function(
+  #         fun = function(x) {
+  #           (dnorm(x, mean = mean, sd = sd)) * n * binwidth * lambda
+  #         }
+  #       )
+  #     },
+  #     mean = my_mix3[["mu"]], #mean
+  #     sd = my_mix3[["sigma"]], #standard deviation
+  #     lambda = my_mix3[["lambda"]], #amplitude
+  #     n = length(dfo3$PERC), #sample size
+  #     binwidth = 0.005 #binwidth used for histogram
+  #   )+
+  #   theme_bw()
+  # 
+  # qnorm(0.05,my_mix3[["mu"]][2],my_mix3[["sigma"]][2])
+  # qnorm(0.05,my_mix2[["mu"]][2],my_mix2[["sigma"]][2])
+  # # [1] 0.9660939
+  # # [1] 0.9666396
+  # nrow(dfo3[PERC<0.9660939])/nrow(dfo3)
+  # nrow(dfo2[PERC<0.9666396])/nrow(dfo2)
+  
+
+  library(ape)
+  sq2 <- read.FASTA(infile.sequence, type = "DNA")
+  rawdist <- dfo[,list(RAWDIST=dist.dna(sq2[c(TAXA1,TAXA2)])[1]),by=c('TAXA1','TAXA2')]
+  ggplot(rawdist,aes(RAWDIST))+
+    geom_histogram(bins = 30)+
+    theme_bw()
+  
+  df <- subset(dfo,select=c('TAXA1','TAXA2','PERC','LENGTH'))
+  tmp <- df[!(TAXA1<TAXA2),]
+  setnames(tmp,c('TAXA1','TAXA2'),c('TAXA2','TAXA1'))
+  df <- rbind(df[(TAXA1<TAXA2),],tmp)
+  df <- unique(df)
+  # dftmp <- copy(rawdist)
+  # tmp <- dftmp[!(TAXA1<TAXA2),]
+  # setnames(tmp,c('TAXA1','TAXA2'),c('TAXA2','TAXA1'))
+  # dftmp <- unique(rbind(dftmp[(TAXA1<TAXA2),],tmp))
+  # df <- merge(df,dftmp,by=c('TAXA1','TAXA2'),all=T)
+  dftmp <- subset(gd,select=c('TAXA2','TAXA','CONS_GDRW'))
+  tmp <- dftmp[!(TAXA<TAXA2),]
+  setnames(tmp,c('TAXA','TAXA2'),c('TAXA2','TAXA'))
+  dftmp <- unique(rbind(dftmp[(TAXA<TAXA2),],tmp))
+  df <- merge(df,dftmp,by.x=c('TAXA1','TAXA2'),by.y=c('TAXA','TAXA2'),all=T)
+  df[is.na(PERC)]
+  # TAXA1              TAXA2 PERC LENGTH RAWDIST  CONS_GDRW
+  # 1: RCCS_PG14-UG500339 RCCS_PG14-UG500678   NA     NA      NA 0.05846154
+  df[is.na(RAWDIST)]
+  # sq2[tmp2$TAXA1[1]]
+  # tmp2 <- sq[c('RCCS_PG14-UG500339','RCCS_PG14-UG500678')]
+  # which(tmp2[[1]]!='?'&tmp2[[1]]!='-'&tmp2[[2]]!='?'&tmp2[[2]]!='-')
+
+  
+  df[is.na(CONS_GDRW)]
+  ggplot(df[!is.na(CONS_GDRW)],aes(PERC))+
+    geom_histogram(bins = 30)+
+    theme_bw()
+  
+  df[,EXTRA:=F]
+  df[is.na(CONS_GDRW),EXTRA:=T]
+  # library(ggplot2)
+  # ggplot(df,aes(PERC,fill=EXTRA))+
+  #   geom_density(alpha=0.5, position = 'identity')+
+  #   theme_bw()
+  
+  hist(df[EXTRA==F,PERC])
+  mix1 <- normalmixEM(df[!is.na(CONS_GDRW),log(PERC)], k = 2)
+  plot(mix1, which = 2)
+  mix
+  
+  df <- merge(df,dinfo,by.x='TAXA1',by.y='pangea_id',all.x=T)
+  df <- merge(df,dinfo,by.x='TAXA2',by.y='pangea_id',all.x=T)
+  df[,pt_id.x:=as.character(pt_id.x)]
+  df[,pt_id.y:=as.character(pt_id.y)]
+  tmp <- df[!(pt_id.x<pt_id.y)]
+  setnames(tmp,c('TAXA1','TAXA2','pt_id.x','pt_id.y','sex.x','sex.y'),
+           c('TAXA2','TAXA1','pt_id.y','pt_id.x','sex.y','sex.x'))
+  df <- rbind(df[(pt_id.x<pt_id.y)],tmp)
+  df19 <-  df[!is.na(CONS_GDRW)]
+  df19[,pt_id.xy:=paste0(pt_id.x,'-',pt_id.y)]
+  df21extra <- df[is.na(CONS_GDRW)]
+  df21extra[ ,pt_id.xy:=paste0(pt_id.x,'-',pt_id.y)]
+  tmp <- unique(subset(df21extra[pt_id.xy%in% df19$pt_id.xy],select=c('pt_id.x','pt_id.y')))
+  tmp[,NEW:=F]
+  tmp2 <- unique(subset(df21extra[!(pt_id.xy%in% df19$pt_id.xy)],select=c('pt_id.x','pt_id.y')))
+  tmp2[,NEW:=T]
+  tmp <- rbind(tmp,tmp2)
+  df <- merge(df,tmp,by=c('pt_id.x','pt_id.y'),all.x=T)
+  
+  # library(ggplot2)
+  # ggplot(df[!is.na(NEW)],aes(PERC,fill=NEW))+
+  #   geom_density(alpha=0.5, position = 'identity')+
+  #   theme_bw()
+
+  ggplot(df[NEW==F],aes(EXTRA,PERC,fill=EXTRA))+
+    geom_boxplot(alpha=0.5, position = 'identity')+
+    theme_bw()
+  
+  ggplot(df[NEW==F],aes(PERC,fill=factor(EXTRA,c(T,F),c('yes','no'))))+
+    geom_density(alpha=0.5, position = 'identity')+
+    theme_bw()+
+    labs(x='\n similarity scores',fill='newly collected sequences')+
+    scale_y_continuous(expand = c(0,0),limits = c(0,12.5))+
+    theme(legend.position = 'bottom',legend.box = 'horizontal',text = element_text(size=20))
+    ggsave(filename = 'similarity_scores_existing_couples.pdf',width = 6,height = 4)
+  
+  df[EXTRA==T]
+  df[EXTRA==T,table(NEW)]
+  
+  ggplot(df[EXTRA==T],aes(PERC,fill=factor(NEW,c(T,F),c('yes','no'))))+
+    geom_density(alpha=0.5, position = 'identity')+
+    theme_bw()+
+    labs(x='\n similarity scores',fill='sequences from couples \n in Ratmann et al.(2019)')+
+    scale_y_continuous(expand = c(0,0),limits = c(0,15))+
+    theme(legend.position = 'bottom',legend.box = 'horizontal',text = element_text(size=20))
+  ggsave(filename = 'similarity_scores_new_samples.pdf',width = 6,height = 4.5)
+  
+   
+  df2 <- df[,list(MAX_PERC=max(PERC)),by=c('pt_id.x','pt_id.y','EXTRA','NEW')]
+  ggplot(df2,aes(MAX_PERC))+
+    geom_density(alpha=0.5)+
+    theme_bw()
+  
+  ggplot(df2[EXTRA==F],aes(MAX_PERC))+
+    geom_density(alpha=0.5)+
+    theme_bw()
+  
+  nrow(df2[EXTRA==F & MAX_PERC<0.94])/nrow(df2[EXTRA==F])
+  # 0.4516854
+  nrow(df2[MAX_PERC<0.94])/nrow(df2)
+  # 0.4039088
+  
+  ggplot(df,aes(PERC))+
+    geom_density(alpha=0.5)+
+    theme_bw()
+  ggplot(df[EXTRA==F],aes(PERC))+
+    geom_density(alpha=0.5)+
+    theme_bw()
+  nrow(df[EXTRA==F & PERC<0.94])/nrow(df[EXTRA==F])
+  # 0.4440079
+  nrow(df[PERC<0.94])/nrow(df)
+  # 0.4076433
+  
+  
+  # library(mixtools)
+  # set(dfo2,NULL,c('pt_id.x'),dfo2[,as.character(pt_id.x)])
+  # set(dfo2,NULL,c('pt_id.y'),dfo2[,as.character(pt_id.y)])
+  # set(gd2,NULL,c('pt_id.x'),gd2[,as.character(pt_id.x)])
+  # set(gd2,NULL,c('pt_id.y'),gd2[,as.character(pt_id.y)])
+  # tmp <- dfo2[!(pt_id.x < pt_id.y)]
+  # setnames(tmp,c('pt_id.x','pt_id.y'),c('pt_id.y','pt_id.x'))
+  # dfo2 <- rbind(dfo2[(pt_id.x < pt_id.y)], tmp)
+  # tmp <- gd2[!(pt_id.x < pt_id.y)]
+  # setnames(tmp,c('pt_id.x','pt_id.y'),c('pt_id.y','pt_id.x'))
+  # gd2 <- rbind(gd2[(pt_id.x < pt_id.y)], tmp)
+  # df <- merge(gd2,dfo2,by=c('pt_id.x','pt_id.y'),all=T)
+  # hist(df[!is.na(CONS_GDRW),log(PERC)])
+  # mix1 <- normalmixEM(df[!is.na(CONS_GDRW),log(PERC)], k = 2)
+  # plot(mix1, which = 2)
+  # mix
+ 
+}
+
+explore_bimodal_stan <- function(){
+  library(data.table)
+  length_cutoff <- 250
+  window_size <- 500
+  windown <- 99
+  
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+  infile.sequence <- file.path(data.dir,"200422_PANGEA2_RCCSMRC_alignment.fasta")
+  infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+  infile.dist <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown,'_results.rda'))
+  
+  # load data
+  alignment <- seqinr::read.fasta(file = infile.sequence)
+  unique(do.call(c, lapply(alignment, unique)))
+  nsequence <- length(alignment)
+  npos <- unique(lengths(alignment))
+  
+  # windows
+  windows_last_start <- ceiling(npos/100) * 100 - window_size + 1
+  windows_2last_end <- floor(npos/100) * 100
+  windows_start <- seq(1,windows_last_start,100)
+  windows_end <- c(seq(window_size ,windows_2last_end,100),npos)
+  windows <- seq_len(length(windows_start))
+  dw <- data.table(WINDOW=windows,
+                   START=windows_start,
+                   END=windows_end)
+  
+  
+  # map alignments to studyid
+  dinfo <- data.table(pangea_id=names(alignment))
+  id.dt <- data.table(read.csv(infile.ind.rccs))
+  id.dt <- subset(id.dt,select = c("pt_id","sex","pangea_id"))
+  id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- subset(tmp,select = c("pt_id","sex","pangea_id"))
+  tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
+  id.dt <- rbind(id.dt,tmp)
+  id.dt <- unique(id.dt)
+  dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
+  tmp <- dinfo[is.na(pt_id)]
+  dinfo <- dinfo[!is.na(pt_id)]
+  # tmp2 <- subset(rccsData,select=c('RCCS_studyid','Pangea.id','SEX'))
+  # colnames(tmp2) <- c("pt_id","pangea_id","sex")
+  # set(tmp, NULL, c("pt_id","sex"), NULL)
+  # tmp <- merge(tmp, tmp2, by='pangea_id',all.x=T)
+  # dinfo <- rbind(dinfo, tmp)
+  cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+  
+  load(infile.couple)
+  couple <- unique(subset(data.table(coupdat), select=c('male.RCCS_studyid', 'female.RCCS_studyid')))
+  couple[, COUPLE:=1]
+  couple[,male.RCCS_studyid:=paste0('RK-',male.RCCS_studyid)]
+  couple[,female.RCCS_studyid:=paste0('RK-',female.RCCS_studyid)]
+  
+  tmp_couple <- subset(couple,select=c('male.RCCS_studyid','female.RCCS_studyid', 'COUPLE'))
+  tmp <- copy(tmp_couple)
+  setnames(tmp_couple, c('male.RCCS_studyid','female.RCCS_studyid'),c('pt_id1','pt_id2'))
+  setnames(tmp, c('male.RCCS_studyid','female.RCCS_studyid'),c('pt_id2','pt_id1'))
+  tmp_couple[,sex1_couple := 'M']
+  tmp_couple[,sex2_couple := 'F']
+  tmp[,sex1_couple := 'F']
+  tmp[,sex2_couple := 'M']
+  tmp_couple <- rbind(tmp_couple, tmp)
+  unique(tmp_couple)
+  tmp_couple  <- tmp_couple[!is.na(pt_id1) & !is.na(pt_id2) & pt_id1!=pt_id2,]
+  
+  
+  #	load raw genetic distances 
+  # infile	<- "~/Dropbox (SPH Imperial College)/Rakai Fish Analysis/consensus/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_rawgendist.rda"
+  infile <- "~/PANGEA_HIV_Imperial_v170704_UG_bestcov_cov700_rawgendist.rda"
+  load(infile)		
+  gd		<- subset(gd, grepl('^PG',TAXA) & grepl('^PG',TAXA2))
+  set(gd, NULL, 'TAXA', gd[, gsub('_WTSI.*','',TAXA)])
+  set(gd, NULL, 'TAXA2', gd[, gsub('_WTSI.*','',TAXA2)])	
+  set(gd, NULL, 'TAXA', gd[, gsub('-S[0-9]+$','',TAXA)])
+  set(gd, NULL, 'TAXA2', gd[, gsub('-S[0-9]+$','',TAXA2)])	
+  gd[,TAXA := paste0('RCCS_',TAXA)]
+  gd[,TAXA2 := paste0('RCCS_',TAXA2)]
+  gd <- merge(gd,dinfo,by.x='TAXA',by.y='pangea_id')
+  gd <- merge(gd,dinfo,by.x='TAXA2',by.y='pangea_id')
+  gd <- merge(gd,tmp_couple,by.x=c('pt_id.x','pt_id.y'),by.y=c('pt_id1','pt_id2'))
+  gd_taxa <- subset(gd,select=c('TAXA2','TAXA'))
+  tmp <- copy(gd_taxa)
+  setnames(tmp,c('TAXA2','TAXA'),c('TAXA','TAXA2'))
+  gd_taxa <- rbind(gd_taxa,tmp)
+  
+  # calculate similarities of pairs among couples on each window
+  for (i in 1:windown) {
+    # similarity per window
+    cat('\n process window ',i , '\n')
+    load(infile.dist[i])
+    #
+    distancei <- distancei[LENGTH >= length_cutoff,]
+    distancei <- merge(distancei, gd_taxa,by.x=c('TAXA1','TAXA2'),by.y=c('TAXA','TAXA2'))
+    if(i==1){
+      ans <- distancei
+    }else{
+      ans <- rbind(ans, distancei)
+    }
+  }
+  save(ans, file = file.path(potential.networks.analysis.dir,'distance_couple_per_window_2019.rda'))  
+  
+  
+  library(data.table)
+  library(rstan)
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  load(file.path(potential.networks.analysis.dir,'distance_couple_per_window_2019.rda'))
+  similarity <- list()
+  for (i in seq_len(max(ans$WINDOW))) {
+    similarity[[i]] <- ans[WINDOW==i,]$PERC
+  }
+  
+  max_data <- max(lengths(similarity))
+  
+  for (i in seq_len(max(ans$WINDOW))) {
+    if(length(similarity[[i]]) !=max_data){
+      similarity[[i]] <- c(similarity[[i]], rep(NA,max_data-length(similarity[[i]])))
+    }
+  }
+  
+  stan_data <- list()
+  stan_data$similarity <- do.call(rbind,similarity)
+  stan_data$Nsimilarity <- apply(stan_data$similarity,1,function(x)sum(!is.na(x)))
+  stan_data$Nwindow <- length(similarity)
+  stan_data$max_data <- max_data
+  stan_data$similarity[is.na(stan_data$similarity)] <- -1
+  
+  save(stan_data, file = file.path(potential.networks.analysis.dir,'stan_data_threshold_2019.rda'))
+
+  # fit bimodal model to similarities
+  stan_data$similarity <- log(stan_data$similarity)
+  stan_data$similarity[is.na(stan_data$similarity)] <- -1
+  stan_code <- "
+  data {
+  int<lower = 0> N;
+  vector[N] y;
+  }
+
+  parameters {
+    ordered[2] mu;
+    real<lower=0> sigma[2];
+    real<lower=0, upper=1> theta;
+  }
+
+  model {
+  sigma ~ exponential(5.0);
+  mu ~ normal(0, 1);
+  theta ~ beta(5, 5);
+  for (n in 1:N)
+     target += log_mix(theta,
+                       normal_lpdf(y[n] | mu[1], sigma[1]),
+                       normal_lpdf(y[n] | mu[2], sigma[2]));
+  }
+
+  "
+  fit <- list()
+  windown <- 99
+  for (i in 1:windown) {
+    cat('fit window ', i, '\n')
+    tmp <- list()
+    tmp$y <- (stan_data$similarity[i,1:stan_data$Nsimilarity[i]])
+    tmp$N <- stan_data$Nsimilarity[i]
+    fit[[i]] <- stan(model_code=stan_code,
+                     data=tmp,
+                     chains=1, seed=42,iter = 1e4, warmup = 2e3)
+    
+  }
+  
+  # save fitted model
+  save(fit,file=file.path(potential.networks.analysis.dir,'indep_exp5_fit_2019.rda'))
+  
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_fit_2019.rda'))
+  # check fit 
+  rh= c()
+  ness= c()
+  tess= c()
+  bess= c()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    pars <- rstan::extract(fit[[i]], pars=names(fit[[i]])[!grepl('lp_',names(fit[[i]]))])
+    pars = do.call(cbind,pars)
+    
+    rh = c(rh,max(summary(fit[[i]])$summary[, "Rhat"]))
+    ness = c(ness,min(summary(fit[[i]])$summary[, "n_eff"]))
+    tess = c(tess,min(apply(pars, 2, ess_tail)))
+    bess = c(bess,min(apply(pars, 2, ess_bulk)))
+  }
+  
+  cat('range of rhat is ',range(rh),'\n')
+  cat('range of ess is ',range(ness),'\n')
+  cat('range of ess_tail is ',range(tess),'\n')
+  cat('range of ess_bulk is ',range(bess),'\n')
+  # >   cat('range of rhat is ',range(rh),'\n')
+  # range of rhat is  0.9999084 1.003752 
+  # >   cat('range of ess is ',range(ness),'\n')
+  # range of ess is  658.6633 3547.528 
+  # >   cat('range of ess_tail is ',range(tess),'\n')
+  # range of ess_tail is  6001.91 7879.407 
+  # >   cat('range of ess_bulk is ',range(bess),'\n')
+  # range of ess_bulk is  6656.799 8023.899 
+  
+  # extract outputs 
+  df = data.table()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    tmp = data.table(summary(fit[[i]])$summary[1:5,c("2.5%","50%","97.5%")])
+    tmp[,VAR:=rownames(summary(fit[[i]])$summary)[1:5]]
+    tmp[,WIN:=i]
+    df = rbind(df, tmp)
+  }
+  
+  df19 <- copy(df)
+  load(file.path(potential.networks.analysis.dir,'indep_exp5_fit_moreiters.rda'))
+  # check fit 
+  rh= c()
+  ness= c()
+  tess= c()
+  bess= c()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    pars <- rstan::extract(fit[[i]], pars=names(fit[[i]])[!grepl('lp_',names(fit[[i]]))])
+    pars = do.call(cbind,pars)
+    
+    rh = c(rh,max(summary(fit[[i]])$summary[, "Rhat"]))
+    ness = c(ness,min(summary(fit[[i]])$summary[, "n_eff"]))
+    tess = c(tess,min(apply(pars, 2, ess_tail)))
+    bess = c(bess,min(apply(pars, 2, ess_bulk)))
+  }
+  
+  cat('range of rhat is ',range(rh),'\n')
+  cat('range of ess is ',range(ness),'\n')
+  cat('range of ess_tail is ',range(tess),'\n')
+  cat('range of ess_bulk is ',range(bess),'\n')
+  # >   cat('range of rhat is ',range(rh),'\n')
+  # range of rhat is  0.9998934 1.002183 
+  # >   cat('range of ess is ',range(ness),'\n')
+  # range of ess is  1397.306 3504.346 
+  # >   cat('range of ess_tail is ',range(tess),'\n')
+  # range of ess_tail is  6684.921 7845.617 
+  # >   cat('range of ess_bulk is ',range(bess),'\n')
+  # range of ess_bulk is  6857.484 8029.006
+  
+  # extract outputs 
+  df = data.table()
+  for (i in 1:windown) {
+    cat('process fit window ', i, '\n')
+    tmp = data.table(summary(fit[[i]])$summary[1:5,c("2.5%","50%","97.5%")])
+    tmp[,VAR:=rownames(summary(fit[[i]])$summary)[1:5]]
+    tmp[,WIN:=i]
+    df = rbind(df, tmp)
+  }
+  
+  df[,TYPE:='2021']
+  df19[,TYPE:='2019']
+  df <- rbind(df,df19)
+  
+  ggplot(df[grep('mu',VAR)],aes(x=100 * WIN))+
+    geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`,fill=factor(TYPE,c(2019,2021),c('excluded','included'))),alpha=0.5) +
+    geom_line(aes(y = `50%`,color=factor(TYPE,c(2019,2021),c('excluded','included'))))+
+    facet_grid(.~factor(VAR,c('mu[1]','mu[2]'),c('lower','upper'))) +
+    labs(x='genome positions', y='component means',fill='new samples',color='new samples')+
+    theme_bw()+
+    theme(legend.position = 'bottom',legend.box = 'horizontal')
+  # save 
+  ggsave(file.path(potential.networks.analysis.dir,'plots','component_mean_vs_window_exp5_indep_compare.pdf'),
+         width = 10, height= 4)
+  
+  ggplot(df[grep('sigma',VAR)],aes(x=100 * WIN))+
+    geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`,fill=factor(TYPE,c(2019,2021),c('excluded','included'))),alpha=0.5) +
+    geom_line(aes(y = `50%`,color=factor(TYPE,c(2019,2021),c('excluded','included'))))+
+    facet_grid(.~factor(VAR,c('sigma[1]','sigma[2]'),c('lower','upper'))) +
+    labs(x='genome positions', y='component standard deviations',fill='new samples',color='new samples')+
+    theme_bw()+
+    theme(legend.position = 'bottom',legend.box = 'horizontal')
+  # save 
+  ggsave(file.path(potential.networks.analysis.dir,'plots','component_sd_vs_window_exp5_indep_compare.pdf'),
+         width = 10, height= 4)
+  df[VAR=='mu[1]' & WIN==1]
+}
+
+library(ggplot2)
+library(data.table)
+potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+load(file.path(potential.networks.analysis.dir,paste0('threshold_dip_indep_exp5.rda')))
+threshold1 <- copy(threshold)
+load(file.path(potential.networks.analysis.dir,paste0('threshold_5quantile_indep_exp5.rda')))
+threshold2 <- copy(threshold)
+load(file.path(potential.networks.analysis.dir,paste0('threshold_median_indep_exp5.rda')))
+threshold3 <- copy(threshold)
+
+threshold1[,TYPE:='dip']
+threshold1[,ID:=1:99]
+threshold2[,TYPE:='5% quantile']
+threshold2[,ID:=1:99]
+threshold3[,TYPE:='median']
+threshold3[,ID:=1:99]
+threshold <- rbind(threshold1, threshold2, threshold3)
+ggplot(threshold, aes(ID,`50%`,fill=TYPE, colour=TYPE)) +
+   geom_line()+
+  geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`))+
+  theme_bw() +
+  labs(x= '\n genome windows', y='threshold \n', fill="type of thresholds")+
+  theme(legend.position = 'bottom',legend.direction = 'vertical',legend.box = 'vertical',text = element_text(size=20))+
+  scale_x_continuous(expand = c(0,0.05))+
+  scale_y_continuous(expand = c(0,0.05))+guides(fill=guide_legend(nrow=1),color=F)
+ggsave(file.path(potential.networks.analysis.dir,'threshold_compare.pdf'), width = 6,height = 4)
+

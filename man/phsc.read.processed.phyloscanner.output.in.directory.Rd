@@ -4,9 +4,15 @@
 \alias{phsc.read.processed.phyloscanner.output.in.directory}
 \title{Read processed phyloscanner output}
 \usage{
-phsc.read.processed.phyloscanner.output.in.directory(prefix.infiles,
-  save.file.base, read.likelytransmissions = TRUE, read.trees = TRUE,
-  read.subtrees = TRUE, resume = FALSE, zip = FALSE)
+phsc.read.processed.phyloscanner.output.in.directory(
+  prefix.infiles,
+  save.file.base,
+  read.likelytransmissions = TRUE,
+  read.trees = TRUE,
+  read.subtrees = TRUE,
+  resume = FALSE,
+  zip = FALSE
+)
 }
 \arguments{
 \item{prefix.infiles}{Full path name to processed phyloscanner output}

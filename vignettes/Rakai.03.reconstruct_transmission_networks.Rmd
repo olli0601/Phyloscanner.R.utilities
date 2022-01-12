@@ -40,8 +40,8 @@ Do make sure that the directory names above do not start with "~", because
 the names are not expanded in the scripts below. White space, or characters like
 '-' are OK.
 
-## Find all pairs of individuals between whom linkage cannot be
-excluded
+## Find all pairs of individuals between whom linkage cannot be excluded
+
 The following code snippet processes all pairwise phylogenetic
 relationships that were reconstructed with *phyloscanner* [in the previous tutorial](Rakai.02.run_phyloscanner.html), and returns a data.table that contains all pairs of individuals between whom phylogenetic linkage is not excluded based on distance and adjacency. There are three input arguments:
  

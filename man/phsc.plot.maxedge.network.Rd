@@ -4,14 +4,26 @@
 \alias{phsc.plot.maxedge.network}
 \title{Plot probability network with most likely edges}
 \usage{
-phsc.plot.maxedge.network(df, di, point.size = 10,
-  point.size.couple = point.size * 1.4, edge.gap = 0.04,
-  edge.size = 0.4, curvature = -0.2, arrow = arrow(length =
-  unit(0.04, "npc"), type = "open"), curv.shift = 0.08, label.size = 3,
-  node.label = "ID", node.shape = NA_character_,
-  node.fill = NA_character_, node.shape.values = NA_integer_,
-  node.fill.values = NA_character_, edge.label = NA_character_,
-  edge.label.values = NA_character_, threshold.linked = NA_real_)
+phsc.plot.maxedge.network(
+  df,
+  di,
+  point.size = 10,
+  point.size.couple = point.size * 1.4,
+  edge.gap = 0.04,
+  edge.size = 0.4,
+  curvature = -0.2,
+  arrow = arrow(length = unit(0.04, "npc"), type = "open"),
+  curv.shift = 0.08,
+  label.size = 3,
+  node.label = "ID",
+  node.shape = NA_character_,
+  node.fill = NA_character_,
+  node.shape.values = NA_integer_,
+  node.fill.values = NA_character_,
+  edge.label = NA_character_,
+  edge.label.values = NA_character_,
+  threshold.linked = NA_real_
+)
 }
 \arguments{
 \item{df}{data.table with the following columns 'IDCLU','ID1', 'ID2', 'TYPE','KEFF','LKL_MAX','POSTERIOR_SCORE'}

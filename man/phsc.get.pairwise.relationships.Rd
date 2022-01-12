@@ -4,10 +4,13 @@
 \alias{phsc.get.pairwise.relationships}
 \title{Calculate pairwise relationships}
 \usage{
-phsc.get.pairwise.relationships(df, get.groups = c("TYPE_PAIR_DI2",
-  "TYPE_PAIR_TO", "TYPE_PAIR_TODI2x2", "TYPE_PAIR_TODI2", "TYPE_DIR_TODI2",
-  "TYPE_NETWORK_SCORES", "TYPE_CHAIN_TODI", "TYPE_ADJ_NETWORK_SCORES",
-  "TYPE_ADJ_DIR_TODI2"), make.pretty.labels = TRUE)
+phsc.get.pairwise.relationships(
+  df,
+  get.groups = c("TYPE_PAIR_DI2", "TYPE_PAIR_TO", "TYPE_PAIR_TODI2x2",
+    "TYPE_PAIR_TODI2", "TYPE_DIR_TODI2", "TYPE_NETWORK_SCORES", "TYPE_CHAIN_TODI",
+    "TYPE_ADJ_NETWORK_SCORES", "TYPE_ADJ_DIR_TODI2"),
+  make.pretty.labels = TRUE
+)
 }
 \arguments{
 \item{df}{data.table to which new columns of relationship groups will be added. Must contain a column with name TYPE_DIR_TODI7x3. This column contains fundamental relationship states for every window, from which other relationships are derived.}

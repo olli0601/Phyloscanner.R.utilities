@@ -4,9 +4,14 @@
 \alias{phsc.read.likelytransmissions}
 \title{Read likely transmissions summary files into a data.table}
 \usage{
-phsc.read.likelytransmissions(prefix.infiles, prefix.run = "ptyr",
-  regexpr.lklsu = "trmStats.csv$", save.file = NA, resume = FALSE,
-  zip = FALSE)
+phsc.read.likelytransmissions(
+  prefix.infiles,
+  prefix.run = "ptyr",
+  regexpr.lklsu = "trmStats.csv$",
+  save.file = NA,
+  resume = FALSE,
+  zip = FALSE
+)
 }
 \arguments{
 \item{prefix.infiles}{Full path name identifying likely transmissions summary files}

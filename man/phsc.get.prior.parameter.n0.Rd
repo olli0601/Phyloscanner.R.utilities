@@ -4,8 +4,12 @@
 \alias{phsc.get.prior.parameter.n0}
 \title{Calculate prior parameter n0}
 \usage{
-phsc.get.prior.parameter.n0(n.states, keff = 2, neff = 3,
-  confidence.cut = 0.66)
+phsc.get.prior.parameter.n0(
+  n.states,
+  keff = 2,
+  neff = 3,
+  confidence.cut = 0.66
+)
 }
 \arguments{
 \item{n.states}{Number of relationship states.}

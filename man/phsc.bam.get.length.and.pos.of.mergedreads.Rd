@@ -4,8 +4,7 @@
 \alias{phsc.bam.get.length.and.pos.of.mergedreads}
 \title{Calculate position and length of merged reads}
 \usage{
-phsc.bam.get.length.and.pos.of.mergedreads(bam.file.name,
-  error.strict = TRUE)
+phsc.bam.get.length.and.pos.of.mergedreads(bam.file.name, error.strict = TRUE)
 }
 \arguments{
 \item{bam.file.name}{full path name to bam file.}
