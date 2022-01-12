@@ -302,7 +302,7 @@ rkuvri.make.alignments<- function()
   
   # file names
   prog.pty <- '~/phyloscanner/phyloscanner_make_trees.py'
-  HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'	
+  HOME <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'	
   in.dir <- file.path(HOME,'210122_phsc_input')		
   work.dir <- file.path(HOME,"210122_phsc_work")
   out.dir <- file.path(HOME,"210122_phsc_output")	
@@ -346,10 +346,11 @@ rkuvri.make.alignments<- function()
   pty.runs[ID_TYPE=='control',RENAME_ID:=paste0('CNTRL-',RENAME_ID)]
   pty.runs[,BAM:=paste0(data.dir,SAMPLE_ID,'.bam')]
   pty.runs[,REF:=paste0(data.dir,SAMPLE_ID,'_ref.fasta')]
+  
   #
   #	define phyloscanner input args to generate read alignments 
-  #	for each window and each run
-  ptyi <- seq(2000,5500,25)		
+  #	for each window and each run  
+  ptyi <- seq(800,9400,25)
   pty.c	<- lapply(seq_along(ptyi), function(i)
   {
     pty.args <- list(prog.pty=prog.pty, 
