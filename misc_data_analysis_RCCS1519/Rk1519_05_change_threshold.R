@@ -672,7 +672,7 @@ make.phyloscanner<- function()
   tmpdir	<- file.path(HOME,"211220_phsc_work/")
   outdir	<- file.path(HOME,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/')
   outdir	<- file.path(HOME,'211220_phsc_phscrelationships_02_05_30_min_read_null_max_read_posthoccount_im_mrca_fixpd/')
-  outdir	<- file.path(HOME,'211220_phsc_phsoocrelationships_025_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/')
+  outdir	<- file.path(HOME,'211220_phsc_phscrelationships_025_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/')
   outdir	<- file.path(HOME,'211220_phsc_phscrelationships_025_30_min_read_null_max_read_posthoccount_im_mrca_fixpd/')
   dir.create(outdir)
   prog.phyloscanner_analyse_trees <- '/rds/general/user/xx4515/home/phyloscanner/phyloscanner_analyse_trees.R'
@@ -794,4 +794,144 @@ make.phyloscanner<- function()
 }
 
 
+phsc.transmission.networks<- function()
+{
+  # find transmission networks and chains from tree statistics.
+  # inputs: tree analysis outputs.
+  # outputs: transmission networks and transmission chains. 
+  make_networks <- function(job_tag)
+  {  
+    library(data.table)
+    library(tidyverse)
+    
+    # set up directories
+    indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships'
+    indir	<- paste0(indir.base,job_tag)
+    infiles	<- data.table(F=list.files(indir, pattern='*workspace.rda$', full.names=TRUE))
+    infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+    setkey(infiles, PTY_RUN)
 
+    #	collect all dwin and dc
+    dca	<- infiles[, {
+      cat(PTY_RUN,'\n')
+      load(F)
+      dc
+    }, by='PTY_RUN']
+    dwina <- infiles[, {
+      cat(PTY_RUN,'\n')
+      load(F)
+      dwin
+    }, by='PTY_RUN']
+    save(dca,dwina,file = paste0('~/dcdwina',job_tag,'.rda'))
+
+    # directories
+    control <- list(linked.group='close.and.adjacent.cat',
+                    linked.no='not.close.or.nonadjacent',
+                    linked.yes='close.and.adjacent', 
+                    dir.group = "close.and.adjacent.and.directed.cat",
+                    conf.cut=0.6, 
+                    neff.cut=3,
+                    weight.complex.or.no.ancestry=0.5)
+    indir.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships'
+    indir	<- paste0(indir.base,job_tag)
+    
+    library(tidyverse)
+    library(glue)
+    library(igraph)
+    library(RBGL)
+    library(data.table)
+    library(phyloscannerR)
+    load(paste0('~/dcdwina',job_tag,'.rda'))
+    
+    # control
+    dca[,CNTRL1:=FALSE]
+    dca[,CNTRL2:=FALSE]
+    dca[grepl('CNTRL-',host.1),CNTRL1:=TRUE]
+    dca[grepl('CNTRL-',host.2),CNTRL2:=TRUE]
+    dca[grepl('CNTRL-',host.1),host.1:=gsub('CNTRL-','',host.1)]
+    dca[grepl('CNTRL-',host.2),host.2:=gsub('CNTRL-','',host.2)]
+    dwina[,CNTRL1:=FALSE]
+    dwina[,CNTRL2:=FALSE]
+    dwina[grepl('CNTRL-',host.1),CNTRL1:=TRUE]
+    dwina[grepl('CNTRL-',host.2),CNTRL2:=TRUE]
+    dwina[grepl('CNTRL-',host.1),host.1:=gsub('CNTRL-','',host.1)]
+    dwina[grepl('CNTRL-',host.2),host.2:=gsub('CNTRL-','',host.2)]
+    
+    # sort dwin
+    tmp			<- subset(dwina, host.1>host.2)
+    setnames(tmp, c('host.1','host.2','paths12','paths21','nodes1','nodes2','CNTRL1','CNTRL2'),
+             c('host.2','host.1','paths21','paths12','nodes2','nodes1','CNTRL2','CNTRL1'))
+    set(tmp, NULL, 'close.and.contiguous.and.directed.cat',
+        tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.contiguous.and.directed.cat)))])
+    set(tmp, NULL, 'close.and.adjacent.and.directed.cat',
+        tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.adjacent.and.directed.cat)))])
+    set(tmp, NULL, 'close.and.contiguous.and.ancestry.cat',
+        tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.contiguous.and.ancestry.cat)))])
+    set(tmp, NULL, 'close.and.adjacent.and.ancestry.cat',
+        tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.adjacent.and.ancestry.cat)))])
+    dwina		<- rbind(subset(dwina, !(host.1>host.2)), tmp)
+    
+    # sort dca
+    tmp			<- subset(dca, host.1>host.2)
+    setnames(tmp, c('host.1','host.2','CNTRL1','CNTRL2'),
+             c('host.2','host.1','CNTRL2','CNTRL1'))
+    set(tmp, NULL, 'type',
+        tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',type)))])
+    dca		<- rbind(subset(dca, !(host.1>host.2)), tmp)  
+    tmp <- unique(subset(dwina,select=c('PTY_RUN','host.1','host.2')))
+    tmp <- tmp[,list(PTY_RUN=PTY_RUN[1]),by=c('host.1','host.2')]
+    dwina <- merge(dwina,tmp, by=c('host.1','host.2'))
+    dca <- merge(dca,tmp, by=c('host.1','host.2','PTY_RUN'))
+    dwina$PTY_RUN.y=NULL
+    dca$PTY_RUN.y=NULL
+    setnames(dwina,'PTY_RUN.x','PTY_RUN',skip_absent=T)
+    setnames(dca,'PTY_RUN.x','PTY_RUN',skip_absent=T)
+    
+    # find pairs
+    tmp <- find.pairs.in.networks(dwina, dca, control=control, verbose=TRUE)
+    dpl <- copy(tmp$network.pairs)
+    dc <- copy(tmp$relationship.counts)
+    dw <- copy(tmp$windows)
+    save(dpl, dc, dw, file=file.path(indir,'Rakai_phscnetworks_allpairs.rda'))
+    
+    # find pairs
+    # control <- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent', conf.cut=0.5, neff.cut=3)
+    # tmp <- find.pairs.in.networks(dwina, dca, control=control)
+    # dpl <- copy(tmp$network.pairs)
+    # dc <- copy(tmp$relationship.counts)
+    # dw <- copy(tmp$windows)
+    # save(dpl, dc, dw, file=file.path(indir,'Rakai_phscnetworksmh_allpairs.rda'))
+    
+    # find networks
+    tmp <- find.networks(dc, control=control, verbose=TRUE)
+    dnet <- copy(tmp$transmission.networks)
+    dchain <- copy(tmp$most.likely.transmission.chains)
+    save(dpl, dc, dw, dnet, dchain, file=file.path(indir,'Rakai_phscnetworks.rda'))
+
+    # control<- list(linked.group='close.and.adjacent.cat',linked.no='not.close.or.nonadjacent',linked.yes='close.and.adjacent',
+    #                dir.group="close.and.adjacent.and.ancestry.cat", neff.cut=3, weight.complex.or.no.ancestry=0.5)
+    # tmp <- find.networks(dc, control=control, verbose=TRUE)
+    # dnet <- copy(tmp$transmission.networks)
+    # dchain <- copy(tmp$most.likely.transmission.chains)
+    # save(dpl, dc, dw, dnet, dchain, file=file.path(indir,'Rakai_phscnetworksmh.rda'))
+  }
+
+  job_tag <- '_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd'
+  job_tag <- '_02_05_30_min_read_null_max_read_posthoccount_im_mrca_fixpd'
+  job_tag <- '_025_30_min_read_100_max_read_posthoccount_im_mrca_fixpd'
+  job_tag <- '_025_30_min_read_null_max_read_posthoccount_im_mrca_fixpd'
+  make_networks(job_tag)  
+  
+  library(data.table)
+  indir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210325_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd'
+  load(file.path(indir,'Rakai_phscnetworks.rda'))
+  dchain <- as.data.table(dchain)
+  dchain <- dchain[SCORE_LINKED>0.6]
+  dchain[SCORE_DIR_12 <= 0.6 & SCORE_DIR_21 <= 0.6, EST_DIR:='unclear']
+  dchain[SCORE_DIR_12 > 0.6, EST_DIR:='12']
+  dchain[SCORE_DIR_21 > 0.6, EST_DIR:='21']
+  table(dchain$EST_DIR)
+  # 12      21 unclear 
+  # 376     362     233 
+  
+}
