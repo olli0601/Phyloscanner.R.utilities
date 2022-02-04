@@ -86,7 +86,6 @@ args <-
 args <- list(
   verbose = T,
   seed = 42,
-  sliding_width = 10L,
   window_cutoff = 0.5,
   n_control = 5,
   if_save_data = T,
