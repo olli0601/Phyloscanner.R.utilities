@@ -31,13 +31,6 @@ option_list <- list(
     help = "Random number seed [default %default]",
     dest = "seed"
   ),
-  # optparse::make_option(
-  #   "--sliding_width",
-  #   type = "integer",
-  #   default = 10L,
-  #   help = "Sliding width [default %default]",
-  #   dest = "sliding_width"
-  # ),
   optparse::make_option(
     "--window_cutoff",
     type = "numeric",
