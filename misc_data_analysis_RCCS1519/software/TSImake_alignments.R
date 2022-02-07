@@ -35,14 +35,14 @@ option_list <- list(
     type = "integer",
     default = 10L,
     help = "Sliding width [default %default]",
-    dest = "sliding_width"
+    dest = "sliding.width"
   ),
   optparse::make_option(
     "--window_cutoff",
     type = "numeric",
     default = 0.5,
     help = "Cutoff of proportion of windows indicating close relationship [default %default]",
-    dest = "window_cutoff"
+    dest = "window.cutoff"
   ),
   optparse::make_option(
     "--n_control",
@@ -99,8 +99,8 @@ args <-
 args <- list(
   verbose = T,
   seed = 42,
-  sliding_width = 10L,
-  window_cutoff = 0.5,
+  sliding.width = 10L,
+  window.cutoff = 0.5,
   n_control = 5,
   if_save_data = T,
   date = '2022-02-04',
@@ -152,7 +152,7 @@ infile.runs <- file.path(
   args$out.dir,
   paste0(
     'phscinput_runs_cutoff',
-    gsub('\\.', '', args$window_cutoff),
+    gsub('\\.', '', args$window.cutoff),
     '_ncontrol',
     args$n_control,
     '.rds'
@@ -229,13 +229,13 @@ pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # Remove starts, ends and vloops
-ptyi <- seq(800, 9175, args$sliding_width)
+ptyi <- seq(800, 9175, args$sliding.width)
 ptyi <- c(ptyi[ptyi <= 6615 - 250], 6825, 6850, ptyi[ptyi >= 7636])
 
 pty.c	<- lapply(seq_along(ptyi), function(i)
 {
   pty.args <- list(
-    prog.pty = args$prog_dir,
+    prog.pty = args$prog.dir,
     prog.mafft = '\" mafft --globalpair --maxiterate 1000 \" ',
     data.dir = args$out.dir.data,
     work.dir = args$out.dir.work,
@@ -257,7 +257,7 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
     all.bootstrap.trees = TRUE,
     strip.max.len = 350,
     min.ureads.individual = NA,
-    win = c(ptyi[i], ptyi[i] + 250, args$sliding_width, 250),
+    win = c(ptyi[i], ptyi[i] + 250, args$sliding.width, 250),
     keep.overhangs = FALSE,
     mem.save = 0,
     verbose = TRUE,
@@ -338,5 +338,5 @@ for (i in 1:pty.c[, max(JOB_ID)]) {
   cat(cmd, file = outfile)
   cmd <- paste("qsub", outfile)
   cat(cmd)
-  cat(system(cmd, intern = TRUE))
+  # cat(system(cmd, intern = TRUE))
 }
