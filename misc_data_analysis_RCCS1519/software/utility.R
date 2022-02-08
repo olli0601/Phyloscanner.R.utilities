@@ -189,3 +189,53 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   detach(pty.args)
   cmd
 }
+
+
+#' @export
+#' @title Produce a single iqtree shell command. 
+#' @return	Character string
+cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTRCAT --HKY85 -p 42')
+{		
+  cmd<- paste("#######################################################
+  # start: IQTREE
+  #######################################################\n",sep='')
+  cmd<- paste(cmd,"CWD=$(pwd)\n",sep='')
+  cmd<- paste(cmd,"echo $CWD\n",sep='')	
+  tmpdir.prefix	<- paste('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+  tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+  tmp.in			<- basename(infile.fasta)
+  tmp.out			<- basename(outfile)	
+  cmd<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
+  cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
+  cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
+  cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n', sep='') 
+  cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
+  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n',sep='')
+  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n',sep='')
+  cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
+  cmd<- paste(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
+  cmd<- paste(cmd,'cd $CWD\n', sep='')
+  cmd<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
+  cmd<- paste(cmd, "#######################################################
+  # end: IQTREE
+  #######################################################\n",sep='')
+  cmd
+}
+
+
+#' @export
+cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=1, hpc.q=NA, hpc.load=HPC.CX1.IMPERIAL.LOAD, hpc.array=NA)
+{
+  wrap<- "#!/bin/sh"
+  tmp	<- paste("#PBS -l walltime=",hpc.walltime,":59:59,pcput=",hpc.walltime,":45:00",sep='')
+  wrap<- paste(wrap, tmp, sep='\n')		
+  tmp	<- paste("#PBS -l select=",hpc.select,":ncpus=",hpc.nproc,":mem=",hpc.mem,sep='')
+  wrap<- paste(wrap, tmp, sep='\n')
+  wrap<- paste(wrap, "#PBS -j oe", sep='\n')
+  if(!is.na(hpc.array))
+    wrap<- paste(wrap, "\n#PBS -J 1-", hpc.array, sep='')
+  if(!is.na(hpc.q))
+    wrap<- paste(wrap, "\n#PBS -q",hpc.q, sep='')
+  wrap<- paste(wrap, hpc.load, sep='\n')
+  wrap
+}
