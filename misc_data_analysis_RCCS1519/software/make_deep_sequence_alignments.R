@@ -1,9 +1,7 @@
-# The phyloscanner run for TSI estimates - make alignments
+# The phyloscanner run - make alignments
 
 # Preamble
-# The set of scripts aims to run phyloscanner for TSI estimates.
-# We change the sliding windows from 25 to 10 and
-# update the options for buiding and analysing trees.
+# The set of scripts aims to run phyloscanner.
 # This script aims to make alignments in each potential transmission network.
 
 # Load the required packages
@@ -47,9 +45,16 @@ option_list <- list(
   optparse::make_option(
     "--n_control",
     type = "integer",
-    default = 5,
+    default = 0,
     help = "Number of controls added [default %default]",
     dest = "n_control"
+  ),
+  optparse::make_option(
+    "--cluster_size",
+    type = "integer",
+    default = 100L,
+    help = "Maximum cluster size [default %default]",
+    dest = "cluster_size"
   ),
   optparse::make_option(
     "--save_data",
@@ -87,7 +92,6 @@ option_list <- list(
     help = 'As of date to extract data from.  Defaults to today.',
     dest = 'date'
   )
-  
 )
 
 args <-
@@ -101,7 +105,8 @@ args <- list(
   seed = 42,
   sliding.width = 10L,
   window.cutoff = 0.5,
-  n_control = 5,
+  n_control = 0,
+  cluster_size = 100,
   if_save_data = T,
   date = '2022-02-04',
   out.dir = NA,
@@ -146,14 +151,14 @@ if (is.na(args$prj.dir))
 dir.data <-
   '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.net <-
-  file.path(args$out.dir, "200929_SIMILARTY_windowsize500_batchsize100")
+  file.path(args$out.dir, "potential_network")
 
 infile.runs <- file.path(
   args$out.dir,
   paste0(
-    'phscinput_runs_cutoff',
-    gsub('\\.', '', args$window.cutoff),
-    '_ncontrol',
+    'phscinput_runs_clusize_',
+    args$cluster_size,
+    '_ncontrol_',
     args$n_control,
     '.rds'
   )
@@ -201,10 +206,15 @@ source(file.path(args$prj.dir, "utility.R"))
 
 # Check duplicates
 pty.runs <- readRDS(infile.runs)
-setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
+if ('ID_TYPE' %in% colnames(pty.runs)) {
+  setorder(pty.runs, PTY_RUN,-ID_TYPE, UNIT_ID)
+} else{
+  setorder(pty.runs, PTY_RUN, UNIT_ID)
+}
+
 tmp <- pty.runs[, duplicated(SAMPLE_ID), by = 'PTY_RUN']
 tmp <- tmp[, which(V1)]
-pty.runs <- pty.runs[-tmp, ]
+pty.runs <- pty.runs[-tmp,]
 tmp <-
   pty.runs[, length(SAMPLE_ID) - length(unique(SAMPLE_ID)), by = 'PTY_RUN']
 stopifnot(all(tmp$V1 == 0))
@@ -222,8 +232,10 @@ root_seq <-
   )
 
 # Change the format
-pty.runs[ID_TYPE == 'control', UNIT_ID := paste0('CNTRL-', UNIT_ID)]
-pty.runs[ID_TYPE == 'control', RENAME_ID := paste0('CNTRL-', RENAME_ID)]
+if ('ID_TYPE' %in% colnames(pty.runs)) {
+  pty.runs[ID_TYPE == 'control', UNIT_ID := paste0('CNTRL-', UNIT_ID)]
+  pty.runs[ID_TYPE == 'control', RENAME_ID := paste0('CNTRL-', RENAME_ID)]
+}
 pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
 pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
@@ -314,7 +326,7 @@ cat(pbshead)
 
 #	Create PBS job array
 for (i in 1:pty.c[, max(JOB_ID)]) {
-  tmp <- pty.c[JOB_ID == i, ]
+  tmp <- pty.c[JOB_ID == i,]
   cmd <-
     tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
   cmd <-
@@ -338,5 +350,5 @@ for (i in 1:pty.c[, max(JOB_ID)]) {
   cat(cmd, file = outfile)
   cmd <- paste("qsub", outfile)
   cat(cmd)
-  # cat(system(cmd, intern = TRUE))
+  cat(system(cmd, intern = TRUE))
 }
