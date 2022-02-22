@@ -17,7 +17,7 @@ option_list <- list(
   optparse::make_option(
     c("-v", "--verbose"),
     action = "store_true",
-    default = FALSE,
+    default = TRUE,
     help = "Print extra output [default]",
     dest = "verbose"
   ),
@@ -33,7 +33,7 @@ option_list <- list(
     type = "integer",
     default = 10L,
     help = "Sliding width [default %default]",
-    dest = "sliding.width"
+    dest = "sliding_width"
   ),
   optparse::make_option(
     "--window_cutoff",
@@ -87,7 +87,7 @@ option_list <- list(
   optparse::make_option(
     "--date",
     type = 'character',
-    default = '2022-02-04',
+    default = Sys.Date(),
     metavar = '"YYYY-MM-DD"',
     help = 'As of date to extract data from.  Defaults to today.',
     dest = 'date'
@@ -100,19 +100,22 @@ args <-
 #
 # test
 #
-args <- list(
-  verbose = T,
-  seed = 42,
-  sliding.width = 10L,
-  window.cutoff = 0.5,
-  n_control = 0,
-  cluster_size = 100,
-  if_save_data = T,
-  date = '2022-02-04',
-  out.dir = NA,
-  prj.dir = NA,
-  prog.dir = NA
-)
+if(0){
+  args <- list(
+    verbose = T,
+    seed = 42,
+    sliding_width = 10L,
+    window.cutoff = 0.5,
+    n_control = 0,
+    cluster_size = 100,
+    if_save_data = T,
+    date = '2022-02-10',
+    out.dir = NA,
+    prj.dir = NA,
+    prog.dir = NA
+  )
+}
+
 
 #
 # use manually specified directories when args$out.dir is NA
@@ -187,7 +190,7 @@ ifelse(!dir.exists(args$out.dir.output),
 
 # Copy files into input folder
 file.copy(
-  list.files(file.path(args$out.dir, '210325_phsc_input'), full.names = T),
+  list.files(file.path('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/', '210325_phsc_input'), full.names = T),
   args$out.dir.data,
   overwrite = T,
   recursive = FALSE,
@@ -207,14 +210,14 @@ source(file.path(args$prj.dir, "utility.R"))
 # Check duplicates
 pty.runs <- readRDS(infile.runs)
 if ('ID_TYPE' %in% colnames(pty.runs)) {
-  setorder(pty.runs, PTY_RUN,-ID_TYPE, UNIT_ID)
+  setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
 } else{
   setorder(pty.runs, PTY_RUN, UNIT_ID)
 }
 
 tmp <- pty.runs[, duplicated(SAMPLE_ID), by = 'PTY_RUN']
 tmp <- tmp[, which(V1)]
-pty.runs <- pty.runs[-tmp,]
+pty.runs <- pty.runs[-tmp, ]
 tmp <-
   pty.runs[, length(SAMPLE_ID) - length(unique(SAMPLE_ID)), by = 'PTY_RUN']
 stopifnot(all(tmp$V1 == 0))
@@ -241,7 +244,7 @@ pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # Remove starts, ends and vloops
-ptyi <- seq(800, 9175, args$sliding.width)
+ptyi <- seq(800, 9175, args$sliding_width)
 ptyi <- c(ptyi[ptyi <= 6615 - 250], 6825, 6850, ptyi[ptyi >= 7636])
 
 pty.c	<- lapply(seq_along(ptyi), function(i)
@@ -269,7 +272,7 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
     all.bootstrap.trees = TRUE,
     strip.max.len = 350,
     min.ureads.individual = NA,
-    win = c(ptyi[i], ptyi[i] + 250, args$sliding.width, 250),
+    win = c(ptyi[i], ptyi[i] + 250, args$sliding_width, 250),
     keep.overhangs = FALSE,
     mem.save = 0,
     verbose = TRUE,
@@ -285,7 +288,6 @@ pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
 pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run))[1:nrow(pty.c)]]
 pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
-save(pty.c, file = '~/tsi_ptyc.rda')
 
 #	Define PBS variables
 hpc.load			<-
@@ -326,7 +328,7 @@ cat(pbshead)
 
 #	Create PBS job array
 for (i in 1:pty.c[, max(JOB_ID)]) {
-  tmp <- pty.c[JOB_ID == i,]
+  tmp <- pty.c[JOB_ID == i, ]
   cmd <-
     tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
   cmd <-
@@ -348,7 +350,7 @@ for (i in 1:pty.c[, max(JOB_ID)]) {
     ))
   outfile <- file.path(args$out.dir.work, outfile)
   cat(cmd, file = outfile)
-  cmd <- paste("qsub", outfile)
+  cmd <- paste("cd ",dirname(outfile),'\n',"qsub ", outfile)
   cat(cmd)
   cat(system(cmd, intern = TRUE))
 }

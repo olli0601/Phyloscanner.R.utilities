@@ -1,9 +1,9 @@
-# The phyloscanner run - divide individuals into batches.
+# The phyloscanner run - divide individuals into batches for the purpose of TSI estimation.
 
 # Preamble
 # The set of scripts aims to run phyloscanner.
-# This script aims to split individuals into batches
-# according to pre-calculated similarity scores.
+# This script aims to break individuals into batches
+# based on the pre-calculated similarity scores over the genome
 
 # Load the required packages
 library(data.table)
@@ -124,6 +124,8 @@ if (tmp["user"] == "xx4515")
 {
   if (is.na(args$out.dir))
   {
+    # args$out.dir <-
+    #   "/rds/general/project/ratmann_deepseq_analyses/live/testTSI/"
     args$out.dir <-
       "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
   }
@@ -181,10 +183,12 @@ df[LENGTH <= args$n_pos, PERC := NA]
 #
 dfrccs <- data.table(read.csv(infile.ind.rccs))
 dfrccs <- unique(subset(dfrccs, select = c('pt_id', 'pangea_id')))
+dfrccs[, pangea_id := paste0('RCCS_', pangea_id)]
 dfmrc <- data.table(read.csv(infile.ind.mrc))
 dfmrc <- unique(subset(dfmrc, select = c('pt_id', 'pangea_id')))
+dfmrc[, pangea_id := paste0('MRCUVRI_', pangea_id)]
 dfrccsmrc <- rbind(dfrccs, dfmrc)
-dfrccsmrc[, pangea_id := paste0('RCCS_', pangea_id)]
+
 df <- merge(df,
             dfrccsmrc,
             by.x = 'H1',
@@ -233,7 +237,7 @@ if (args$if_save_plots) {
   dev.off()
 }
 # cluster
-# do not apply hclust directly in case only one large clusters left and others are of size 1
+# I did not apply hclust directly in case only one large clusters left and others are of size 1
 # the code increases the number of clusters from 2,
 # identifies the cluster of size < pre-defined cluster_size,
 # deletes the individuals from distance matrix,

@@ -64,6 +64,13 @@ option_list <- list(
     dest = 'out.dir2'
   ),
   optparse::make_option(
+    "--out_dir_plots",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to base directory where all output is stored for comparison [default]",
+    dest = 'out.dir'
+  ),
+  optparse::make_option(
     "--name_out_dir_base1",
     type = "character",
     default = NA_character_,
@@ -91,9 +98,10 @@ if (0) {
     verbose = T,
     seed = 42,
     if_save_data = T,
-    ind = 'AID0039,AID8583,AID6594',
+    ind = 'AID0488,AID1202',
     out.dir1 = NA,
     out.dir2 = NA,
+    out.dir = NA,
     name.out.dir1 = '80% threshold',
     name.out.dir2 = '50% threshold'
   )
@@ -149,7 +157,11 @@ control <- list(
     "not.close.or.nonadjacent" = "grey80"
   )
 )
-out.dir <- file.path(args$out.dir1,'plots')
+if(is.na(args$out.dir)){
+  out.dir <- file.path(args$out.dir1,'plots')
+}else{
+  out.dir <- args$out.dir
+}
 dir.create(out.dir)
 #
 aids <- strsplit(args$ind, split = ',')[[1]]
