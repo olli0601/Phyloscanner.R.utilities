@@ -36,11 +36,18 @@ option_list <- list(
     dest = "sliding_width"
   ),
   optparse::make_option(
+    "--window_size",
+    type = "integer",
+    default = 250L,
+    help = "Window size [default %default]",
+    dest = "window_size"
+  ),
+  optparse::make_option(
     "--window_cutoff",
     type = "numeric",
-    default = 0.5,
+    default = NA,
     help = "Cutoff of proportion of windows indicating close relationship [default %default]",
-    dest = "window.cutoff"
+    dest = "window_cutoff"
   ),
   optparse::make_option(
     "--n_control",
@@ -105,7 +112,8 @@ if(0){
     verbose = T,
     seed = 42,
     sliding_width = 10L,
-    window.cutoff = 0.5,
+    window_size = 250L,
+    window_cutoff = NA,
     n_control = 0,
     cluster_size = 100,
     if_save_data = T,
@@ -156,16 +164,30 @@ dir.data <-
 dir.net <-
   file.path(args$out.dir, "potential_network")
 
-infile.runs <- file.path(
-  args$out.dir,
-  paste0(
-    'phscinput_runs_clusize_',
-    args$cluster_size,
-    '_ncontrol_',
-    args$n_control,
-    '.rds'
-  )
-)
+if(!is.na(args$window_cutoff)){
+  infile.runs <- file.path(
+    args$out.dir,
+    paste0(
+      'phscinput_runs_clusize_',
+      args$cluster_size,
+      '_ncontrol_',
+      args$n_control,
+      '_windowcutoff_',
+      args$window_cutoff,
+      '.rds'
+    ))
+}else{
+  infile.runs <- file.path(
+    args$out.dir,
+    paste0(
+      'phscinput_runs_clusize_',
+      args$cluster_size,
+      '_ncontrol_',
+      args$n_control,
+      '.rds'
+    ))
+}
+
 max.per.run <- 4900
 
 
@@ -245,7 +267,7 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # Remove starts, ends and vloops
 ptyi <- seq(800, 9175, args$sliding_width)
-ptyi <- c(ptyi[ptyi <= 6615 - 250], 6825, 6850, ptyi[ptyi >= 7636])
+ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
 
 pty.c	<- lapply(seq_along(ptyi), function(i)
 {
@@ -272,7 +294,7 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
     all.bootstrap.trees = TRUE,
     strip.max.len = 350,
     min.ureads.individual = NA,
-    win = c(ptyi[i], ptyi[i] + 250, args$sliding_width, 250),
+    win = c(ptyi[i], ptyi[i] + args$window_size, args$sliding_width, args$window_size),
     keep.overhangs = FALSE,
     mem.save = 0,
     verbose = TRUE,

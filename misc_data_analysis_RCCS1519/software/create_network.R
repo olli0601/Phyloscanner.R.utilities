@@ -504,7 +504,7 @@ if ((nrow(ans) != 0 & !file.exists(file.path(
       cat('Process window ', window, ' ...\n')
     }
     tmp <- list()
-    tmp$y <- ans[WINDOW == window]$PERC
+    tmp$y <- log(ans[WINDOW == window]$PERC)
     tmp$N <- length(tmp$y)
     fit[[window]] <- stan(
       model_code = stan_code,
@@ -537,14 +537,7 @@ if ((nrow(ans) != 0 & !file.exists(file.path(
     ))
   }
   
-  fit <- readRDS(file.path(
-    out.dir,
-    paste0(
-      'similarity_couple_fitted_model_minlen_',
-      args$length_cutoff,
-      '.rds'
-    )
-  ))
+
   cat(' ---------- Check the fitted models ---------- \n')
   rh = c()
   ness = c()
@@ -733,106 +726,113 @@ gc()
 
 cat(' ---------- Summarise closeness between sequences by windows ----------')
 threshold <- threshold$`50%`
-for (window in 1:length(windows_start)) {
-  cat('\n Process window ', window , '\n')
-  load(infile.similarity[window])
-  dfbatch <- dfbatch[LENGTH >= args$length_cutoff,]
-  
-  # select individuals with high depth
-  ddepth_select <-
-    unique(subset(ddepth_windows[WINDOW == window,], select = c('pangea_id','HD')))
-  setnames(ddepth_select,
-           colnames(ddepth_select),
-           paste0(colnames(ddepth_select), '1'))
-  dfbatch <-
-    merge(
-      dfbatch,
-      ddepth_select,
-      by.x = 'H1',
-      by.y = 'pangea_id1',
-      all.x = T
-    )
-  setnames(ddepth_select,
-           colnames(ddepth_select),
-           gsub('1', '2', colnames(ddepth_select)))
-  dfbatch <-
-    merge(
-      dfbatch,
-      ddepth_select,
-      by.x = 'H2',
-      by.y = 'pangea_id2',
-      all.x = T
-    )
-  setnames(ddepth_select,
-           colnames(ddepth_select),
-           gsub('2', '', colnames(ddepth_select)))
-  dfbatch <- dfbatch[HD1 == 1 & HD2 == 1,]
-  
-  # add thresholds
-  dfbatch[, threshold_window := threshold[window]]
-  dfbatch[, CLOSE := as.integer(PERC > threshold_window)]
-  
-  # average similarity per sequence pair
-  tmp  <-
-    unique(subset(dfbatch, select = c('H1', 'H2', 'PERC')))
-  tmp <-
-    tmp[, list(PERC = mean(PERC, na.rm = T)), by = c('H1', 'H2')]
-  setnames(tmp, 'PERC', paste0('PERC', window))
-  if (window == 1) {
-    df <- copy(tmp)
-  } else{
-    df <- merge(df,
-                tmp,
-                by = c('H1', 'H2'),
-                all = T)
+# if(!file.exists(file.path(out.dir, 'average_similarity.rds')) |
+#    !file.exists(file.path(out.dir, 'support_close.rds')) | args$overwrite){
+if(T){
+  for (window in 1:length(windows_start)) {
+    cat('\n Process window ', window , '\n')
+    load(grep(paste0('similarity',window,'.rda'), infile.similarity,value = T))
+    dfbatch <- dfbatch[LENGTH >= args$length_cutoff,]
+    
+    # select individuals with high depth
+    ddepth_select <-
+      unique(subset(ddepth_windows[WINDOW == window,], select = c('pangea_id','HD')))
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             paste0(colnames(ddepth_select), '1'))
+    dfbatch <-
+      merge(
+        dfbatch,
+        ddepth_select,
+        by.x = 'H1',
+        by.y = 'pangea_id1',
+        all.x = T
+      )
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             gsub('1', '2', colnames(ddepth_select)))
+    dfbatch <-
+      merge(
+        dfbatch,
+        ddepth_select,
+        by.x = 'H2',
+        by.y = 'pangea_id2',
+        all.x = T
+      )
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             gsub('2', '', colnames(ddepth_select)))
+    dfbatch <- dfbatch[HD1 == 1 & HD2 == 1,]
+    
+    # add thresholds
+    dfbatch[, threshold_window := threshold[window]]
+    dfbatch[, CLOSE := as.integer(PERC > threshold_window)]
+    
+    # average similarity per sequence pair
+    tmp  <-
+      unique(subset(dfbatch, select = c('H1', 'H2', 'PERC')))
+    tmp <-
+      tmp[, list(PERC = mean(PERC, na.rm = T)), by = c('H1', 'H2')]
+    setnames(tmp, 'PERC', paste0('PERC', window))
+    if (window == 1) {
+      df <- copy(tmp)
+    } else{
+      df <- merge(df,
+                  tmp,
+                  by = c('H1', 'H2'),
+                  all = T)
+    }
+    rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows','dfbatch',
+                            'df','args','infile.similarity','out.dir','window','dsupport')))
+    gc()
+    
+    # support for close relationship per sequence pair
+    tmp  <-
+      unique(subset(dfbatch, select = c('H1', 'H2', 'CLOSE')))
+    tmp <-
+      tmp[, list(CLOSE = mean(CLOSE, na.rm = T)), by = c('H1', 'H2')]
+    setnames(tmp, 'CLOSE', paste0('CLOSE', window))
+    if (window == 1) {
+      dsupport <- copy(tmp)
+    } else{
+      dsupport <- merge(dsupport,
+                        tmp,
+                        by = c('H1', 'H2'),
+                        all = T)
+    }
+    rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows',
+                            'dsupport','df','args','infile.similarity','out.dir')))
+    gc()
   }
-  rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows','dfbatch',
-                          'df','args','infile.similarity','out.dir','window','dsupport')))
-  gc()
   
-  # support for close relationship per sequence pair
-  tmp  <-
-    unique(subset(dfbatch, select = c('H1', 'H2', 'CLOSE')))
-  tmp <-
-    tmp[, list(CLOSE = mean(CLOSE, na.rm = T)), by = c('H1', 'H2')]
-  setnames(tmp, 'CLOSE', paste0('CLOSE', window))
-  if (window == 1) {
-    dsupport <- copy(tmp)
-  } else{
-    dsupport <- merge(dsupport,
-                      tmp,
-                      by = c('H1', 'H2'),
-                      all = T)
+  #
+  if (args$if_save_data) {
+    cat(
+      'Write the average similarity scores to ',
+      file.path(out.dir, 'average_similarity.rds'),
+      '... \n'
+    )
+    saveRDS(df, file = file.path(out.dir, 'average_similarity.rds'))
+    cat(
+      'Write the supports for closeness to ',
+      file.path(out.dir, 'support_close.rds'),
+      '... \n'
+    )
+    saveRDS(dsupport, file = file.path(out.dir, 'support_close.rds'))
+    rm(list=setdiff(ls(), c('couple','ids','dsupport','args','out.dir')))
+    gc()
   }
-  rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows',
-                          'dsupport','df','args','infile.similarity','out.dir')))
-  gc()
 }
-
-#
-if (args$if_save_data) {
-  cat(
-    'Write the average similarity scores to ',
-    file.path(out.dir, 'average_similarity.rds'),
-    '... \n'
-  )
-  saveRDS(df, file = file.path(out.dir, 'average_similarity.rds'))
-  cat(
-    'Write the supports for closeness to ',
-    file.path(out.dir, 'support_close.rds'),
-    '... \n'
-  )
-  saveRDS(dsupport, file = file.path(out.dir, 'support_close.rds'))
-}
-rm(list=setdiff(ls(), c('couple','ids','dsupport','args','out.dir')))
-gc()
 
 cat('---------- Classify the closeness between sequences ----------')
 dsupport <-
   data.table(readRDS(file.path(out.dir, 'support_close.rds')))
+print(str(dsupport))
+print(str(ids))
 tmp <-
   subset(dsupport, select = grep('CLOSE', colnames(dsupport), value = T))
 tmp <- as.matrix(tmp)
+print(str(tmp))
 tmpn <- apply(tmp, 1, function(x)
   sum(!is.na(x)))
 tmpp <- apply(tmp, 1, function(x)
@@ -840,9 +840,11 @@ tmpp <- apply(tmp, 1, function(x)
 tmpp <- tmpp / tmpn
 dsupport$DATA <- tmpn
 dsupport$PROP <- tmpp
+dsupport <- subset(dsupport, select=c('H1','H2','PROP','DATA'))
+print(str(dsupport))
 dsupport <- dsupport[DATA >= args$n_overlap,]
 dsupport <- dsupport[PROP >= args$window_cutoff]
-
+print(str(dsupport))
 # map
 setnames(ids, colnames(ids), paste0(colnames(ids), '1'))
 df <-
@@ -1218,26 +1220,18 @@ pty.runs <- merge(rtc, pty.runs, by = 'UNIT_ID', all.x = T)
 
 # Write processed samples
 if (args$if_save_data) {
-  cat('\nWriting to file ',
-      file.path(
-        args$out.dir,
-        paste0(
-          'phscinput_runs_clusize_',
-          args$cluster_size,
-          '_ncontrol_',
-          args$n_control,
-          '.rds'
-        )
-      ))
+  outfile <- file.path(
+    args$out.dir,
+    paste0(
+      'phscinput_runs_clusize_',
+      args$cluster_size,
+      '_ncontrol_',
+      args$n_control,
+      '_windowcutoff_',
+      args$window_cutoff,
+      '.rds'
+    ))
+  cat('\nWriting to file ',outfile)
   saveRDS(pty.runs,
-          file =  file.path(
-            args$out.dir,
-            paste0(
-              'phscinput_runs_clusize_',
-              args$cluster_size,
-              '_ncontrol_',
-              args$n_control,
-              '.rds'
-            )
-          ))
+          file = outfile)
 }
