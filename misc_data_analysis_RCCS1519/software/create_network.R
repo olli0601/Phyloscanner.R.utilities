@@ -239,6 +239,7 @@ args$infile.mrc <-
   file.path(dir.data,
             'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_mapped_samples.rds')
 
+
 args$infile.pty.runs <-
   file.path(dir.rccs1519, '210120_RCCSUVRI_phscinput_samples.rds')
 out.dir <- file.path(args$out.dir, 'potential_network')
@@ -249,8 +250,8 @@ infile.threshold <-
 # Define functions just used in this script alone
 take_bridging_individual <- function(df_graph, df) {
   bridging = list()
-  for (k in 1:max(df$MEMBERSHIP)) {
-    tmp1 = df[MEMBERSHIP == k, ]$PT_ID
+  for (k in 1:max(df$IDCLU)) {
+    tmp1 = df[IDCLU == k, ]$ID
     tmp2 = df_graph[pt_id1 %in% tmp1 &
                       !(pt_id2 %in% tmp1) & SIMILARITY >= 0.975, ]
     tmp3 = df_graph[pt_id2 %in% tmp1 &
@@ -263,8 +264,8 @@ take_bridging_individual <- function(df_graph, df) {
 break_large_clusters <- function(idlarge, dflarge, ddist) {
   ans <- data.table()
   for (i in idlarge) {
-    idlarge_ind <- dflarge[MEMBERSHIP == i]$PT_ID
-    maxsize <- unique(dflarge[MEMBERSHIP == i, ]$CLU_SIZE)
+    idlarge_ind <- dflarge[IDCLU == i]$ID
+    maxsize <- unique(dflarge[IDCLU == i, ]$CLU_SIZE)
     ddist_idlarge_ind <-
       ddist[pt_id1 %in% idlarge_ind & pt_id2 %in% idlarge_ind]
     chain_idlarge_ind <-
@@ -279,10 +280,10 @@ break_large_clusters <- function(idlarge, dflarge, ddist) {
       E(chain_idlarge_ind)$weight
     )
     tmp = clusters(chain_idlarge_ind, mode = 'weak')
-    stopifnot(all(tmp$membership == 1))
+    # stopifnot(all(tmp$membership == 1))
     comm_idlarge_ind <- cluster_louvain(chain_idlarge_ind)
-    df_idlarge_ind = data.table(PT_ID = comm_idlarge_ind$names,
-                                MEMBERSHIP = comm_idlarge_ind$membership)
+    df_idlarge_ind = data.table(ID = comm_idlarge_ind$names,
+                                IDCLU = comm_idlarge_ind$membership)
     df_graph_idlarge_ind = as_long_data_frame(chain_idlarge_ind)
     df_graph_idlarge_ind = data.table(df_graph_idlarge_ind[, 3:5])
     colnames(df_graph_idlarge_ind) = c('SIMILARITY', 'pt_id1', 'pt_id2')
@@ -292,21 +293,62 @@ break_large_clusters <- function(idlarge, dflarge, ddist) {
     if (length(bridging_all) != 0) {
       tmpidclu <- max(comm_idlarge_ind$membership) + 1
       df_idlarge_ind = rbind(df_idlarge_ind,
-                             data.table(PT_ID = bridging_all, MEMBERSHIP = tmpidclu))
+                             data.table(ID = bridging_all, IDCLU = tmpidclu))
     }
-    tmp = df_idlarge_ind[, list(CLU_SIZE = length(PT_ID)), by = 'MEMBERSHIP']
-    df_idlarge_ind = merge(df_idlarge_ind, tmp, by = 'MEMBERSHIP')
+    tmp = df_idlarge_ind[, list(CLU_SIZE = length(ID)), by = 'IDCLU']
+    df_idlarge_ind = merge(df_idlarge_ind, tmp, by = 'IDCLU')
     df_idlarge_ind[, IDC := i]
     ans <- rbind(ans, df_idlarge_ind)
   }
-  tmp <- unique(subset(ans, select = c('MEMBERSHIP', 'IDC')))
-  tmp[, MEMBERSHIP2 := seq_len(nrow(tmp))]
-  ans <- merge(ans, tmp, by = c('MEMBERSHIP', 'IDC'))
-  ans[, MEMBERSHIP := NULL]
+  tmp <- unique(subset(ans, select = c('IDCLU', 'IDC')))
+  tmp[, IDCLU2 := seq_len(nrow(tmp))]
+  ans <- merge(ans, tmp, by = c('IDCLU', 'IDC'))
+  ans[, IDCLU := NULL]
   ans[, IDC := NULL]
-  setnames(ans, 'MEMBERSHIP2', 'MEMBERSHIP')
+  setnames(ans, 'IDCLU2', 'IDCLU')
   return(ans)
 }
+is.match <- function(x,y){
+  #' returns match score for each position
+  #' @param x,y two nucleotides at one positions
+  if(x %in% c('a','g','c','t') & y %in% c('a','g','c','t')){
+    if(x==y){
+      ans = 1
+    }else{
+      ans = 0
+    }
+  }else{
+    if(((x=='g'|x=='a')&y=='r')|
+       ((y=='g'|y=='a')&x=='r')|
+       ((x=='t'|x=='c')&y=='y')|
+       ((y=='t'|y=='c')&x=='y')|
+       ((x=='a'|x=='t')&y=='w')|
+       ((y=='a'|y=='t')&x=='w')|
+       ((x=='a'|x=='c')&y=='m')|
+       ((y=='a'|y=='c')&x=='m')|
+       ((x=='g'|x=='c')&y=='s')|
+       ((y=='g'|y=='c')&x=='s')|
+       ((x=='g'|x=='t')&y=='k')|
+       ((y=='g'|y=='t')&x=='k')){
+      ans = 1/2
+    }else if(((x=='a'|x=='c'|x=='t')&y=='h')|
+             ((y=='a'|y=='c'|y=='t')&x=='h')|
+             ((x=='a'|x=='g'|x=='t')&y=='d')|
+             ((y=='a'|y=='g'|y=='t')&x=='d')|
+             ((x=='g'|x=='c'|x=='t')&y=='b')|
+             ((y=='g'|y=='c'|y=='t')&x=='b')|
+             ((x=='a'|x=='c'|x=='g')&y=='v')|
+             ((y=='a'|y=='c'|y=='g')&x=='v')){
+      ans = 1/3
+    }else{
+      ans = 0
+    }
+  }
+  return(ans)
+}
+
+
+
 
 # Set seed
 set.seed(args$seed)
@@ -393,8 +435,7 @@ if(!file.exists(file.path(
   out.dir,
   paste0('similarity_couple_minlen_',
          args$length_cutoff,
-         '.rds')
-))|args$overwrite){
+         '.rds')))|args$overwrite){
   # similarity among couples
   for (file in infile.similarity) {
     if (args$verbose) {
@@ -639,7 +680,7 @@ if ((nrow(ans) != 0 & !file.exists(file.path(
   load(infile.threshold)
 }
 rm(list=setdiff(ls(), c('couple','ids','threshold','args',
-                        'infile.similarity','out.dir')))
+                        'infile.similarity','out.dir',lsf.str())))
 gc()
 
 cat(' ----------- Select high depth sequences ---------- ')
@@ -709,7 +750,7 @@ if(!file.exists(gsub('.fasta', '_depths.rds', args$infile)) | args$overwrite){
 }
 
 rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth','args',
-                        'windows_start','infile.similarity','out.dir')))
+                        'windows_start','infile.similarity','out.dir',lsf.str())))
 gc()
 
 # select
@@ -721,16 +762,84 @@ ddepth_windows[, HD := 1]
 #   data.table::dcast(ddepth_windows, pangea_id ~ WINDOW, value.var = 'HD')
 
 rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows','args',
-                        'windows_start','infile.similarity','out.dir')))
+                        'windows_start','infile.similarity','out.dir',lsf.str())))
 gc()
 
-cat(' ---------- Summarise closeness between sequences by windows ----------')
+cat(' ---------- Summarise closeness between sequences by windows ----------\n')
 threshold <- threshold$`50%`
-# if(!file.exists(file.path(out.dir, 'average_similarity.rds')) |
-#    !file.exists(file.path(out.dir, 'support_close.rds')) | args$overwrite){
-if(T){
+if(!file.exists(file.path(out.dir, 'average_similarity.rds'))| args$overwrite){
   for (window in 1:length(windows_start)) {
-    cat('\n Process window ', window , '\n')
+    cat('\n Extract the distance in window ', window , '\n')
+    load(grep(paste0('similarity',window,'.rda'), infile.similarity,value = T))
+    dfbatch <- dfbatch[LENGTH >= args$length_cutoff,]
+    
+    # select individuals with high depth
+    ddepth_select <-
+      unique(subset(ddepth_windows[WINDOW == window,], select = c('pangea_id','HD')))
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             paste0(colnames(ddepth_select), '1'))
+    dfbatch <-
+      merge(
+        dfbatch,
+        ddepth_select,
+        by.x = 'H1',
+        by.y = 'pangea_id1',
+        all.x = T
+      )
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             gsub('1', '2', colnames(ddepth_select)))
+    dfbatch <-
+      merge(
+        dfbatch,
+        ddepth_select,
+        by.x = 'H2',
+        by.y = 'pangea_id2',
+        all.x = T
+      )
+    setnames(ddepth_select,
+             colnames(ddepth_select),
+             gsub('2', '', colnames(ddepth_select)))
+    dfbatch <- dfbatch[HD1 == 1 & HD2 == 1,]
+    
+    # average similarity per sequence pair
+    tmp  <-
+      unique(subset(dfbatch, select = c('H1', 'H2', 'PERC')))
+    tmp <-
+      tmp[, list(PERC = mean(PERC, na.rm = T)), by = c('H1', 'H2')]
+    setnames(tmp, 'PERC', paste0('PERC', window))
+    if (window == 1) {
+      df <- copy(tmp)
+    } else{
+      df <- merge(df,
+                  tmp,
+                  by = c('H1', 'H2'),
+                  all = T)
+    }
+    rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows',
+                            'df','args','infile.similarity','out.dir','window',
+                            'windows_start',lsf.str())))
+    gc()
+  }
+  #
+  if (args$if_save_data) {
+    cat(
+      'Write the average similarity scores to ',
+      file.path(out.dir, 'average_similarity.rds'),
+      '... \n'
+    )
+    saveRDS(df, file = file.path(out.dir, 'average_similarity.rds'))
+    rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows',
+                            'args','infile.similarity','out.dir',
+                            'windows_start',lsf.str())))
+    gc()
+  }
+}
+
+if(!file.exists(file.path(out.dir, 'support_close.rds')) | args$overwrite){
+  for (window in 1:length(windows_start)) {
+    cat('\n Extract supports in window ', window , '\n')
     load(grep(paste0('similarity',window,'.rda'), infile.similarity,value = T))
     dfbatch <- dfbatch[LENGTH >= args$length_cutoff,]
     
@@ -768,24 +877,6 @@ if(T){
     dfbatch[, threshold_window := threshold[window]]
     dfbatch[, CLOSE := as.integer(PERC > threshold_window)]
     
-    # average similarity per sequence pair
-    tmp  <-
-      unique(subset(dfbatch, select = c('H1', 'H2', 'PERC')))
-    tmp <-
-      tmp[, list(PERC = mean(PERC, na.rm = T)), by = c('H1', 'H2')]
-    setnames(tmp, 'PERC', paste0('PERC', window))
-    if (window == 1) {
-      df <- copy(tmp)
-    } else{
-      df <- merge(df,
-                  tmp,
-                  by = c('H1', 'H2'),
-                  all = T)
-    }
-    rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows','dfbatch',
-                            'df','args','infile.similarity','out.dir','window','dsupport')))
-    gc()
-    
     # support for close relationship per sequence pair
     tmp  <-
       unique(subset(dfbatch, select = c('H1', 'H2', 'CLOSE')))
@@ -801,50 +892,34 @@ if(T){
                         all = T)
     }
     rm(list=setdiff(ls(), c('couple','ids','threshold','ddepth_windows',
-                            'dsupport','df','args','infile.similarity','out.dir')))
+                            'dsupport','args','infile.similarity','out.dir',
+                            'window',lsf.str())))
     gc()
   }
-  
   #
   if (args$if_save_data) {
-    cat(
-      'Write the average similarity scores to ',
-      file.path(out.dir, 'average_similarity.rds'),
-      '... \n'
-    )
-    saveRDS(df, file = file.path(out.dir, 'average_similarity.rds'))
-    cat(
+     cat(
       'Write the supports for closeness to ',
       file.path(out.dir, 'support_close.rds'),
       '... \n'
     )
     saveRDS(dsupport, file = file.path(out.dir, 'support_close.rds'))
-    rm(list=setdiff(ls(), c('couple','ids','dsupport','args','out.dir')))
+    rm(list=setdiff(ls(), c('couple','ids','dsupport','args','out.dir',lsf.str())))
     gc()
   }
+}else{
+  dsupport <- data.table(readRDS(file.path(out.dir, 'support_close.rds')))
 }
 
-cat('---------- Classify the closeness between sequences ----------')
-dsupport <-
-  data.table(readRDS(file.path(out.dir, 'support_close.rds')))
-print(str(dsupport))
-print(str(ids))
-tmp <-
-  subset(dsupport, select = grep('CLOSE', colnames(dsupport), value = T))
-tmp <- as.matrix(tmp)
-print(str(tmp))
-tmpn <- apply(tmp, 1, function(x)
-  sum(!is.na(x)))
-tmpp <- apply(tmp, 1, function(x)
-  sum(x, na.rm = T))
-tmpp <- tmpp / tmpn
-dsupport$DATA <- tmpn
-dsupport$PROP <- tmpp
+
+cat('---------- Classify the closeness between sequences ----------\n')
+dsupport[ ,DATA := rowSums(!is.na(.SD)), .SDcols = grep("CLOSE", names(dsupport))]
+dsupport[ ,SUPPORT := rowSums(.SD, na.rm = T), .SDcols = grep("CLOSE", names(dsupport))]
+dsupport[ ,PROP := SUPPORT/DATA]
 dsupport <- subset(dsupport, select=c('H1','H2','PROP','DATA'))
-print(str(dsupport))
 dsupport <- dsupport[DATA >= args$n_overlap,]
 dsupport <- dsupport[PROP >= args$window_cutoff]
-print(str(dsupport))
+
 # map
 setnames(ids, colnames(ids), paste0(colnames(ids), '1'))
 df <-
@@ -886,8 +961,56 @@ if (args$if_save_data) {
     '.rds'
   )))
 }
-rm(list=setdiff(ls(), c('couple','ids','close_pairs','args','out.dir')))
+rm(list=setdiff(ls(), c('couple','ids','close_pairs','args','out.dir',lsf.str())))
 gc()
+
+
+cat('---------- Calculate similarity on the entire genome ----------\n')
+if(!file.exists(file.path(out.dir, 'whole_genome_similarity_close_pairs.rds'))){
+  mapping_rccs <- readRDS(args$infile.rccs)
+  dconsensus <- subset(mapping_rccs,select=c('PANGEA_ID','CONSENSUS','F'))
+  dconsensus <- unique(dconsensus[CONSENSUS!="",])
+  dconsensus[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+  mapping_mrc <- readRDS(args$infile.mrc)
+  tmp <- subset(mapping_mrc,select=c('PANGEA_ID','CONSENSUS','F'))
+  tmp <- unique(tmp[CONSENSUS!="",])
+  tmp[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
+  dconsensus = rbind(dconsensus, tmp)
+  dconsensus = subset(dconsensus, select=c('PANGEA_ID','F'))
+  dconsensus <- merge(dconsensus, ids, by.x='PANGEA_ID',by.y='pangea_id', all.x=T)
+  tmp <-  data.table(pt_id=unique(c(close_pairs$pt_id1, close_pairs$pt_id2)))
+  dconsensus <- merge(dconsensus, tmp, by='pt_id', all.y=T)
+  dconsensus <- subset(dconsensus,select=c('pt_id','F'))
+  dconsensus <- unique(dconsensus)
+  # dconsensus[,sum(is.na(`F`))]
+  lconsensus <- list()
+  for (i in 1:nrow(dconsensus)) {
+    lconsensus[[as.character(dconsensus$pt_id[i])]] = read.fasta(dconsensus$`F`[i])
+  }
+  ddist		<- close_pairs[,{ 
+    seq1 <- lconsensus[[as.character(pt_id1)]][[1]]
+    seq2 <- lconsensus[[as.character(pt_id2)]][[1]]
+    pos <- which(seq1 !='-' & seq1 !='?' & seq1 !='n' & seq2 !='-' & seq2 !='?' &  seq2 !='n')
+    if (length(pos)==0 ){
+      len <- as.integer(-1.0)
+      match <- -1.0
+    }else{
+      seq1 <- seq1[pos]
+      seq2 <- seq2[pos]
+      len <- length(pos)
+      # 
+      match <- sum(sapply(1:length(pos),function(pos){is.match(seq1[pos],seq2[pos])}))
+    }
+    list(LENGTH= len,
+         MATCHES= match)
+  }, by=c('pt_id1','pt_id2')]
+  
+  ddist[,SIMILARITY:=MATCHES/LENGTH]
+}else{
+  dist <- data.table(readRDS(file.path(out.dir, 'whole_genome_similarity_close_pairs.rds')))
+}
+
+ddist[SIMILARITY >= 0.975, SIMILARITY := 1]
 
 cat(' ----------- Generate clusters ----------- \n')
 chains <-
@@ -907,73 +1030,33 @@ rtc[, CLU := NULL]
 setkey(rtc, IDCLU)
 
 cat('----------- Break the large clusters ----------- \n')
-if (any(tmp$CLU_SIZE >= args$cluster_size)) {
-  id = rtc[IDCLU == 1, ]$ID
-  chains <- subset(close_pairs, select = c(pt_id1, pt_id2))
-  chains <- chains[pt_id1 %in% id & pt_id2 %in% id]
-  load(infile.ddist)
-  ddist = copy(ddist_copy)
-  ddist[SIMILARITY >= 0.975, SIMILARITY := 1]
-  ddist <-
-    ddist[, list(SIMILARITY = mean(SIMILARITY)), by = c('pt_id1', 'pt_id2')]
-  chains_tmp <-
-    graph.data.frame(ddist, directed = FALSE, vertices = NULL)
-  E(chains_tmp)$weight = ddist$SIMILARITY
-  chains_tmp <- simplify(chains_tmp)
-  E(chains_tmp)$weight = ifelse(E(chains_tmp)$weight > 1,
-                                E(chains_tmp)$weight / 2,
-                                E(chains_tmp)$weight)
-  comm <- cluster_louvain(chains_tmp)
-  df = data.table(PT_ID = comm$names, MEMBERSHIP = comm$membership)
-  df_graph = as_long_data_frame(chains_tmp)
-  df_graph = data.table(df_graph[, 3:5])
-  colnames(df_graph) = c('SIMILARITY', 'pt_id1', 'pt_id2')
-  bridging <- take_bridging_individual(df_graph, df)
-  bridging_all <- unique(do.call(c, bridging))
-  id_clu <- max(df$MEMBERSHIP)
-  tmp <- data.table(PT_ID = bridging_all, MEMBERSHIP = id_clu + 1)
-  df <- rbind(df, tmp)
-  df = rbind(df, data.table(PT_ID = bridging_all, MEMBERSHIP = id_clu))
-  tmp = df[, list(CLU_SIZE = length(PT_ID)), by = 'MEMBERSHIP']
-  df = merge(df, tmp, by = 'MEMBERSHIP')
-  
-  # Repeat tricks
-  dflarge <- df[CLU_SIZE > args$cluster_size]
-  df <- df[CLU_SIZE <= args$cluster_size]
-  tmp <-
-    data.table(MEMBERSHIP2 = seq_len(length(unique(df$MEMBERSHIP))),
-               MEMBERSHIP = unique(df$MEMBERSHIP))
-  df <- merge(df, tmp, by = 'MEMBERSHIP')
-  df[, MEMBERSHIP := NULL]
-  setnames(df, 'MEMBERSHIP2', 'MEMBERSHIP')
-  idlarge <- unique(dflarge$MEMBERSHIP)
+dflarge <- rtc[CLU_SIZE > args$cluster_size]
+df <- rtc[CLU_SIZE <= args$cluster_size]
+if(nrow(dflarge) !=0){
+  idlarge <- unique(dflarge$IDCLU)
   breaked_dflarge <- break_large_clusters(idlarge, dflarge, ddist)
   while (T) {
-    id_clu <- max(df$MEMBERSHIP)
+    id_clu <- max(df$IDCLU)
     tmp <- breaked_dflarge[CLU_SIZE <= args$cluster_size]
     tmp2 <-
-      unique(subset(tmp, select = c('CLU_SIZE', 'MEMBERSHIP')))
-    setkey(tmp2, MEMBERSHIP)
-    tmp2[, MEMBERSHIP2 := seq_len(nrow(tmp2))]
-    tmp <- merge(tmp, tmp2, by = c('CLU_SIZE', 'MEMBERSHIP'))
-    tmp[, MEMBERSHIP := NULL]
-    setnames(tmp, 'MEMBERSHIP2', 'MEMBERSHIP')
-    tmp[, MEMBERSHIP := MEMBERSHIP + id_clu]
+      unique(subset(tmp, select = c('CLU_SIZE', 'IDCLU')))
+    setkey(tmp2, IDCLU)
+    tmp2[, IDCLU2 := seq_len(nrow(tmp2))]
+    tmp <- merge(tmp, tmp2, by = c('CLU_SIZE', 'IDCLU'))
+    tmp[, IDCLU := IDCLU2 + id_clu]
+    tmp[,IDCLU2:=NULL]
     df <- rbind(df, tmp)
     dflarge <- breaked_dflarge[CLU_SIZE > args$cluster_size]
-    idlarge <- unique(dflarge$MEMBERSHIP)
+    idlarge <- unique(dflarge$IDCLU)
+    print(idlarge)
     if (length(idlarge) == 0)
       break
     breaked_dflarge <-
       break_large_clusters(idlarge, dflarge, ddist)
+    if (length(unique(breaked_dflarge$IDCLU)) == 1)
+      warning(paste0('The best maximum cluster size that can be achieved is ',unique(breaked_dflarge$CLU_SIZE),'\n'))
+      break
   }
-  # Merge
-  setnames(df, c('PT_ID', 'MEMBERSHIP'), c('ID', 'IDCLU'))
-  rtc = rtc[IDCLU != 1, ]
-  rtc[, IDCLU := IDCLU + max(df$IDCLU) - 1]
-  df = rbind(rtc, df)
-} else{
-  df <- copy(rtc)
 }
 
 # Save
@@ -1116,12 +1199,13 @@ if (args$verbose) {
   print(head(tmp))
 }
 
-# Find n_control closest individuals to all the individuals in each cluster
-if (args$n_control != 0) {
-  tmp <-
+
+cat('---------- Summarise average similarity across the genome ----------\n')
+if(!file.exists(file.path(out.dir, 'whole_genome_average_similarity.rds'))){
+  df <-
     data.table(readRDS(file.path(out.dir, 'average_similarity.rds')))
-  df <- subset(tmp, select = c('H1', 'H2'))
-  df$SIMILARITY <- rowMeans(tmp[, 3:ncol(tmp)], na.rm = TRUE)
+  df[ ,SIMILARITY := rowMeans(.SD,na.rm = T), .SDcols = grep("PERC", names(df))]
+  df <- subset(df, select = c('H1', 'H2','SIMILARITY'))
   setnames(ids, colnames(ids), paste0(colnames(ids), '1'))
   df <-
     merge(df,
@@ -1147,6 +1231,12 @@ if (args$n_control != 0) {
     saveRDS(df ,
             file.path(out.dir, 'whole_genome_average_similarity.rds'))
   }
+}else{
+  df <- data.table(readRDS(file.path(out.dir, 'whole_genome_average_similarity.rds')))
+}
+
+# Find n_control closest individuals to all the individuals in each cluster
+if (args$n_control != 0) {
   dcl <- rtc[, {
     tmp <- df[pt_id1 %in% ID, c('pt_id2', 'SIMILARITY')]
     tmp2 <- df[pt_id2 %in% ID, c('pt_id1', 'SIMILARITY')]
@@ -1177,8 +1267,8 @@ if (args$n_control != 0) {
       paste0(args$n_control, 'closest_individuals.rds')
     ))
   }
-  
 }
+
 tmp <-
   subset(dcl,
          select = c('CLU_SIZE', 'IDCLU', paste0('ID_CLOSE', 1:args$n_control)))

@@ -55,13 +55,13 @@ option_list <- list(
     help = "Maximum distance threshold on a window for a relationship to be reconstructed between two hosts on that window.[default]",
     dest = 'distance.threshold'
   ),
-  optparse::make_option(
-    "--fileNameRegex", 
-    action="store", 
-    default="^(?:.*\\D)?([0-9]+)_to_([0-9]+).*$",
-    help="Regular expression identifying window coordinates in tree file names. Two capture groups: start and end; if the latter is missing then the first group is a single numerical identifier for the window. If absent, input will be assumed to be from the phyloscanner pipeline.",
-    dest = 'file.name.regex'
-    ),
+  # optparse::make_option(
+  #   "--fileNameRegex", 
+  #   action="store", 
+  #   default="^(?:.*\\D)?([0-9]+)_to_([0-9]+).*$",
+  #   help="Regular expression identifying window coordinates in tree file names. Two capture groups: start and end; if the latter is missing then the first group is a single numerical identifier for the window. If absent, input will be assumed to be from the phyloscanner pipeline.",
+  #   dest = 'file.name.regex'
+  #   ),
   optparse::make_option(
     "--max_reads_per_host",
     type = "interger",
@@ -233,20 +233,21 @@ args$out.dir.work <-
   file.path(args$out.dir, paste0(args$date, "_phsc_work"))
 args$out.dir.output <-
   file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+
+tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","prj.dir",
+                             "out.dir","date","help",'out.dir.data','out.dir.work',
+                             'out.dir.output'))
+tmpv <- args[tmp]
 out.dir.analyse.trees <- file.path(args$out.dir, 
-                                   paste0(args$date, '_phsc_phscrelationships_',
-                                          gsub(" ","_",args$distance.threshold),
-                                          '_',args$max.reads.per.host,'_max_read',
-                                          ifelse(args$zero.length.adjustment, 
-                                                 'zero_length_adjustment',
-                                                 '')))
+                                   paste0(args$date,'_phsc_phscrelationships_',
+                                   paste(gsub('\\.','_',names(tmpv)),
+                                         gsub('\\.','',tmpv),collapse='_',sep = '_')))
 dir.create(out.dir.analyse.trees)
 
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
 
 #	Set phyloscanner variables	
-#	set phyloscanner variables	
 control	<- list()
 control$allow.mt <- TRUE
 control$alignment.file.directory = NULL 
@@ -257,7 +258,7 @@ control$distance.threshold <- args$distance.threshold
 control$do.dual.blacklisting = FALSE					
 control$duplicate.file.directory = NULL
 control$duplicate.file.regex = NULL
-control$file.name.regex = args$file.name.regex
+control$file.name.regex = "^(?:.*\\D)?([0-9]+)_to_([0-9]+).*$"
 control$guess.multifurcation.threshold = FALSE
 control$max.reads.per.host <- args$max.reads.per.host
 control$min.reads.per.host <- args$min.reads.per.host
