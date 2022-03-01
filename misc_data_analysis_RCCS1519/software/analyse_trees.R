@@ -1,3 +1,4 @@
+cat("\n\n===== analyse_trees.R =====\n\n")
 # The phyloscanner run for TSI estimates - analyse trees
 
 # Preamble

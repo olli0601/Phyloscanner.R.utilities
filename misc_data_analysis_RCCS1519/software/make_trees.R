@@ -1,3 +1,4 @@
+cat("\n\n===== make_trees.R =====\n\n")
 # The phyloscanner run - make trees
 
 # Preamble

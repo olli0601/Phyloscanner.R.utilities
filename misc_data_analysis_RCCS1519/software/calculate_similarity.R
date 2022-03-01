@@ -1,3 +1,4 @@
+cat("\n\n===== calculate_similarity.R =====\n\n")
 # The script for calculating similarity scores along the whole genome
 
 # Preamble

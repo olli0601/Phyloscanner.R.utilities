@@ -1,3 +1,4 @@
+cat("\n\n===== calculate_similarity_over_windows.R =====\n\n")
 # The phyloscanner run - calculate similarities between the consensus sequences
 # on the overlapping windows
 

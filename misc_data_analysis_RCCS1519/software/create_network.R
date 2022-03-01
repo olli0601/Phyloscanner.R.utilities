@@ -1,3 +1,4 @@
+cat("\n\n===== create_network.R =====\n\n")
 # The phyloscanner run  - divide individuals into batches for the purpose of reconstructing transmissions.
 
 # Preamble
