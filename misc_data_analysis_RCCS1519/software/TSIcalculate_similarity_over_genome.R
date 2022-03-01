@@ -1,3 +1,4 @@
+cat('\n\n=====  TSIcalculate_similarity_over_genome.R =====\n\n')
 # The phyloscanner run - calculate similarities between consensus sequences
 # on the whole genome
 
@@ -10,6 +11,8 @@
 # Load the required packages
 library(data.table)
 library(seqinr)
+# library(optparse)
+# library(here)
 #
 # Define input arguments that can be changed by users
 #
@@ -210,6 +213,9 @@ for (jobid in seq_len(max(df$JOB_ID))) {
     '\n',
     cmd
   )
+  cmd <- paste0(cmd, '\n',
+                'cp * ', out.dir)
+
   outfile <- file.path(out.dir,
                        paste0('script_calculate_similarity_job', jobid, '.qsub'))
   cat(cmd, file = outfile)
@@ -217,3 +223,15 @@ for (jobid in seq_len(max(df$JOB_ID))) {
   cat(cmd)
   cat(system(cmd, intern = TRUE))
 }
+
+# in the above command, could add a function which checks whether all the runs have run!
+# So by checking whether all of these files exists in the output directory!!!!!! 
+#       paste0(
+#         'similarity',
+#         args$script_id,
+#         '_window_',
+#         args$window_id,
+#         '.rds'
+#       )
+
+
