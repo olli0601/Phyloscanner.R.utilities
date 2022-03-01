@@ -1,3 +1,4 @@
+cat("\n\n===== check_trees.R =====\n\n")
 # The phyloscanner run for TSI estimates - make trees if not exist
 
 # Preamble
