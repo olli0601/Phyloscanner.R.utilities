@@ -87,10 +87,22 @@ option_list <- list(
     help = "Absolute file path to base directory where all output is stored [default]",
     dest = 'out.dir'
   )
+  optparse::make_option(
+    "--controller",
+    type = "integer",
+    default = NA_character_, # Think about adding the controller in the software directory
+    help = "Path to sh script directing the full analysis"
+    dest = 'controller'
+  ),
 )
 
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
+
+if(dirname(args$controller == '.'))
+{
+        args$controller <- file.path(args$prj.dir, args$controller)
+}
 
 #
 # test
@@ -106,7 +118,8 @@ if (0) {
     if_save_data = T,
     out.dir = NA,
     prj.dir = NA,
-    infile = NA
+    infile = NA,
+    controller=NA
   )
 }
 
@@ -182,6 +195,23 @@ header <- paste0(
 #PBS -j oe \n"
 )
 
+if(file.exists(args$controller))
+footer <- paste0('
+       OUT="',out.dir,'"
+       N_run=$(ls $OUT/similarity_*.rds | wc -l)
+       N_tot=',max(df$JOB_ID),' 
+
+       while [ $N_run < $N_tot ];do
+       sleep 10
+       N_run=$(ls $OUT/similarity_*.rds | wc -l)
+       done
+
+       # queue next command
+       qsub -v STEP="net" ',args$controller,' 
+       '
+) 
+
+
 for (jobid in seq_len(max(df$JOB_ID))) {
   cmd <- 'case $PBS_ARRAY_INDEX in\n'
   script_ids <- unique(df[JOB_ID == jobid,]$SCRIPT_ID)
@@ -226,12 +256,4 @@ for (jobid in seq_len(max(df$JOB_ID))) {
 
 # in the above command, could add a function which checks whether all the runs have run!
 # So by checking whether all of these files exists in the output directory!!!!!! 
-#       paste0(
-#         'similarity',
-#         args$script_id,
-#         '_window_',
-#         args$window_id,
-#         '.rds'
-#       )
-
 
