@@ -199,17 +199,13 @@ if(file.exists(args$controller))
 {
         footer <- paste0('
                OUT="',out.dir,'"
-               N_run=$(ls $OUT/similarity*.rds | wc -l)
+               N_run=$(ls $OUT/similarity[0-9]*.rds | wc -l)
                N_tot=',max(df$JOB_ID),' 
 
-               hile [ $N_run < $N_tot ];do
-               sleep 100
-               N_run=$(ls $OUT/similarity_*.rds | wc -l)
-               done
-
                # queue next command
-               qsub -v STEP="net" ',args$controller,' 
-               '
+               if [ $N_run -ge $N_tot ];then
+               qsub -v STEP="net" ',args$controller,'
+               fi'
         ) 
 }
 
