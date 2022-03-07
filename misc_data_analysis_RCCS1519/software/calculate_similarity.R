@@ -59,7 +59,7 @@ is.match <- function(x, y) {
 #
 option_list <- list(
   optparse::make_option(
-    "--infile_sequence",
+    "--infile",
     type = "character",
     default = NA,
     help = "Absolute file path to sequence fasta file [default]",

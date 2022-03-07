@@ -221,10 +221,12 @@ for (jobid in seq_len(max(df$JOB_ID))) {
       cmd,
       count,
       ')\n',
-      'Rscript calculate_similarity.R --script_id ',
+      'Rscript ',args$prj.dir,'/calculate_similarity.R --script_id ',
       scriptid,
       ' --out_dir ',
       out.dir,
+      ' --infile ',
+      args$infile,
       '\n;; \n'
     )
     count <- count + 1
@@ -237,9 +239,6 @@ for (jobid in seq_len(max(df$JOB_ID))) {
     '\n',
     "module load anaconda3/personal \nsource activate ",
     args$env_name,
-    '\n',
-    'cd ',
-    args$prj.dir,
     '\n',
     cmd
   )
