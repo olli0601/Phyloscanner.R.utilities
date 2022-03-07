@@ -99,7 +99,6 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
-args <- list(controller=NA)
 if(is.na(args$controller))
 {
         args$controller <- file.path(args$prj.dir, args$controller)
@@ -147,7 +146,8 @@ if (tmp["user"] == "xx4515")
 }
 
 # if prj.dir and out.dir are not manually set, default to here()
-if (is.na(args$prj.dir))
+args$prj.dir
+if(is.na(args$prj.dir)){}
 {
   args$prj.dir <- here::here()
   args$out.dir <- here::here()
