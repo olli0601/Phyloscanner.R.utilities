@@ -217,7 +217,7 @@ for (jobid in seq_len(max(df$JOB_ID))) {
       ')\n',
       # While loop to check whether output file is produced: rerun at most 10 times.
       'n=0\n',
-      paste0('while [ "$n" -lt 10 ] && [ -f ', out.dir,'/similarity', as.character(scriptid),'.rds ]; do\n'),
+      paste0('while [ "$n" -lt 10 ] && [ ! -f ', out.dir,'/similarity', as.character(scriptid),'.rds ]; do\n'),
       'n=$(( n + 1 ))\n',
       'Rscript ',args$prj.dir,'/calculate_similarity.R --script_id ',
       scriptid,
