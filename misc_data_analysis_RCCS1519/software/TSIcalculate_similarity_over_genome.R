@@ -146,15 +146,10 @@ if (tmp["user"] == "xx4515")
 }
 
 # if prj.dir and out.dir are not manually set, default to here()
-args$prj.dir
-if(is.na(args$prj.dir)){}
-{
-  args$prj.dir <- here::here()
-  args$out.dir <- here::here()
-}
-if (is.na(args$infile)) {
-  stop("Please input the sequence file. ")
-}
+if(is.na(args$prj.dir)){ args$prj.dir <- here::here() }
+if(is.na(args$out.dir)){ args$out.dir <- here::here() }
+if (is.na(args$infile)) { stop("Please input the sequence file. ") }
+
 #
 # add constants that should not be changed by the user
 #
@@ -206,7 +201,7 @@ if(file.exists(args$controller))
                # queue next command
                if [ $N_run -ge $N_tot ];then
                qsub -v STEP="net" ',args$controller,'
-               fi'
+               fi\n'
         ) 
 }
 
@@ -252,7 +247,7 @@ for (jobid in seq_len(max(df$JOB_ID))) {
                 'cp * ', out.dir)
 
   outfile <- file.path(out.dir,
-                       paste0('script_calculate_similarity_job', jobid, '.qsub'))
+                       paste0('script_calculate_similarity_job', jobid, '.qsub\n'))
   cat(cmd, file = outfile)
   cmd <- paste("qsub", outfile)
   cat(cmd)
