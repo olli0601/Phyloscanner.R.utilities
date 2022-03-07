@@ -86,20 +86,21 @@ option_list <- list(
     default = NA_character_,
     help = "Absolute file path to base directory where all output is stored [default]",
     dest = 'out.dir'
-  )
+  ),
   optparse::make_option(
     "--controller",
     type = "character",
     default = NA_character_, # Think about adding the controller in the software directory
-    help = "Path to sh script directing the full analysis"
+    help = "Path to sh script directing the full analysis",
     dest = 'controller'
-  ),
+  )
 )
 
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
-if(dirname(args$controller == '.'))
+args <- list(controller=NA)
+if(is.na(args$controller))
 {
         args$controller <- file.path(args$prj.dir, args$controller)
 }
