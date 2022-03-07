@@ -247,9 +247,9 @@ for (jobid in seq_len(max(df$JOB_ID))) {
                 'cp * ', out.dir)
 
   outfile <- file.path(out.dir,
-                       paste0('script_calculate_similarity_job', jobid, '.qsub\n'))
+                       paste0('script_calculate_similarity_job', jobid, '.qsub'))
   cat(cmd, file = outfile)
-  cmd <- paste("qsub", outfile)
+  cmd <- paste("qsub", outfile, '\n')
   cat(cmd)
   cat(system(cmd, intern = TRUE))
 }
