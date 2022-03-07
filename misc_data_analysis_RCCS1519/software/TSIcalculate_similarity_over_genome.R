@@ -89,7 +89,7 @@ option_list <- list(
   )
   optparse::make_option(
     "--controller",
-    type = "integer",
+    type = "character",
     default = NA_character_, # Think about adding the controller in the software directory
     help = "Path to sh script directing the full analysis"
     dest = 'controller'
@@ -196,20 +196,22 @@ header <- paste0(
 )
 
 if(file.exists(args$controller))
-footer <- paste0('
-       OUT="',out.dir,'"
-       N_run=$(ls $OUT/similarity_*.rds | wc -l)
-       N_tot=',max(df$JOB_ID),' 
+{
+        footer <- paste0('
+               OUT="',out.dir,'"
+               N_run=$(ls $OUT/similarity*.rds | wc -l)
+               N_tot=',max(df$JOB_ID),' 
 
-       while [ $N_run < $N_tot ];do
-       sleep 10
-       N_run=$(ls $OUT/similarity_*.rds | wc -l)
-       done
+               hile [ $N_run < $N_tot ];do
+               sleep 100
+               N_run=$(ls $OUT/similarity_*.rds | wc -l)
+               done
 
-       # queue next command
-       qsub -v STEP="net" ',args$controller,' 
-       '
-) 
+               # queue next command
+               qsub -v STEP="net" ',args$controller,' 
+               '
+        ) 
+}
 
 
 for (jobid in seq_len(max(df$JOB_ID))) {
@@ -221,13 +223,20 @@ for (jobid in seq_len(max(df$JOB_ID))) {
       cmd,
       count,
       ')\n',
+      # While loop to check whether output file is produced: rerun at most 10 times.
+      'n=0\n',
+      paste0('while [ "$n" -lt 10 ] && [ -f similarity', as.character(scriptid),'.rds ]; do'),
+      'n=$(( n + 1 ))\n',
       'Rscript ',args$prj.dir,'/calculate_similarity.R --script_id ',
       scriptid,
       ' --out_dir ',
       out.dir,
       ' --infile ',
       args$infile,
+      '\ndone',
       '\n;; \n'
+
+
     )
     count <- count + 1
   }
