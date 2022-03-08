@@ -136,6 +136,19 @@ if (tmp["user"] == "xx4515")
       "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
   }
 }
+
+if(tmp["user"] == "andrea")
+{
+        if(is.na(args$out.dir))
+        {
+                args$out.dir <- "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_MRC_TSI/"
+        }
+        if(is.na(args$prj.dir))
+        {
+                args$prj.dir <- "/home/andrea/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software"
+        }
+}
+
 # if prj.dir and out.dir are not manually set, default to here()
 if (is.na(args$prj.dir))
 {
@@ -166,6 +179,12 @@ if (args$if_add_couple_control) {
 #
 set.seed(args$seed)
 
+if(0)
+{
+        infile.ind.mrc <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
+        infile.ind.rccs <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
+}
+
 cat(' ---------- Load files ---------- \n')
 files <- list.files(out.dir, full.names = T)
 files <- files[grepl('similarity[0-9]+.rds', files)]
@@ -176,6 +195,11 @@ for (file in files) {
   }
   df <- rbind(df, data.table(readRDS(file)))
 }
+
+# check that all similarity have run 
+# (IDEA: could use return codes to tell the HPC to rerun previous qsub job!)
+stopifnot(df[, .N==choose(length(unique(c(H1, H2))), 2)])
+
 #
 # set unknown distance
 #
@@ -200,13 +224,17 @@ df <- merge(df,
             by.x = 'H2',
             by.y = 'pangea_id',
             all.x = T)
-df <- df[!is.na(pt_id.x) & !is.na(pt_id.y)]
-tmp <- df[pt_id.x > pt_id.y]
-setnames(tmp, c('pt_id.x', 'pt_id.y'), c('pt_id.y', 'pt_id.x'))
+
+# Swap column names so that 1st col always comes first in lexicographical order
+df <- df[, .(pt_id.x, pt_id.y, PERC)]
+tmp <- df[pt_id.x > pt_id.y, list(tmp=pt_id.x, pt_id.x, pt_id.y, PERC)] 
+tmp <- tmp[, list(pt_id.x=pt_id.y, pt_id.y=tmp, PERC)]
 df <- rbind(df[pt_id.x <= pt_id.y], tmp)
+stopifnot(df[pt_id.x > pt_id.y, .N == 0])
+df <- df[pt_id.x != pt_id.y]
+
 
 cat(' ---------- Calculate similarity between individuals ---------- \n')
-#
 df <-
   df[, list(SIMILARITY = mean(PERC, na.rm = T)), by = c('pt_id.x', 'pt_id.y')]
 pt_id <- unique(c(df$pt_id.x, df$pt_id.y))
@@ -221,22 +249,83 @@ tmp[, SIMILARITY := NA]
 df <- rbind(df, tmp)
 setkey(df, pt_id.x, pt_id.y)
 
-cat(' ---------- Make clusters  ---------- \n')
-df <- dcast(df, pt_id.x ~ pt_id.y, value.var = 'SIMILARITY')
-rownames(df) <- df$pt_id.x
-df[, pt_id.x := NULL]
-df <- as.matrix(df)
-df <- t(df)
-dist <- as.dist(1 - df)
-dist[is.na(dist)] <- max(dist[!is.na(dist)])
-dist_clu <- hclust(dist, method = 'ward.D')
-if (args$if_save_plots) {
-  pdf(file.path(out.dir, 'cluster.pdf'),
-      width = 10,
-      height = 8)
-  plot(dist_clu)
-  dev.off()
+# Clustering algorithm based on source code here: https://github.com/jmonlong/Hippocamplus/blob/master/content/post/2018-06-09-ClusterEqualSize.Rmd 
+cluster.fixed.size <- function(dmat, clsize = 100){
+
+        #         dmat <- copy(df)
+        #         clsize=100
+
+        clsize.rle = rle(as.numeric(cut(1:nrow(dmat), ceiling(nrow(dmat)/clsize))))
+        clsize = clsize.rle$lengths
+        # Performs clustering with clusters of determined sizes.
+        # At each step, pick the 
+        lab = rep(NA, nrow(mat))
+        cpt = 1
+        while(sum(is.na(lab)) > 0){
+                lab.ii = which(is.na(lab))
+                dmat.m = dmat[lab.ii,lab.ii]
+         
+                # Pick point which is furthest from remaining unclassified
+                ii = which.max(rowSums(dmat.m))
+
+                lab.m = rep(NA, length(lab.ii))
+                lab.m[head(order(dmat.m[ii,]), clsize[cpt])] = cpt
+                lab[lab.ii] = lab.m
+                cpt = cpt + 1
+        }
+        if(any(is.na(lab))){
+                lab[which(is.na(lab))] = cpt
+        }
+  lab
 }
+
+
+if(1)
+{
+        cat(' ------ Make Clusters ------ \n')
+        df[pt_id.x == pt_id.y, SIMILARITY := 1] 
+
+        df <- dcast(df, pt_id.x ~ pt_id.y, value.var = 'SIMILARITY')
+        rownames(df) <- df$pt_id.x
+        df[, pt_id.x:=NULL]
+        stopifnot(all(rownames(df)==colnames(df)))
+        df <- t(df)
+        colnames(df) <- rownames(df)
+
+        # Get distance matrix
+        mean(is.na(df[lower.tri(df)]))
+        all(is.na(df[upper.tri(df)]))
+        df[upper.tri(df)] <- df[lower.tri(df)] 
+        # isSymmetric.matrix(df)
+        df <- sqrt(1-df)
+        df[which(is.na(df))] <- min(df, na.rm=T)
+
+        clus <- cluster.fixed.size(df, clsize=100)
+        rtc <- data.table(ID=colnames(df), IDCLU=clus)
+        setkey(tmp,cluster, pt_id)
+        rtc[, CLU_SIZE:=.N, by='IDCLU']
+        
+}else{
+
+        cat(' ---------- Make clusters  ---------- \n')
+        df <- dcast(df, pt_id.x ~ pt_id.y, value.var = 'SIMILARITY')
+        rownames(df) <- df$pt_id.x
+        df[, pt_id.x:=NULL]
+        stopifnot(all(rownames(df)==colnames(df)))
+        df <- t(df)
+
+# I don t think that as dist makes sense here.
+# The percentages are already inversely proportional to a distance
+        dist <- as.dist(1 - df)
+        dist[is.na(dist)] <- max(dist[!is.na(dist)])
+        dist_clu <- hclust(dist, method = 'ward.D')
+        if (args$if_save_plots) {
+          pdf(file.path(out.dir, 'cluster.pdf'),
+              width = 10,
+              height = 8)
+          plot(dist_clu)
+          dev.off()
+        }
 # cluster
 # I did not apply hclust directly in case only one large clusters left and others are of size 1
 # the code increases the number of clusters from 2,
@@ -247,58 +336,61 @@ if (args$if_save_plots) {
 # or all the newly identified clusters of size < cluster_size
 #
 # number of clusters specified for cutree
-k <- 2
+        k <- 2
 # cluster ID
-count <- 1
-while (T) {
-  if (args$verbose) {
-    cat('Divided into ', k, ' clusters ... \n')
-  }
-  dist_cut <- cutree(dist_clu, k)
-  if (any(table(dist_cut) < args$cluster_size)) {
-    ids <- which(table(dist_cut) < args$cluster_size)
-    for (id in ids) {
-      id_name <- names(dist_cut)[dist_cut == id]
-      if (count == 1) {
-        rtc <- data.table(CLU = count,
-                          ID = id_name)
-      } else{
-        tmp <- data.table(CLU = count,
-                          ID = id_name)
-        rtc <- rbind(rtc, tmp)
-      }
-      tmp <- which(dist_cut == id)
-      dist <- as.matrix(dist)
-      dist <- dist[-tmp, -tmp]
-      if (nrow(dist) <= args$cluster_size) {
-        tmp <- data.table(CLU = count + 1,
-                          ID = rownames(dist))
-        rtc <- rbind(rtc, tmp)
-        break
-      }
-      dist <- as.dist(dist)
-      count <- count + 1
-    }
-  }
-  if (all(table(dist_cut) < args$cluster_size)) {
-    break
-  }
-  k <- k + 1
-  dist_clu <- hclust(dist, method = 'ward.D')
+        count <- 1
+        while (T) {
+          if (args$verbose) {
+            cat('Divided into ', k, ' clusters ... \n')
+          }
+          dist_cut <- cutree(dist_clu, k)
+          if (any(table(dist_cut) < args$cluster_size)) {
+            ids <- which(table(dist_cut) < args$cluster_size)
+            for (id in ids) {
+              id_name <- names(dist_cut)[dist_cut == id]
+              if (count == 1) {
+                rtc <- data.table(CLU = count,
+                                  ID = id_name)
+              } else{
+                tmp <- data.table(CLU = count,
+                                  ID = id_name)
+                rtc <- rbind(rtc, tmp)
+              }
+              tmp <- which(dist_cut == id)
+              dist <- as.matrix(dist)
+              dist <- dist[-tmp, -tmp]
+              if (nrow(dist) <= args$cluster_size) {
+                tmp <- data.table(CLU = count + 1,
+                                  ID = rownames(dist))
+                rtc <- rbind(rtc, tmp)
+                break
+              }
+              dist <- as.dist(dist)
+              count <- count + 1
+            }
+          }
+          if (all(table(dist_cut) < args$cluster_size)) {
+            break
+          }
+          k <- k + 1
+          dist_clu <- hclust(dist, method = 'ward.D')
+        }
+
+        tmp	<- rtc[, list(CLU_SIZE = length(ID)), by = 'CLU']
+        setkey(tmp, CLU_SIZE)
+        if (args$verbose) {
+          cat('---------- Largest cluster sizes ----------\n')
+          print(tail(tmp))
+          cat('---------- Smallest cluster sizes ----------\n')
+          print(head(tmp))
+        }
+        tmp[, IDCLU := seq_len(nrow(tmp))]
+        rtc	<- subset(merge(rtc, tmp, by = 'CLU'))
+        rtc[, CLU := NULL]
+        setkey(rtc, IDCLU)
 }
 
-tmp	<- rtc[, list(CLU_SIZE = length(ID)), by = 'CLU']
-setkey(tmp, CLU_SIZE)
-if (args$verbose) {
-  cat('---------- Largest cluster sizes ----------\n')
-  print(tail(tmp))
-  cat('---------- Smallest cluster sizes ----------\n')
-  print(head(tmp))
-}
-tmp[, IDCLU := seq_len(nrow(tmp))]
-rtc	<- subset(merge(rtc, tmp, by = 'CLU'))
-rtc[, CLU := NULL]
-setkey(rtc, IDCLU)
+
 
 if (args$if_save_data) {
   cat('Writing files to ',
