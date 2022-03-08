@@ -226,13 +226,18 @@ for (jobid in seq_len(max(df$JOB_ID))) {
     count <- count + 1
   }
   cmd <- paste0(cmd, 'esac')
+
+  # Try activating the environment multiple times to avoid ldpaths bug
+  act <- rep(paste0("source activate ", args$env_name),4)
+  act <- paste0(act, collapse=' || ')
+
   cmd <- paste0(
     header,
     '#PBS -J 1-',
     count,
     '\n',
-    "module load anaconda3/personal \nsource activate ",
-    args$env_name,
+    "module load anaconda3/personal \n",
+    act,
     '\n',
     cmd 
   )
@@ -252,6 +257,5 @@ for (jobid in seq_len(max(df$JOB_ID))) {
   cat(system(cmd, intern = TRUE))
 }
 
-# in the above command, could add a function which checks whether all the runs have run!
 # So by checking whether all of these files exists in the output directory!!!!!! 
 
