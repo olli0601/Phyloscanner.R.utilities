@@ -99,11 +99,6 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
-if(is.na(args$controller))
-{
-        args$controller <- file.path(args$prj.dir, args$controller)
-}
-
 #
 # test
 #
@@ -239,10 +234,15 @@ for (jobid in seq_len(max(df$JOB_ID))) {
     "module load anaconda3/personal \nsource activate ",
     args$env_name,
     '\n',
-    cmd
+    cmd 
   )
   cmd <- paste0(cmd, '\n',
                 'cp * ', out.dir)
+
+  if(file.exists(args$controller))
+  {
+          cmd <- paste0(cmd, '\n', footer)
+  }
 
   outfile <- file.path(out.dir,
                        paste0('script_calculate_similarity_job', jobid, '.qsub'))
