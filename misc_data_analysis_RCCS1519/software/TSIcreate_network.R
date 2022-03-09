@@ -227,6 +227,8 @@ df <- merge(df,
 
 # Swap column names so that 1st col always comes first in lexicographical order
 df <- df[, .(pt_id.x, pt_id.y, PERC)]
+c("pt_id.x", "pt_id.y")
+df[, c("pt_id.x", "pt_id.y") := lapply(.SD, as.character), .SDcols= c("pt_id.x", "pt_id.y")]
 tmp <- df[pt_id.x > pt_id.y, list(tmp=pt_id.x, pt_id.x, pt_id.y, PERC)] 
 tmp <- tmp[, list(pt_id.x=pt_id.y, pt_id.y=tmp, PERC)]
 df <- rbind(df[pt_id.x <= pt_id.y], tmp)
@@ -314,8 +316,8 @@ if(1)
         stopifnot(all(rownames(df)==colnames(df)))
         df <- t(df)
 
-# I don t think that as dist makes sense here.
-# The percentages are already inversely proportional to a distance
+# AB: I don t think that as dist makes sense here.
+# AB: The percentages are already inversely proportional to a pairwise distance
         dist <- as.dist(1 - df)
         dist[is.na(dist)] <- max(dist[!is.na(dist)])
         dist_clu <- hclust(dist, method = 'ward.D')
