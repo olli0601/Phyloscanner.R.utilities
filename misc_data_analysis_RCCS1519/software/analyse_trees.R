@@ -157,6 +157,13 @@ option_list <- list(
     dest = 'prj.dir'
   ),
   optparse::make_option(
+    "--prog_dir",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to the phyloscanner [default]",
+    dest = 'prog.dir'
+  ),
+  optparse::make_option(
     "--out_dir_base",
     type = "character",
     default = NA_character_,
@@ -179,20 +186,19 @@ args <-
 #
 # test
 #
-if(0){
-  args <- list(
-    verbose = T,
-    seed = 42,
-    if_save_data = T,
-    date = '2022-02-04',
-    env_name = 'phylo',
-    if_tsi = T,
-    max.reads.per.host = 100,
-    distance.threshold = '0.02 0.05',
-    out.dir = NA,
-    prj.dir = NA
-  )
-}
+# if(1){
+#   args$blacklist.report=T
+#   args$date = '19037'
+#   args$env_name = 'phylostan'
+#   args$norm.ref.file.name = "~/phyloscanner/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv"
+#   args$outgroup.name = "B.FR.83.HXB2_LAI_IIIB_BRU.K03455"
+#   args$output.nexus.tree = T
+#   args$ratio.blacklist.threshold = 0.005
+#   args$skip.summary.graph = T
+#   args$out.dir = NA
+#   args$prj.dir = NA
+#   args$prog.dir = NA
+# }
 
 
 #
@@ -211,6 +217,11 @@ if (tmp["user"] == "xx4515")
     args$prj.dir <-
       "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
   }
+  if (is.na(args$prog.dir))
+  {
+    args$prog.dir <-
+      '/rds/general/user/xx4515/home/phyloscanner/phyloscanner_analyse_trees.R'
+  }
 }
 
 # if prj.dir and out.dir are not manually set, default to here()
@@ -222,27 +233,29 @@ if (is.na(args$out.dir))
 {
   args$out.dir <- here::here()
 }
+if (is.na(args$prog.dir))
+{
+  args$prog.dir <- here::here()
+}
 #
 # Add constants that should not be changed by the user
 #
 max.per.run <- 4900
 
 # Set default output directories relative to out.dir
-args$out.dir.data <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_input"))
 args$out.dir.work <-
   file.path(args$out.dir, paste0(args$date, "_phsc_work"))
 args$out.dir.output <-
   file.path(args$out.dir, paste0(args$date, "_phsc_output"))
 
-tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","prj.dir",
+tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","prj.dir","prog.dir",
                              "out.dir","date","help",'out.dir.data','out.dir.work',
-                             'out.dir.output'))
+                             'out.dir.output','norm.ref.file.name'))
 tmpv <- args[tmp]
 out.dir.analyse.trees <- file.path(args$out.dir, 
                                    paste0(args$date,'_phsc_phscrelationships_',
                                    paste(gsub('\\.','_',names(tmpv)),
-                                         gsub('\\.','',tmpv),collapse='_',sep = '_')))
+                                         gsub('\\.|-','',tmpv),collapse='_',sep = '_')))
 dir.create(out.dir.analyse.trees)
 
 # Source functions
@@ -280,7 +293,7 @@ control$prune.blacklist = FALSE
 control$post.hoc.count.blacklisting <- args$post.hoc.count.blacklisting
 control$ratio.blacklist.threshold = args$ratio.blacklist.threshold
 control$raw.blacklist.threshold = 3			
-control$read.count.matter.on.zero.length.branches = TRUE
+control$read.counts.matter.on.zero.length.branches = TRUE
 control$recombination.file.directory = NULL
 control$recombination.file.regex = NULL
 control$relaxed.ancestry = args$relaxed.ancestry
