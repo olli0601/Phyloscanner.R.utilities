@@ -261,7 +261,7 @@ cluster.fixed.size <- function(dmat, clsize = 100){
         clsize = clsize.rle$lengths
         # Performs clustering with clusters of determined sizes.
         # At each step, pick the 
-        lab = rep(NA, nrow(mat))
+        lab = rep(NA, nrow(dmat))
         cpt = 1
         while(sum(is.na(lab)) > 0){
                 lab.ii = which(is.na(lab))
