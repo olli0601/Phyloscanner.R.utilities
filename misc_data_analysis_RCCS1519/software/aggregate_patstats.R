@@ -58,7 +58,7 @@ names(patstats) <- zip.files
 ans <- rbindlist(patstats,use.names = T, idcol = 'PTY_RUN',fill=T)
 gc()
 
-write.csv(ans, file = file.path(args$out.dir,'patstats_02_05_30_min_read_100_max_read.csv'))
+write.csv(ans, file = file.path(args$out.dir,'patstats.csv'))
 #
 
 
