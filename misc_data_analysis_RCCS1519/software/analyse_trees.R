@@ -80,7 +80,6 @@ option_list <- list(
   optparse::make_option(
     "--multinomial", 
     action="store_true", 
-    default = TRUE,
     help="Use the adjustment for missing and overlapping windows as described in Ratmann et al., Nature Communications, 2019.",
     dest='multinomial'
   ),
@@ -187,7 +186,7 @@ args <-
 # test
 #
 # if(1){
-#   args$blacklist.report=T
+#   args$ort=T
 #   args$date = '19037'
 #   args$env_name = 'phylostan'
 #   args$norm.ref.file.name = "~/phyloscanner/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv"
@@ -248,6 +247,10 @@ args$out.dir.work <-
 args$out.dir.output <-
   file.path(args$out.dir, paste0(args$date, "_phsc_output"))
 
+if(args$verbose){
+  print(args)
+}
+
 tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","prj.dir","prog.dir",
                              "out.dir","date","help",'out.dir.data','out.dir.work',
                              'out.dir.output','norm.ref.file.name'))
@@ -266,6 +269,7 @@ control	<- list()
 control$allow.mt <- TRUE
 control$alignment.file.directory = NULL 
 control$alignment.file.regex = NULL
+control$blacklist.report = args$blacklist.report
 control$blacklist.underrepresented = FALSE	
 control$count.reads.in.parsimony = TRUE
 control$distance.threshold <- args$distance.threshold
@@ -293,7 +297,6 @@ control$prune.blacklist = FALSE
 control$post.hoc.count.blacklisting <- args$post.hoc.count.blacklisting
 control$ratio.blacklist.threshold = args$ratio.blacklist.threshold
 control$raw.blacklist.threshold = 3			
-control$read.counts.matter.on.zero.length.branches = TRUE
 control$recombination.file.directory = NULL
 control$recombination.file.regex = NULL
 control$relaxed.ancestry = args$relaxed.ancestry
@@ -346,13 +349,13 @@ if(args$verbose){
 #
 #	Make header
 hpc.load			<- paste0("module load anaconda3/personal \n source activate ", args$env_name)
-hpc.select			<- 1					
-hpc.nproc			<- 1						
-hpc.walltime		<- 23					
-if(1)		
+hpc.select			<- 1
+hpc.nproc			<- 1
+hpc.walltime		<- 23
+if(1)
 {
-  hpc.q			<- NA					
-  hpc.mem			<- "36gb" 					
+  hpc.q			<- NA
+  hpc.mem			<- "36gb"
 }
 hpc.array			<- length(cmds)
 pbshead		<- "#!/bin/sh"
@@ -360,19 +363,18 @@ tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime,
 pbshead		<- paste(pbshead, tmp, sep = "\n")
 tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
 pbshead 	<- paste(pbshead, tmp, sep = "\n")
-pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")	
+pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")
 if(!is.na(hpc.array))
-  pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
-if(!is.na(hpc.q)) 
+  pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')
+if(!is.na(hpc.q))
   pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
-pbshead 	<- paste(pbshead, hpc.load, sep = "\n")	
+pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
 cat(pbshead)
-
 #	Make array job
 for(i in 1:length(cmds))
   cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
-cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')	
-cmd		<- paste(pbshead,cmd,sep='\n')	
+cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')
+cmd		<- paste(pbshead,cmd,sep='\n')
 
 #	Submit job
 outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
