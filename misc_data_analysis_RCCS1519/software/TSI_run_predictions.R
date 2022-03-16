@@ -119,6 +119,8 @@ if (Sys.info()[['user']]=='andrea') {
                 file.bf.locs="~/Documents/Box/2021/phyloTSI/bfloc2hpc_20220103.rds"
         )
 }
+work.dir <- gsub('_output$','_work',args$out.dir)
+stopifnot(! dir.exists(work.dir))
 
 ################
 # main
@@ -218,7 +220,7 @@ for (pty_idx in dfiles$pty)
 
 
 ##################################
-# submit jobs for TSIs! 
+# submit jobs 
 ##################################
 
 dfiles[, IDX := 1:.N, ]
@@ -230,7 +232,6 @@ cmd <- paste0('\n module load anaconda3/personal \n',
               'source activate ',args$env_name, '\n',
               cmd)
 
-cat(cmd)
 #make header
 header <- paste0(
                  "#!/bin/sh \n",
@@ -240,4 +241,14 @@ header <- paste0(
                  "#PBS -J 1-", dfiles[, max(IDX)] ,"\n"
 )
 
-# Do I need a footer for the controller? Or can I just remove the arg?
+# Patch together and write 
+cmd <- paste0(header, cmd)
+datetime <- paste(strsplit(date(), split = ' ')[[1]], collapse = '_', sep = '')
+datetime <- gsub(':','',datetime)
+outfile <- file.path(work.dir, paste0('phylo_tsi_',datetime,'.sh'))
+cat(cmd, file=outfile)
+
+# Run the command
+cmd <- paste("cd ",dirname(outfile),'\n',"qsub ", outfile)
+cat(cmd)
+cat(system(cmd, intern = TRUE))
