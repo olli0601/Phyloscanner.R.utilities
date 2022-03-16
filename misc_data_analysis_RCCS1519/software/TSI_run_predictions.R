@@ -199,7 +199,11 @@ for (pty_idx in dfiles$pty)
         rows_to_del <- rownames(maf_mat)[which(grepl(paste0(tmp1$AID, collapse='|'), rownames(maf_mat) ))]
         rows_to_del <- rows_to_del[! rows_to_del %in% tmp1$FQ]
         
+        # Store -fq used so we can check exact sampling date
         maf_mat <- maf_mat[! rownames(maf_mat) %in% rows_to_del, ]
+        filename=paste0('ptyr', pty_idx, '_basefreqs_used.csv')
+        write.csv(rownames(maf_mat), 
+                  file=file.path(dirname(files_pty$pat.path), filename))
         rownames(maf_mat) <- gsub('-fq[0-9]$', '', rownames(maf_mat))
         rm(tmp1, rows_to_del)
 
