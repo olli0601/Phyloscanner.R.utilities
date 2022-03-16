@@ -126,6 +126,9 @@ stopifnot(! dir.exists(work.dir))
 # main
 ################
 
+stopifnot(! dir.exists(args$rel.dir))
+stopifnot(! dir.exists(args$out.dir))
+
 # These determine the pty's for which we can run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
 phsc_inputs <- list.files(args$out.dir, pattern='input.csv$', full.name=TRUE)
