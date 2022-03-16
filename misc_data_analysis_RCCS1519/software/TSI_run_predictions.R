@@ -121,17 +121,13 @@ if (Sys.info()[['user']]=='andrea') {
 }
 work.dir <- gsub('_output$','_work',args$out.dir)
 
-cat(work.dir, '\n')
-stopifnot(! dir.exists(work.dir))
-
 ################
 # main
 ################
 
-cat(args$rel.dir, '\n')
-stopifnot(! dir.exists(args$rel.dir))
-cat(args$out.dir, '\n')
-stopifnot(! dir.exists(args$out.dir))
+stopifnot(dir.exists(work.dir))
+stopifnot(dir.exists(args$rel.dir))
+stopifnot(dir.exists(args$out.dir))
 
 # These determine the pty's for which we can run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
