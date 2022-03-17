@@ -119,23 +119,24 @@ if (Sys.info()[['user']]=='andrea') {
                 file.bf.locs="~/Documents/Box/2021/phyloTSI/bfloc2hpc_20220103.rds"
         )
 }
-work.dir <- gsub('_output$','_work',args$out.dir)
 
 ################
 # main
 ################
 
+work.dir <- gsub('_output$','_work',args$out.dir)
 stopifnot(dir.exists(work.dir))
 stopifnot(dir.exists(args$rel.dir))
 stopifnot(dir.exists(args$out.dir))
 
 # These determine the pty's for which we can run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
-phsc_inputs <- list.files(args$out.dir, pattern='input.csv$', full.name=TRUE)
+phsc_inputs <- list.files(args$out.dir, pattern='input.csv$', full.name=TRUE, recursive=TRUE)
 
 # dfiles containing paths of interest + unzipping PatStats 
 tmp <- gsub('^.*?ptyr|_otherstuff.zip','',patstats_zipped)
-dfiles <- data.table(pty=tmp)
+dfiles <- data.table(pty=as.integer(tmp))
+setkey(dfiles, pty)
 dfiles[, zip.path:=grep( paste0('ptyr', pty, '_'), patstats_zipped, value=T) ,by=pty]
 dfiles[, phi.path:=grep( paste0('ptyr', pty, '_'), phsc_inputs, value=T) ,by=pty]
 dfiles <- dfiles[ file.exists(zip.path) & file.exists(phi.path)]
