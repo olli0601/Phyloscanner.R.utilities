@@ -161,7 +161,6 @@ for (pty_idx in dfiles$pty)
         # (Checked that BAM and FASTA files are consistent in terms of namings and locs)
 
         # Find BAM_PATH then get the MAF
-        cat(ph.input[, basename(BAM_PATH)])
         ph.input[, HXB2_PATH := gsub('.bam$','_BaseFreqs_WithHXB2.csv', basename(BAM_PATH))]
         if(Sys.info()[['user']] == 'andrea')
         {
@@ -213,6 +212,8 @@ for (pty_idx in dfiles$pty)
                       ' -m ', files_pty$maf.path,' \\\n',
                       ' -o ', files_pty$tsi.path, '\n'
                      )
+        dfiles[pty==pty_idx, CMD:=cmd]
+
         # guess I may need to free up some memory here
         rm(maf_mat, ph.input, patstats)
         gc()
