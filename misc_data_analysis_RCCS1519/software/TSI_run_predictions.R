@@ -227,7 +227,7 @@ for (pty_idx in dfiles$pty)
 dfiles[, IDX := 1:.N, ]
 dfiles[, CMD := paste0(IDX, ')\n',CMD, ';;\n')]
 cmd <- paste0(dfiles$CMD, collapse='\n')
-cmd <- paste0('case $PBS_array_index in\n', cmd, 'esac\n')
+cmd <- paste0('case $PBS_ARRAY_INDEX in\n', cmd, 'esac\n')
 
 cmd <- paste0('\n module load anaconda3/personal \n',
               'source activate ',args$env_name, '\n',
