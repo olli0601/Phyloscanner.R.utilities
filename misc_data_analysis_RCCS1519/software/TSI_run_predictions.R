@@ -1,4 +1,4 @@
-cat('\n\n=====  TSI_generate_maf.R =====\n\n')
+cat('\n\n=====  TSI_run_predictions.R =====\n\n')
 # TODO: note we should redo some HXB2 pushing
 
 library(data.table)
@@ -149,6 +149,8 @@ dfiles[, CMD:=NA_character_]
 
 for (pty_idx in dfiles$pty)
 {
+        cat('Processing PTY index: ', pty_idx, '...\n')
+
         # Load patstats
         files_pty <- as.vector(dfiles[pty==pty_idx]) 
         patstats <- as.data.table(read.csv(files_pty$pat.path, header=TRUE, sep=","))
@@ -172,6 +174,7 @@ for (pty_idx in dfiles$pty)
         }
 
         # Find BAM_PATH then get the MAF
+        cat(ph.input[, basename(BAM_PATH)])
         ph.input[, HXB2_PATH := gsub('.bam$','_BaseFreqs_WithHXB2.csv', basename(BAM_PATH))]
         if(Sys.info()[['user']] == 'andrea')
         {
