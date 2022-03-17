@@ -131,14 +131,16 @@ stopifnot(dir.exists(args$out.dir))
 
 # These determine the pty's for which we can run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
-phsc_inputs <- list.files(args$out.dir, pattern='input.csv$', full.name=TRUE, recursive=TRUE)
+tmp <- gsub('^.*?ptyr|_otherstuff.zip','',patstats_zipped)
+phsc_inputs <- file.path(args$out.dir, 
+                         paste0('ptyr', tmp, '_trees'), 
+                         paste0('ptyr', tmp, '_input.csv' ))
 
 # dfiles containing paths of interest + unzipping PatStats 
-tmp <- gsub('^.*?ptyr|_otherstuff.zip','',patstats_zipped)
-dfiles <- data.table(pty=as.integer(tmp))
+dfiles <- data.table(pty=as.integer(tmp), 
+                     zip.path=patstats_zipped, 
+                     phi.path=phsc_inputs)
 setkey(dfiles, pty)
-dfiles[, zip.path:=grep( paste0('ptyr', pty, '_'), patstats_zipped, value=T) ,by=pty]
-dfiles[, phi.path:=grep( paste0('ptyr', pty, '_'), phsc_inputs, value=T) ,by=pty]
 dfiles <- dfiles[ file.exists(zip.path) & file.exists(phi.path)]
 dfiles[, pat.path:=.unzip.patstats(zip.path), by='pty']
 dfiles[, maf.path:=gsub('patStats.csv$','maf.csv',pat.path)]
