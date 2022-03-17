@@ -64,11 +64,6 @@ args <-
 # helper f's
 ###############
 
-.read <- function(x){
-  if(grepl('.csv$', x)){return(as.data.table(read.csv(x)))}
-  if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
-}
-
 .unzip.patstats <- function(x){
         csv.name <- unzip(x, list = TRUE)$Name
         csv.name <- grep('_patStats.csv$',csv.name,value = T)
@@ -153,25 +148,17 @@ for (pty_idx in dfiles$pty)
 
         # Load patstats
         files_pty <- as.vector(dfiles[pty==pty_idx]) 
-        patstats <- as.data.table(read.csv(files_pty$pat.path, header=TRUE, sep=","))
+        patstats <- as.data.table(read.csv(files_pty$pat.path, header=TRUE, sep=",", stringsAsFactors=F))
         if(any((patstats$xcoord %% 1) != 0)){
                 patstats[, xcoord:=ceiling(xcoord)]
                 write.csv(patstats, files_pty$pat.path)
         }
-        ph.input <- as.data.table(read.csv(files_pty$phi.path, header=FALSE, sep=","))
+        ph.input <- as.data.table(read.csv(files_pty$phi.path, header=FALSE, sep=",",stringsAsFactors=F))
         colnames(ph.input) <- c('BAM_PATH','FASTA_PATH', 'SAMPLE_ID')
         ph.input[, AID:=gsub('-fq.*?$','', SAMPLE_ID)]
         stopifnot( all(patstats[, unique(host.id)] %in% ph.input[, unique(AID)]) )
 
-        if(0) # Check that bam and fasta path make sense
-        {
-                tmp1 <- ph.input[, .(BAM_PATH, FASTA_PATH) ]
-                tmp1[, lapply(.SD, dirname)][BAM_PATH != FASTA_PATH]
-                tmp1[, colnames(tmp1):=lapply(.SD, basename)]
-                .f <- function(x){gsub('_ref.fasta$|.bam$|.fasta$', '', x)}
-                tmp1[, colnames(tmp1):=lapply(.SD, .f)]
-                tmp1[BAM_PATH != FASTA_PATH]
-        }
+        # (Checked that BAM and FASTA files are consistent in terms of namings and locs)
 
         # Find BAM_PATH then get the MAF
         cat(ph.input[, basename(BAM_PATH)])
