@@ -27,7 +27,7 @@ option_list <- list(
   ),
   optparse::make_option(
     c("-o", "--overwrite"),
-    action = "store_true",
+    action = "store_false",
     default = TRUE,
     help = "Print extra output [default]",
     dest = "overwrite"
@@ -201,7 +201,7 @@ if (tmp["user"] == "xx4515")
   if (is.na(args$infile))
   {
     args$infile <-
-      "/rds/general/project/ratmann_pangea_deepsequencedata/live/200422_PANGEA2_RCCSMRC_alignment.fasta"
+      "/rds/general/project/ratmann_pangea_deepsequencedata/live/200422_PANGEA2_MRC_alignment.fasta"
   }
 }
 
@@ -432,11 +432,16 @@ tmp[, pangea_id := paste0('MRCUVRI_', pangea_id)]
 ids <- rbind(ids, tmp)
 ids <- unique(ids)
 
+print(out.dir)
+print(args$length_cutoff)
+print(args$overwrite)
+
+
 if(!file.exists(file.path(
   out.dir,
   paste0('similarity_couple_minlen_',
          args$length_cutoff,
-         '.rds')))|args$overwrite){
+         '.rds')))|args$overwrite) {
   # similarity among couples
   for (file in infile.similarity) {
     if (args$verbose) {
@@ -508,14 +513,17 @@ if(!file.exists(file.path(
 }
 
 
-
 #
-if ((nrow(ans) != 0 & !file.exists(file.path(
-  out.dir,
-  paste0(
-    'similarity_couple_fitted_thresholds_minlen_',
-    args$length_cutoff,
-    '.rda'))))|args$overwrite) {
+if (nrow(ans) != 0 &
+    !file.exists(file.path(
+      out.dir,
+      paste0(
+        'similarity_couple_fitted_thresholds_minlen_',
+        args$length_cutoff,
+        '.rda'
+      )
+    )) &
+    args$overwrite) {
   setkey(ans, pt_id1,  pt_id2)
   cat('Fit the two-component Gaussian mixture model ... \n')
   stan_code <- "

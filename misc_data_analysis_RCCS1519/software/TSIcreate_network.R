@@ -304,7 +304,7 @@ if(1)
 
         clus <- cluster.fixed.size(df, clsize=100)
         rtc <- data.table(ID=colnames(df), IDCLU=clus)
-        setkey(tmp,cluster, pt_id)
+        # setkey(tmp,cluster, pt_id)
         rtc[, CLU_SIZE:=.N, by='IDCLU']
         
 }else{
