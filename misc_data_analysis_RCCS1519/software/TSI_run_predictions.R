@@ -1,6 +1,6 @@
 cat('\n\n=====  TSI_run_predictions.R =====\n\n')
-# TODO: note we should redo some HXB2 pushing
 
+library(lubridate)
 library(data.table)
 
 option_list <- list(
@@ -32,6 +32,14 @@ option_list <- list(
     help = "Conda environment name to run HIV-phylo-TSI analyses [default] ",
     dest = 'env_name'
   ),
+  optparse::make_option(
+    "--input_samples",
+    type = "character",
+    default = '',
+    help = "Absolute file path to input samples rds containing PANGEA_IDs and RENAME_IDs", 
+    dest = 'phsc.samples'
+  ),
+
   optparse::make_option(
     "--walltime",
     type = "integer",
@@ -73,7 +81,7 @@ args <-
         return(csv.name)
 }
 
-generate_sample <- function(maf) {
+generate.sample <- function(maf) {
 
         # Lele's function to compute Minor Allele Frequencies. 
         MAF_matrix<-matrix(0,ncol=10000,nrow=(nrow(maf)+1))
@@ -99,10 +107,44 @@ generate_sample <- function(maf) {
         return(MAF_matrix)
 }
 
+get.sampling.dates <- function()
+{
+        # Find files containing all sample collection dates 
+        if(user != 'andrea')
+        {
+                db.sharing.path.rccs <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
+                db.sharing.path.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
+        }else{
+                db.sharing.path.rccs <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
+                db.sharing.path.mrc <-  '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv' 
+        }
+
+        tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc,args$phsc.samples)
+        stopifnot(all(file.exists(tmp)))
+
+        dsamples <- setDT(readRDS(args$phsc.samples))
+        dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
+        dsamples[, PANGEA_ID:=gsub('^.*?_','',PANGEA_ID)]
+
+        ddates <- setDT(read.csv(db.sharing.path.mrc))
+        ddates <- unique(ddates[, .(pangea_id, visit_dt)])
+        tmp <- as.data.table(read.csv(db.sharing.path.rccs))
+        tmp <- unique(tmp[, .(pangea_id, visit_dt)])
+        ddates <- rbind(tmp, ddates)
+        ddates[, visit_dt:=as.Date(visit_dt, format="%Y-%m-%d")]
+        stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
+
+        ddates <- merge(dsamples, ddates, all.x=TRUE,
+                        by.x='PANGEA_ID', by.y='pangea_id')
+        ddates[, PANGEA_ID := NULL]
+        return(ddates)
+}
+
 ###############
 # testing
 ###############
-if (Sys.info()[['user']]=='andrea') {
+user <- Sys.info()[['user']]
+if (user=='andrea') {
         args <- list(
                 out.dir='~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_output',
                 rel.dir= "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/",
@@ -111,7 +153,8 @@ if (Sys.info()[['user']]=='andrea') {
                 walltime = 3L,
                 memory = 2L,
                 controller=NA,
-                file.bf.locs="~/Documents/Box/2021/phyloTSI/bfloc2hpc_20220103.rds"
+                file.bf.locs="~/Documents/Box/2021/phyloTSI/bfloc2hpc_20220103.rds",
+                phsc.samples="~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds"
         )
 }
 
@@ -162,7 +205,7 @@ for (pty_idx in dfiles$pty)
 
         # Find BAM_PATH then get the MAF
         ph.input[, HXB2_PATH := gsub('.bam$','_BaseFreqs_WithHXB2.csv', basename(BAM_PATH))]
-        if(Sys.info()[['user']] == 'andrea')
+        if(user == 'andrea')
         {
                 fraser.dir <- '~/Documents/Box/ratmann_pangea_deepsequencedata/fraserupload-KoPKvNP7dgmnfnxE/well/fraser/DATA/processing'
                 hxb2files <- as.character(list.files(fraser.dir, recursive=TRUE, pattern='^.*?HXB2.csv', full.names = TRUE))
@@ -175,21 +218,32 @@ for (pty_idx in dfiles$pty)
                 ph.input[, HXB2_EXISTS := file.exists(HXB2_PATH)]
         }
         maf <- ph.input[, .(SAMPLE_ID, HXB2_PATH, HXB2_EXISTS)]
-        maf <- maf[, .(SAMPLE_ID, HXB2_PATH, HXB2_EXISTS)]
-        maf_mat <- generate_sample(maf)
+        maf_mat <- generate.sample(maf)
 
-        # If there are multiple sequences associated to one AID
-        # take first non-NA -fq[0-9]
-        # then save the maf 
+        # use the first sequence if frequencies are available
+        ddates <- get.sampling.dates()
+        # now need to chose the -fq with maximum date
+        setnames(ddates, 'RENAME_ID', 'SAMPLE_ID')
+        ddates[, AID := gsub('-fq.*?$','', SAMPLE_ID)]
+        setorder(ddates, AID, -visit_dt)
+
+        # If there are multiple sequences associated to one AID:
+        # take sequence with associated BaseFreq file ("HXB2")
+        # with latest collection date  
         tmp1 <- gsub('-fq.*?$','',rownames(maf_mat))
         tmp1 <- unique(tmp1[duplicated(tmp1)])
         tmp1 <- data.table(AID = tmp1)
         tmp1 <- tmp1[, list(FQ=grep(AID, rownames(maf_mat), value=T)),by=AID]
-        # remove the NAs
-        tmp1 <- tmp1[, list(IS_NA = is.na(maf_mat[FQ, 1])), by=c("AID","FQ") ]
-        tmp1[, IDX:=which(IS_NA == TRUE)[1] , by="AID"]
-        tmp1[is.na(IDX), IDX:=1]
-        tmp1 <- unique(tmp1[, list(FQ=FQ[IDX]), by='AID'])
+        # which do not have HXB2?
+        tmp1 <- tmp1[, list(HXB2 = !is.na(maf_mat[FQ, 1])), by=c("AID","FQ") ]
+        tmp1 <- merge(tmp1, ddates, by.x=c('AID', 'FQ'), by.y=c("AID", "SAMPLE_ID"))
+        setorder(ddates, AID, -visit_dt)
+        tmp1 <- tmp1[, {
+                z <- which(HXB2 == TRUE)[1];
+                z <- ifelse(is.na(z), 1, z)
+                list(FQ=FQ[z], visit_dt=visit_dt[z])
+        }, by='AID']
+
 
         rows_to_del <- rownames(maf_mat)[which(grepl(paste0(tmp1$AID, collapse='|'), rownames(maf_mat) ))]
         rows_to_del <- rows_to_del[! rows_to_del %in% tmp1$FQ]
