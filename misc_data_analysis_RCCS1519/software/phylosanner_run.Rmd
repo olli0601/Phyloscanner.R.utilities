@@ -77,11 +77,12 @@ To reconstruct transmission pairs, a slightly different command is recommended. 
 * changing the maximum cluster size `--cluster_size` from 100 to 55
 * adding controls to each cluster and changing `--n_control` from 0 to 3
 * changing the distance between windows `sliding_width` from 10 to 25
+* carrying on the argument `window_cutoff` in the previous step `create_networks.R`
 
 and the command is 
 
 ```{r,eval=FALSE}
-Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_deep_sequence_alignments.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --prog_dir  "~/phyloscanner/phyloscanner_make_trees.py" --sliding_width 25 --n_control 3 --cluster_size 55
+Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_deep_sequence_alignments.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --prog_dir  "~/phyloscanner/phyloscanner_make_trees.py" --sliding_width 25 --n_control 3 --cluster_size 55 --window_cutoff 0.5
 ```
 
 ## Build trees 
