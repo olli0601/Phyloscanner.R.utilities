@@ -25,7 +25,7 @@ option_list <- list(
     "--input_samples",
     type = "character",
     default = NA_character_, 
-    # '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds',
+# '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds',
     help = "Absolute file path to rds containing PANGEA_IDs and RENAME_IDs", 
     dest = 'phsc.samples'
   ),
@@ -119,6 +119,7 @@ if(0)
 }
 
 # Take median of predictions and cc's in sqrt space, then transform to linear space
+# Alternatively could pick prediciton with minimum MAE
 cols <- grep('RF',colnames(dpreds), value=T)
 cols <- grep('linear', cols, value=T, invert = TRUE)
 dpreds <- dpreds[, lapply(.SD, median) ,by='RENAME_ID', .SDcols=cols]
@@ -146,9 +147,10 @@ if(sampling.dates.available)
         ddates <- setDT(read.csv(db.sharing.path.mrc))
         ddates <- unique(ddates[, .(pangea_id, visit_dt)])
         ddates[, as.Date(visit_dt, format="%Y-%m-%d")]
-        tmp <- as.data.table(read.csv(db.sharing.path.rccs))
+        tmp <- setDT(read.csv(db.sharing.path.rccs))
         tmp <- unique(tmp[, .(pangea_id, visit_dt)])
         ddates <- rbind(tmp, ddates)
+        ddates[, visit_dt := as.Date(visit_dt, "%Y-%m-%d")]
         stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
 
         tmp <- dsamples[, `:=` (pangea_id=gsub('^.*?_','', PANGEA_ID),
