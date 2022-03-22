@@ -415,9 +415,10 @@ pre code {
 <li>changing the maximum cluster size <code>--cluster_size</code> from 100 to 55</li>
 <li>adding controls to each cluster and changing <code>--n_control</code> from 0 to 3</li>
 <li>changing the distance between windows <code>sliding_width</code> from 10 to 25</li>
+<li>carrying on the argument <code>window_cutoff</code> in the previous step <code>create_networks.R</code></li>
 </ul>
 <p>and the command is</p>
-<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_deep_sequence_alignments.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --prog_dir  &quot;~/phyloscanner/phyloscanner_make_trees.py&quot; --sliding_width 25 --n_control 3 --cluster_size 55</code></pre>
+<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_deep_sequence_alignments.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --prog_dir  &quot;~/phyloscanner/phyloscanner_make_trees.py&quot; --sliding_width 25 --n_control 3 --cluster_size 55 --window_cutoff 0.5</code></pre>
 </div>
 </div>
 <div id="build-trees" class="section level2">

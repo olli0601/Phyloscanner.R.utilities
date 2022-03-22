@@ -230,7 +230,7 @@ infile.consensus.oneeach <-
 source(file.path(args$prj.dir, "utility.R"))
 
 # Check duplicates
-pty.runs <- readRDS(infile.runs)
+pty.runs <- data.table(readRDS(infile.runs))
 if ('ID_TYPE' %in% colnames(pty.runs)) {
   setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
 } else{
@@ -239,7 +239,10 @@ if ('ID_TYPE' %in% colnames(pty.runs)) {
 
 tmp <- pty.runs[, duplicated(SAMPLE_ID), by = 'PTY_RUN']
 tmp <- tmp[, which(V1)]
-pty.runs <- pty.runs[-tmp, ]
+if(length(tmp)!=0){
+  pty.runs <- pty.runs[-tmp, ]
+}
+
 tmp <-
   pty.runs[, length(SAMPLE_ID) - length(unique(SAMPLE_ID)), by = 'PTY_RUN']
 stopifnot(all(tmp$V1 == 0))
@@ -308,6 +311,9 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
 })
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
+
+print(pty.c)
+
 pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run))[1:nrow(pty.c)]]
 pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
 
@@ -321,6 +327,7 @@ hpc.q				<- NA
 hpc.mem				<- "6gb"
 hpc.array			<- pty.c[, max(CASE_ID)]
 
+print(hpc.array)
 #	Define PBS header for job scheduler
 pbshead		<- "#!/bin/sh"
 tmp			<-
@@ -348,6 +355,8 @@ if (!is.na(hpc.q))
 pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
 cat(pbshead)
 
+print(pty.c[, max(JOB_ID)])
+print(max(pty.c$JOB_ID))
 #	Create PBS job array
 for (i in 1:pty.c[, max(JOB_ID)]) {
   tmp <- pty.c[JOB_ID == i, ]
