@@ -10,7 +10,7 @@
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI.sh'
+        echo 'qsub -v STEP="xxx" runall_TSI_seroconv.sh'
         exit 1
 fi
 echo "running '${STEP:=sim}' analysis"
@@ -37,7 +37,7 @@ case $STEP in
 
         sim)
         echo "----- Calculate genome similarities -----"
-        Rscript $software_path/TSIcalculate_similarity_over_windows.R \
+        Rscript $software_path/calculate_similarity_over_windows.R \
         --infile "$DEEPDATA/200422_PANGEA2_RCCSMRC_alignment.fasta" \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
