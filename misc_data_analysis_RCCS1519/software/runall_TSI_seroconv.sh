@@ -41,8 +41,7 @@ case $STEP in
         --infile "$DEEPDATA/200422_PANGEA2_RCCSMRC_alignment.fasta" \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
-        --env_name "hivphylotsi"\
-        --controller $controller
+        --env_name "hivphylotsi"
         ;;
 
 # Want to substitute this with a script that finds the 5 closest individuals to each
@@ -58,8 +57,10 @@ case $STEP in
         echo "----- Create network -----"
         Rscript $software_path/TSIcreate_network_seroconverters.R \
         --out_dir_base $out_dir_base \
-        --pkg_dir $software_path
+        --pkg_dir $software_path \
+        --n_control 0
         ;;
+
 
         tsi)
         echo "----- Run HIV-TSI -----"
@@ -84,6 +85,3 @@ case $STEP in
         ;;
 esac
 
-# We want to be able to check the logs of each script that was run
-sleep 600
-cp -r $cwd/* $out_dir_logs
