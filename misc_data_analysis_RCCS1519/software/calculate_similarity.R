@@ -161,7 +161,7 @@ if (is.na(args$infile)) {
   stop("Please input the sequence file. ")
 }
 
-cat(' ---------- Load job information ---------- ')
+cat(' ---------- Load job information ---------- \n')
 if (is.na(args$window_id)) {
   infile_job_info <- file.path(args$out.dir, 'similarity_batches.rds')
 } else{
@@ -180,10 +180,10 @@ if (is.na(args$window_id)) {
 dfo <- data.table(readRDS(infile_job_info))
 
 
-cat(' ---------- Load sequences ---------- ')
+cat(' ---------- Load sequences ---------- \n')
 sq <- read.fasta(args$infile)
 
-cat(' ---------- Select pairs and sequences ---------- ')
+cat(' ---------- Select pairs and sequences ---------- \n')
 dfo	<- subset(dfo, SCRIPT_ID == args$script_id)
 sq	<- sq[dfo[, unique(c(H1, H2))]]
 
@@ -200,7 +200,7 @@ tmp[, MATCHES := -1.0]
 tmp[, PERC := -1.0]
 dfo <- dfo[!H1 %in% sq.n.names & !H2 %in% sq.n.names]
 
-cat(' ---------- Calculate similarities ---------- ')
+cat(' ---------- Calculate similarities ---------- \n')
 dfo		<- dfo[, {
   seq1 <- sq[[H1]]
   seq2 <- sq[[H2]]
@@ -227,7 +227,7 @@ dfo[, PERC := MATCHES / LENGTH]
 dfo[LENGTH == -1L, PERC := -1.0]
 dfo <- rbind(dfo, tmp)
 
-cat(' ---------- Save ---------- ')
+cat(' ---------- Save ---------- \n')
 if (args$if_save_data) {
   if (is.na(args$window_id)) {
     cat('\nWriting to file ',
