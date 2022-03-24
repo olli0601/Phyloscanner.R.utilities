@@ -426,13 +426,13 @@ pre code {
 <p>We are then able to build trees using deep sequence alignment. Again, a slightly different option is used for the two purposes.</p>
 <div id="tsi-estimates-2" class="section level3">
 <h3>TSI estimates</h3>
-<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/myfirstrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot;   --iqtree_option &quot;-m GTR+F+R6&quot; --date &quot;2022-02-22&quot;</code></pre>
+<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/myfirstrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --iqtree_method &quot;GTR+F+R6&quot; --date &quot;2022-02-22&quot;</code></pre>
 <p><code>--out_dir_base</code> has a subdirectory <strong>X_phsc_output</strong> that stores the deep sequence alignment and will store the trees generated in this step. The scripts also allow the arguments <code>--seed</code> (random seeds for the script and IQTREE), <code>--env_name</code> (users’ environment name) and <code>--date</code> (prefix of <strong>X_phsc_output</strong>). This command generates scripts to build trees for each deep sequence alignment, and the main outputs is in the form of <strong>ptyrZ_InWindow_to_END_v2.treefile</strong> <strong>ptyrZ_InWindow_PositionsExcised_START_to_END_v2.treefile</strong> depending on the form of the corresponding <em>fasta</em> files. Please remember to carry on the date arguments from deep sequence alignment.</p>
 </div>
 <div id="transmission-pair-analysis-2" class="section level3">
 <h3>Transmission pair analysis</h3>
 <p>In the transmission pair analysis, we root the tree by <em>REF_CON_H</em>.</p>
-<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot;   --iqtree_option &quot;-m GTR+F+R6 -o REF_CON_H&quot; --date &quot;2022-02-22&quot;</code></pre>
+<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --iqtree_method &quot;GTR+F+R6&quot; --iqtree_root &quot;REF_CON_H&quot; --date &quot;2022-02-22&quot;</code></pre>
 </div>
 </div>
 <div id="check-trees" class="section level2">
@@ -440,11 +440,11 @@ pre code {
 <p>Moderate computational resources are used to build trees. The walltime is 24 hours andthe memory is 1850mb. In case any trees are not built due to the constraint, we check these trees and increase the computational resources to build them. The arguments are the same as the step <strong>Build trees</strong>.</p>
 <div id="tsi-estimates-3" class="section level3">
 <h3>TSI estimates</h3>
-<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/myfirstrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot;   --iqtree_option '-m GTR+F+R6'</code></pre>
+<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/myfirstrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --iqtree_method &quot;GTR+F+R6&quot; --date &quot;2022-02-22&quot;</code></pre>
 </div>
 <div id="transmission-pair-analysis-3" class="section level3">
 <h3>Transmission pair analysis</h3>
-<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot;   --iqtree_option '-m GTR+F+R6 -o REF_CON_H'</code></pre>
+<pre class="r"><code>Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_trees.R --out_dir_base &quot;/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/&quot; --pkg_dir &quot;~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/&quot; --iqtree_method &quot;GTR+F+R6&quot; --iqtree_root &quot;REF_CON_H&quot; --date &quot;2022-02-22&quot;</code></pre>
 </div>
 </div>
 <div id="analyse-trees" class="section level2">
