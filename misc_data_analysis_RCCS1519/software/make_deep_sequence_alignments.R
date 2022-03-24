@@ -94,7 +94,7 @@ option_list <- list(
   optparse::make_option(
     "--date",
     type = 'character',
-    default = Sys.Date(),
+    default = as.character(Sys.Date()),
     metavar = '"YYYY-MM-DD"',
     help = 'As of date to extract data from.  Defaults to today.',
     dest = 'date'
@@ -190,7 +190,7 @@ if(!is.na(args$window_cutoff)){
 
 max.per.run <- 4900
 
-
+args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
 args$out.dir.data <-
   file.path(args$out.dir, paste0(args$date, "_phsc_input"))
