@@ -259,3 +259,4 @@ for (jobid in seq_len(max(df$JOB_ID))) {
 
 # So by checking whether all of these files exists in the output directory!!!!!! 
 
+cat('\n\n===== END OF SCRIPT =====\n\n')
