@@ -35,7 +35,7 @@ option_list <- list(
   optparse::make_option(
     "--input_samples",
     type = "character",
-    default = '',
+    default = NA_character_,
     help = "Absolute file path to input samples rds containing PANGEA_IDs and RENAME_IDs", 
     dest = 'phsc.samples'
   ),
@@ -95,7 +95,7 @@ generate.sample <- function(maf) {
 
         for(sp in spls){
                 sp_file <- maf[SAMPLE_ID == sp, HXB2_PATH]
-                cat(paste0('Computing MAF for: ', sp_file,'\n'))
+                # cat(paste0('Computing MAF for: ', sp_file,'\n'))
                 basefile<-read.csv(sp_file, header=T)
                 indexes_HXB2_pos<-which(basefile$Position.in.B.FR.83.HXB2_LAI_IIIB_BRU.K03455!='-')
                 sample_HXB2_pos<-as.numeric(basefile[indexes_HXB2_pos,1])
