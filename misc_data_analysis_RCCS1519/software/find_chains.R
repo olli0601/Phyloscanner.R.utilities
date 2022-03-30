@@ -150,6 +150,7 @@ if (is.na(args$phylo.dir))
 #
 max.per.run <- 4900
 
+args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
 args$out.dir.data <-
   file.path(args$out.dir, paste0(args$date, "_phsc_input"))
@@ -227,7 +228,7 @@ if('PTY_RUN.y' %in% colnames(dca)){
 
 
 
-if(args$classif_rule=='o'|args$classif_rule='b'){
+if(args$classif_rule=='o'|args$classif_rule=='b'){
   control <- list(linked.group='close.and.adjacent.cat',
                   linked.no='not.close.or.nonadjacent',
                   linked.yes='close.and.adjacent', 
@@ -248,7 +249,7 @@ if(args$classif_rule=='o'|args$classif_rule='b'){
   save(dpl, dc, dw, dnet, dchain, file=file.path(args$phylo.dir,'Rakai_phscnetworks_ruleo.rda'))
 }
 
-if(args$classif_rule=='m'|args$classif_rule='b'){
+if(args$classif_rule=='m'|args$classif_rule=='b'){
   # Find pairs
   control <- list(linked.group='close.and.adjacent.cat',
                   linked.no='not.close.or.nonadjacent',
