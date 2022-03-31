@@ -144,7 +144,7 @@ if (tmp["user"] == "xx4515")
   if (is.na(args$prog.dir))
   {
     args$prog.dir <-
-      "~/phyloscanner/phyloscanner_make_trees.py"
+      "~/phyloscanner"
   }
 }
 
@@ -275,7 +275,7 @@ ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
 pty.c	<- lapply(seq_along(ptyi), function(i)
 {
   pty.args <- list(
-    prog.pty = args$prog.dir,
+    prog.pty = file.path(args$prog.dir, "phyloscanner_make_trees.py"),
     prog.mafft = '\" mafft --globalpair --maxiterate 1000 \" ',
     data.dir = args$out.dir.data,
     work.dir = args$out.dir.work,
