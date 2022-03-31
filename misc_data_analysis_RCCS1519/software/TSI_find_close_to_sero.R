@@ -127,8 +127,9 @@ pty.runs[, `:=` (PTY_RUN=IDCLU, PTY_SIZE=CLU_SIZE)]
 setcolorder(pty.runs, c( "UNIT_ID","IDCLU", "CLU_SIZE", "PTY_SIZE", "PTY_RUN", "PANGEA_ID", "RENAME_ID", "SAMPLE_ID"))
 
 # Write processed samples
-outfile <- paste0('phscinput_runs_clusize_', args$cluster_size,
-                  '_ncontrol_',args$n_control, '.rds')
+outfile <- paste0('phscinput_runs_clusize_',
+                  args$cluster_size,
+                  '_ncontrol_0.rds')
 outfile <- file.path(args$out.dir, outfile)
 cat('\nWriting to file ', outfile)
 saveRDS(pty.runs, file=outfile)
