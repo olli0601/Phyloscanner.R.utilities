@@ -43,12 +43,26 @@ option_list <- list(
     help = "Conda environment name [default]",
     dest = 'env_name'
   ),
+  # optparse::make_option(
+  #   "--iqtree_option",
+  #   type = "character",
+  #   default = 'GTR+F+R6',
+  #   help = "Options in IQTREE [default]",
+  #   dest = 'iqtree_option'
+  # ),
   optparse::make_option(
-    "--iqtree_option",
+    "--iqtree_method",
     type = "character",
-    default = 'GTR+F+R6',
-    help = "Options in IQTREE [default]",
-    dest = 'iqtree_option'
+    default = "GTR+F+R6",
+    help = "Methods in IQTREE [default]",
+    dest = 'iqtree_method'
+  ),
+  optparse::make_option(
+    "--iqtree_root",
+    type = "character",
+    default = NULL,
+    help = "Root in IQTREE [default]",
+    dest = 'iqtree_root'
   ),
   optparse::make_option(
     "--pkg_dir",
@@ -138,7 +152,7 @@ if (is.na(args$prj.dir))
 # Add constants that should not be changed by the user
 #
 max.per.run <- 4900
-
+args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
 args$out.dir.data <-
   file.path(args$out.dir, paste0(args$date, "_phsc_input"))
@@ -165,12 +179,14 @@ if(1)
   hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 71; hpc.mem<- "63850mb"; hpc.q<- NA
 }
 
+# iqtree option
 iqtree.pr <- 'iqtree'
-iqtree.pr <- 'iqtree'
+iqtree.args <- paste0('-m ',args$iqtree_method)
+if(!is.null(args$iqtree_root)){
+  iqtree.args	<- paste0(iqtree.args, ' -o ', args$iqtree_root)
+}
 if(!is.na(args$seed)){
-  iqtree.args	<- paste0(args$iqtree_option, ' -seed ', args$seed)
-}else{
-  iqtree.args	<- args$iqtree_option
+  iqtree.args	<- paste0(iqtree.args, ' -seed ', args$seed)
 }
 
 # Load alignments

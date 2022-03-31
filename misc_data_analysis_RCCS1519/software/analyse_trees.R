@@ -50,9 +50,9 @@ option_list <- list(
     dest = 'blacklist.report'
     ),
   optparse::make_option(
-    "--distance_threshold",
-    type = "numeric",
-    default = -1,
+    "--distanceThreshold",
+    action="store", 
+    default = NULL,
     help = "Maximum distance threshold on a window for a relationship to be reconstructed between two hosts on that window.[default]",
     dest = 'distance.threshold'
   ),
@@ -64,14 +64,14 @@ option_list <- list(
   #   dest = 'file.name.regex'
   #   ),
   optparse::make_option(
-    "--max_reads_per_host",
-    type = "interger",
+    "--maxReadsPerHost",
+    action="store", 
     default = NULL,
     help = "If given, blacklist to downsample read counts (or tip counts if no read counts are identified) from each host to this number. [default]",
     dest = 'max.reads.per.host'
   ),
   optparse::make_option(
-    "--min_reads_per_host",
+    "--minReadsPerHost",
     type = "integer",
     default = 1,
     help = "Blacklist hosts from trees where they have less than this number of reads. [default]",
@@ -112,7 +112,6 @@ option_list <- list(
   optparse::make_option( 
     "--outputNexusTree",
     action="store_true",
-    default = NULL,
     help="Standard output of annotated trees are in PDF format. If this option is present, output them as NEXUS instead.",
     dest = 'output.nexus.tree'
   ),
@@ -132,7 +131,6 @@ option_list <- list(
   optparse::make_option(
     "--relaxedAncestry", 
     action="store_true", 
-    default=NULL,
     help="If absent, directionality can be inferred so long as at least one subraph from one host is descended from one from the other, and no pair of subgraphs exist in the opposite direction. Otherwise it is required that every subgraph from one host is descended from one from the other.",
     dest = "relaxed.ancestry"
   ),
@@ -236,6 +234,9 @@ if (is.na(args$prog.dir))
 {
   args$prog.dir <- here::here()
 }
+if(is.null(args$distance.threshold)){
+  args$distance.threshold <- -1
+}
 #
 # Add constants that should not be changed by the user
 #
@@ -259,6 +260,21 @@ out.dir.analyse.trees <- file.path(args$out.dir,
                                    paste0(args$date,'_phsc_phscrelationships_',
                                    paste(gsub('\\.','_',names(tmpv)),
                                          gsub('\\.|-','',tmpv),collapse='_',sep = '_')))
+out.dir.analyse.trees <- gsub(' ','_',out.dir.analyse.trees)
+# simplify name
+out.dir.analyse.trees <- gsub('_TRUE','_T',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_seed','_sd',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_distance_threshold','_sdt',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_max_reads_per_host','_dsl',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_min_reads_per_host','_mr',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_multinomial','_mlt',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_no_progress_bars','_npb',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_outgroup_name','_og',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_post_hoc_count_blacklisting','_phcb',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_ratio_blacklist_threshold','_rtt',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_relaxed_ancestry','_rla',out.dir.analyse.trees)
+out.dir.analyse.trees <- gsub('_zero_length_adjustment','_zla',out.dir.analyse.trees)
+print(out.dir.analyse.trees)
 dir.create(out.dir.analyse.trees)
 
 # Source functions
