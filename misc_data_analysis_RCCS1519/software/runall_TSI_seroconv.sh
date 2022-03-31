@@ -59,7 +59,25 @@ case $STEP in
         --sliding_width 10 \
         --n_control 0 \
         --cluster_size $CLUSIZE
+        ;;
+        
+        btr)
+        echo "----- build trees ----"
+        Rscript $software_path/make_trees.R \
+        --out_dir_base $out_dir_base \
+        --pkg_dir $software_path \
+        --iqtree_method "GTR+F+R6" \
+        --date "2022-03-31"
+        ;;
 
+        ctr)
+        echo "----- check trees ----"
+        Rscript $software_path/check_trees.R \
+        --out_dir_base $out_dir_base \
+        --pkg_dir $software_path \
+        --iqtree_method "GTR+F+R6" \
+        --date "2022-03-31"
+        ;;
         # Steps here to implement as we go.
 
         tsi)
