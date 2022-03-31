@@ -27,8 +27,8 @@ out_dir_base="$DEEPANALYSES/seroconverters"
 #out_dir_out="$out_dir_base/19037_phsc_output"
 #out_dir_rel="$out_dir_base/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/"
 #out_dir_logs="$HOME/.scripts/testing"
-controller=$(readlink -f ${BASH_SOURCE}) #current script location
-CLUSIZE='6L'
+controller="$software_path/runall_TSI_seroconv.sh" #current script location
+CLUSIZE='6'
 
 
 
