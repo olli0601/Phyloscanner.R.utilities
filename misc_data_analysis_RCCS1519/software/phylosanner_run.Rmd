@@ -16,7 +16,7 @@ The analysis requires the installation of *phyloscanner* and other packages as d
 
 
 
-## Make potential networks
+## Make potential networks{.tabset}
 There are two ways to make potential networks. For the purpose of TSI estimates, we use a simple method to calculate the similarity over the entire genome and assign each individual to a cluster through hierarchical clustering. For the purpose of uncovering the transmission pairs, a more rigorous approach is needed. 
 
 ### TSI estimates
@@ -62,7 +62,8 @@ You may specify `--cluster_size`, `--n_pos`, `--n_control`,`--add_couple_control
 
 The command takes the window-specific similarity scores in the `--out_dir_base`, classifies whether two individuals are close in each window and aggregates the classifications over the entire genome. If the close relationships are confirmed on at least `--window_cutoff` windows, the pair is considered as close. The close relationship prompts to divide individuals into connected components. If any clusters of size larger than `--cluster_size` exist, we further divide them into densely connected components and take the bridging individuals into a separate cluster. Again the output is **phscinput_runs_clusize_X_ncontrol_Y.rds** in a subdirectory *potential_network* under `--out_dir_base`.
 
-## Make deep sequence alignment
+## Make deep sequence alignment{.tabset}
+
 In each potential transmission network, we perform the phylogenetic analysis through *phyloscanner*. 
 
 ### TSI estimates
@@ -86,7 +87,8 @@ and the command is
 Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_deep_sequence_alignments.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --prog_dir  "~/phyloscanner/phyloscanner_make_trees.py" --sliding_width 25 --n_control 3 --cluster_size 55 --window_cutoff 0.5
 ```
 
-## Build trees 
+## Build trees{.tabset}
+
 We are then able to build trees using deep sequence alignment. Again, a slightly different option is used for the two purposes. 
 
 ### TSI estimates
@@ -101,7 +103,7 @@ In the transmission pair analysis, we root the tree by *REF_CON_H*.
 Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/make_trees.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --iqtree_method "GTR+F+R6" --iqtree_root "REF_CON_H" --date "2022-02-22"
 ```
 
-## Check trees
+## Check trees{.tabset}  
 Moderate computational resources are used to build trees. The walltime is 24 hours andthe memory is 1850mb. In case any trees are not built due to the constraint, we check these trees and increase the computational resources to build them. Please use the same arguments as the step **Build trees**.
 
 ### TSI estimates
@@ -114,7 +116,7 @@ Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_tr
 Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/check_trees.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --iqtree_method "GTR+F+R6" --iqtree_root "REF_CON_H" --date "2022-02-22"
 ```
 
-## Analyse trees
+## Analyse trees{.tabset}
 Next, we analyse the trees through *phyloscanner*, and this provides evidence on who infect whom. This script requires `--out_dir_base` which stores **X_phsc_output**, and you are able to provide some phyloscanner options. We provide the example commands for TSI estimates and transmission pair analysis as follows. This command generates and submits scripts to analyse trees in each potential network, and the final output is stored in a new directory *X_phsc_phscrelationships_Y* where X is the date and Y is the phyloscanner option. For example, the default arguments produce the directory `DATE_phsc_phscrelationships_seed_42_distance_threshold__1_min_reads_per_host_1_multinomial_TRUE_ratio_blacklist_threshold_0`.You may specify `--prog_dir` by the full path to `phyloscanner/phyloscanner_analyse_trees.R`. 
 
 ### TSI estimates
@@ -129,7 +131,7 @@ Note that Tanya used `--outgroupName "B.FR.83.HXB2_LAI_IIIB_BRU.K03455"`.
 Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/analyse_trees.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --normRefFileName "~/normalisation_ByPosition.csv" --outgroupName "REF_CON_H" --ratioBlacklistThreshold 0.01 --distanceThreshold "0.02 0.05"   --maxReadsPerHost 100 --minReadsPerHost 30  --multinomial --noProgressBars  --postHocCountBlacklisting  --relaxedAncestry --zeroLengthAdjustment --date "2022-02-22" --env_name "phylostan"
 ```
 
-## Find transmission chains 
+## Find transmission chains{.tabset}
 The final step is only applicable to transmission pair analysis. It further processes the *phyloscanner* outputs and identifies the most likely transmission chain. Please specify `--phylo_dir` as the directory created in **Analyse trees**, *X_phsc_phscrelationships_Y*. The command generates **Rakai_phscnetworks_ruleZ.rda** under `--phylo_dir`, where Z is the classification rule specified by `--classification_rule` which takes value o (Oliver's rule), m (Matthew's rule) and b (both).
 ```{r,eval=FALSE}
 Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/find_chains.R --out_dir_base "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/" --pkg_dir "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/" --phylo_dir "/rds/general/project/ratmann_deepseq_analyses/live/mysecondrun/X_phsc_phscrelationships_Y" --date "2022-02-22" --env_name "phylostan"
