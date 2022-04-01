@@ -116,6 +116,7 @@ for (id in sero_ids)
 }
 # Save clusters.csv in the potential_network directory
 filename <- file.path(args$out.dir, 'potential_network', 'clusters.rds')
+cat('\nWriting to file ', filename, '\n')
 saveRDS(dclusters, filename)
 
 # To build: phscinput_runs_clusize_6_ncontrol0.rds
@@ -131,12 +132,13 @@ outfile <- paste0('phscinput_runs_clusize_',
                   args$cluster_size,
                   '_ncontrol_0.rds')
 outfile <- file.path(args$out.dir, outfile)
-cat('\nWriting to file ', outfile)
+cat('\nWriting to file ', outfile, '\n')
 saveRDS(pty.runs, file=outfile)
 
 # Set up next step in the analysis as well!
 if(file.exists(args$controller))
 {
+        cat('\nSubmitting "ali" job\n')
         cmd <- paste0('cd ', dirname(args$controller), '\n')
         cmd <- paste0(cmd,
                       'qsub -v STEP="ali" ', args$controller
