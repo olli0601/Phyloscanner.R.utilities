@@ -67,6 +67,7 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
+        --env_name "phylostan" \
         --date "2022-03-31"
         ;;
 
@@ -76,7 +77,8 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
-        --date "2022-03-31"
+        --env_name "phylostan" \
+        --date "2022-03-31" 
         ;;
         # Steps here to implement as we go.
 
