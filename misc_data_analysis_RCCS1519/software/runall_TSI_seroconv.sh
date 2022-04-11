@@ -82,6 +82,7 @@ case $STEP in
         ;;
 
         atr)
+        conda activate phylostan
         Rscript $software_path/analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
