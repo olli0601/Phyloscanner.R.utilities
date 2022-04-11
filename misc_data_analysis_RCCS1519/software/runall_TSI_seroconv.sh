@@ -80,7 +80,20 @@ case $STEP in
         --env_name "phylostan" \
         --date "2022-03-31" 
         ;;
-        # Steps here to implement as we go.
+
+        atr)
+        Rscript $software_path/analyse_trees.R \
+        --out_dir_base $out_dir_base \
+        --pkg_dir $software_path \
+        --blacklistReport \
+        --outputNexusTree \
+        --skipSummaryGraph \
+        --normRefFileName "$phyloscanner_path/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv" \
+        --outgroupName "REF_CON_H"  \
+        --ratioBlacklistThreshold 0.005 \
+        --date "2022-03-31" \
+        --env_name "phylostan"
+        ;;
 
         tsi)
         echo "----- Run HIV-TSI -----"
