@@ -237,6 +237,13 @@ if (is.na(args$prog.dir))
 if(is.null(args$distance.threshold)){
   args$distance.threshold <- -1
 }
+
+
+if(dir.exists(args$prog.dir))
+{
+        args$prog.dir <- file.path(args$prog.dir, 'phyloscanner_analyse_trees.R')
+}
+
 #
 # Add constants that should not be changed by the user
 #
