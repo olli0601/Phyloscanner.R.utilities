@@ -238,11 +238,12 @@ if(is.null(args$distance.threshold)){
   args$distance.threshold <- -1
 }
 
-
 if(dir.exists(args$prog.dir))
 {
         args$prog.dir <- file.path(args$prog.dir, 'phyloscanner_analyse_trees.R')
 }
+
+args$date <- gsub('-','_',args$date)
 
 #
 # Add constants that should not be changed by the user
@@ -370,6 +371,7 @@ if(args$verbose){
 #
 # Submit array job to HPC
 #
+
 #	Make header
 hpc.load			<- paste0("module load anaconda3/personal \n source activate ", args$env_name)
 hpc.select			<- 1
@@ -393,6 +395,7 @@ if(!is.na(hpc.q))
   pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
 pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
 cat(pbshead)
+
 #	Make array job
 for(i in 1:length(cmds))
   cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
