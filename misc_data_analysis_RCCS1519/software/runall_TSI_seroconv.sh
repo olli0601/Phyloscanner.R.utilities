@@ -86,6 +86,7 @@ case $STEP in
         Rscript $software_path/analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
+        --prog_dir $phyloscanner_path \
         --blacklistReport \
         --outputNexusTree \
         --skipSummaryGraph \
