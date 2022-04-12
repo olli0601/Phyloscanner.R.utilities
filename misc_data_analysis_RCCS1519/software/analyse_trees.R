@@ -407,7 +407,8 @@ outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],colla
 outfile		<- file.path(args$out.dir.work, outfile)
 cat(cmd, file=outfile)
 cmd 		<- paste("qsub", outfile)
-cat(cmd)
+cat('\n', cmd)
 cat(system(cmd, intern= TRUE))
+
 
 
