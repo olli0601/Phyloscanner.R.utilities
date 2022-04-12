@@ -37,6 +37,14 @@ option_list <- list(
 #    dest = 'coll.dates'
 #  ),
   optparse::make_option(
+    "--date",
+    type = 'character',
+    default = NA,
+    metavar = '"YYYY-MM-DD"',
+    help = 'As of date to extract data from.  Defaults to today.',
+    dest = 'date'
+  ),
+  optparse::make_option(
     "--controller",
     type = "character",
     default = NA_character_, # Think about adding the controller in the software directory
@@ -64,18 +72,25 @@ if(user == 'andrea'){
         )
 }
 
-if(is.na(args$rel.dir)) args$rel.dir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/'
-
 ################
 # MAIN
 ################
+
+args$date <- gsub('-','_',args$date)
+if( ! grepl('output$', args$out.dir))
+{
+        args$out.dir <- 
+                file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+}
+
+stopifnot(dir.exists(args$rel.dir))
+stopifnot(dir.exists(args$out.dir))
+
 # Load PANGEA_ID for each sample and collection dates
 dsamples <- setDT(readRDS(args$phsc.samples))
 dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
-# ddates <- 
 
 # Load results from prev
-
 tmp <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
 tmp <- data.table(tsi.path=tmp, 
                   pty=gsub('^.*?ptyr|_tsi.csv', '', tmp))

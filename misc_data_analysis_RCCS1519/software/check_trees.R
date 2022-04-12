@@ -108,7 +108,7 @@ if(0){
     seed = 42,
     if_save_data = T,
     date = '2022-02-04',
-    env_name = 'phylor4',
+    env_name = 'phylostan',
     iqtree_option = '-m GTR+F+R6 -o REF_CON_H',
     out.dir = NA,
     prj.dir = NA,

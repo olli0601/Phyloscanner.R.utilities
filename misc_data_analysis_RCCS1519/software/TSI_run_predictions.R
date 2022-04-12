@@ -39,11 +39,10 @@ option_list <- list(
     help = "Absolute file path to input samples rds containing PANGEA_IDs and RENAME_IDs", 
     dest = 'phsc.samples'
   ),
-
   optparse::make_option(
     "--walltime",
     type = "integer",
-    default = 3L,
+    default = 4L,
     help = "Job walltime (hours) [default]",
     dest = 'walltime'
   ),
@@ -53,6 +52,14 @@ option_list <- list(
     default = 2L,
     help = "Job memory (GB) [default]",
     dest = 'memory'
+  ),
+  optparse::make_option(
+    "--date",
+    type = 'character',
+    default = NA,
+    metavar = '"YYYY-MM-DD"',
+    help = 'As of date to extract data from.  Defaults to today.',
+    dest = 'date'
   ),
   optparse::make_option(
     "--controller",
@@ -162,7 +169,15 @@ if (user=='andrea') {
 # main
 ################
 
+args$date <- gsub('-','_',args$date)
+if( ! grepl('output$', args$out.dir))
+{
+        args$out.dir <- 
+                file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+}
+
 work.dir <- gsub('_output$','_work',args$out.dir)
+
 stopifnot(dir.exists(work.dir))
 stopifnot(dir.exists(args$rel.dir))
 stopifnot(dir.exists(args$out.dir))
