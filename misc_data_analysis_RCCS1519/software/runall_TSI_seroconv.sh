@@ -24,9 +24,7 @@ software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/so
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/seroconverters"
-#out_dir_out="$out_dir_base/19037_phsc_output"
-#out_dir_rel="$out_dir_base/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/"
-#out_dir_logs="$HOME/.scripts/testing"
+out_dir_rel="$out_dir_base/2022_03_31_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_REF_CON_H_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1/"
 controller="$software_path/runall_TSI_seroconv.sh" #current script location
 CLUSIZE='6'
 
@@ -100,10 +98,11 @@ case $STEP in
         tsi)
         echo "----- Run HIV-TSI -----"
         Rscript $software_path/TSI_run_predictions.R \
-        --out_dir_base $out_dir_out \
+        --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
+        --date "2022-03-31" \
         --env_name 'hivphylotsi'
         ;;
 
@@ -112,6 +111,7 @@ case $STEP in
         Rscript $software_path/TSI_estimate_dates.R \
         --out_dir_base $out_dir_out \
         --relationship_dir $out_dir_rel \
+        --date "2022-03-31" \
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
         ;;
 
