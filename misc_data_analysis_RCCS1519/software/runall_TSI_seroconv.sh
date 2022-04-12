@@ -109,7 +109,7 @@ case $STEP in
         dti)
         echo "----- get dates of infection -----"
         Rscript $software_path/TSI_estimate_dates.R \
-        --out_dir_base $out_dir_out \
+        --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
         --date "2022-03-31" \
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
