@@ -90,6 +90,7 @@ args <-
 
 generate.sample <- function(maf) {
 
+        cat('\n', 'Running generate.sample()...', '\n')
         # Lele's function to compute Minor Allele Frequencies. 
         MAF_matrix<-matrix(0,ncol=10000,nrow=(nrow(maf)+1))
         MAF_matrix[1,]<-seq(1,10000)
@@ -160,10 +161,10 @@ if (user=='andrea') {
                 walltime = 3L,
                 memory = 2L,
                 controller=NA,
-                file.bf.locs="~/Documents/Box/2021/phyloTSI/bfloc2hpc_20220103.rds",
                 phsc.samples="~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds"
         )
 }
+
 
 ################
 # main
@@ -248,23 +249,26 @@ for (pty_idx in dfiles$pty)
         tmp1 <- gsub('-fq.*?$','',rownames(maf_mat))
         tmp1 <- unique(tmp1[duplicated(tmp1)])
         tmp1 <- data.table(AID = tmp1)
-        tmp1 <- tmp1[, list(FQ=grep(AID, rownames(maf_mat), value=T)),by=AID]
-        # which do not have HXB2?
-        tmp1 <- tmp1[, list(HXB2 = !is.na(maf_mat[FQ, 1])), by=c("AID","FQ") ]
-        tmp1 <- merge(tmp1, ddates, by.x=c('AID', 'FQ'), by.y=c("AID", "SAMPLE_ID"))
-        setorder(ddates, AID, -visit_dt)
-        tmp1 <- tmp1[, {
-                z <- which(HXB2 == TRUE)[1];
-                z <- ifelse(is.na(z), 1, z)
-                list(FQ=FQ[z], visit_dt=visit_dt[z])
-        }, by='AID']
+        if(tmp1[, .N>1])
+        {
+                tmp1 <- tmp1[, list(FQ=grep(AID, rownames(maf_mat), value=T)),by=AID]
+                # which do not have HXB2?
+                tmp1 <- tmp1[, list(HXB2 = !is.na(maf_mat[FQ, 1])), by=c("AID","FQ") ]
+                tmp1 <- merge(tmp1, ddates, by.x=c('AID', 'FQ'), by.y=c("AID", "SAMPLE_ID"))
+                setorder(ddates, AID, -visit_dt)
+                tmp1 <- tmp1[, {
+                        z <- which(HXB2 == TRUE)[1];
+                        z <- ifelse(is.na(z), 1, z)
+                        list(FQ=FQ[z], visit_dt=visit_dt[z])
+                }, by='AID']
 
 
-        rows_to_del <- rownames(maf_mat)[which(grepl(paste0(tmp1$AID, collapse='|'), rownames(maf_mat) ))]
-        rows_to_del <- rows_to_del[! rows_to_del %in% tmp1$FQ]
-        
-        # Store -fq used so we can check exact sampling date
-        maf_mat <- maf_mat[! rownames(maf_mat) %in% rows_to_del, ]
+                rows_to_del <- rownames(maf_mat)[which(grepl(paste0(tmp1$AID, collapse='|'), rownames(maf_mat) ))]
+                rows_to_del <- rows_to_del[! rows_to_del %in% tmp1$FQ]
+                
+                # Store -fq used so we can check exact sampling date
+                maf_mat <- maf_mat[! rownames(maf_mat) %in% rows_to_del, ]
+        }
         filename=paste0('ptyr', pty_idx, '_basefreqs_used.csv')
         write.csv(rownames(maf_mat), 
                   file=file.path(dirname(files_pty$pat.path), filename))
