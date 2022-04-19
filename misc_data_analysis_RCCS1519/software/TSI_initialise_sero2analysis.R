@@ -12,7 +12,7 @@ if (usr == 'andrea')
 }else{
         indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata'
-        tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
+        tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
 }
 
 args <- list( out.dir=file.path(indir.deepsequence_analyses, 'seroconverters2'))
