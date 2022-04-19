@@ -284,8 +284,7 @@ write.hpc.input <- function(ddates, out.dir)
         dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
         dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
         setnames(dclus, 'ID', 'UNIT_ID')
-        dclus
-        filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLUSIZE]),'_ncontrol_0.rds'))
+        filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLU_SIZE]),'_ncontrol_0.rds'))
         saveRDS(dclus, filename)
 }
 
