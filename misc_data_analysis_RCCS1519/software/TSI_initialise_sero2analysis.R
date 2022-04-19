@@ -264,6 +264,7 @@ write.hpc.input <- function(ddates, out.dir)
         # make phscinput_samples.rds
         # ______________________________
         phsc_samples <- make_new_input_samples(ddates)
+        colnames(phsc_samples)
         filename=file.path(out.dir, paste0('220419_phscinput_samples.rds'))
         saveRDS(phsc_samples, filename)
 
@@ -281,7 +282,9 @@ write.hpc.input <- function(ddates, out.dir)
         # ______________________________
         suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
         dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLUSIZE) ]
-        merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
+        dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
+        setnames(dclus, 'ID', 'UNIT_ID')
+        setnames(dclus, 'CLUSIZE', 'CLU_SIZE')
         filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLUSIZE]),'_ncontrol_0.rds'))
         saveRDS(dclus, filename)
 }
