@@ -111,8 +111,6 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
-# Super-weird bug for which the args$tsi_analysis eventually becomes NULL on HPC
-make_tsi_bool <- args$tsi_analysis
 
 #
 # test
@@ -131,7 +129,7 @@ if(0){
     out.dir = NA,
     prj.dir = NA,
     prog.dir = NA,
-    make_tsi_bool = TRUE
+    args$tsi_analysis=TRUE
   )
 }
 
@@ -156,25 +154,6 @@ if (tmp["user"] == "xx4515")
   {
     args$prog.dir <-
       "~/phyloscanner"
-  }
-}
-
-if (tmp["user"] == "ab1820")
-{
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-  if (is.na(args$prog.dir))
-  {
-    args$prog.dir <-
-      "~/git/phyloscanner"
   }
 }
 
@@ -259,7 +238,7 @@ file.copy(
 
 # Set consensus sequences.
 
-if(make_tsi_bool)
+if(args$tsi_analysis)
 {
         infile.consensus <- file.path(args$out.dir.data,'220419_reference_set_for_PARTNERS_mafft.fasta')
 }else{
@@ -313,13 +292,8 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # Remove starts, ends and vloops
 
-args <- list(
-        window_size=250,
-        sliding_width=10
-)
-
-# TODO: if standard:
-if(make_tsi_bool)
+# if standard:
+if(args$tsi_analysis=TRUE)
 {
         ptyi <- (52:949)*10
         mafft.opt <- '\" mafft \"'
