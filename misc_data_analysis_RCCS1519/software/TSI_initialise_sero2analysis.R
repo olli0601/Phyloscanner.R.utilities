@@ -282,7 +282,7 @@ write.hpc.input <- function(ddates, out.dir)
         suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
         dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLUSIZE) ]
         merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
-        filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus(CLUSIZE)),'_ncontrol_0.rds'))
+        filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLUSIZE]),'_ncontrol_0.rds'))
         saveRDS(dclus, filename)
 }
 
