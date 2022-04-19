@@ -272,7 +272,7 @@ write.hpc.input <- function(ddates, out.dir)
         # ______________________________
         tmp <- ddates[, pt_id]
         dclus <- data.table(ID=tmp, IDCLU=1:3)
-        dclus[,CLUSIZE:=.N,by='IDCLU']
+        dclus[,CLU_SIZE:=.N,by='IDCLU']
         setkey(dclus, IDCLU)
         filename=file.path(out.dir, 'potential_network', 'clusters.rds')
         saveRDS(dclus, filename)
@@ -281,10 +281,10 @@ write.hpc.input <- function(ddates, out.dir)
         # make phscinput_runs_clusize...
         # ______________________________
         suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
-        dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLUSIZE) ]
+        dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
         dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
         setnames(dclus, 'ID', 'UNIT_ID')
-        setnames(dclus, 'CLUSIZE', 'CLU_SIZE')
+        dclus
         filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLUSIZE]),'_ncontrol_0.rds'))
         saveRDS(dclus, filename)
 }
