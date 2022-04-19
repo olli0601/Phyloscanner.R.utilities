@@ -11,7 +11,7 @@ if (usr == 'andrea')
         tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
 }else{
         indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-        indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata'
+        indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
         tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
 }
 
