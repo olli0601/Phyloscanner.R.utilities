@@ -1,3 +1,5 @@
+cat("\n\n===== TSI_initialise_sero2analysis.R =====\n\n")
+
 require(data.table)
 require(ggplot2)
 
@@ -14,10 +16,6 @@ if (usr == 'andrea')
 }
 
 args <- list( out.dir=file.path(indir.deepsequence_analyses, 'seroconverters2'))
-
-
-
-
 
 ###
 # DATA
@@ -39,7 +37,6 @@ dtsi.1.path <- file.path(tmp, "aggregated_TSI_with_estimated_dates.csv")
 file.db.sharing <- file.path(indir.deepsequencedata,"/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv")
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses_old,'important_anonymisation_keys_210119.csv')
 file.phsc.input.samples <- file.path(indir.deepsequence_analyses_old, '210120_RCCSUVRI_phscinput_samples.rds' )
-
 
 
 
@@ -267,7 +264,7 @@ write.hpc.input <- function(ddates, out.dir)
         # make phscinput_samples.rds
         # ______________________________
         phsc_samples <- make_new_input_samples(ddates)
-        filename=file.path(out.dir, paste0('220413_phscinput_samples.rds'))
+        filename=file.path(out.dir, paste0('220419_phscinput_samples.rds'))
         saveRDS(phsc_samples, filename)
 
         # Make clusters.rds
@@ -299,4 +296,4 @@ dir.create(file.path(args$out.dir, 'potential_network'))
 predictors.ours <- preprocess.ours()
 predictors.tanya <- preprocess.tanya() 
 ddates <- find.common.seroconverters.pangeaids(predictors.ours, predictors.tanya)
-write.hpc.input(ddates, out.dir)
+write.hpc.input(ddates, args$out.dir)
