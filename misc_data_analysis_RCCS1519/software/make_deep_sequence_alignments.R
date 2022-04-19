@@ -304,7 +304,7 @@ if(args$tsi_analysis)
 }else{
         ptyi <- seq(800, 9175, args$sliding_width)
         ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
-        mafft.opt <- '\" mafft --globalpair --maxiterate 1000 \" ',
+        mafft.opt <- '\" mafft --globalpair --maxiterate 1000 \" '
         excision.default.bool <- TRUE
 }
 
