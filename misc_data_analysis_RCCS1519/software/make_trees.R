@@ -220,6 +220,7 @@ pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.w
 
 indexes <- df[, unique(JOB_ID)]
 for (i in seq_along(indexes)) {
+
   tmp<-df[JOB_ID==i,]
 
   hpc.array <- nrow(tmp)
@@ -229,10 +230,12 @@ for (i in seq_along(indexes)) {
   if(pbsJ_bool)
   {
         cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-        tmp <- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+        tmp <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
   }else{
-        tmp <- pbshead
+        cmd <- cmd[, paste0(CASE, collapse='')]
+        cmd <- gsub('1)', '', cmd)
         cmd <- gsub(';;', '', cmd)
+        tmp <- pbshead
   }
   tmp <- paste0(tmp,'\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
