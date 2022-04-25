@@ -217,14 +217,21 @@ if(nrow(df) > max.per.run){
 }
 
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
+pbsJ_bool <- hpc.array > 1
 
 indexes <- df[, unique(JOB_ID)]
 for (i in seq_along(indexes)) {
   tmp<-df[JOB_ID==i,]
   hpc.array <- nrow(tmp)
   cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
-  cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-  tmp <- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+  if(pbsJ_bool)
+  {
+        cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
+        tmp <- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
+  }else{
+        tmp <- pbshead
+        cmd <- gsub(';;', '', cmd)
+  }
   tmp <- paste0(tmp,'\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
   
