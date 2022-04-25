@@ -5,7 +5,7 @@
 
 # The key driver of this analysis is the STEP parameter
 # which should be passed through the qsub command.
-# qsub -v STEP="net" runall_TSI_seroconv.sh
+# qsub -v STEP="net" runall_TSI_seroconv2.sh
 # If unset default to "sim"
 if [ -z "$STEP" ]
 then
@@ -27,7 +27,7 @@ out_dir_base="$DEEPANALYSES/seroconverters2"
 # out_dir_rel="$out_dir_base/2022_03_31_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_REF_CON_H_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1/"
 controller="$software_path/runall_TSI_seroconv2.sh" #current script location
 CLUSIZE='50'
-
+DATE='2022-03-31'
 
 
 cwd=$(pwd)
@@ -62,7 +62,7 @@ case $STEP in
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
-        --date "2022-03-31"
+        --date $DATE 
         ;;
 
         ctr)
@@ -72,7 +72,7 @@ case $STEP in
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
-        --date "2022-03-31" 
+        --date $DATE
         ;;
 
         atr)
@@ -87,7 +87,7 @@ case $STEP in
         --normRefFileName "$phyloscanner_path/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv" \
         --outgroupName "REF_CON_H"  \
         --ratioBlacklistThreshold 0.005 \
-        --date "2022-03-31" \
+        --date $DATE \
         --env_name "phylostan"
         ;;
 
@@ -98,7 +98,7 @@ case $STEP in
         --relationship_dir $out_dir_rel \
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
-        --date "2022-03-31" \
+        --date $DATE \
         --env_name 'hivphylotsi'
         ;;
 
@@ -107,7 +107,7 @@ case $STEP in
         Rscript $software_path/TSI_estimate_dates.R \
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
-        --date "2022-03-31" \
+        --date $DATE \
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
         ;;
 
