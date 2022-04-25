@@ -195,7 +195,7 @@ infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
 
 cat('---------- Delete the files without excision if the files with excision exist ---------- \n')
 tmp <- infiles[(PositionsExcised==F & NUM==2),]
-for (i in 1:nrow(tmp)) {
+for (i in seq_along(tmp$FO)) {
   tmp_name<- tmp$FO[i]
   file.remove(paste0(tmp_name,'.fasta'))
 }
@@ -218,7 +218,8 @@ if(nrow(df) > max.per.run){
 
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
-for (i in 1:df[, max(JOB_ID)]) {
+indexes <- df[, unique(JOB_ID)]
+for (i in seq_along(indexes)) {
   tmp<-df[JOB_ID==i,]
   hpc.array <- nrow(tmp)
   cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
