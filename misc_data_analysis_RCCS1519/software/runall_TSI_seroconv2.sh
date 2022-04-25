@@ -27,7 +27,7 @@ out_dir_base="$DEEPANALYSES/seroconverters2"
 # out_dir_rel="$out_dir_base/2022_03_31_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_REF_CON_H_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1/"
 controller="$software_path/runall_TSI_seroconv2.sh" #current script location
 CLUSIZE='50'
-DATE='2022-04-19'
+DATE='2022-05-25'
 
 
 cwd=$(pwd)
