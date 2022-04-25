@@ -129,7 +129,7 @@ if(0){
     out.dir = NA,
     prj.dir = NA,
     prog.dir = NA,
-    args$tsi_analysis=TRUE
+    tsi_analysis=TRUE
   )
 }
 
@@ -293,7 +293,7 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 # Remove starts, ends and vloops
 
 # if standard:
-if(args$tsi_analysis=TRUE)
+if(args$tsi_analysis)
 {
         ptyi <- (52:949)*10
         mafft.opt <- '\" mafft \"'
