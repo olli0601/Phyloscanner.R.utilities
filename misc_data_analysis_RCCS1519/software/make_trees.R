@@ -146,8 +146,14 @@ args$out.dir.work <-
 args$out.dir.output <-
   file.path(args$out.dir, paste0(args$date, "_phsc_output"))
 
+stopifnot(file.exists(args$out.dir.data))
+stopifnot(file.exists(args$out.dir.work))
+stopifnot(file.exists(args$out.dir.output))
+
+
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
+
 #
 #	produce trees
 #
