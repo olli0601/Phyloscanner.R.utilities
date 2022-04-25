@@ -245,6 +245,10 @@ for (i in seq_along(indexes)) {
   outfile <- gsub(':','_',outfile)
   outfile<-file.path(args$out.dir.work, outfile)
   cat(cmd, file=outfile)
+
+  cmd <- paste('cd', dirname(outfile))
+  cat(system(cmd, intern=TRUE))
+
   cmd<-paste("qsub", outfile)
   cat(cmd)
   cat(system(cmd, intern= TRUE))
