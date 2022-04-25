@@ -217,12 +217,14 @@ if(nrow(df) > max.per.run){
 }
 
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
-pbsJ_bool <- hpc.array > 1
 
 indexes <- df[, unique(JOB_ID)]
 for (i in seq_along(indexes)) {
   tmp<-df[JOB_ID==i,]
+
   hpc.array <- nrow(tmp)
+  pbsJ_bool <- hpc.array > 1
+
   cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
   if(pbsJ_bool)
   {
