@@ -85,7 +85,7 @@ case $STEP in
         --outputNexusTree \
         --skipSummaryGraph \
         --normRefFileName "$phyloscanner_path/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv" \
-        --outgroupName "REF_CON_H"  \
+        --outgroupName "A1.UGANDA.2007.p191845.JX236671"  \
         --ratioBlacklistThreshold 0.005 \
         --date $DATE \
         --env_name "phylostan"
