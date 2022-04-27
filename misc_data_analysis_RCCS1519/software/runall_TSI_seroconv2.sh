@@ -24,7 +24,7 @@ software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/so
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/seroconverters2"
-# out_dir_rel="$out_dir_base/2022_03_31_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_REF_CON_H_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1/"
+out_dir_rel="$out_dir_base/2022_04_25_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_A1UGANDA2007p191845JX236671_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1"
 controller="$software_path/runall_TSI_seroconv2.sh" #current script location
 CLUSIZE='50'
 DATE='2022-04-25'
@@ -96,7 +96,7 @@ case $STEP in
         Rscript $software_path/TSI_run_predictions.R \
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
-        --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds" \
+        --input_samples "$out_dir_base/210419_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
         --date $DATE \
         --env_name 'hivphylotsi'
@@ -112,7 +112,7 @@ case $STEP in
         ;;
 
         *)
-        echo "no R script run. STEP does not match any task." 
+        echo "no R script run. STEP does not match any task.\n" 
         ;;
 esac
 
