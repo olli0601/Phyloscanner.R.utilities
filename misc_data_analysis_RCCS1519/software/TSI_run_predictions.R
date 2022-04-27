@@ -82,7 +82,7 @@ args <-
 .unzip.patstats <- function(x){
         csv.name <- unzip(x, list = TRUE)$Name
         csv.name <- grep('_patStats.csv$',csv.name,value = T)
-        patstat <- fread(unz(x, csv.name), header = TRUE, sep = ",")
+        patstat <- as.data.table(read.csv(unz(x, csv.name), header = TRUE, sep = ","))
         csv.name <- file.path(dirname(x), csv.name)
         write.csv(patstat, file=csv.name)
         return(csv.name)
