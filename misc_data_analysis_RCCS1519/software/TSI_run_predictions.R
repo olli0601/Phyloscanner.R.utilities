@@ -191,6 +191,7 @@ write.mafs.and.cmds <-function(pty_idx)
         }
         maf <- ph.input[, .(SAMPLE_ID, HXB2_PATH, HXB2_EXISTS)]
         maf_mat <- generate.sample(maf)
+        cat(maf_mat[2, 1:10], '\n')
 
         # If there are multiple sequences associated to one AID:
         # take sequence with associated BaseFreq file ("HXB2")
