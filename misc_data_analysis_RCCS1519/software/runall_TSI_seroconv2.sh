@@ -96,7 +96,7 @@ case $STEP in
         Rscript $software_path/TSI_run_predictions.R \
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
-        --input_samples "$out_dir_base/210419_phscinput_samples.rds" \
+        --input_samples "$out_dir_base/220419_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
         --date $DATE \
         --env_name 'hivphylotsi'
