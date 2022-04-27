@@ -1,7 +1,7 @@
 require(data.table)
 
 .read <- function(x){
-  if(grepl('.csv$', x)){return(as.data.table(read.csv(x)))}
+  if(grepl('.csv$', x)){ return(fread(x)) }
   if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
 }
 
@@ -151,7 +151,7 @@ cat(length(PTY_incomplete), 'out of ',max(patstats$PTY_RUN),
 tmp1 <- unique(phsc.input[ grepl('RCCS', PANGEA_ID) , list(PREFIX=PREFIX, PANGEA_ID=gsub('RCCS_','',PANGEA_ID)) ])
 # meta.rccs.1 <- load(file.path(indir.deepsequence_analyses, 'RakaiPangeaMetaData_v2.rda'))
 # meta.rccs.1 <- as.data.table(rccsData)
-meta.rccs.2 <- as.data.table(read.csv(file.path.meta.data.rccs.2))
+meta.rccs.2 <- fread(file.path.meta.data.rccs.2)
 
 stopifnot(all(tmp1$PANGEA_ID %in% meta.rccs.2$pangea_id))
 tmp2 <- unique(meta.rccs.2[, .(pangea_id, visit_dt)])

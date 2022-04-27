@@ -423,10 +423,12 @@ couple <- rbind(couple, tmp)
 couple  <- couple[pt_id1 != pt_id2, ]
 
 # map ids
-ids <- data.table(read.csv(infile.ind.rccs))
+# ids <- data.table(read.csv(infile.ind.rccs))
+ids <- fread(infile.ind.rccs)
 ids <- subset(ids, select = c("pt_id", "sex", "pangea_id"))
 ids[, pangea_id := paste0('RCCS_', pangea_id)]
-tmp <- data.table(read.csv(infile.ind.mrc))
+# tmp <- data.table(read.csv(infile.ind.mrc))
+tmp <- fread(infile.ind.mrc)
 tmp <- subset(tmp, select = c("pt_id", "sex", "pangea_id"))
 tmp[, pangea_id := paste0('MRCUVRI_', pangea_id)]
 ids <- rbind(ids, tmp)
