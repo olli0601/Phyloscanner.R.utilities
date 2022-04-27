@@ -115,7 +115,7 @@ generate.sample <- function(maf) {
         return(MAF_matrix)
 }
 
-get.sampling.dates <- function()
+get.sampling.dates <- function(phsc.samples = args$phsc.samples)
 {
         # Find files containing all sample collection dates 
         if(user != 'andrea')
@@ -127,10 +127,10 @@ get.sampling.dates <- function()
                 db.sharing.path.mrc <-  '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv' 
         }
 
-        tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc,args$phsc.samples)
+        tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc, phsc.samples)
         stopifnot(all(file.exists(tmp)))
 
-        dsamples <- setDT(readRDS(args$phsc.samples))
+        dsamples <- setDT(readRDS(phsc.samples))
         dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
         dsamples[, PANGEA_ID:=gsub('^.*?_','',PANGEA_ID)]
 
@@ -145,6 +145,12 @@ get.sampling.dates <- function()
         ddates <- merge(dsamples, ddates, all.x=TRUE,
                         by.x='PANGEA_ID', by.y='pangea_id')
         ddates[, PANGEA_ID := NULL]
+        
+        # Order based on sampling dates 
+        setnames(ddates, 'RENAME_ID', 'SAMPLE_ID')
+        ddates[, AID := gsub('-fq.*?$','', SAMPLE_ID)]
+        setorder(ddates, AID, -visit_dt)
+
         return(ddates)
 }
 
@@ -166,6 +172,20 @@ if (user=='andrea') {
 }
 
 
+if(0)
+{
+        args <- list(
+                out.dir='/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/2022_04_25_phsc_output',
+                rel.dir= "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/2022_04_25_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_A1UGANDA2007p191845JX236671_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1",
+                TSI.dir='~/git/HIV-phyloTSI-main',
+                env_name='hivphylotsi',
+                walltime = 3L,
+                memory = 2L,
+                controller=NA,
+                phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/210419_phscinput_samples.rds"
+        )
+}
+
 ################
 # main
 ################
@@ -182,15 +202,18 @@ work.dir <- gsub('_output$','_work',args$out.dir)
 stopifnot(dir.exists(work.dir))
 stopifnot(dir.exists(args$rel.dir))
 stopifnot(dir.exists(args$out.dir))
+stopifnot(file.exists(args$phsc.samples))
 
-# These determine the pty's for which we can run Tanya's algorithm
+# dates of collection for samples.
+ddates <- get.sampling.dates(phsc.samples=args$phsc.samples)
+
+# Collect pty files allowing to run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
 tmp <- gsub('^.*?ptyr|_otherstuff.zip','',patstats_zipped)
 phsc_inputs <- file.path(args$out.dir, 
                          paste0('ptyr', tmp, '_trees'), 
                          paste0('ptyr', tmp, '_input.csv' ))
 
-# dfiles containing paths of interest + unzipping PatStats 
 dfiles <- data.table(pty=as.integer(tmp), 
                      zip.path=patstats_zipped, 
                      phi.path=phsc_inputs)
@@ -200,6 +223,7 @@ dfiles[, pat.path:=.unzip.patstats(zip.path), by='pty']
 dfiles[, maf.path:=gsub('patStats.csv$','maf.csv',pat.path)]
 dfiles[, tsi.path:=gsub('patStats.csv$','tsi.csv',pat.path)]
 dfiles[, CMD:=NA_character_]
+
 
 for (pty_idx in dfiles$pty)
 {
@@ -235,13 +259,6 @@ for (pty_idx in dfiles$pty)
         }
         maf <- ph.input[, .(SAMPLE_ID, HXB2_PATH, HXB2_EXISTS)]
         maf_mat <- generate.sample(maf)
-
-        # use the first sequence if frequencies are available
-        ddates <- get.sampling.dates()
-        # now need to chose the -fq with maximum date
-        setnames(ddates, 'RENAME_ID', 'SAMPLE_ID')
-        ddates[, AID := gsub('-fq.*?$','', SAMPLE_ID)]
-        setorder(ddates, AID, -visit_dt)
 
         # If there are multiple sequences associated to one AID:
         # take sequence with associated BaseFreq file ("HXB2")
