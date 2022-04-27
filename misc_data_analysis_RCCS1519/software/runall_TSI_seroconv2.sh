@@ -108,7 +108,7 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
         --date $DATE \
-        --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
+        --input_samples "$out_dir_base/220419_phscinput_samples.rds" 
         ;;
 
         *)
