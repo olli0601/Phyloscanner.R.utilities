@@ -82,7 +82,7 @@ args <-
 .unzip.patstats <- function(x){
         csv.name <- unzip(x, list = TRUE)$Name
         csv.name <- grep('_patStats.csv$',csv.name,value = T)
-        patstat <- data.table(read.csv(unz(x, csv.name), header = TRUE, sep = ","))
+        patstat <- fread(unz(x, csv.name), header = TRUE, sep = ",")
         csv.name <- file.path(dirname(x), csv.name)
         write.csv(patstat, file=csv.name)
         return(csv.name)
@@ -136,7 +136,7 @@ get.sampling.dates <- function(phsc.samples = args$phsc.samples)
 
         ddates <- setDT(read.csv(db.sharing.path.mrc))
         ddates <- unique(ddates[, .(pangea_id, visit_dt)])
-        tmp <- as.data.table(read.csv(db.sharing.path.rccs))
+        tmp <- fread(db.sharing.path.rccs)
         tmp <- unique(tmp[, .(pangea_id, visit_dt)])
         ddates <- rbind(tmp, ddates)
         ddates[, visit_dt:=as.Date(visit_dt, format="%Y-%m-%d")]
@@ -163,12 +163,12 @@ write.mafs.and.cmds <-function(pty_idx)
 
         # Load patstats
         files_pty <- as.vector(dfiles[pty==pty_idx]) 
-        patstats <- as.data.table(read.csv(files_pty$pat.path, header=TRUE, sep=",", stringsAsFactors=F))
+        patstats <- fread(files_pty$pat.path, header=TRUE, sep=",", stringsAsFactors=F)
         if(any((patstats$xcoord %% 1) != 0)){
                 patstats[, xcoord:=ceiling(xcoord)]
                 write.csv(patstats, files_pty$pat.path)
         }
-        ph.input <- as.data.table(read.csv(files_pty$phi.path, header=FALSE, sep=",",stringsAsFactors=F))
+        ph.input <- fread(files_pty$phi.path, header=FALSE, sep=",",stringsAsFactors=F)
         colnames(ph.input) <- c('BAM_PATH','FASTA_PATH', 'SAMPLE_ID')
         ph.input[, AID:=gsub('-fq.*?$','', SAMPLE_ID)]
         stopifnot( all(patstats[, unique(host.id)] %in% ph.input[, unique(AID)]) )

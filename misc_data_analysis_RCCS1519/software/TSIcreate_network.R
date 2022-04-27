@@ -206,10 +206,13 @@ stopifnot(df[, .N==choose(length(unique(c(H1, H2))), 2)])
 df[LENGTH == -1, PERC := NA]
 df[LENGTH <= args$n_pos, PERC := NA]
 #
-dfrccs <- data.table(read.csv(infile.ind.rccs))
+
+#dfrccs <- data.table(read.csv(infile.ind.rccs))
+dfrccs <- fread(infile.ind.rccs)
 dfrccs <- unique(subset(dfrccs, select = c('pt_id', 'pangea_id')))
 dfrccs[, pangea_id := paste0('RCCS_', pangea_id)]
-dfmrc <- data.table(read.csv(infile.ind.mrc))
+#dfmrc <- data.table(read.csv(infile.ind.mrc))
+dfmrc <- fread(infile.ind.mrc)
 dfmrc <- unique(subset(dfmrc, select = c('pt_id', 'pangea_id')))
 dfmrc[, pangea_id := paste0('MRCUVRI_', pangea_id)]
 dfrccsmrc <- rbind(dfrccs, dfmrc)
