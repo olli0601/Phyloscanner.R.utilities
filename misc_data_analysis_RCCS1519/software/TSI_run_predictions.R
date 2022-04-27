@@ -104,7 +104,7 @@ generate.sample <- function(maf) {
         for(sp in spls){
                 sp_file <- maf[SAMPLE_ID == sp, HXB2_PATH]
                 # cat(paste0('Computing MAF for: ', sp_file,'\n'))
-                basefile<-read.csv(sp_file, header=T)
+                basefile<-read.csv(sp_file, header=T, stringsAsFactors=FALSE)
                 indexes_HXB2_pos<-which(basefile$Position.in.B.FR.83.HXB2_LAI_IIIB_BRU.K03455!='-')
                 sample_HXB2_pos<-as.numeric(basefile[indexes_HXB2_pos,1])
                 sample_MAFs<-apply(basefile[indexes_HXB2_pos,4:7], 1, function(x) 1-(max(x,na.rm = T)/sum(x,na.rm = T)))
@@ -319,11 +319,7 @@ dfiles[, maf.path:=gsub('patStats.csv$','maf.csv',pat.path)]
 dfiles[, tsi.path:=gsub('patStats.csv$','tsi.csv',pat.path)]
 dfiles[, CMD:=NA_character_]
 
-
-
-
 lapply(dfiles$pty, write.mafs.and.cmds)
-for (pty_idx in dfiles$pty)
 
 ##################################
 # submit jobs 
