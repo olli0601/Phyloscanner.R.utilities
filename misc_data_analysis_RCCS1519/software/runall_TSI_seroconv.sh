@@ -115,6 +115,14 @@ case $STEP in
         --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
         ;;
 
+        pst)
+        echo "----- plot results -----"
+        Rscript $software_path/TSI_postprocessing_comparison.R \
+        --relationship_dir $out_dir_rel \
+        --TSI_dir $hivtsipath \
+        --input_samples "$out_dir_base/210120_RCCSUVRI_phscinput_samples.rds"
+        ;;
+
         *)
         echo "no R script run. STEP does not match any task." 
         ;;
