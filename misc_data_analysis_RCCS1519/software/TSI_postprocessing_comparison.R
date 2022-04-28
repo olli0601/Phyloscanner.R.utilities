@@ -47,6 +47,10 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
+args[['help']] <- NULL
+
+print(args)
+
 stopifnot( all(sapply(args, file.exists())) )
 
 # Paths
