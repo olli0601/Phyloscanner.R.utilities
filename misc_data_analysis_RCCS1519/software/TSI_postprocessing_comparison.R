@@ -51,7 +51,7 @@ args[['help']] <- NULL
 
 print(args)
 
-stopifnot( all(sapply(args, file.exists())) )
+stopifnot( all(sapply(unlist(args, file.exists())) )
 
 # Paths
 #________ 
@@ -69,7 +69,7 @@ if (usr == 'andrea')
         args$phsc.samples <- list.files(tmp, pattern='phscinput_samples', full.names=T)
 }else{
         indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-        indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata'
+        indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
         tanya.rakai.dir <- file.path(args$TSI.dir, 'RakExample_Tanya')
 }
 
@@ -83,9 +83,11 @@ file.db.sharing <- file.path(indir.deepsequencedata,"/PANGEA2_RCCS/200316_pangea
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses_old,'important_anonymisation_keys_210119.csv')
 file.seroconverters <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '220329_TSI_seroconverters.csv')
 
-stopifnot(all(file.exists(      
-        indir.deepsequence_analyses_old, file.db.sharing, file.anonymisation.keys, file.seroconverters
-)))
+tmp <-file.exists(indir.deepsequence_analyses_old, file.db.sharing,
+                  file.anonymisation.keys, file.seroconverters)
+)
+print(tmp)
+stopifnot(all(tmp))
 
 
 
@@ -310,13 +312,13 @@ dtsi[, study_id:=.aid2studyid(RENAME_ID, with_fq=TRUE),]
 
 # TODO: some of the inds which Tanya treated as seroconverters 
 # are not seroconverters in our eyes:
-if(0)
-{
-        ?write.csv
-        dtsi[, study_id[! study_id %in% dsero$study_id] ] |>
-                write.table('220428_tanyaseroc_not_ourserconv.csv', 
-                            row.names=F, sep=',', col.names=F)
-}
+# if(0)
+# {
+#         ?write.csv
+#         dtsi[, study_id[! study_id %in% dsero$study_id] ] |>
+#                 write.table('220428_tanyaseroc_not_ourserconv.csv', 
+#                             row.names=F, sep=',', col.names=F)
+# }
 
 
 dtsi <- merge(dtsi, dsero, by='study_id')
