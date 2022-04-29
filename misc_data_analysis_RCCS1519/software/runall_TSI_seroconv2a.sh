@@ -79,7 +79,7 @@ case $STEP in
         # atm modified from here...
         atr)
         conda activate phylostan
-        Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/analyse_trees.R \
+        Rscript $software_path/analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
