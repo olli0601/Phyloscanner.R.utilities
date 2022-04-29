@@ -78,6 +78,7 @@ case $STEP in
 
         # atm modified from here...
         atr)
+        conda activate phylostan
         Rscript ~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
@@ -93,7 +94,7 @@ case $STEP in
         --postHocCountBlacklisting  \
         --relaxedAncestry \
         --zeroLengthAdjustment \
-        --date $DATE
+        --date $DATE \
         --env_name "phylostan"
         ;;
         
