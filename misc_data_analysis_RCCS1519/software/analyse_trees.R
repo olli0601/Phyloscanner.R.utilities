@@ -403,9 +403,15 @@ cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')
 cmd		<- paste(pbshead,cmd,sep='\n')
 
 #	Submit job
+cmd0 <- paste('cd', args$out.dir.work)
+cat('\n', cmd0)
+system(cmd0)
+
 outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
 outfile		<- file.path(args$out.dir.work, outfile)
 cat(cmd, file=outfile)
+
+
 cmd 		<- paste("qsub", outfile)
 cat('\n', cmd)
 cat(system(cmd, intern= TRUE))
