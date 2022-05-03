@@ -51,7 +51,7 @@ args[['help']] <- NULL
 
 print(args)
 
-tmp <- sapply(unlist(args, file.exists()))
+tmp <- file.exists(unlist(args))
 stopifnot(all(tmp))
 
 # Paths
