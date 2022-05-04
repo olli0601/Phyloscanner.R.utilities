@@ -92,6 +92,13 @@ option_list <- list(
     dest = 'prog.dir'
   ),
   optparse::make_option(
+    "--reference",
+    type = "character",
+    default = NA_character_,
+    help = "path to reference consensus sequences .fasta file required for the analysis",
+    dest = 'reference'
+  ),
+  optparse::make_option(
     "--date",
     type = 'character',
     default = as.character(Sys.Date()),
@@ -103,7 +110,7 @@ option_list <- list(
     "--tsi_analysis",
     type = 'logical',
     default = FALSE,  
-    help = 'Indicator on whether we want to perform a Time Since Infection analysis',
+    help = 'Indicator on whether we want to perform a Time Since Infection analysis[default]',
     dest = 'tsi_analysis'
   )
 )
@@ -168,8 +175,10 @@ if (is.na(args$prj.dir))
 #
 # Add constants that should not be changed by the user
 #
-dir.data <-
-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
+
+
 dir.net <-
   file.path(args$out.dir, "potential_network")
 
@@ -220,33 +229,34 @@ ifelse(!dir.exists(args$out.dir.output),
        FALSE)
 
 # Copy files into input folder
+tmp <- c(
+         list.files(file.path(dir.analyses, 'PANGEA2_RCCS1519_UVRI/210325_phsc_input'), full.names=T),
+         file.path(dir.data,'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
+)
+
 file.copy(
-  list.files(file.path('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/', '210325_phsc_input'), full.names = T),
+  tmp,
   args$out.dir.data,
   overwrite = T,
   recursive = FALSE,
   copy.mode = TRUE
 )
 
-file.copy(
-          file.path(dir.data,'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta'),
-          args$out.dir.data,
-          overwrite = T,
-          recursive = FALSE,
-          copy.mode = TRUE
-)
-
 # Set consensus sequences.
+# (default consensus/reference for tsi and pair analyses if no arg is passed)
 
-if(args$tsi_analysis)
+infile.consensus <- args$reference 
+if(is.na(infile.consensus))
 {
-        infile.consensus <- file.path(args$out.dir.data,'220419_reference_set_for_PARTNERS_mafft.fasta')
-}else{
-        infile.consensus <-
-          file.path(args$out.dir.data, 'ConsensusGenomes.fasta')
+        tmp <- ifelse(args$tsi_analysis,
+                      yes='220419_reference_set_for_PARTNERS_mafft.fasta',
+                      no='ConsensusGenomes.fasta')
+        infile.consensus <- file.path(args$out.dir.data, tmp)
 }
 infile.consensus.oneeach <-  file.path(args$out.dir.data, '2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
 
+cnd <- file.exists(c(infile.consensus,infile.consensus.oneeach))
+stopifnot(cnd)
 
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
