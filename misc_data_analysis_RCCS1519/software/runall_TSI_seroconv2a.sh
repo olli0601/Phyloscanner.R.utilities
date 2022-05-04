@@ -53,7 +53,7 @@ case $STEP in
         --sliding_width 10 \
         --n_control 0 \
         --cluster_size $CLUSIZE \
-        --reference $DEEPDATA/ConsensusGenome.fasta \
+        --reference ConsensusGenome.fasta \
         --tsi_analysis TRUE
         ;;
         

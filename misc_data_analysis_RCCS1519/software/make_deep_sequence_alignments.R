@@ -95,7 +95,7 @@ option_list <- list(
     "--reference",
     type = "character",
     default = NA_character_,
-    help = "path to reference consensus sequences .fasta file required for the analysis",
+    help = "path to reference consensus sequences .fasta file required for the analysis. Basename is sufficient if file is 'standard'.",
     dest = 'reference'
   ),
   optparse::make_option(
@@ -246,12 +246,21 @@ file.copy(
 # (default consensus/reference for tsi and pair analyses if no arg is passed)
 
 infile.consensus <- args$reference 
+
 if(is.na(infile.consensus))
 {
+        # if NA, look in args$out.dir.data
         tmp <- ifelse(args$tsi_analysis,
                       yes='220419_reference_set_for_PARTNERS_mafft.fasta',
                       no='ConsensusGenomes.fasta')
         infile.consensus <- file.path(args$out.dir.data, tmp)
+}else{
+        # If does not exists, look within args$out.dir.data
+        if(! file.exists(infile.consensus) )
+        {
+                infile.consensus <- file.path(args$out.dir.data, basename(infile.consensus))
+        }
+        
 }
 infile.consensus.oneeach <-  file.path(args$out.dir.data, '2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
 
