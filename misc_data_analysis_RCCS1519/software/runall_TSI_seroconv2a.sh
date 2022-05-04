@@ -23,8 +23,8 @@ HOME="/rds/general/user/ab1820/home"
 software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software"
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
-out_dir_base="$DEEPANALYSES/seroconverters2"
-out_dir_rel="$out_dir_base/2022_04_25_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_A1UGANDA2007p191845JX236671_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1"
+out_dir_base="$DEEPANALYSES/sero_align1_ref"
+out_dir_rel="$out_dir_base/TODO"
 controller="$software_path/runall_TSI_seroconv2.sh" #current script location
 CLUSIZE='50'
 DATE='2022-04-25'
@@ -43,6 +43,7 @@ case $STEP in
         Rscript TSI_initialise_sero2analysis.R
         ;;
 
+        # modified this step adding the reference flag 
         ali)
         echo "---- compute alignments ----"
         Rscript $software_path/make_deep_sequence_alignments.R \
@@ -52,6 +53,7 @@ case $STEP in
         --sliding_width 10 \
         --n_control 0 \
         --cluster_size $CLUSIZE \
+        --reference $DEEPDATA/ConsensusGenome.fasta \
         --tsi_analysis TRUE
         ;;
         
@@ -83,7 +85,7 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
-        --normRefFileName "~/normalisation_ByPosition.csv" \
+        --normRefFileName "$DEEPDATA/normalisation_ByPosition.csv" \
         --outgroupName "REF_CON_H" \
         --ratioBlacklistThreshold 0.01 \
         --distanceThreshold "0.02 0.05"   \
