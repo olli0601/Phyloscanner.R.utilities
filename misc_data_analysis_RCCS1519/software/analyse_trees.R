@@ -405,7 +405,7 @@ cmd		<- paste(pbshead,cmd,sep='\n')
 #	Submit job
 cmd0 <- paste('cd', args$out.dir.work)
 cat('\n', cmd0)
-cat(system(cmd0m intern=TRUE))
+cat(system(cmd0, intern=TRUE))
 
 outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
 outfile		<- file.path(args$out.dir.work, outfile)
