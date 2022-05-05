@@ -27,7 +27,7 @@ out_dir_base="$DEEPANALYSES/sero_align1_ref"
 out_dir_rel="$out_dir_base/TODO"
 controller="$software_path/runall_TSI_seroconv2.sh" #current script location
 CLUSIZE='50'
-DATE='2022-04-25'
+DATE='2022-05-04'
 
 
 cwd=$(pwd)
@@ -57,6 +57,7 @@ case $STEP in
         --tsi_analysis TRUE
         ;;
         
+        # The 2 here should be run without changes the first time
         btr)
         echo "----- build trees ----"
         Rscript $software_path/make_trees.R \
