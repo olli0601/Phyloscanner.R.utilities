@@ -86,7 +86,7 @@ file.seroconverters <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '220329
 
 tmp <-file.exists(indir.deepsequence_analyses_old, file.db.sharing,
                   file.anonymisation.keys, file.seroconverters)
-)
+
 print(tmp)
 stopifnot(all(tmp))
 
@@ -224,7 +224,7 @@ compare.predictors <- function(predictors.ours, predictors.tanya)
                 predictors.merged[, .N]
                 do.call("grid.arrange", c(gg_list, ncol=3)) -> gg1
                 filename=file.path(args$rel.dir , "inputs_outputs_comparison.png")
-                ggsave(filename , gg, w=10, h=14)
+                ggsave(filename , gg1, w=10, h=14)
         }
 
         

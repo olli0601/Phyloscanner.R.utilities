@@ -116,6 +116,7 @@ case $STEP in
         ;;
 
         pst)
+        conda activate phylostan
         echo "----- plot results -----"
         Rscript $software_path/TSI_postprocessing_comparison.R \
         --relationship_dir $out_dir_rel \
