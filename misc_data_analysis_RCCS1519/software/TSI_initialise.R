@@ -70,7 +70,7 @@ saveRDS(phsc_samples, filename)
 # Make clusters.rds
 # ______________________________
 set.seed(42)
-NCLU = phsc_samples[, floor(uniqueN(UNIT_ID) / args$clusize) ]
+NCLU = phsc_samples[, floor(uniqueN(UNIT_ID) / args$cluster_size) ]
 dclus <- phsc_samples[, list(ID=sample(UNIT_ID), IDCLU= 1:NCLU)]
 dclus[, CLU_SIZE:=.N, by='IDCLU']
 setkey(dclus, IDCLU)
