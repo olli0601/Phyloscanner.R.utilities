@@ -39,7 +39,7 @@ case $STEP in
 
         net)
         echo "---- initialise analysis ----"
-        Rscript TSI_initialise.R \
+        Rscript $software_path/TSI_initialise.R \
         --out_dir_base $out_dir_base \
         --cluster_size $CLUSIZE \
         --controller $controller
