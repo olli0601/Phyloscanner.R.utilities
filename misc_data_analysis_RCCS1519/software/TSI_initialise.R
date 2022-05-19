@@ -86,7 +86,7 @@ dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
 dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
 setnames(dclus, 'ID', 'UNIT_ID')
 filename=file.path(args$out.dir,
-                   paste0('phscinput_runs_clusize_',max(dclus[,CLU_SIZE]),'_ncontrol_0.rds'))
+                   paste0('phscinput_runs_clusize_', args$cluster_size,'_ncontrol_0.rds'))
 setkey(dclus, IDCLU)
 saveRDS(dclus, filename)
 
