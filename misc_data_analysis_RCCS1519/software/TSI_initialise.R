@@ -58,6 +58,7 @@ if(! dir.exists(args$out.dir))
 {
         cat('Creating output directory\n')
         dir.create(args$out.dir)
+        dir.create(file.path(args$out.dir, 'potential_network'))
 }else{
         cat('Warning: output directory already exists\n')
 }
