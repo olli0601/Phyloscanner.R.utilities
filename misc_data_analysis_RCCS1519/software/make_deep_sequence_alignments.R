@@ -178,7 +178,6 @@ if (is.na(args$prj.dir))
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
 
-
 dir.net <-
   file.path(args$out.dir, "potential_network")
 
@@ -186,26 +185,22 @@ if(!is.na(args$window_cutoff)){
   infile.runs <- file.path(
     args$out.dir,
     paste0(
-      'phscinput_runs_clusize_',
-      args$cluster_size,
-      '_ncontrol_',
-      args$n_control,
-      '_windowcutoff_',
-      args$window_cutoff,
+      'phscinput_runs_clusize_', args$cluster_size,
+      '_ncontrol_', args$n_control,
+      '_windowcutoff_', args$window_cutoff,
       '.rds'
     ))
 }else{
   infile.runs <- file.path(
     args$out.dir,
     paste0(
-      'phscinput_runs_clusize_',
-      args$cluster_size,
-      '_ncontrol_',
-      args$n_control,
+      'phscinput_runs_clusize_', args$cluster_size,
+      '_ncontrol_', args$n_control,
       '.rds'
     ))
 }
 
+# I think this relates to the maximum number of subjobs per script
 max.per.run <- 4900
 
 args$date <- gsub('-','_',args$date)
@@ -218,15 +213,11 @@ args$out.dir.output <-
   file.path(args$out.dir, paste0(args$date, "_phsc_output"))
 
 # Create directories if needed
-ifelse(!dir.exists(args$out.dir.data),
-       dir.create(args$out.dir.data),
-       FALSE)
-ifelse(!dir.exists(args$out.dir.work),
-       dir.create(args$out.dir.work),
-       FALSE)
-ifelse(!dir.exists(args$out.dir.output),
-       dir.create(args$out.dir.output),
-       FALSE)
+.f <- function(x) ifelse(!dir.exists(x), dir.create(x), FALSE)
+
+.f(args$out.dir.data)
+.f(args$out.dir.work)
+.f(args$out.dir.output)
 
 # Copy files into input folder
 tmp <- c(
@@ -262,6 +253,7 @@ if(is.na(infile.consensus))
         }
         
 }
+# not really sure whether oneeach is needed anywhere
 infile.consensus.oneeach <-  file.path(args$out.dir.data, '2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
 
 cnd <- file.exists(c(infile.consensus,infile.consensus.oneeach))
@@ -270,7 +262,7 @@ stopifnot(cnd)
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
 
-# Check duplicates
+# remove duplicates if existing
 pty.runs <- data.table(readRDS(infile.runs))
 if ('ID_TYPE' %in% colnames(pty.runs)) {
   setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
@@ -284,9 +276,8 @@ if(length(tmp)!=0){
   pty.runs <- pty.runs[-tmp, ]
 }
 
-tmp <-
-  pty.runs[, length(SAMPLE_ID) - length(unique(SAMPLE_ID)), by = 'PTY_RUN']
-stopifnot(all(tmp$V1 == 0))
+tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
+stopifnot( all(tmp$V1) )
 
 # Load backgrounds
 consensus_seq <- seqinr::read.fasta(infile.consensus)
@@ -309,7 +300,6 @@ pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
 pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
 
-# Remove starts, ends and vloops
 
 # if standard:
 if(args$tsi_analysis)
@@ -318,6 +308,7 @@ if(args$tsi_analysis)
         mafft.opt <- '\" mafft \"'
         excision.default.bool <- FALSE
 }else{
+        # Remove starts, ends and vloops
         ptyi <- seq(800, 9175, args$sliding_width)
         ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
         mafft.opt <- '\" mafft --globalpair --maxiterate 1000 \" '
@@ -370,34 +361,23 @@ pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run)
 pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
 
 #	Define PBS variables
-hpc.load			<-
-  "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available
-hpc.select			<- 1
-hpc.nproc			<- 1
-hpc.walltime		<- 71
-hpc.q				<- NA
-hpc.mem				<- "6gb"
-hpc.array			<- pty.c[, max(CASE_ID)]
+hpc.load	<-  "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available
+hpc.select	<- 1
+hpc.nproc	<- 1
+hpc.walltime    <- 7
+hpc.q	        <- NA
+hpc.mem		<- "6gb"
+hpc.array	<- pty.c[, max(CASE_ID)]
 
 print(hpc.array)
+
 #	Define PBS header for job scheduler
-pbshead		<- "#!/bin/sh"
-tmp			<-
-  paste("#PBS -l walltime=",
-        hpc.walltime,
-        ":59:00,pcput=",
-        hpc.walltime,
-        ":45:00",
-        sep = "")
-pbshead		<- paste(pbshead, tmp, sep = "\n")
-tmp			<-
-  paste("#PBS -l select=",
-        hpc.select,
-        ":ncpus=",
-        hpc.nproc,
-        ":mem=",
-        hpc.mem,
-        sep = "")
+pbshead	<- "#!/bin/sh"
+tmp     <- paste0("#PBS -l walltime=", hpc.walltime,":59:00,pcput=", hpc.walltime,":45:00")
+
+pbshead <- paste(pbshead, tmp, sep = "\n")
+tmp     <- paste0("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc, ":mem=",  hpc.mem)
+       
 pbshead 	<- paste(pbshead, tmp, sep = "\n")
 pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")
 if (!is.na(hpc.array))
@@ -405,10 +385,10 @@ if (!is.na(hpc.array))
 if (!is.na(hpc.q))
   pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
 pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
-cat(pbshead)
+# cat(pbshead)
+# print(pty.c[, max(JOB_ID)])
+# print(max(pty.c$JOB_ID))
 
-print(pty.c[, max(JOB_ID)])
-print(max(pty.c$JOB_ID))
 #	Create PBS job array
 for (i in 1:pty.c[, max(JOB_ID)]) {
   tmp <- pty.c[JOB_ID == i, ]
