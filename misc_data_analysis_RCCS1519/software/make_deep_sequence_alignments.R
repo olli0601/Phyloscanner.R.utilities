@@ -201,7 +201,8 @@ if(!is.na(args$window_cutoff)){
 }
 
 # I think this relates to the maximum number of subjobs per script
-max.per.run <- 4900
+# I can run at most 1000 simultaneous jobs on the short q.
+max.per.run <- 950
 
 args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
@@ -346,7 +347,7 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
     verbose = TRUE,
     select = NA,
     default.coord = excision.default.bool,
-    realignment = TRUE
+    realignment = ifelse(!args$tsi_analysis, TRUE, FALSE) # NOT SURE IF THIS IS NEEDED!
   )
   pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
   pty.c[, W_FROM := ptyi[i]]
@@ -354,37 +355,22 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
 })
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
-
-print(pty.c)
+# cat(pty.c$CMD[1])
 
 pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run))[1:nrow(pty.c)]]
+
 pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
 
-#	Define PBS variables
-hpc.load	<-  "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"	# make third party requirements available
-hpc.select	<- 1
-hpc.nproc	<- 1
-hpc.walltime    <- 7
-hpc.q	        <- NA
-hpc.mem		<- "6gb"
-hpc.array	<- pty.c[, max(CASE_ID)]
-
-print(hpc.array)
-
 #	Define PBS header for job scheduler
-pbshead	<- "#!/bin/sh"
-tmp     <- paste0("#PBS -l walltime=", hpc.walltime,":59:00,pcput=", hpc.walltime,":45:00")
-
-pbshead <- paste(pbshead, tmp, sep = "\n")
-tmp     <- paste0("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc, ":mem=",  hpc.mem)
-       
-pbshead 	<- paste(pbshead, tmp, sep = "\n")
-pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")
-if (!is.na(hpc.array))
-  pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep = '')
-if (!is.na(hpc.q))
-  pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
-pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
+pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
+        hpc.select = 1,
+        hpc.nproc = 1,
+        hpc.walltime = 7,
+        hpc.q = NA,
+        hpc.mem = "6gb",
+        hpc.array = pty.c[, max(CASE_ID)],
+        hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+)
 # cat(pbshead)
 # print(pty.c[, max(JOB_ID)])
 # print(max(pty.c$JOB_ID))
