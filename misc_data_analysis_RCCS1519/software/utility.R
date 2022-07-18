@@ -156,7 +156,8 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
     cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')		
   }
   if(realignment==TRUE){
-    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t mafft --globalpair --maxiterate 1000 "$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
+    cmd	<- paste0(cmd, 'echo Performing realignment...\n')
+    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t', gsub('"','',mafft.opt) , '"$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
   }
   if(is.na(alignments.file) || is.na(keep.overhangs))
   {
@@ -238,4 +239,37 @@ cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HP
     wrap<- paste(wrap, "\n#PBS -q",hpc.q, sep='')
   wrap<- paste(wrap, hpc.load, sep='\n')
   wrap
+}
+
+
+#' @export
+#' @title Generate bash commands to extract queue status information.
+#' @param jobid ID pointing to the job we want to query for.
+#' @param var_name Name of the variable where we want to store the bash output.
+#' @return Character string containing the line of code generated
+#' @description This function produces code to extract the number of subjobs that are either queued, running or finished according to the qstat command. Additionaly, the output number can be stored in a bash variable.
+#' @example  a <- qstat.info(option='f', jobid='124', var_name='Q'); cat(a)
+qstat.info <- function(jobid=NA, var_name=NA, option='Running')
+{       
+        #
+        # MATCH OPTIONS:
+        options_vec <- c('Running', 'Queued', 'Finished')
+        names(options_vec) <- c('running', 'queued', 'finished')
+        option <- pmatch(tolower(option), names(options_vec))
+        if(is.na(option)) return(NA)
+        option <- unname(options_vec[option])
+
+        # BUILD COMMAND:
+        cmd <- 'qstat'
+        if(!is.na(jobid)){cmd <- paste0(cmd, '| grep "', jobid,'"')}
+        cmd <- paste0(cmd, ' | grep -Eo "',option,':[0-9]+" | grep -Eo [0-9]+')
+
+        # Store variable if wanted:
+        if(!is.na(var_name))
+        {
+                cmd <- paste0(var_name, '=$(' ,cmd, ')')
+        }
+
+        cmd <- paste0(cmd, '\n')
+        return(cmd)
 }

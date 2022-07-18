@@ -15,7 +15,18 @@ if (usr == 'andrea')
         tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
 }
 
-args <- list( out.dir=file.path(indir.deepsequence_analyses, 'seroconverters2'))
+option_list <- list(
+  optparse::make_option(
+    "--out_dir_base",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to base directory where all output is stored [default]",
+    dest = 'out.dir'
+  )
+)
+
+args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+if( is.na(args$out.dir) ) stop('Need to provide output directory')
 
 ###
 # DATA
@@ -236,8 +247,6 @@ find.common.seroconverters.pangeaids <- function(predictors.ours, predictors.tan
         cat('There are', length(tmp_ids),'out of', ddates[, .N], 'individuals with disagreeing dates\n')
         cat('Those inds do not appear in HIV or ALLHIV...\n')
 
-        # ONCE WE FIND INDIVIDUALS WITH MATCHING DATES ETC... 
-        # WHAT DO I NEED TO DO TO RUN THE NEW ANALYSES???
         ddates[! pt_id %in% tmp_ids]
 }
 
