@@ -31,7 +31,7 @@ option_list <- list(
   optparse::make_option(
     "--sliding_width",
     type = "integer",
-    default = 10L,
+    default = NA_integer_,
     help = "Sliding width [default %default]",
     dest = "sliding_width"
   ),
@@ -118,6 +118,8 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
+# stop if arguments are not provided:
+if( is.na(args$sliding_width) ) stop('No sliding_width provided')
 
 #
 # test
@@ -178,8 +180,7 @@ if (is.na(args$prj.dir))
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
 
-dir.net <-
-  file.path(args$out.dir, "potential_network")
+dir.net <- file.path(args$out.dir, "potential_network")
 
 if(!is.na(args$window_cutoff)){
   infile.runs <- file.path(
@@ -301,16 +302,15 @@ pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
 pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
 
-
 # if standard:
 if(args$tsi_analysis)
 {
-        ptyi <- (52:949)*10
+        ptyi <- seq(520, 9490, by=args$sliding_width)
         mafft.opt <- '\" mafft \"'
         excision.default.bool <- FALSE
 }else{
         # Remove starts, ends and vloops
-        ptyi <- seq(800, 9175, args$sliding_width)
+        ptyi <- seq(800, 9175, by=args$sliding_width)
         ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
         mafft.opt <- '\" mafft --globalpair --maxiterate 1000 \" '
         excision.default.bool <- TRUE
