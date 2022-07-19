@@ -24,11 +24,12 @@ software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/so
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/seroconverters3_alignXX"
-out_dir_rel="$out_dir_base/TODO"
+out_dir_rel="$out_dir_base/TODO" # TODO
 controller="$software_path/runall_TSI_seroconv3.sh" #current script location
 CLUSIZE='50'
 # DATE= TODO
 
+echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
 cwd=$(pwd)
 echo $cwd
@@ -51,10 +52,14 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
+        --windows_start 550 \
+        --windows_end 9500 \
         --sliding_width 25 \
         --n_control 0 \
         --cluster_size $CLUSIZE \
         --reference ConsensusGenomes.fasta \
+        --mafft "--globalpair --maxiterate 1000" \
+        --rm_vloops FALSE
         --tsi_analysis FALSE
         ;;
         
