@@ -29,6 +29,20 @@ option_list <- list(
     dest = "seed"
   ),
   optparse::make_option(
+    "--windows_start",
+    type = "integer",
+    default = 800,
+    help = "Left extremity of leftmost window[default]",
+    dest = "windows_start"
+  ),
+  optparse::make_option(
+    "--windows_end",
+    type = "integer",
+    default = 9175,
+    help = "Left extremity of rightmost windows[default]",
+    dest = "windows_end"
+  ),
+  optparse::make_option(
     "--sliding_width",
     type = "integer",
     default = NA_integer_,
@@ -75,7 +89,7 @@ option_list <- list(
     type = "character",
     default = NA_character_,
     help = "Absolute file path to package directory, used as long we don t build an R package [default]",
-    dest = 'prj.dir'
+    dest = 'pkg.dir'
   ),
   optparse::make_option(
     "--out_dir_base",
@@ -110,13 +124,26 @@ option_list <- list(
     "--tsi_analysis",
     type = 'logical',
     default = FALSE,  
-    help = 'Indicator on whether we want to perform a Time Since Infection analysis[default]',
+    help = 'Indicator on whether we want to perform a Time Since Infection analysis[default]. Close to being deprecated',
     dest = 'tsi_analysis'
+  ),
+  optparse::make_option(
+    "--mafft",
+    type = 'character',
+    default = '--globalpair --maxiterate 1000',  
+    help = 'mafft options', 
+    dest = 'mafft.opt'
+  ),
+  optparse::make_option(
+    "--rm_vloops",
+    action = "store_true",
+    default = TRUE,
+    help = "Indicator on whether to avoid alignments on vloop region.[default]",
+    dest = 'rm_vloops'
   )
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 # stop if arguments are not provided:
 if( is.na(args$sliding_width) ) stop('No sliding_width provided')
@@ -128,50 +155,20 @@ if(0){
   args <- list(
     verbose = T,
     seed = 42,
-    sliding_width = 10L,
+    windows_start=550L,
+    windows_end=9500L,
+    sliding_width = 25L,
     window_size = 250L,
     window_cutoff = NA,
     n_control = 0,
-    cluster_size = 100,
+    cluster_size = 50,
     if_save_data = T,
-    date = '2022-02-10',
-    out.dir = NA,
-    prj.dir = NA,
-    prog.dir = NA,
+    date = '2022-07-19',
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
     tsi_analysis=TRUE
   )
-}
-
-
-#
-# use manually specified directories when args$out.dir is NA
-#
-tmp <- Sys.info()
-if (tmp["user"] == "xx4515")
-{
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-  if (is.na(args$prog.dir))
-  {
-    args$prog.dir <-
-      "~/phyloscanner"
-  }
-}
-
-# if prj.dir and out.dir are not manually set, default to here()
-if (is.na(args$prj.dir))
-{
-  args$prj.dir <- here::here()
-  args$out.dir <- here::here()
-  args$prog.dir <- here::here()
 }
 
 #
@@ -179,64 +176,56 @@ if (is.na(args$prj.dir))
 #
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-
 dir.net <- file.path(args$out.dir, "potential_network")
 
-if(!is.na(args$window_cutoff)){
-  infile.runs <- file.path(
+ifelse(
+       !is.na(args$window_cutoff),
+       paste0('_n_control_', args$n_control), ''
+) -> tmp
+
+infile.runs <- file.path(
     args$out.dir,
     paste0(
       'phscinput_runs_clusize_', args$cluster_size,
       '_ncontrol_', args$n_control,
-      '_windowcutoff_', args$window_cutoff,
-      '.rds'
-    ))
-}else{
-  infile.runs <- file.path(
-    args$out.dir,
-    paste0(
-      'phscinput_runs_clusize_', args$cluster_size,
-      '_ncontrol_', args$n_control,
-      '.rds'
-    ))
-}
+      tmp,'.rds'
+    )
+)
+stopifnot(file.exists(infile.runs))
 
 # I think this relates to the maximum number of subjobs per script
 # I can run at most 1000 simultaneous jobs on the short q.
 max.per.run <- 950
 
-args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
-args$out.dir.data <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_input"))
-args$out.dir.work <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_work"))
-args$out.dir.output <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+args$date <- gsub('-','_',args$date)
+.f <- function(x) file.path(args$out.dir, paste0(args$date, x))
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('_phsc_output')
 
 # Create directories if needed
 .f <- function(x) ifelse(!dir.exists(x), dir.create(x), FALSE)
-
 .f(args$out.dir.data)
 .f(args$out.dir.work)
 .f(args$out.dir.output)
 
 # Copy files into input folder
-tmp <- c(
-         list.files(file.path(dir.analyses, 'PANGEA2_RCCS1519_UVRI/210325_phsc_input'), full.names=T),
-         file.path(dir.data,'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
-)
+tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
+tmp1 <- file.path(dir.data, 'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
+tmp <- c(list.files( tmp, full.name=T), tmp1)
 
 file.copy(
-  tmp,
-  args$out.dir.data,
+  tmp,  args$out.dir.data,
   overwrite = T,
   recursive = FALSE,
   copy.mode = TRUE
 )
 
+
 # Set consensus sequences.
 # (default consensus/reference for tsi and pair analyses if no arg is passed)
+# not really sure whether oneeach is needed anywhere
 
 infile.consensus <- args$reference 
 
@@ -255,16 +244,17 @@ if(is.na(infile.consensus))
         }
         
 }
-# not really sure whether oneeach is needed anywhere
 infile.consensus.oneeach <-  file.path(args$out.dir.data, '2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
 
 cnd <- file.exists(c(infile.consensus,infile.consensus.oneeach))
 stopifnot(cnd)
 
-# Source functions
-source(file.path(args$prj.dir, "utility.R"))
 
-# remove duplicates if existing
+# Source functions
+# source(file.path(getwd(), 'utility.R'))
+source(file.path(args$pkg.dir, "utility.R"))
+
+# Load sequences and remove duplicates if existing
 pty.runs <- data.table(readRDS(infile.runs))
 if ('ID_TYPE' %in% colnames(pty.runs)) {
   setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
@@ -281,7 +271,7 @@ if(length(tmp)!=0){
 tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
 stopifnot( all(tmp$V1) )
 
-# Load backgrounds
+# Load backgrounds and extract HXB2 for pairwise MSA. 
 consensus_seq <- seqinr::read.fasta(infile.consensus)
 consensus_seq_names <- names(consensus_seq)
 hxb2 <- grep('HXB2', names(consensus_seq), value = T)
@@ -302,25 +292,36 @@ pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
 pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
 setkey(pty.runs, PTY_RUN, RENAME_ID)
 
-# if standard:
-if(args$tsi_analysis)
+# 
+# Set the alignment options
+#
+
+# MAFFT: reformat options so they are readily pasted in sh command.
+args$mafft.opt <- gsub('mafft', '', args$mafft.opt)
+args$mafft.opt <- paste('\" mafft', args$mafft.opt,'\"')
+
+# GENOMIC WINDOWS
+# excision.default will excise more positions, atm I group together with remove vloops
+
+stopifnot(args$windows_start <= args$window_end)
+ptyi <- seq(args$windows_start, args$windows_length, by='sliding_width')
+
+# by remove loops, I also remove starts and ends as per Xiaoyue's analyses
+if(args$rm_vloops)
 {
-        ptyi <- seq(520, 9490, by=args$sliding_width)
-        mafft.opt <- '\" mafft \"'
-        excision.default.bool <- FALSE
-}else{
-        # Remove starts, ends and vloops
-        ptyi <- seq(800, 9175, by=args$sliding_width)
         ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
-        mafft.opt <- '\" mafft --globalpair --maxiterate 1000 \" '
         excision.default.bool <- TRUE
+}else{
+        excision.default.bool <- FALSE
 }
 
-pty.c	<- lapply(seq_along(ptyi), function(i)
+# Now write command
+
+write.pty.command <- function(i)
 {
   pty.args <- list(
     prog.pty = file.path(args$prog.dir, "phyloscanner_make_trees.py"),
-    prog.mafft = mafft.opt,
+    prog.mafft = args$mafft.opt,
     data.dir = args$out.dir.data,
     work.dir = args$out.dir.work,
     out.dir = args$out.dir.output,
@@ -347,12 +348,14 @@ pty.c	<- lapply(seq_along(ptyi), function(i)
     verbose = TRUE,
     select = NA,
     default.coord = excision.default.bool,
-    realignment = ifelse(!args$tsi_analysis, TRUE, FALSE) # NOT SURE IF THIS IS NEEDED!
+    realignment = TRUE
   )
   pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
   pty.c[, W_FROM := ptyi[i]]
   pty.c
-})
+}
+
+pty.c	<- lapply(seq_along(ptyi), write.pty.command)
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
 # cat(pty.c$CMD[1])
