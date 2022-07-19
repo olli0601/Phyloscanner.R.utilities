@@ -10,7 +10,7 @@
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI_seroconv.sh'
+        echo 'qsub -v STEP="xxx" runall_TSI_seroconv2.sh'
         exit 1
 fi
 echo "running '${STEP:=sim}' analysis"
@@ -108,6 +108,14 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
         --date $DATE \
+        --input_samples "$out_dir_base/220419_phscinput_samples.rds" 
+        ;;
+
+        pst)
+        echo "----- post processing pngs -----"
+        Rscript $software_path/TSI_postprocessing_comparison.R \
+        --relationship_dir $out_dir_rel \
+        --TSI_dir $hivtsipath \
         --input_samples "$out_dir_base/220419_phscinput_samples.rds" 
         ;;
 

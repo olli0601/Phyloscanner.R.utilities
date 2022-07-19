@@ -44,9 +44,7 @@ option_list <- list(
   )
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
-
+args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 args[['help']] <- NULL
 
 print(args)
@@ -61,6 +59,7 @@ cat("...loading paths\n")
 usr <- Sys.info()[['user']]
 if (usr == 'andrea')
 {
+        # If local
         indir.deepsequence_analyses <- '~/Documents/Box/ratmann_deepseq_analyses/live'
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
         tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
@@ -69,6 +68,7 @@ if (usr == 'andrea')
         tmp <- dirname(args$rel.dir)
         args$phsc.samples <- list.files(tmp, pattern='phscinput_samples', full.names=T)
 }else{
+        # if HPC
         indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
         tanya.rakai.dir <- file.path(args$TSI.dir, 'RakExample_Tanya')
