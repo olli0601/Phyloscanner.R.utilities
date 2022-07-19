@@ -1,4 +1,5 @@
 
+
 #' @export
 #' @title Generate bash commands for multiple phyloscanner runs
 #' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
@@ -149,12 +150,18 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   if(is.na(no.trees) & !is.na(num.bootstraps) & !all.bootstrap.trees)
     cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/',run.id,'_}"\ndone\n',sep='')	
   #cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
+
+  # check which windows are problematic problematic_windows.txt !
+  tmp <- paste0('\nif ! ln AlignReads*.fasta 1> /dev/null 2>&1; then echo "', window.coord, '" >> problematic_windows.txt; fi\n')
+  cmd <- paste0(cmd, tmp)
+
   if(!is.na(alignments.file) & !is.na(keep.overhangs))
   {
     cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')		
     cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',phsc.cmd.mafft.add(alignments.file,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree --retree 1'),'\ndone\n',sep='')		
     cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')		
   }
+
   if(realignment==TRUE){
     cmd	<- paste0(cmd, 'echo Performing realignment...\n')
     cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t', gsub('"','', pty.args[['mafft.opt']]) , '"$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
