@@ -131,7 +131,7 @@ option_list <- list(
     "--mafft",
     type = 'character',
     default = '--globalpair --maxiterate 1000',  
-    help = 'mafft options', 
+    help = 'options for alignment program mafft', 
     dest = 'mafft.opt'
   ),
   optparse::make_option(
@@ -144,6 +144,7 @@ option_list <- list(
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+cat(args$mafft.opt)
 
 # stop if arguments are not provided:
 if( is.na(args$sliding_width) ) stop('No sliding_width provided')
@@ -296,7 +297,8 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # MAFFT: reformat options so they are readily pasted in sh command.
 args$mafft.opt <- gsub('mafft', '', args$mafft.opt)
-args$mafft.opt <- paste('\" mafft', args$mafft.opt,'\"')
+args$mafft.opt <- paste('\\\" mafft', args$mafft.opt,'\\\"')
+# cat(args$mafft.opt)
 
 # GENOMIC WINDOWS
 # excision.default will excise more positions, atm I group together with remove vloops
