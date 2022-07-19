@@ -88,8 +88,7 @@ option_list <- list(
   
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 #
 # test
@@ -108,21 +107,8 @@ if(0){
 
 #
 # use manually specified directories when args$out.dir is NA
-#
-tmp <- Sys.info()
-if (tmp["user"] == "xx4515")
-{
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-}
+# erased
+# tmp <- Sys.info()
 
 # if prj.dir and out.dir are not manually set, default to here()
 if (is.na(args$prj.dir))
@@ -135,7 +121,7 @@ if (is.na(args$prj.dir))
 #
 # Add constants that should not be changed by the user
 #
-max.per.run <- 4900
+max.per.run <- 950
 
 args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
@@ -157,6 +143,7 @@ source(file.path(args$prj.dir, "utility.R"))
 #
 #	produce trees
 #
+# WHY? And why such a big memory?
 if(0)	
 {
   hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
@@ -173,22 +160,25 @@ if(0)
 # iqtree option
 iqtree.pr <- 'iqtree'
 iqtree.args <- paste0('-m ',args$iqtree_method)
-if(!is.null(args$iqtree_root)){
+
+if(!is.null(args$iqtree_root))
   iqtree.args	<- paste0(iqtree.args, ' -o ', args$iqtree_root)
-}
-if(!is.na(args$seed)){
+
+if(!is.na(args$seed))
   iqtree.args	<- paste0(iqtree.args, ' -seed ', args$seed)
-}
+
 
                 
 
-# Load alignments
+# Load alignments:
+# only those with v2 completed?
 infiles	<- data.table(FI=list.files(args$out.dir.output, pattern='_v2.fasta$', full.names=TRUE, recursive=TRUE))
 infiles[, FO:= gsub('.fasta$','',FI)]
 infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
 infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
 infiles[is.na(W_FROM),W_FROM:= as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',basename(FI)))]
 infiles[,PositionsExcised:=grepl('PositionsExcised',FI)]
+
 setkey(infiles, PTY_RUN, W_FROM)
 tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
 infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
@@ -219,6 +209,9 @@ if(nrow(df) > max.per.run){
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
 indexes <- df[, unique(JOB_ID)]
+
+# Can I write the below more concisely in data.table?
+
 for (i in seq_along(indexes)) {
 
   tmp<-df[JOB_ID==i,]

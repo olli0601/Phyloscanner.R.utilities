@@ -96,8 +96,7 @@ option_list <- list(
   
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 #
 # test
@@ -120,25 +119,7 @@ if(0){
 #
 # use manually specified directories when args$out.dir is NA
 #
-tmp <- Sys.info()
-if (tmp["user"] == "xx4515")
-{
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-  if (is.na(args$prog.dir))
-  {
-    args$prog.dir <-
-      "~/phyloscanner/phyloscanner_make_trees.py"
-  }
-}
+# removed
 
 # if prj.dir and out.dir are not manually set, default to here()
 if (is.na(args$prj.dir))
@@ -151,21 +132,22 @@ if (is.na(args$prj.dir))
 #
 # Add constants that should not be changed by the user
 #
-max.per.run <- 4900
+max.per.run <- 950
 args$date <- gsub('-','_',args$date)
+
 # Set default output directories relative to out.dir
-args$out.dir.data <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_input"))
-args$out.dir.work <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_work"))
-args$out.dir.output <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+.f <- function(x) file.path(args$out.dir, paste0(args$date, x))
+args$out.dir.data <- .f("_phsc_input")
+args$out.dir.work <- .f("_phsc_work")
+args$out.dir.output <- .f("_phsc_output")
 
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
+
 #
 #	produce trees
-#
+# 
+
 if(0)	
 {
   hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
@@ -210,9 +192,9 @@ if(args$verbose){
 }
 
 # Set up jobs
-df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
+df <- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
 df[, ID:=ceiling(seq_len(nrow(df))/4)]
-df<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+df <- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
 
 #	Create PBS job array
 if(nrow(df) > max.per.run){
