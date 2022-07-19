@@ -191,6 +191,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   {
     cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
     cmd		<- paste(cmd, 'cp ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
+    cmd		<- paste(cmd, 'cp problematic_windows.txt',' "',out.dir2,'"\n',sep='')		
   }
   #	clean up
   cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
