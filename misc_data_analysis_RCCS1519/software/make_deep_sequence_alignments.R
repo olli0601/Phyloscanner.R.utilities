@@ -167,7 +167,10 @@ if(0){
     out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
-    tsi_analysis=TRUE
+    reference = 'ConsensusGenomes.fasta',
+    tsi_analysis=FALSE,
+    rm_vloops=FALSE,
+    mafft.opt='--globalpair --maxiterate 1000'
   )
 }
 
@@ -262,8 +265,8 @@ if ('ID_TYPE' %in% colnames(pty.runs)) {
   setorder(pty.runs, PTY_RUN, UNIT_ID)
 }
 
-tmp <- pty.runs[, duplicated(SAMPLE_ID), by = 'PTY_RUN']
-tmp <- tmp[, which(V1)]
+tmp <- pty.runs[, list(idx=duplicated(SAMPLE_ID)), by = 'PTY_RUN']
+tmp <- tmp[, which(idx)]
 if(length(tmp)!=0){
   pty.runs <- pty.runs[-tmp, ]
 }
@@ -276,12 +279,7 @@ consensus_seq <- seqinr::read.fasta(infile.consensus)
 consensus_seq_names <- names(consensus_seq)
 hxb2 <- grep('HXB2', names(consensus_seq), value = T)
 hxb2_seq <- consensus_seq[[hxb2]]
-root_seq <-
-  grep(
-    '^REF_CON_M$|REF_CONSENSUS_M$|^REF_CON_H$|REF_CONSENSUS_H$',
-    names(consensus_seq),
-    value = T
-  )
+# removed root_seq as it seemed useless
 
 # Change the format
 if ('ID_TYPE' %in% colnames(pty.runs)) {
@@ -304,7 +302,7 @@ args$mafft.opt <- paste('\" mafft', args$mafft.opt,'\"')
 # excision.default will excise more positions, atm I group together with remove vloops
 
 stopifnot(args$windows_start <= args$window_end)
-ptyi <- seq(args$windows_start, args$windows_length, by='sliding_width')
+ptyi <- seq(args$windows_start, args$windows_end, by=args$sliding_width)
 
 # by remove loops, I also remove starts and ends as per Xiaoyue's analyses
 if(args$rm_vloops)
@@ -326,7 +324,7 @@ write.pty.command <- function(i)
     work.dir = args$out.dir.work,
     out.dir = args$out.dir.output,
     alignments.file = infile.consensus,
-    alignments.root = root_seq, # is this even doing anything?
+    # alignments.root = root_seq, # is this even doing anything?
     alignments.pairwise.to = hxb2,
     window.automatic = '',
     merge.threshold = 0,
@@ -380,29 +378,25 @@ pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
 
 #	Create PBS job array
 for (i in 1:pty.c[, max(JOB_ID)]) {
-  tmp <- pty.c[JOB_ID == i, ]
-  cmd <-
-    tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
-  cmd <-
-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
-                 paste0(CASE, collapse = ''),
-                 'esac')]
-  cmd <- paste(pbshead, cmd, sep = '\n')
-  outfile <-
-    gsub(':', '', paste(
-      "readali",
-      paste0('job', i),
-      paste(
-        strsplit(date(), split = ' ')[[1]],
-        collapse = '_',
-        sep = ''
-      ),
-      'sh',
-      sep = '.'
-    ))
-  outfile <- file.path(args$out.dir.work, outfile)
-  cat(cmd, file = outfile)
-  cmd <- paste("cd ",dirname(outfile),'\n',"qsub ", outfile)
-  cat(cmd)
-  cat(system(cmd, intern = TRUE))
+
+        # Write the job script command
+        tmp <- pty.c[JOB_ID == i, ]
+        cmd <- tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+        cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+                               paste0(CASE, collapse = ''),
+                               'esac')]
+        cmd <- paste(pbshead, cmd, sep = '\n')
+
+        # store in 'readali'-prefixed .sh files
+        time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
+        outfile <- paste("readali",  paste0('job', i), time, 'sh', sep='.')
+        outfile <- file.path(args$out.dir.work, outfile)
+
+        # change to work directory and submit to queue
+        cat(cmd, file = outfile)
+        cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+        cat(cmd)
+        cat(system(cmd, intern = TRUE))
 }
+
+#TODO? could submit a job that waits -walltime seconds and then runs the next step of the controller?

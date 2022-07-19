@@ -41,7 +41,7 @@ case $STEP in
         # In this analysis we avoid the first step of computing similarities, as there exist already
         net)
         echo "---- initialise analysis ----"
-        Rscript TSI_initialise_sero2analysis.R \
+        Rscript $software_path/TSI_initialise_sero2analysis.R \
         --out_dir_base $out_dir_base 
         ;;
 
