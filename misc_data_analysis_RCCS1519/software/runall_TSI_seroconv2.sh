@@ -113,6 +113,7 @@ case $STEP in
 
         pst)
         echo "----- post processing pngs -----"
+        conda activate phylostan # required for gridExtra package
         Rscript $software_path/TSI_postprocessing_comparison.R \
         --relationship_dir $out_dir_rel \
         --TSI_dir $hivtsipath \
