@@ -157,7 +157,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   }
   if(realignment==TRUE){
     cmd	<- paste0(cmd, 'echo Performing realignment...\n')
-    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t', gsub('"','',mafft.opt) , '"$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
+    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\t', gsub('"','', pty.args[['mafft.opt']]) , '"$file" > "${file//.fasta/_v2.fasta}" \n done \n', sep='')
   }
   if(is.na(alignments.file) || is.na(keep.overhangs))
   {
