@@ -13,6 +13,8 @@ then
         echo 'qsub -v STEP="xxx" runall_TSI_seroconv3.sh'
         exit 1
 fi
+
+${RES:=1} 
 echo "running '${STEP:=sim}' analysis"
 
 # This includes all code necessary to run PHSC pipeline to produce TSI estimates
@@ -71,7 +73,8 @@ case $STEP in
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
-        --date $DATE 
+        --date $DATE \
+        --walltime_idx 1
         ;;
 
         ctr)
