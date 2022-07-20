@@ -10,7 +10,7 @@
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI_seroconv3.sh'
+        echo 'qsub -v STEP="xxx",RES=2 runall_TSI_seroconv3.sh'
         exit 1
 fi
 
@@ -75,7 +75,7 @@ case $STEP in
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
         --date $DATE \
-        --walltime_idx 1
+        --walltime_idx $RES
         ;;
 
         ctr)
@@ -86,7 +86,7 @@ case $STEP in
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
         --date $DATE \
-        --walltime_idx 2
+        --walltime_idx $RES
         ;;
 
 
