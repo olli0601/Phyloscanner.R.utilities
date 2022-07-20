@@ -77,11 +77,36 @@ option_list <- list(
     metavar = '"YYYY-MM-DD"',
     help = 'As of date to extract data from.  Defaults to today.',
     dest = 'date'
+  ),
+  optparse::make_option(
+    "--walltime_idx",
+    type = "integer",
+    default = 2,
+    help = "Indicator for amount of resources required by job. Values ranging from 1 (lala) to 3 (lala)",
+    dest = "walltime_idx"
   )
-  
 )
 
 args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+
+#
+# Helpers
+#
+
+.check.alignments <- function(infiles)
+{
+  check <- list.files(args$out.dir.output, 
+                      pattern='InWindow_(.*)?[0-9]{2}.fasta$',
+                      full.names=TRUE, recursive=TRUE)
+  check <- gsub('.fasta', '_v2.fasta', check)
+  
+  check <- round(mean(check %in% infiles)*100, 2)
+  if( check == 100){
+    cat('For each v1 align, there is a v2_align')
+  }else{
+    cat('Only', check, '% of v1 alignments have a corresponding v2 alignment')
+  }
+}
 
 #
 # test
@@ -90,9 +115,11 @@ if(0){
   args <- list(
     out.dir="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
     pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
-    iqtree_method="GTR+F+R6"
+    iqtree_method="GTR+F+R6",
     env_name = 'phylostan',
-    date = '2022-07-20'
+    date = '2022-07-20',
+    seed = 42,
+    walltime_idx=1
   )
 }
 
@@ -111,27 +138,17 @@ args$date <- gsub('-','_',args$date)
 }
 args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
-args$out.dir.output <- .f('phsc_output')
+args$out.dir.output <- .f('_phsc_output')
 
 # Source functions
 source(file.path(args$pkg.dir, "utility.R"))
 
+# sort sh.o* files in new directories
+move.logs(args$out.dir.work)
+
 #
 #	produce trees
 #
-# Why
-if(0)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
-}
-if(1)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 23; hpc.mem<- "1850mb"; hpc.q<- NA
-}
-if(0)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 71; hpc.mem<- "63850mb"; hpc.q<- NA
-}
 
 # iqtree option
 iqtree.pr <- 'iqtree'
@@ -144,31 +161,40 @@ if(!is.na(args$seed))
   iqtree.args	<- paste0(iqtree.args, ' -seed ', args$seed)
 
 
-
 # Load alignments:
 # only those with v2 completed?
-infiles	<- data.table(FI=list.files(args$out.dir.output, pattern='_v2.fasta$', full.names=TRUE, recursive=TRUE))
+# TODO: check with non-v2
+
+infiles <- list.files(args$out.dir.output, 
+                      pattern='InWindow_(.*)?_v2.fasta$',
+                      full.names=TRUE, recursive=TRUE)
+.check.alignments(infiles)
+
+# Extract info from name
+infiles	<- data.table(FI=infiles)
 infiles[, FO:= gsub('.fasta$','',FI)]
 infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
 infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
 infiles[is.na(W_FROM),W_FROM:= as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',basename(FI)))]
 infiles[,PositionsExcised:=grepl('PositionsExcised',FI)]
 
+# Delete the files without excision if the files with excision exist
 setkey(infiles, PTY_RUN, W_FROM)
 tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
 infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
-
-cat('---------- Delete the files without excision if the files with excision exist ---------- \n')
 tmp <- infiles[(PositionsExcised==F & NUM==2),]
-for (i in seq_along(tmp$FO)) {
-  tmp_name<- tmp$FO[i]
-  file.remove(paste0(tmp_name,'.fasta'))
+
+# Test later, but probably, simply file.remove(tmp$FI) should be alright!
+for (file in tmp$FI) {
+  file.remove(file)
 }
+
 infiles <- infiles[!(PositionsExcised==F & NUM==2),]
 
-# Set up jobs
+# Set up jobs: put 4 iqtrees in a same subjob?
+# TODO: change ID, I don't like it
 df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
-df[, ID:=ceiling(seq_len(nrow(df))/4)]
+df[, ID:=ceiling(seq_len(.N)/4)]
 df<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
 
 #	Create PBS job array
@@ -181,42 +207,60 @@ if(nrow(df) > max.per.run){
   df[, JOB_ID:=1]
 }
 
+# Chose PBS specifications according to PBS index
+# Idea is that this script can be run multiple times with increasing res reqs
+
+list(
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA)
+) -> pbs_headers
+
+tmp <-pbs_headers[[args$walltime_idx]]
+list2env(tmp,globalenv())
+
+# now write header + cmd
+
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
 indexes <- df[, unique(JOB_ID)]
-
-# Can I write the below more concisely in data.table?
-
 for (i in seq_along(indexes)) {
 
-  tmp<-df[JOB_ID==i,]
+  # Prepare Job command for submission
+  tmp<- df[JOB_ID==i,]
 
   hpc.array <- nrow(tmp)
   pbsJ_bool <- hpc.array > 1
 
-  cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
+  cmd <- tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,',,\n')), by='CASE_ID']
+  
+  # Decide whether need -J (arrays) or not
   if(pbsJ_bool)
   {
         cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-        tmp <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
+        pbshead <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
   }else{
         cmd <- cmd[, paste0(CASE, collapse='')]
         cmd <- gsub('1)', '', cmd)
-        cmd <- gsub(';;', '', cmd)
-        tmp <- pbshead
+        cmd <- gsub(',,', '', cmd)
   }
-  tmp <- paste0(tmp,'\n module load anaconda3/personal \n source activate ',args$env_name)
+  
+  tmp <- paste0(pbshead,
+                '\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
   
-  #	Submit 
-  outfile	<- paste("srx",paste0('job',i),paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.')
-  outfile <- gsub(':','_',outfile)
+  #	Prepare sh file  
+  date <- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+  date <- gsub(':','_',date)
+  outfile	<- paste("srx",paste0('job',i), date,'sh',sep='.')
   outfile<-file.path(args$out.dir.work, outfile)
   cat(cmd, file=outfile)
 
+  # Change directory...
   cmd <- paste('cd', dirname(outfile))
   cat(system(cmd, intern=TRUE))
 
+  # ... and submit job!
   cmd<-paste("qsub", outfile)
   cat(cmd)
   cat(system(cmd, intern= TRUE))
