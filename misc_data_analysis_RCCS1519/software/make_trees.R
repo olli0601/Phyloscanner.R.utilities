@@ -162,8 +162,6 @@ if(!is.na(args$seed))
 
 
 # Load alignments:
-# only those with v2 completed?
-# TODO: check with non-v2
 
 infiles <- list.files(args$out.dir.output, 
                       pattern='InWindow_(.*)?_v2.fasta$',
@@ -185,9 +183,7 @@ infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
 tmp <- infiles[(PositionsExcised==F & NUM==2),]
 
 # Test later, but probably, simply file.remove(tmp$FI) should be alright!
-for (file in tmp$FI) {
-  file.remove(file)
-}
+file.remove(tmp$FI)
 
 infiles <- infiles[!(PositionsExcised==F & NUM==2),]
 
