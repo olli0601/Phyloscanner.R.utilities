@@ -66,6 +66,7 @@ case $STEP in
         ;;
         
         # The 2 here should be run without changes the first time
+        # I believe there is no reason for having 2 separate scripts...
         btr)
         echo "----- build trees ----"
         Rscript $software_path/make_trees.R \
@@ -84,7 +85,8 @@ case $STEP in
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
-        --date $DATE
+        --date $DATE \
+        --walltime_idx 2
         ;;
 
 

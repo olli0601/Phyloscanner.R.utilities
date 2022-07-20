@@ -85,6 +85,13 @@ option_list <- list(
     metavar = '"YYYY-MM-DD"',
     help = 'As of date to extract data from.  Defaults to today.',
     dest = 'date'
+  ),
+  optparse::make_option(
+    "--walltime_idx",
+    type = "integer",
+    default = 2,
+    help = "Indicator for amount of resources required by job. Values ranging from 1 (lala) to 3 (lala)",
+    dest = "walltime_idx"
   )
   
 )
@@ -94,25 +101,23 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 #
 # test
 #
+
 if(0){
   args <- list(
-    verbose = T,
-    seed = 42,
-    if_save_data = T,
-    date = '2022-02-04',
+    out.dir="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    iqtree_method="GTR+F+R6",
     env_name = 'phylostan',
-    iqtree_option = '-m GTR+F+R6 -o REF_CON_H',
-    out.dir = NA,
-    prj.dir = NA,
-    prog.dir = NA
+    date = '2022-07-20',
+    seed = 42,
+    walltime_idx=1
   )
 }
 
-
 #
-# use manually specified directories when args$out.dir is NA
+# Add constants that should not be changed by the user
 #
-# removed
+max.per.run <- 950
 
 # if prj.dir and out.dir are not manually set, default to here()
 if (is.na(args$prj.dir))
@@ -121,12 +126,6 @@ if (is.na(args$prj.dir))
   args$out.dir <- here::here()
   args$prog.dir <- here::here()
 }
-
-#
-# Add constants that should not be changed by the user
-#
-max.per.run <- 950
-args$date <- gsub('-','_',args$date)
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
@@ -147,14 +146,6 @@ source(file.path(args$prj.dir, "utility.R"))
 #	produce trees
 # 
 
-list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA)
-) -> pbs_headers
-
-tmp <-pbs_headers[[args$walltime_idx]]
-list2env(tmp,globalenv())
 
 # iqtree option
 iqtree.pr <- 'iqtree'
@@ -189,45 +180,72 @@ infiles <- infiles[!(PositionsExcised==F & NUM==2),]
 # check tree completed tree files.
 infiles[,FO_NAME:=paste0(FO,'.treefile')]
 infiles[,FO_EXIST:=file.exists(FO_NAME)]
-infiles <- infiles[FO_EXIST==F]
+infiles <- infiles[FO_EXIST==FALSE]
 if(args$verbose){
   cat('These trees were not built sucessfully...\n')
   print(head(infiles))
   cat('Build again...\n')
 }
 
-# Set up jobs
+# Set up jobs (/1 is an artefact of XX's code, who divided by 4)
 df <- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
-df[, ID:=ceiling(seq_len(nrow(df))/4)]
+df[, ID:=ceiling(seq_len(nrow(df))/1)]
 df <- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
 
-#	Create PBS job array
+# Create PBS job array
 if(nrow(df) > max.per.run){
   df[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(df)/max.per.run))[1:nrow(df)]]
   df[, JOB_ID:= rep(1:ceiling(nrow(df)/max.per.run),each=max.per.run)[1:nrow(df)]]
-  df[,ID:=NULL]
+  df[, ID:=NULL]
 }else{
   setnames(df, 'ID', 'CASE_ID')
   df[, JOB_ID:=1]
 }
 
+# Chose PBS specifications according to PBS index
+# Idea is that this script can be run multiple times with increasing res reqs
+
+list(
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA)
+) -> pbs_headers
+
+tmp <-pbs_headers[[args$walltime_idx]]
+list2env(tmp,globalenv())
+
+#
+# Write cmd and submit
+#
+
+# header
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
 for (i in 1:df[, max(JOB_ID)]) {
+
   tmp<-df[JOB_ID==i,]
+
   hpc.array <- nrow(tmp)
+
+  # Here no pbsJ_bool?
   cmd<-tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
   cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
   tmp <- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')	
   tmp <- paste0(tmp,'\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
   
-  #	Submit 
-  outfile	<- paste("srx",paste0('job',i),paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.')
-  outfile <- gsub(':','_',outfile)
-  outfile<-file.path(args$out.dir.work, outfile)
+  #	Prepare sh file  
+  date <- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
+  date <- gsub(':','_',date)
+  outfile <- paste("srx",paste0('job',i), date,'sh',sep='.')
+  outfile <- file.path(args$out.dir.work, outfile)
+
+  # Change directory...
   cat(cmd, file=outfile)
   cmd<-paste("qsub", outfile)
+
+  # ... and submit job!
   cat(cmd)
   cat(system(cmd, intern= TRUE))
 }
+

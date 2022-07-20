@@ -248,8 +248,8 @@ for (i in seq_along(indexes)) {
   #	Prepare sh file  
   date <- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
   date <- gsub(':','_',date)
-  outfile	<- paste("srx",paste0('job',i), date,'sh',sep='.')
-  outfile<-file.path(args$out.dir.work, outfile)
+  outfile <- paste("srx",paste0('job',i), date,'sh',sep='.')
+  outfile <-file.path(args$out.dir.work, outfile)
   cat(cmd, file=outfile)
 
   # Change directory...
