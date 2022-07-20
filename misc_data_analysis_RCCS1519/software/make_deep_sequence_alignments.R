@@ -297,7 +297,7 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 
 # MAFFT: reformat options so they are readily pasted in sh command.
 args$mafft.opt <- gsub('mafft', '', args$mafft.opt)
-args$mafft.opt <- paste('\\\" mafft', args$mafft.opt,'\\\"')
+args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
 # cat(args$mafft.opt)
 
 # GENOMIC WINDOWS
