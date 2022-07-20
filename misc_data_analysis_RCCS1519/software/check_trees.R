@@ -43,13 +43,6 @@ option_list <- list(
     help = "Conda environment name [default]",
     dest = 'env_name'
   ),
-  # optparse::make_option(
-  #   "--iqtree_option",
-  #   type = "character",
-  #   default = 'GTR+F+R6',
-  #   help = "Options in IQTREE [default]",
-  #   dest = 'iqtree_option'
-  # ),
   optparse::make_option(
     "--iqtree_method",
     type = "character",
@@ -136,10 +129,16 @@ max.per.run <- 950
 args$date <- gsub('-','_',args$date)
 
 # Set default output directories relative to out.dir
-.f <- function(x) file.path(args$out.dir, paste0(args$date, x))
-args$out.dir.data <- .f("_phsc_input")
-args$out.dir.work <- .f("_phsc_work")
-args$out.dir.output <- .f("_phsc_output")
+args$date <- gsub('-','_',args$date)
+.f <- function(x)
+{
+        out <- file.path(args$out.dir, paste0(args$date, x))
+        stopifnot(file.exists(out))
+        out
+}
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('_phsc_output')
 
 # Source functions
 source(file.path(args$prj.dir, "utility.R"))
@@ -148,22 +147,19 @@ source(file.path(args$prj.dir, "utility.R"))
 #	produce trees
 # 
 
-if(0)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
-}
-if(0)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 23; hpc.mem<- "1850mb"; hpc.q<- NA
-}
-if(1)	
-{
-  hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 71; hpc.mem<- "63850mb"; hpc.q<- NA
-}
+list(
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA)
+) -> pbs_headers
+
+tmp <-pbs_headers[[args$walltime_idx]]
+list2env(tmp,globalenv())
 
 # iqtree option
 iqtree.pr <- 'iqtree'
 iqtree.args <- paste0('-m ',args$iqtree_method)
+
 if(!is.null(args$iqtree_root)){
   iqtree.args	<- paste0(iqtree.args, ' -o ', args$iqtree_root)
 }
@@ -172,16 +168,25 @@ if(!is.na(args$seed)){
 }
 
 # Load alignments
-infiles	<- data.table(FI=list.files(args$out.dir.output, pattern='_v2.fasta$', full.names=TRUE, recursive=TRUE))
+infiles <- list.files(args$out.dir.output, 
+                      pattern='InWindow_(.*)?_v2.fasta$',
+                      full.names=TRUE, recursive=TRUE)
+
+# Extract info from name
+infiles	<- data.table(FI=infiles)
 infiles[, FO:= gsub('.fasta$','',FI)]
 infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
 infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
 infiles[is.na(W_FROM),W_FROM:= as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',basename(FI)))]
 infiles[,PositionsExcised:=grepl('PositionsExcised',FI)]
+
+# get files with excision if exist
 setkey(infiles, PTY_RUN, W_FROM)
 tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
 infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
 infiles <- infiles[!(PositionsExcised==F & NUM==2),]
+
+# check tree completed tree files.
 infiles[,FO_NAME:=paste0(FO,'.treefile')]
 infiles[,FO_EXIST:=file.exists(FO_NAME)]
 infiles <- infiles[FO_EXIST==F]
