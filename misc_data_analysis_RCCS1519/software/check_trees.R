@@ -239,12 +239,14 @@ for (i in 1:df[, max(JOB_ID)]) {
   date <- gsub(':','_',date)
   outfile <- paste("srx",paste0('job',i), date,'sh',sep='.')
   outfile <- file.path(args$out.dir.work, outfile)
+  cat(cmd, file=outfile)
 
   # Change directory...
-  cat(cmd, file=outfile)
-  cmd<-paste("qsub", outfile)
+  cmd <- paste('cd', dirname(outfile))
+  cat(system(cmd, intern=TRUE))
 
   # ... and submit job!
+  cmd<-paste("qsub", outfile)
   cat(cmd)
   cat(system(cmd, intern= TRUE))
 }
