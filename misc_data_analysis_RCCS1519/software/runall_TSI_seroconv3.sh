@@ -31,31 +31,6 @@ DATE='2022-07-20'
 
 echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
-# helper function to move log files within a directory
-# TODO: I think it would be better to have a separate file with functions and source it
-move_log_files() {
-
-        DIR=$@
-        for dir in $DIR; do
-
-                # skip directories which do not exist
-                [  -e "$dir" ] || continue 1 
-
-                for file in $dir/*sh; do
-                
-                        # skip files that do not exits
-                        [ -e "$file" ] || continue 1
-
-                        # create a directory to store all outputs of a single sh script
-                        logdir=${file//.sh/}
-                        echo "created $DIR/$newdir directory"
-                        find ${file}.o* > /dev/null 2>&1 && mkdir -p $logdir
-                done
-        done
-}
-
-
-
 cwd=$(pwd)
 echo $cwd
 module load anaconda3/personal
@@ -90,7 +65,6 @@ case $STEP in
         
         # The 2 here should be run without changes the first time
         btr)
-        move_log_files $out_dir_base/*_work/
         echo "----- build trees ----"
         Rscript $software_path/make_trees.R \
         --out_dir_base $out_dir_base \
