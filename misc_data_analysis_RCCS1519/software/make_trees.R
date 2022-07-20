@@ -42,13 +42,6 @@ option_list <- list(
     help = "Conda environment name [default]",
     dest = 'env_name'
   ),
-  # optparse::make_option(
-  #   "--iqtree_option",
-  #   type = "character",
-  #   default = "-m GTR+F+R6",
-  #   help = "Options in IQTREE [default]",
-  #   dest = 'iqtree_option'
-  # ),
   optparse::make_option(
     "--iqtree_method",
     type = "character",
@@ -68,7 +61,7 @@ option_list <- list(
     type = "character",
     default = NA_character_,
     help = "Absolute file path to package directory, used as long we don t build an R package [default]",
-    dest = 'prj.dir'
+    dest = 'pkg.dir'
   ),
   optparse::make_option(
     "--out_dir_base",
@@ -95,27 +88,12 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 #
 if(0){
   args <- list(
-    verbose = T,
-    seed = 42,
-    if_save_data = T,
-    date = '19037',
-    env_name = 'phyloenv',
-    out.dir = NA,
-    prj.dir = NA
+    out.dir="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    iqtree_method="GTR+F+R6"
+    env_name = 'phylostan',
+    date = '2022-07-20'
   )
-}
-
-#
-# use manually specified directories when args$out.dir is NA
-# erased
-# tmp <- Sys.info()
-
-# if prj.dir and out.dir are not manually set, default to here()
-if (is.na(args$prj.dir))
-{
-  args$prj.dir <- here::here()
-  args$out.dir <- here::here()
-  args$prog.dir <- here::here()
 }
 
 #
@@ -123,27 +101,25 @@ if (is.na(args$prj.dir))
 #
 max.per.run <- 950
 
-args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
-args$out.dir.data <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_input"))
-args$out.dir.work <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_work"))
-args$out.dir.output <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_output"))
-
-stopifnot(file.exists(args$out.dir.data))
-stopifnot(file.exists(args$out.dir.work))
-stopifnot(file.exists(args$out.dir.output))
-
+args$date <- gsub('-','_',args$date)
+.f <- function(x)
+{
+        out <- file.path(args$out.dir, paste0(args$date, x))
+        stopifnot(file.exists(out))
+        out
+}
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('phsc_output')
 
 # Source functions
-source(file.path(args$prj.dir, "utility.R"))
+source(file.path(args$pkg.dir, "utility.R"))
 
 #
 #	produce trees
 #
-# WHY? And why such a big memory?
+# Why
 if(0)	
 {
   hpc.select<- 1; hpc.nproc<- 1; hpc.walltime<- 4; hpc.mem<- "1850mb"; hpc.q<- NA
@@ -168,7 +144,6 @@ if(!is.na(args$seed))
   iqtree.args	<- paste0(iqtree.args, ' -seed ', args$seed)
 
 
-                
 
 # Load alignments:
 # only those with v2 completed?
