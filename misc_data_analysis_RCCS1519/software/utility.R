@@ -314,3 +314,25 @@ move.logs <- function(dir, prefix='')
 
   return()
 }
+
+classify.log.errors.and.successes <- function(dir)
+{
+  sh.files <- list.files( pattern = 'sh.o',dir, full.names = T , recursive=T)
+  
+  .count.warnings.and.done <- function(file)
+  {
+    file <- readLines(file)
+    df <- data.frame(conda = 0L, bam = 0L, done = 0L)
+    
+    .f <- function(regex) ifelse(any(grepl(regex, file)), 1L,0L)
+    df$conda <- .f('WARNING: Do not use these anaconda modules for new activities') 
+    df$bam <- .f('Warning: bam file (.*?) has no reads')
+    df$done <- .f('done')
+    df
+  }
+  tmp1 <- lapply(sh.files, .count.warnings.and.done)
+  tmp1 <- rbindlist(tmp1, fill=FALSE, idcol=TRUE)
+  cols <- setdiff(names(tmp1), '.id')
+  print(tmp1[, lapply(.SD, sum), .SDcols=cols])
+  tmp1
+}
