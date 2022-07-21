@@ -301,7 +301,7 @@ move.logs <- function(dir, prefix='')
   
   # create directory for logs
   tmp1 <- unique(dlogs$DIR)
-  stopifnot( file.exists(paste0(tmp1, '.sh')) )
+  stopifnot( file.exists(paste0(tmp1, '.sh')) | tmp1 == 'sh' )
   .f <- function(x) if(! dir.exists(x)) dir.create(x)
   sapply(tmp1, .f)
   
