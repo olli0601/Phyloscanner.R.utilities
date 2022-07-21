@@ -27,7 +27,7 @@ phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/seroconverters3_alignXX"
 out_dir_rel="$out_dir_base/TODO" # TODO
-controller="$software_path/runall_TSI_seroconv3.sh" #current script location
+controller="$software_path/$PBS_JOBNAME" #current script location
 CLUSIZE='50'
 DATE='2022-07-20'
 
@@ -75,6 +75,7 @@ case $STEP in
         --iqtree_method "GTR+F+R6" \
         --env_name "phylostan" \
         --date $DATE \
+        --controller $controller \
         --walltime_idx $RES
         ;;
 

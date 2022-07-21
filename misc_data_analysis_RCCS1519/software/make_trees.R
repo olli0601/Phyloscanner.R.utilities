@@ -17,7 +17,7 @@ option_list <- list(
   optparse::make_option(
     c("-v", "--verbose"),
     action = "store_true",
-    default = FALSE,
+    default = TRUE,
     help = "Print extra output [default]",
     dest = "verbose"
   ),
@@ -71,6 +71,13 @@ option_list <- list(
     dest = 'out.dir'
   ),
   optparse::make_option(
+    "--controller",
+    type = "character",
+    default = NA_character_, 
+    help = "Path to sh script directing the full analysis",
+    dest = 'controller'
+  ),
+  optparse::make_option(
     "--date",
     type = 'character',
     default = as.character(Sys.Date()),
@@ -108,6 +115,19 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
   }
 }
 
+.make.iqtree.opt <- function(args)
+{
+  iqtree.pr <<- 'iqtree'
+  iqtree.args <<- paste0('-m ',args$iqtree_method)
+  
+  if(!is.null(args$iqtree_root))
+    iqtree.args	<<- paste0(iqtree.args, ' -o ', args$iqtree_root)
+  
+  if(!is.na(args$seed))
+    iqtree.args	<<- paste0(iqtree.args, ' -seed ', args$seed)
+}
+
+
 #
 # test
 #
@@ -119,14 +139,14 @@ if(0){
     env_name = 'phylostan',
     date = '2022-07-20',
     seed = 42,
-    walltime_idx=1
+    walltime_idx=1,
+    controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh"
   )
 }
 
 #
 # Add constants that should not be changed by the user
 #
-max.per.run <- 950
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
@@ -151,29 +171,23 @@ move.logs(args$out.dir.work)
 #
 
 # iqtree option
-iqtree.pr <- 'iqtree'
-iqtree.args <- paste0('-m ',args$iqtree_method)
-
-if(!is.null(args$iqtree_root))
-  iqtree.args	<- paste0(iqtree.args, ' -o ', args$iqtree_root)
-
-if(!is.na(args$seed))
-  iqtree.args	<- paste0(iqtree.args, ' -seed ', args$seed)
+.make.iqtree.opt(args)
 
 
 # Load alignments:
-
 infiles <- list.files(args$out.dir.output, 
                       pattern='InWindow_(.*)?_v2.fasta$',
                       full.names=TRUE, recursive=TRUE)
 .check.alignments(infiles)
+# question is should I run those again????
 
 # Extract info from name
+.f <- function(reg, rep, x) as.integer(gsub(reg, rep, x))
+
 infiles	<- data.table(FI=infiles)
 infiles[, FO:= gsub('.fasta$','',FI)]
-infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(FI)))]
-infiles[, W_FROM:= as.integer(gsub('.*InWindow_([0-9]+)_.*','\\1',basename(FI)))]		
-infiles[is.na(W_FROM),W_FROM:= as.integer(gsub('.*PositionsExcised_([0-9]+)_.*','\\1',basename(FI)))]
+infiles[, PTY_RUN:= .f('^ptyr([0-9]+)_.*','\\1',basename(FI))]
+infiles[, W_FROM := .f( '^.*_([0-9]+)_to.*$' , '\\1', basename(FI) )]
 infiles[,PositionsExcised:=grepl('PositionsExcised',FI)]
 
 # Delete the files without excision if the files with excision exist
@@ -181,54 +195,84 @@ setkey(infiles, PTY_RUN, W_FROM)
 tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
 infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
 tmp <- infiles[(PositionsExcised==F & NUM==2),]
-
-# Test later, but probably, simply file.remove(tmp$FI) should be alright!
 file.remove(tmp$FI)
 
 infiles <- infiles[!(PositionsExcised==F & NUM==2),]
 
-# Set up jobs: put 4 iqtrees in a same subjob?
-# TODO: change ID, I don't like it
-df<- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
-df[, ID:=ceiling(seq_len(.N)/4)]
-df<- df[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+# check tree completed: treefiles.
+infiles[,FO_NAME:=paste0(FO,'.treefile')]
+infiles[,FO_EXIST:=file.exists(FO_NAME)]
+infiles <- infiles[FO_EXIST==FALSE]
+if(args$verbose){
+  cat('These trees were not built sucessfully...\n')
+  print(head(infiles))
+  cat('Build again...\n')
+}
+
+if( nrow(infiles) == 0 )
+{
+  
+  # TODO: check that this is actually working...
+  `%+%` <- function(x,y) paste0( x,y )
+  cat('All trees were built, move on to next, analyse tree step...\n')
+  dir <- dirname(args$controller) 
+  
+  cmd <- 'cd ' %+% dir %+% '\n'
+  cmd <- cmd %+% "qsub -v STEP='atr' " %+% basename(args$controller) %+% '\n'
+
+  cat(cmd)
+  cat(system(cmd, intern=TRUE))
+  
+  stop( 'submitted next step of the analysis: atr)' )
+}
+
+
+# Set up jobs: put 2 iqtrees in a same subjob?
+# Maybe randomly permute? before doing it?
+djob <- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
+djob[, ID:=ceiling(seq_len(.N)/2)]
+djob<- djob[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+# cat(djob$CMD[1])
 
 #	Create PBS job array
-if(nrow(df) > max.per.run){
-  df[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(df)/max.per.run))[1:nrow(df)]]
-  df[, JOB_ID:= rep(1:ceiling(nrow(df)/max.per.run),each=max.per.run)[1:nrow(df)]]
-  df[,ID:=NULL]
+if(nrow(djob) > max.per.run){
+  djob[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(djob)/max.per.run))[1:nrow(djob)]]
+  djob[, JOB_ID:= rep(1:ceiling(nrow(djob)/max.per.run),each=max.per.run)[1:nrow(djob)]]
+  djob[,ID:=NULL]
 }else{
-  setnames(df, 'ID', 'CASE_ID')
-  df[, JOB_ID:=1]
+  setnames(djob, 'ID', 'CASE_ID')
+  djob[, JOB_ID:=1]
 }
 
 # Chose PBS specifications according to PBS index
 # Idea is that this script can be run multiple times with increasing res reqs
 
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=475),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
 ) -> pbs_headers
 
-tmp <-pbs_headers[[args$walltime_idx]]
-list2env(tmp,globalenv())
+tmp <- pbs_headers[[args$walltime_idx]]
+
+cat('selected the following PBS specifications:\n')
+print(tmp)
+invisible(list2env(tmp,globalenv()))
 
 # now write header + cmd
 
 pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
-indexes <- df[, unique(JOB_ID)]
+indexes <- djob[, unique(JOB_ID)]
 for (i in seq_along(indexes)) {
 
   # Prepare Job command for submission
-  tmp<- df[JOB_ID==i,]
+  tmp<- djob[JOB_ID==i,]
 
   hpc.array <- nrow(tmp)
   pbsJ_bool <- hpc.array > 1
 
-  cmd <- tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,',,\n')), by='CASE_ID']
+  cmd <- tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
   
   # Decide whether need -J (arrays) or not
   if(pbsJ_bool)
@@ -238,12 +282,13 @@ for (i in seq_along(indexes)) {
   }else{
         cmd <- cmd[, paste0(CASE, collapse='')]
         cmd <- gsub('1)', '', cmd)
-        cmd <- gsub(',,', '', cmd)
+        cmd <- gsub(';;', '', cmd)
   }
   
   tmp <- paste0(pbshead,
                 '\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
+  # cat(substr(cmd, 1, 1000))
   
   #	Prepare sh file  
   date <- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
@@ -252,12 +297,8 @@ for (i in seq_along(indexes)) {
   outfile <-file.path(args$out.dir.work, outfile)
   cat(cmd, file=outfile)
 
-  # Change directory...
-  cmd <- paste('cd', dirname(outfile))
+  # Change directory and submit job!
+  cmd <- paste('cd', dirname(outfile), '\n')
+  cmd <- paste(cmd, "qsub", outfile)
   cat(system(cmd, intern=TRUE))
-
-  # ... and submit job!
-  cmd<-paste("qsub", outfile)
-  cat(cmd)
-  cat(system(cmd, intern= TRUE))
 }
