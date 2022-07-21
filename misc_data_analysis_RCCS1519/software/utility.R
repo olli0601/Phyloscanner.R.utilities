@@ -192,7 +192,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   {
     cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
     cmd		<- paste(cmd, 'cp ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
-    cmd		<- paste(cmd, 'cat problematic_windows.txt >> ', file.path(out.dir2, 'problematic_windows.txt'),'\n',sep='')		
+    cmd		<- paste(cmd, 'echo problematic_windows.txt >> ', file.path(out.dir2, 'problematic_windows.txt'),'\n',sep='')		
   }
   #	clean up
   cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
@@ -321,18 +321,22 @@ classify.log.errors.and.successes <- function(dir)
   
   .count.warnings.and.done <- function(file)
   {
-    file <- readLines(file)
+    fl <- readLines(file)
     df <- data.frame(conda = 0L, bam = 0L, done = 0L)
     
-    .f <- function(regex) ifelse(any(grepl(regex, file)), 1L,0L)
+    .f <- function(regex) ifelse(any(grepl(regex, fl)), 1L,0L)
     df$conda <- .f('WARNING: Do not use these anaconda modules for new activities') 
     df$bam <- .f('Warning: bam file (.*?) has no reads')
     df$done <- .f('done')
+    df$algRds <- .f('Cannot open AlignedReads')
+    df$F <- file
+    df$N <- 1
     df
   }
   tmp1 <- lapply(sh.files, .count.warnings.and.done)
-  tmp1 <- rbindlist(tmp1, fill=FALSE, idcol=TRUE)
-  cols <- setdiff(names(tmp1), '.id')
+  tmp1 <- rbindlist(tmp1, fill=FALSE, idcol=FALSE)
+  cols <- setdiff(names(tmp1), 'F')
   print(tmp1[, lapply(.SD, sum), .SDcols=cols])
   tmp1
 }
+
