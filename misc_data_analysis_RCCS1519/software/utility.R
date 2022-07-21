@@ -208,26 +208,27 @@ cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTR
   cmd<- paste("#######################################################
   # start: IQTREE
   #######################################################\n",sep='')
-  cmd<- paste(cmd,"CWD=$(pwd)\n",sep='')
-  cmd<- paste(cmd,"echo $CWD\n",sep='')	
-  tmpdir.prefix	<- paste('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
-  tmpdir			<- paste("$CWD/",tmpdir.prefix,sep='')
+  cmd<- paste0(cmd,"CWD=$(pwd)\n")
+  cmd<- paste0(cmd,"echo $CWD\n")	
+  tmpdir.prefix	<- paste0('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"))
+  tmpdir			<- paste0("$CWD/",tmpdir.prefix)
   tmp.in			<- basename(infile.fasta)
   tmp.out			<- basename(outfile)	
-  cmd<- paste(cmd,"mkdir -p ",tmpdir,'\n',sep='')
-  cmd<- paste(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n', sep='')	
-  cmd<- paste(cmd,'cd "',tmpdir,'"\n', sep='')	
-  cmd<- paste(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n', sep='') 
-  cmd<- paste(cmd, "rm ", tmp.in,'\n',sep='')	
-  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n',sep='')
-  cmd	<- paste(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n',sep='')
-  cmd<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n',sep='')	
-  cmd<- paste(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n',sep='')
-  cmd<- paste(cmd,'cd $CWD\n', sep='')
-  cmd<- paste(cmd, "rm -r ", tmpdir,'\n',sep='')
-  cmd<- paste(cmd, "#######################################################
+  cmd<- paste0(cmd,"mkdir -p ",tmpdir,'\n')
+  cmd<- paste0(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n',)	
+  cmd<- paste0(cmd,'cd "',tmpdir,'"\n',)	
+  # cmd<- paste0(cmd, 'chmod a+r ', infile.fasta,' \n')
+  cmd<- paste0(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n',) 
+  cmd<- paste0(cmd, "rm ", tmp.in,'\n')	
+  cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n')
+  cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n')
+  cmd<- paste0(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n')	
+  cmd<- paste0(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n')
+  cmd<- paste0(cmd,'cd $CWD\n',)
+  cmd<- paste0(cmd, "rm -r ", tmpdir,'\n')
+  cmd<- paste0(cmd, "#######################################################
   # end: IQTREE
-  #######################################################\n",sep='')
+  #######################################################\n")
   cmd
 }
 

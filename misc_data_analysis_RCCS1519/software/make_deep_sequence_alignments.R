@@ -164,7 +164,7 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-07-19',
+    date = '2022-07-21',
     out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
@@ -359,6 +359,7 @@ pty.c	<- lapply(seq_along(ptyi), write.pty.command)
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
 # cat(pty.c$CMD[1])
+# add chmod a+x to each _v2.fasta
 
 pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run))[1:nrow(pty.c)]]
 
