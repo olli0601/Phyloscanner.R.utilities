@@ -144,8 +144,24 @@ if(0){
   )
 }
 
+# 
+# Chose PBS specifications according to PBS index
+# Idea is that this script can be run multiple times with increasing res reqs
+
+list(
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=475),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
+) -> pbs_headers
+
+tmp <- pbs_headers[[args$walltime_idx]]
+
+cat('selected the following PBS specifications:\n')
+print(tmp)
+invisible(list2env(tmp,globalenv()))
+
 #
-# Add constants that should not be changed by the user
+#       Paths + cleaning
 #
 
 # Set default output directories relative to out.dir
@@ -244,20 +260,6 @@ if(nrow(djob) > max.per.run){
   djob[, JOB_ID:=1]
 }
 
-# Chose PBS specifications according to PBS index
-# Idea is that this script can be run multiple times with increasing res reqs
-
-list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=475),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
-) -> pbs_headers
-
-tmp <- pbs_headers[[args$walltime_idx]]
-
-cat('selected the following PBS specifications:\n')
-print(tmp)
-invisible(list2env(tmp,globalenv()))
 
 # now write header + cmd
 
