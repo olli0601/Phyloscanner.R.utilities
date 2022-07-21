@@ -61,7 +61,7 @@ case $STEP in
         --n_control 0 \
         --cluster_size $CLUSIZE \
         --reference ConsensusGenomes.fasta \
-        --mafft "--globalpair --maxiterate 1000" \
+        --mafft " --globalpair --maxiterate 1000 " \
         --rm_vloops FALSE \
         --tsi_analysis FALSE
         ;;
