@@ -140,6 +140,13 @@ option_list <- list(
     default = TRUE,
     help = "Indicator on whether to avoid alignments on vloop region.[default]",
     dest = 'rm_vloops'
+  ),
+  optparse::make_option(
+    "--walltime_idx",
+    type = "integer",
+    default = 2,
+    help = "Indicator for amount of resources required by job. Values ranging from 1 (lala) to 3 (lala)",
+    dest = "walltime_idx"
   )
 )
 
@@ -171,9 +178,23 @@ if(0){
     reference = 'ConsensusGenomes.fasta',
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
-    mafft.opt='--globalpair --maxiterate 1000'
+    mafft.opt='--globalpair --maxiterate 1000',
+    walltime_idx = 1
   )
 }
+
+# I think this relates to the maximum number of subjobs per script
+# I can run at most 1000 simultaneous jobs on the short q.
+
+list(
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 1 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
+) -> pbs_headers
+tmp <- pbs_headers[[args$walltime_idx]]
+cat('selected the following PBS specifications:\n')
+print(tmp)
+invisible(list2env(tmp,globalenv()))
 
 #
 # Add constants that should not be changed by the user
@@ -197,28 +218,24 @@ infile.runs <- file.path(
 )
 stopifnot(file.exists(infile.runs))
 
-# I think this relates to the maximum number of subjobs per script
-# I can run at most 1000 simultaneous jobs on the short q.
-max.per.run <- 950
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
-.f <- function(x) file.path(args$out.dir, paste0(args$date, x))
+.f <- function(x)  
+{
+  dir <- file.path(args$out.dir, paste0(args$date, x))
+  if(!dir.exists(dir))
+    dir.create(dir)
+  dir
+}
 args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
-
-# Create directories if needed
-.f <- function(x) ifelse(!dir.exists(x), dir.create(x), FALSE)
-.f(args$out.dir.data)
-.f(args$out.dir.work)
-.f(args$out.dir.output)
 
 # Copy files into input folder
 tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
 tmp1 <- file.path(dir.data, 'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
 tmp <- c(list.files( tmp, full.name=T), tmp1)
-
 file.copy(
   tmp,  args$out.dir.data,
   overwrite = T,
@@ -296,7 +313,8 @@ setkey(pty.runs, PTY_RUN, RENAME_ID)
 #
 
 # MAFFT: reformat options so they are readily pasted in sh command.
-args$mafft.opt <- gsub('mafft', '', args$mafft.opt)
+# args$mafft.opt <- '"mafft --globalpair --maxiterate 1000"'
+args$mafft.opt <- gsub('mafft|"', '', args$mafft.opt)
 args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
 # cat(args$mafft.opt)
 
@@ -356,6 +374,7 @@ write.pty.command <- function(i)
 }
 
 pty.c	<- lapply(seq_along(ptyi), write.pty.command)
+cat(pty.c[[1]]$CMD)
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
 # cat(pty.c$CMD[1])
@@ -367,11 +386,11 @@ pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[
 
 #	Define PBS header for job scheduler
 pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
-        hpc.select = 1,
-        hpc.nproc = 1,
-        hpc.walltime = 7,
-        hpc.q = NA,
-        hpc.mem = "6gb",
+        hpc.select = hpc.select,
+        hpc.nproc = hpc.nproc,
+        hpc.walltime = hpc.walltime,
+        hpc.q = hpc.q,
+        hpc.mem = hpc.mem,
         hpc.array = pty.c[, max(CASE_ID)],
         hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
 )
@@ -401,5 +420,3 @@ for (i in 1:pty.c[, max(JOB_ID)]) {
         cat(cmd)
         cat(system(cmd, intern = TRUE))
 }
-
-#TODO? could submit a job that waits -walltime seconds and then runs the next step of the controller?

@@ -48,6 +48,7 @@ case $STEP in
         ;;
 
         # modified this step adding the reference flag 
+        # This also has walltime flag but don't know what to do exactly about it...
         ali)
         echo "---- compute alignments ----"
         Rscript $software_path/make_deep_sequence_alignments.R \
