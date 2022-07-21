@@ -280,14 +280,15 @@ for (i in seq_along(indexes)) {
   if(pbsJ_bool)
   {
         cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-        pbshead <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
+        pbshead1 <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
   }else{
         cmd <- cmd[, paste0(CASE, collapse='')]
         cmd <- gsub('1)', '', cmd)
         cmd <- gsub(';;', '', cmd)
+        pbshead1 <- pbshead
   }
   
-  tmp <- paste0(pbshead,
+  tmp <- paste0(pbshead1,
                 '\n module load anaconda3/personal \n source activate ',args$env_name)
   cmd<-paste(tmp,cmd,sep='\n')	
   # cat(substr(cmd, 1, 1000))
