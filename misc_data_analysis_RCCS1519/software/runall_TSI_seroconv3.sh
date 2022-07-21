@@ -29,7 +29,7 @@ out_dir_base="$DEEPANALYSES/seroconverters3_alignXX"
 out_dir_rel="$out_dir_base/TODO" # TODO
 controller="$software_path/$PBS_JOBNAME" #current script location
 CLUSIZE='50'
-DATE='2022-07-20'
+DATE='2022-07-21'
 
 echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
