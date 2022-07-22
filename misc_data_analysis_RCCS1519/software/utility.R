@@ -317,6 +317,7 @@ move.logs <- function(dir, prefix='')
 
 classify.log.errors.and.successes <- function(dir)
 {
+  # could add a prefix as well to work with readali2 and such! 
   sh.files <- list.files( pattern = 'sh.o',dir, full.names = T , recursive=T)
   
   .count.warnings.and.done <- function(file)
@@ -329,6 +330,7 @@ classify.log.errors.and.successes <- function(dir)
     df$bam <- .f('Warning: bam file (.*?) has no reads')
     df$done <- .f('done')
     df$algRds <- .f('Cannot open AlignedReads')
+    df$kill <- .f('PBS: job killed')
     df$F <- file
     df$N <- 1
     df
@@ -340,3 +342,64 @@ classify.log.errors.and.successes <- function(dir)
   tmp1
 }
 
+rewrite_job <- function(DT, double_walltime=FALSE)
+{
+  # DT is a data frame indicating which job has not completed running.
+  # It contains SH (job submitted) and PBS (PBS_ARRAY_INDEX) of that job
+  cmd_body <- DT[, {
+    
+    # read .sh job script
+    sh <- file.path(args$out.dir.work, SH)
+    lines <- readLines(sh)
+    
+    # extract lines corresponding to a specific job array
+    colons_pos <- grep(';;', lines)
+    .extract.lines <- function(pbs)
+    {
+      regex <- paste0(pbs, ')')
+      start <- grep(regex, lines) + 1
+      if( length(start) == 0)  return(NULL)
+      end <- colons_pos[pbs]  - 1
+      if( end <= start) cat("error:", SH, pbs, '\n')
+      lines[ start:end ]
+    }
+    cmds <- lapply(PBS, .extract.lines )
+    cmds <- lapply(cmds, paste0, collapse='\n')
+    list(PBS=PBS, CMD=cmds)
+    
+  }, by=SH]
+  cmd_body <- cmd_body[ CMD != '',]
+  cmd_body[, CMD := paste0(1:.N, ')\n', CMD,'\n;;\n')]
+  
+  cmd_head <- DT[,{
+    
+    # read .sh job script
+    sh <- file.path(args$out.dir.work, SH[1])
+    lines <- readLines(sh)
+    
+    head_end <- grep('1)', lines)[1] - 1
+    cmd <- paste0(lines[ 1: head_end ], collapse='\n')
+    cmd
+  },]
+  
+  # change the array index to match the subjobs required
+  cmd_head <- gsub('(#PBS -J 1-)[0-9]+', paste0('\\1', nrow(cmd_body)), cmd_head)
+  
+  # Increase PBS resources if required!
+  if(double_walltime) 
+  {
+    wall <- gsub('.*walltime=([0-9]+):[0-9]+:[0-9]+.*', '\\1', cmd_head)
+    pcput.present <- grepl('.*pcput=([0-9]+):[0-9]+:[0-9]+.*', cmd_head)
+    wall <- 2*as.integer(wall)
+    
+    cmd_head <- gsub('(.*walltime=)[0-9]+(:[0-9]+:[0-9]+.*)', paste0( '\\1',wall, '\\2' ), cmd_head)
+    if(pcput.present)
+    {
+      cmd_head <- gsub('(.*pcput=)[0-9]+(:[0-9]+:[0-9]+.*)', paste0( '\\1',wall, '\\2' ), cmd_head)
+    }
+  }
+  
+  cmd_body <- paste0(cmd_body$CMD, collapse='\n')
+  cmd <- paste(cmd_head, cmd_body, 'esac' , sep='\n')
+  cmd
+}

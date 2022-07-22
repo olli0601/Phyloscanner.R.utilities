@@ -3,6 +3,7 @@
 # Preamble
 # The set of scripts aims to run phyloscanner.
 # This script aims to make alignments in each potential transmission network.
+# TODO: check whether moving the pbshead to the for loop solves the issues of 'empty' subjobs
 
 # Load the required packages
 library(data.table)
@@ -374,7 +375,7 @@ write.pty.command <- function(i)
 }
 
 pty.c	<- lapply(seq_along(ptyi), write.pty.command)
-cat(pty.c[[1]]$CMD)
+# cat(pty.c[[1]]$CMD)
 pty.c	<- do.call('rbind', pty.c)
 setkey(pty.c, PTY_RUN, W_FROM)
 # cat(pty.c$CMD[1])
@@ -384,16 +385,6 @@ pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run)
 
 pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
 
-#	Define PBS header for job scheduler
-pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
-        hpc.select = hpc.select,
-        hpc.nproc = hpc.nproc,
-        hpc.walltime = hpc.walltime,
-        hpc.q = hpc.q,
-        hpc.mem = hpc.mem,
-        hpc.array = pty.c[, max(CASE_ID)],
-        hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-)
 # cat(pbshead)
 # print(pty.c[, max(JOB_ID)])
 # print(max(pty.c$JOB_ID))
@@ -403,6 +394,17 @@ for (i in 1:pty.c[, max(JOB_ID)]) {
 
         # Write the job script command
         tmp <- pty.c[JOB_ID == i, ]
+
+        # Define PBS header for job scheduler
+        pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
+                hpc.select = hpc.select,
+                hpc.nproc = hpc.nproc,
+                hpc.walltime = hpc.walltime,
+                hpc.q = hpc.q,
+                hpc.mem = hpc.mem,
+                hpc.array = tmp[, max(CASE_ID)],
+                hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+        )
         cmd <- tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
         cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
                                paste0(CASE, collapse = ''),
