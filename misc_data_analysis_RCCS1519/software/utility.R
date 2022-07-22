@@ -152,7 +152,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   #cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 
   # check which windows are problematic problematic_windows.txt !
-  tmp <- paste0('\nif ! ln AlignReads*.fasta 1> /dev/null 2>&1; then echo "', window.coord, '" >> problematic_windows.txt; fi\n')
+  tmp <- paste0('\nif ! ln AlignReads*.fasta 1> /dev/null 2>&1; then echo "', window.coord, ', ${PBS_ARRAY_INDEX}, ${PBS_JOBNAME}, ${PBS_QUEUE}" >> problematic_windows.csv; fi\n')
   cmd <- paste0(cmd, tmp)
 
   if(!is.na(alignments.file) & !is.na(keep.overhangs))
@@ -192,7 +192,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   {
     cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
     cmd		<- paste(cmd, 'cp ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')		
-    cmd		<- paste(cmd, 'cat problematic_windows.txt >> ', file.path(out.dir2, 'problematic_windows.txt'),'\n',sep='')		
+    cmd		<- paste(cmd, 'cat problematic_windows.csv >> ', file.path(out.dir2, 'problematic_windows.csv'),'\n',sep='')		
   }
   #	clean up
   cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
