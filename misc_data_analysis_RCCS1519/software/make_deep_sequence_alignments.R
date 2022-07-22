@@ -171,7 +171,7 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-07-21',
+    date = '2022-07-22',
     out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
