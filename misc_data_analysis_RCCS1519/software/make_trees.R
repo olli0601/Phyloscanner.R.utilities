@@ -115,18 +115,45 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
   }
 }
 
+.check.or.resubmit.incompleted.alignments <- function()
+{
+  dlogs <- classify.log.errors.and.successes(args$out.dir.work)
+  dlogs[, F :=  gsub( paste0(args$out.dir.work,'/'), '', F)]
+  tmp <- dlogs[ done == 0, .(conda, bam, algRds, kill, F)]
+  tmp[ conda == 0]
+  
+  daligns <- tmp[algRds == 0] 
+  daligns[, SH := paste0(dirname(F), '.sh')]
+  daligns[, PBS := as.numeric(   gsub('^.*\\.([0-9]+)$', '\\1', F) )]
+  
+  cmd <- rewrite_job(daligns, double_walltime = TRUE)
+  if(str_count(cmd, ';;') > 20)
+  {
+    # store in 'readali2'-prefixed .sh files
+    time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
+    outfile <- paste("readali2", time, 'sh', sep='.')
+    outfile <- file.path(args$out.dir.work, outfile)
+    
+    # change to work directory and submit to queue
+    cat(cmd, file = outfile)
+    cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+    cat(cmd)
+    cat(system(cmd, intern = TRUE))
+    stop('Submitted realignment')
+  }
+}
+
 .make.iqtree.opt <- function(args)
 {
   iqtree.pr <<- 'iqtree'
   iqtree.args <<- paste0('-m ',args$iqtree_method)
   
   if(!is.null(args$iqtree_root))
-    iqtree.args	<<- paste0(iqtree.args, ' -o ', args$iqtree_root)
+    iqtree.args	<<- aste0(iqtree.args, ' -o ', args$iqtree_root)
   
   if(!is.na(args$seed))
     iqtree.args	<<- paste0(iqtree.args, ' -seed ', args$seed)
 }
-
 
 #
 # test
@@ -137,7 +164,7 @@ if(0){
     pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     iqtree_method="GTR+F+R6",
     env_name = 'phylostan',
-    date = '2022-07-20',
+    date = '2022-07-22',
     seed = 42,
     walltime_idx=1,
     controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh"
@@ -155,7 +182,6 @@ list(
 ) -> pbs_headers
 
 tmp <- pbs_headers[[args$walltime_idx]]
-
 cat('selected the following PBS specifications:\n')
 print(tmp)
 invisible(list2env(tmp,globalenv()))
@@ -189,13 +215,17 @@ move.logs(args$out.dir.work)
 # iqtree option
 .make.iqtree.opt(args)
 
-
 # Load alignments:
+# and check how many did not run
 infiles <- list.files(args$out.dir.output, 
                       pattern='InWindow_(.*)?_v2.fasta$',
                       full.names=TRUE, recursive=TRUE)
+
 .check.alignments(infiles)
-# question is should I run those again????
+
+# If we haven't re-run alignments already, check if some are problematic:
+cnd <- length(list.files(args$out.dir.work, pattern='readali2')) == 0
+if(cnd){.check.or.resubmit.incompleted.alignments()}
 
 # Extract info from name
 .f <- function(reg, rep, x) as.integer(gsub(reg, rep, x))
@@ -305,3 +335,4 @@ for (i in seq_along(indexes)) {
   cmd <- paste(cmd, "qsub", outfile)
   cat(system(cmd, intern=TRUE))
 }
+
