@@ -414,6 +414,7 @@ rewrite_job <- function(DT, double_walltime=FALSE)
 #' @example  
 qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, res=args$walltime+1)
 {
+
         # Check controller file exists
         if( ! file.exists(file) ) 
         {
@@ -422,9 +423,11 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         }
 
         # Clean the job-ids of the jobs we need to wait completion for
+        # also wait for the jobs to be submitted
         cmd_id <- ''
         if( !is.na(ids) & length(ids) > 0 )
         {
+                Sys.sleep(20)
                 job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
                 cmd_id <- paste0('-W depend=afterok:', job_ids)
         }
