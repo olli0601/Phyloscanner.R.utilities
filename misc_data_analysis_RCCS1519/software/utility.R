@@ -428,7 +428,7 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         cmd_id <- ''
         if( !is.na(ids) & length(ids) > 0 )
         {
-                Sys.sleep(20)
+                Sys.sleep(200)
                 job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
                 cmd_id <- paste0('-W depend=afterok:', job_ids)
         }
@@ -444,5 +444,4 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         cmd <- paste0('cd ', dir , '\n', cmd, '\n' )
         cat(cmd)
         system(cmd, intern=TRUE)
-ds=ids, 
 }

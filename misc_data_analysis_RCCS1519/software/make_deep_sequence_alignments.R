@@ -542,7 +542,6 @@ if( nrow(pty.c) == 0 )
 {
  # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
-                 ids='', 
                  next_step='btr', 
                  res=1)
   stop('Alignment step completed, submitted the following task')
@@ -560,7 +559,7 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
-ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID]
+ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
 
