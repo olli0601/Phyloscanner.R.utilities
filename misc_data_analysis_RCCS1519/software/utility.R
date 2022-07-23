@@ -403,3 +403,36 @@ rewrite_job <- function(DT, double_walltime=FALSE)
   cmd <- paste(cmd_head, cmd_body, 'esac' , sep='\n')
   cmd
 }
+
+#' @export
+#' @title 
+#' @param file full path pointing to the controller shell script (eg. runall_serconverters.sh)
+#' @param ids Job ids indicating jobs which require completion before the next step is submitted.
+#' @return next_step Next step of the analysis to run, refer to STEP in the controller.
+#' @return res Level of PBS resources to be used in the next step. Refer to RES in the controller.
+#' @description This function submits the job for the next step in the pipeline, guaranteeing that it is run after the required jobs are successfully completed
+#' @example  
+qsub.next.step <- function(file=args$controller, ids, next_step, res=args$walltime+1)
+{
+        # Check controller file exists
+        if( ! file.exists(file) ) 
+        {
+                cat('Controller file not found')
+                return(1)
+        }
+
+        # Clean the job-ids of the jobs we need to wait completion for
+        job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+
+        res <- min(res,3)
+        dir <- dirname(file)
+        sh <- basename(file)
+
+        # Maybe add a flag depending on whether length(ids)>0 or not...
+        cmd <- paste0('qsub -W depend=afterok:', job_ids,
+                      ' -v STEP=', next_step,',RES=',res,
+                      ' ',sh)
+        cmd <- paste0('cd ', dir , '\n', cmd )
+        system(cmd, intern=TRUE)
+}
+
