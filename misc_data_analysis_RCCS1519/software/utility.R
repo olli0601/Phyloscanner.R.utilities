@@ -412,7 +412,7 @@ rewrite_job <- function(DT, double_walltime=FALSE)
 #' @return res Level of PBS resources to be used in the next step. Refer to RES in the controller.
 #' @description This function submits the job for the next step in the pipeline, guaranteeing that it is run after the required jobs are successfully completed
 #' @example  
-qsub.next.step <- function(file=args$controller, ids, next_step, res=args$walltime+1)
+qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, res=args$walltime+1)
 {
         # Check controller file exists
         if( ! file.exists(file) ) 
@@ -422,17 +422,23 @@ qsub.next.step <- function(file=args$controller, ids, next_step, res=args$wallti
         }
 
         # Clean the job-ids of the jobs we need to wait completion for
-        job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+        cmd_id <- ''
+        if( !is.na(ids) & length(ids) > 0 )
+        {
+                job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+                cmd_id <- paste0('-W depend afterok:', job_ids)
+        }
 
         res <- min(res,3)
         dir <- dirname(file)
         sh <- basename(file)
 
         # Maybe add a flag depending on whether length(ids)>0 or not...
-        cmd <- paste0('qsub -W depend=afterok:', job_ids,
+        cmd <- paste0('qsub ', cmd_id, 
                       ' -v STEP=', next_step,',RES=',res,
                       ' ',sh)
         cmd <- paste0('cd ', dir , '\n', cmd )
+        cat(cmd)
         system(cmd, intern=TRUE)
 }
 
