@@ -560,14 +560,10 @@ ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
 
-# could be made into a function
-if(file.exists(args$controller))
-{
-  job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
-  res <- min(args$walltime_idx + 1,3)
-  dir <- dirname(args$controller)
-  sh <- basename(args$controller)
-  cmd <- paste0('qsub -W depend=afterok:', job_ids, ' -v STEP=ali,RES=',res, ' ',sh)
-  cmd <- paste0('cd ', dir , '\n', cmd )
-  cat(cmd)
-}
+# qsub alignment step again, to check whether everything has run...
+qsub.next.step(file=args$controller,
+               ids=ids, 
+               next_step='ali', 
+               res=args$walltime_idx + 1)
+
+
