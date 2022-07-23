@@ -538,9 +538,13 @@ if(0)
 # IF ALL OUTPUTS WERE CREATED, GO TO NEXT STEP IN THE ANALYSIS
 #
 
-if(nrow(pty.c) == 0 )
+if( nrow(pty.c) == 0 )
 {
-  # TODO
+ # ISN'T THIS BEAUTIFUL?
+  qsub.next.step(file=args$controller,
+                 ids='', 
+                 next_step='btr', 
+                 res=1)
   stop('Alignment step completed, submitted the following task')
 }
 
