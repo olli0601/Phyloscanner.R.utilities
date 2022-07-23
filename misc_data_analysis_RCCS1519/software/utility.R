@@ -414,6 +414,7 @@ rewrite_job <- function(DT, double_walltime=FALSE)
 #' @example  
 qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, res=args$walltime+1)
 {
+        cat("\n\n---qsub.next.step---\n\n")
 
         # Check controller file exists
         if( ! file.exists(file) ) 
@@ -440,7 +441,8 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         cmd <- paste0('qsub ', cmd_id, 
                       ' -v STEP=', next_step,',RES=',res,
                       ' ',sh)
-        cmd <- paste0('cd ', dir , '\n', cmd )
+        cmd <- paste0('cd ', dir , '\n', cmd, '\n' )
         cat(cmd)
         system(cmd, intern=TRUE)
+ds=ids, 
 }
