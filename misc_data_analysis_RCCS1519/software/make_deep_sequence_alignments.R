@@ -330,6 +330,9 @@ args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
 
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
+  
 
 # Look for RDS file containing subjobs CMDS, if can't findd, KEEP GOING
 cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
@@ -378,11 +381,7 @@ if(file.exists(cmds.path))
     
   }
   stopifnot(file.exists(infile.consensus))
-  
-  
-  # Source functions
-  source(file.path(args$pkg.dir, "utility.R"))
-  
+
   # Load sequences and remove duplicates if existing
   pty.runs <- data.table(readRDS(infile.runs))
   if ('ID_TYPE' %in% colnames(pty.runs)) {
