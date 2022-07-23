@@ -143,6 +143,13 @@ option_list <- list(
     dest = 'rm_vloops'
   ),
   optparse::make_option(
+    "--controller",
+    type = "character",
+    default = NA_character_, 
+    help = "Path to sh script irecting the full analysis",
+    dest = 'controller'
+  ),
+  optparse::make_option(
     "--walltime_idx",
     type = "integer",
     default = 2,
@@ -152,10 +159,100 @@ option_list <- list(
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-cat(args$mafft.opt)
 
 # stop if arguments are not provided:
 if( is.na(args$sliding_width) ) stop('No sliding_width provided')
+
+#
+# Helpers
+#
+
+.check.existing.outputs <- function(regex, outdir, pattern='')
+{
+  # returns a vector of TRUE or FALSE based on whether regex is found in outdir
+  if( ! file.exists(outdir) ){return(rep(NA_character_, length(regex)))}
+  
+  files <- list.files(outdir, pattern=pattern)
+  # .f <- function(rgx) any(grepl(x=files,rgx))
+  .f <- function(rgx) grep(x=files,rgx, value=T)[1]
+  sapply(regex, .f) -> tmp
+  unlist(tmp)
+} 
+
+.modify_cmd_for_existing_v1 <- function(cmd, outdir, out1)
+{
+  if(length(out1) == 0){ stop('error: empty input to .modify_cmd_for_existing_v1')}
+  # cmd <- pty.c[, CMD[1]]
+  out1 <- basename(out1)
+  out2 <- gsub('\\.fasta', '\\_v2.fasta', out1)
+  lines <- strsplit(cmd, '\n')[[1]]
+  
+  # remove useless parts
+  rm1_start <- grep('phyloscanner_make_trees', lines)
+  rm1_end <- grep('Performing realignment', lines) - 1 
+  rm1 <- rm1_start:rm1_end
+  rm2 <- grep("(?=.*mv.*)(?=.*AlignedReads.*)", lines, perl = TRUE)
+  rm2 <- (rm2-1):(rm2+1)
+  rm3 <- grep('problematic_windows.csv', lines)
+  lines <- lines[ -c(rm1, rm2, rm3)]
+  
+  # copy out1 to work dir
+  cp_pos <- grep('^cp', lines)[1]
+  cp <- lines[cp_pos]
+  cp <- gsub('^cp "(.*?)" (.*?)$', paste0('cp "', file.path(outdir, out1)  ,'" \\2'), cp)
+  lines[cp_pos] <- cp
+  
+  # substitute AlignedReads* with the name of our file
+  mafft_pos <- grep('mafft', lines)[1]
+  mafft <- lines[mafft_pos]
+  mafft2 <- gsub('\\\t', '', mafft)
+  mafft2 <- gsub('\\$file', out1, mafft2)
+  mafft2 <- gsub('\\$\\{file//.fasta/_v2.fasta\\}', out2, mafft2)
+  lines[mafft_pos] <- mafft2
+  rm4 <- c(mafft_pos + 1, mafft_pos -1)
+  lines <- lines[ -rm4]
+  
+  cmd <- paste0(lines, collapse='\n')
+  return(cmd)
+}
+
+.write.job <- function(DT)
+{
+  # Define PBS header for job scheduler
+  pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
+    hpc.select = hpc.select,
+    hpc.nproc = hpc.nproc,
+    hpc.walltime = hpc.walltime,
+    hpc.q = hpc.q,
+    hpc.mem = hpc.mem,
+    hpc.array = DT[, max(CASE_ID)],
+    hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
+  )
+  
+  cmd <- DT[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+  cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+                         paste0(CASE, collapse = ''),
+                         'esac')]
+  cmd <- paste(pbshead, cmd, sep = '\n')
+  cmd
+}
+
+.store.and.submit <- function(DT)
+{
+  JOB_ID <- unique(DT$JOB_ID)
+  
+  # store in 'readali'-prefixed .sh files
+  time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
+  outfile <- paste("readali",  paste0('job', JOB_ID), time, 'sh', sep='.')
+  outfile <- file.path(args$out.dir.work, outfile)
+  cat(cmd, file = outfile)
+  
+  # change to work directory and submit to queue
+  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+  cat(cmd)
+  cat(system(cmd, intern = TRUE))
+  
+}
 
 #
 # test
@@ -172,7 +269,7 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-07-22',
+    date = '2022-07-23',
     out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
@@ -180,17 +277,17 @@ if(0){
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
+    contorller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconverters3_alignXX',
     walltime_idx = 1
   )
 }
 
-# I think this relates to the maximum number of subjobs per script
 # I can run at most 1000 simultaneous jobs on the short q.
 
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 1 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 1 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "63gb",hpc.q = NA, max.per.run=4900)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
@@ -233,192 +330,231 @@ args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
 
-# Copy files into input folder
-tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
-tmp1 <- file.path(dir.data, 'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
-tmp <- c(list.files( tmp, full.name=T), tmp1)
-file.copy(
-  tmp,  args$out.dir.data,
-  overwrite = T,
-  recursive = FALSE,
-  copy.mode = TRUE
-)
 
+# Look for RDS file containing subjobs CMDS, if can't findd, KEEP GOING
+cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
 
-# Set consensus sequences.
-# (default consensus/reference for tsi and pair analyses if no arg is passed)
-# not really sure whether oneeach is needed anywhere
-
-infile.consensus <- args$reference 
-
-if(is.na(infile.consensus))
+if(file.exists(cmds.path))
 {
-        # if NA, look in args$out.dir.data
-        tmp <- ifelse(args$tsi_analysis,
-                      yes='220419_reference_set_for_PARTNERS_mafft.fasta',
-                      no='ConsensusGenomes.fasta')
-        infile.consensus <- file.path(args$out.dir.data, tmp)
+  # Load commands
+  move.logs(args$out.dir.work)
+  pty.c <- readRDS(cmds.path)
+  
 }else{
-        # If does not exists, look within args$out.dir.data
-        if(! file.exists(infile.consensus) )
-        {
-                infile.consensus <- file.path(args$out.dir.data, basename(infile.consensus))
-        }
-        
+  
+  # Write commands
+  
+  # Copy files into input folder
+  tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
+  tmp1 <- file.path(dir.data, 'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
+  tmp <- c(list.files( tmp, full.name=T), tmp1)
+  file.copy(
+    tmp,  args$out.dir.data,
+    overwrite = T,
+    recursive = FALSE,
+    copy.mode = TRUE
+  )
+  
+  
+  # Set consensus sequences.
+  # (default consensus/reference for tsi and pair analyses if no arg is passed)
+  # not really sure whether oneeach is needed anywhere
+  
+  infile.consensus <- args$reference 
+  
+  if(is.na(infile.consensus))
+  {
+    # if NA, look in args$out.dir.data
+    tmp <- ifelse(args$tsi_analysis,
+                  yes='220419_reference_set_for_PARTNERS_mafft.fasta',
+                  no='ConsensusGenomes.fasta')
+    infile.consensus <- file.path(args$out.dir.data, tmp)
+  }else{
+    # If does not exists, look within args$out.dir.data
+    if(! file.exists(infile.consensus) )
+    {
+      infile.consensus <- file.path(args$out.dir.data, basename(infile.consensus))
+    }
+    
+  }
+  stopifnot(file.exists(infile.consensus))
+  
+  
+  # Source functions
+  source(file.path(args$pkg.dir, "utility.R"))
+  
+  # Load sequences and remove duplicates if existing
+  pty.runs <- data.table(readRDS(infile.runs))
+  if ('ID_TYPE' %in% colnames(pty.runs)) {
+    setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
+  } else{
+    setorder(pty.runs, PTY_RUN, UNIT_ID)
+  }
+  
+  tmp <- pty.runs[, list(idx=duplicated(SAMPLE_ID)), by = 'PTY_RUN']
+  tmp <- tmp[, which(idx)]
+  if(length(tmp)!=0){
+    pty.runs <- pty.runs[-tmp, ]
+  }
+  
+  tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
+  stopifnot( all(tmp$V1) )
+  
+  # Load backgrounds and extract HXB2 for pairwise MSA. 
+  consensus_seq <- seqinr::read.fasta(infile.consensus)
+  consensus_seq_names <- names(consensus_seq)
+  hxb2 <- grep('HXB2', names(consensus_seq), value = T)
+  hxb2_seq <- consensus_seq[[hxb2]]
+  # removed root_seq as it seemed useless
+  
+  # Change the format
+  if ('ID_TYPE' %in% colnames(pty.runs)) {
+    pty.runs[ID_TYPE == 'control', UNIT_ID := paste0('CNTRL-', UNIT_ID)]
+    pty.runs[ID_TYPE == 'control', RENAME_ID := paste0('CNTRL-', RENAME_ID)]
+  }
+  pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
+  pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
+  setkey(pty.runs, PTY_RUN, RENAME_ID)
+  
+  # 
+  # Set the alignment options
+  #
+  
+  # MAFFT: reformat options so they are readily pasted in sh command.
+  # args$mafft.opt <- '"mafft --globalpair --maxiterate 1000"'
+  args$mafft.opt <- gsub('mafft|"', '', args$mafft.opt)
+  args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
+  # cat(args$mafft.opt)
+  
+  # GENOMIC WINDOWS
+  # excision.default will excise more positions, atm I group together with remove vloops
+  
+  stopifnot(args$windows_start <= args$window_end)
+  ptyi <- seq(args$windows_start, args$windows_end, by=args$sliding_width)
+  
+  # by remove loops, I also perform different 
+  if(args$rm_vloops)
+  {
+    ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
+    excision.default.bool <- TRUE
+  }else{
+    excision.default.bool <- FALSE
+  }
+  
+  # Now write command
+  write.pty.command <- function(w_from)
+  {
+    pty.args <- list(
+      prog.pty = file.path(args$prog.dir, "phyloscanner_make_trees.py"),
+      prog.mafft = args$mafft.opt,
+      data.dir = args$out.dir.data,
+      work.dir = args$out.dir.work,
+      out.dir = args$out.dir.output,
+      alignments.file = infile.consensus,
+      # alignments.root = root_seq, # is this even doing anything?
+      alignments.pairwise.to = hxb2,
+      window.automatic = '',
+      merge.threshold = 0,
+      min.read.count = 1,
+      quality.trim.ends = 23,
+      min.internal.quality = 23,
+      merge.paired.reads = TRUE,
+      discard.improper.pairs = TRUE,
+      no.trees = TRUE,
+      dont.check.duplicates = FALSE,
+      dont.check.recombination = TRUE,
+      num.bootstraps = 1,
+      all.bootstrap.trees = TRUE,
+      strip.max.len = 350,
+      min.ureads.individual = NA,
+      win = c(w_from, w_from + args$window_size, args$sliding_width, args$window_size),
+      keep.overhangs = FALSE,
+      mem.save = 0,
+      verbose = TRUE,
+      select = NA,
+      default.coord = excision.default.bool,
+      realignment = TRUE
+    )
+    pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
+    pty.c[, W_FROM := w_from ]
+    pty.c
+  }
+  
+  pty.c	<- lapply(ptyi, write.pty.command)
+  pty.c	<- do.call('rbind', pty.c)
+  setkey(pty.c, PTY_RUN, W_FROM)
+  stopifnot(pty.c[, .N, by=c('PTY_RUN', 'W_FROM')][, all(N == 1)])
+  
+  pty.c[ , OUTDIR := file.path(args$out.dir.output, paste0('ptyr', PTY_RUN, '_trees')) ]
+  pty.c[, OUT_REGEX_V1 := paste0( W_FROM, '_to_', W_FROM + args$window_size - 1,  '.fasta') ]
+  pty.c[, OUT_REGEX_V2 := paste0( W_FROM, '_to_', W_FROM + args$window_size - 1,  '_v2.fasta') ]
+  
+  saveRDS(pty.c, cmds.path)
 }
-infile.consensus.oneeach <-  file.path(args$out.dir.data, '2019_New_ConsensusGenomesOneEach_GeneCut.fasta')
 
-cnd <- file.exists(c(infile.consensus,infile.consensus.oneeach))
-stopifnot(cnd)
+# Now check which outputs are not ready yet and need re-running
+cols <- c('OUT1', 'OUT2')
+pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols=names(pty.c) %like% 'REGEX']
 
-
-# Source functions
-# source(file.path(getwd(), 'utility.R'))
-source(file.path(args$pkg.dir, "utility.R"))
-
-# Load sequences and remove duplicates if existing
-pty.runs <- data.table(readRDS(infile.runs))
-if ('ID_TYPE' %in% colnames(pty.runs)) {
-  setorder(pty.runs, PTY_RUN, -ID_TYPE, UNIT_ID)
-} else{
-  setorder(pty.runs, PTY_RUN, UNIT_ID)
+# Select jobs with missing final outcome.
+# if intermediary output is there, change CMD.
+pty.c <- pty.c[ is.na(OUT2)]
+if(pty.c[ !is.na(OUT1), .N > 0])
+{
+  pty.c[ ! is.na(OUT1) ,  .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
 }
 
-tmp <- pty.runs[, list(idx=duplicated(SAMPLE_ID)), by = 'PTY_RUN']
-tmp <- tmp[, which(idx)]
-if(length(tmp)!=0){
-  pty.runs <- pty.runs[-tmp, ]
+if(0)
+{
+  cols <- c('OUT1', 'OUT2')
+  pty.c2 <- copy(pty.c)
+  pty.c2[, OUTDIR := gsub('23','22',OUTDIR)]
+  pty.c2[, (cols):=lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols=names(pty.c) %like% 'REGEX']
+  pty.c2[, (cols) := lapply(.SD, unlist), .SDcols=cols ]
+  pty.c2$OUT2[ c(10, 20, 37)] <- NA_character_
+  pty.c2
+  
+  pty.c2 <- pty.c2[ is.na(OUT2)]
+  pty.c2[ ! is.na(OUT1) ,  CMD := .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
+  
+  # problematic windows...
+  tmp <- unique(pty.c2$OUTDIR)
+  names(tmp) <- gsub('[A-z]', '', basename(tmp))
+  .f <- function(x) fread(list.files(x, pattern='problematic', full.names = T)[1])
+  tmp <- lapply(tmp, .f)
+  tmp <- rbindlist(tmp, idcol = 'PTY_RUN')
+  names(tmp) <- c('PTY_RUN', 'W_FROM', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
+  tmp[, PTY_RUN := as.integer(PTY_RUN)]
+  
+  tmp <- merge(pty.c2, tmp, by=c('PTY_RUN', 'W_FROM'), all.x=T)
+  tmp[, LOG := file.path(args$out.dir.work, gsub('.sh$','', SH))]
+  tmp[, LOG := gsub('23', '22', LOG)]
+  tmp[, { z <- list.files(LOG, full.names = T); z1 <- gsub('^.*\\.([0-9]+)$', '\\1', z); z[which(as.integer(z1) %in% PBS_ARRAY_INDEX )] } , by=LOG]
+  
+  
+  pty.c2$W_FROM
 }
 
-tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
-stopifnot( all(tmp$V1) )
-
-# Load backgrounds and extract HXB2 for pairwise MSA. 
-consensus_seq <- seqinr::read.fasta(infile.consensus)
-consensus_seq_names <- names(consensus_seq)
-hxb2 <- grep('HXB2', names(consensus_seq), value = T)
-hxb2_seq <- consensus_seq[[hxb2]]
-# removed root_seq as it seemed useless
-
-# Change the format
-if ('ID_TYPE' %in% colnames(pty.runs)) {
-  pty.runs[ID_TYPE == 'control', UNIT_ID := paste0('CNTRL-', UNIT_ID)]
-  pty.runs[ID_TYPE == 'control', RENAME_ID := paste0('CNTRL-', RENAME_ID)]
-}
-pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
-pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
-setkey(pty.runs, PTY_RUN, RENAME_ID)
-
-# 
-# Set the alignment options
+#
+# IF ALL OUTPUTS WERE CREATED, GO TO NEXT STEP IN THE ANALYSIS
 #
 
-# MAFFT: reformat options so they are readily pasted in sh command.
-# args$mafft.opt <- '"mafft --globalpair --maxiterate 1000"'
-args$mafft.opt <- gsub('mafft|"', '', args$mafft.opt)
-args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
-# cat(args$mafft.opt)
-
-# GENOMIC WINDOWS
-# excision.default will excise more positions, atm I group together with remove vloops
-
-stopifnot(args$windows_start <= args$window_end)
-ptyi <- seq(args$windows_start, args$windows_end, by=args$sliding_width)
-
-# by remove loops, I also remove starts and ends as per Xiaoyue's analyses
-if(args$rm_vloops)
+if(nrow(pty.c) == 0 )
 {
-        ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
-        excision.default.bool <- TRUE
-}else{
-        excision.default.bool <- FALSE
+  # TODO
+  stop('Alignment step completed, submitted the following task')
 }
 
-# Now write command
+#
+# NOW THAT WE HAVE THE IND CMDs to RUN, WE NEED TO AGGREGATE THEM
+#
 
-write.pty.command <- function(i)
-{
-  pty.args <- list(
-    prog.pty = file.path(args$prog.dir, "phyloscanner_make_trees.py"),
-    prog.mafft = args$mafft.opt,
-    data.dir = args$out.dir.data,
-    work.dir = args$out.dir.work,
-    out.dir = args$out.dir.output,
-    alignments.file = infile.consensus,
-    # alignments.root = root_seq, # is this even doing anything?
-    alignments.pairwise.to = hxb2,
-    window.automatic = '',
-    merge.threshold = 0,
-    min.read.count = 1,
-    quality.trim.ends = 23,
-    min.internal.quality = 23,
-    merge.paired.reads = TRUE,
-    discard.improper.pairs = TRUE,
-    no.trees = TRUE,
-    dont.check.duplicates = FALSE,
-    dont.check.recombination = TRUE,
-    num.bootstraps = 1,
-    all.bootstrap.trees = TRUE,
-    strip.max.len = 350,
-    min.ureads.individual = NA,
-    win = c(ptyi[i], ptyi[i] + args$window_size, args$sliding_width, args$window_size),
-    keep.overhangs = FALSE,
-    mem.save = 0,
-    verbose = TRUE,
-    select = NA,
-    default.coord = excision.default.bool,
-    realignment = TRUE
-  )
-  pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
-  pty.c[, W_FROM := ptyi[i]]
-  pty.c
-}
+n_jobs <- ceiling( nrow(pty.c) / max.per.run)
+idx <- 1:nrow(pty.c)
 
-pty.c	<- lapply(seq_along(ptyi), write.pty.command)
-# cat(pty.c[[1]]$CMD)
-pty.c	<- do.call('rbind', pty.c)
-setkey(pty.c, PTY_RUN, W_FROM)
-# cat(pty.c$CMD[1])
-# add chmod a+x to each _v2.fasta
+pty.c[, CASE_ID := rep(1:max.per.run, times = n_jobs)[idx] ]
+pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
-pty.c[, CASE_ID := rep(1:max.per.run, times = ceiling(nrow(pty.c) / max.per.run))[1:nrow(pty.c)]]
-
-pty.c[, JOB_ID := rep(1:ceiling(nrow(pty.c) / max.per.run), each = max.per.run)[1:nrow(pty.c)]]
-
-# cat(pbshead)
-# print(pty.c[, max(JOB_ID)])
-# print(max(pty.c$JOB_ID))
-
-#	Create PBS job array
-for (i in 1:pty.c[, max(JOB_ID)]) {
-
-        # Write the job script command
-        tmp <- pty.c[JOB_ID == i, ]
-
-        # Define PBS header for job scheduler
-        pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
-                hpc.select = hpc.select,
-                hpc.nproc = hpc.nproc,
-                hpc.walltime = hpc.walltime,
-                hpc.q = hpc.q,
-                hpc.mem = hpc.mem,
-                hpc.array = tmp[, max(CASE_ID)],
-                hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
-        )
-        cmd <- tmp[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
-        cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
-                               paste0(CASE, collapse = ''),
-                               'esac')]
-        cmd <- paste(pbshead, cmd, sep = '\n')
-
-        # store in 'readali'-prefixed .sh files
-        time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
-        outfile <- paste("readali",  paste0('job', i), time, 'sh', sep='.')
-        outfile <- file.path(args$out.dir.work, outfile)
-
-        # change to work directory and submit to queue
-        cat(cmd, file = outfile)
-        cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
-        cat(cmd)
-        cat(system(cmd, intern = TRUE))
-}
+# Write and submit:
+djob <- pty.c[, CMD:=.write.job(.SD), by=JOB_ID]
+djob <- djob[, .store.and.submit(.SD), by=JOB_ID]
