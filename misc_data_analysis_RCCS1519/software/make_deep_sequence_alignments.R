@@ -245,7 +245,7 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
   outfile <- paste("readali",  paste0('job', JOB_ID), time, 'sh', sep='.')
   outfile <- file.path(args$out.dir.work, outfile)
-  cat(CMD, file = outfile)
+  cat(DT$CMD, file = outfile)
   
   # change to work directory and submit to queue
   cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
