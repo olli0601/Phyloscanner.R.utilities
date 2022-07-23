@@ -439,8 +439,8 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
 
         # Maybe add a flag depending on whether length(ids)>0 or not...
         cmd <- paste0('qsub ', cmd_id, 
-                      ' -v STEP=', next_step,',RES=',res,
-                      ' ',sh)
+                      ' -v STEP="', next_step,'",RES="',res,
+                      '" ',sh)
         cmd <- paste0('cd ', dir , '\n', cmd, '\n' )
         cat(cmd)
         system(cmd, intern=TRUE)
