@@ -249,9 +249,9 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   
   # change to work directory and submit to queue
   cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
-  cat(cmd)
+  cat(cmd, '\n')
   x <- system(cmd, intern = TRUE)
-  cat(x)
+  cat(x, '\n')
   x
 }
 
@@ -557,7 +557,7 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
 ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID]
-ids <- as.character(djob$ID)
+ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
 
 # could be made into a function
