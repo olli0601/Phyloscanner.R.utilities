@@ -438,6 +438,7 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
                       ' -v STEP=', next_step,',RES=',res,
                       ' ',sh)
         cmd <- paste0('cd ', dir , '\n', cmd )
+        cat(cmd)
         system(cmd, intern=TRUE)
 }
 
