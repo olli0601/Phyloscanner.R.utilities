@@ -245,13 +245,14 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
   outfile <- paste("readali",  paste0('job', JOB_ID), time, 'sh', sep='.')
   outfile <- file.path(args$out.dir.work, outfile)
-  cat(cmd, file = outfile)
+  cat(CMD, file = outfile)
   
   # change to work directory and submit to queue
   cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
   cat(cmd)
-  cat(system(cmd, intern = TRUE))
-  
+  x <- system(cmd, intern = TRUE)
+  cat(x)
+  x
 }
 
 #
@@ -277,7 +278,7 @@ if(0){
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
-    contorller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconverters3_alignXX',
+    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconverters3_alignXX.sh',
     walltime_idx = 1
   )
 }
@@ -332,7 +333,6 @@ args$out.dir.output <- .f('_phsc_output')
 
 # Source functions
 source(file.path(args$pkg.dir, "utility.R"))
-  
 
 # Look for RDS file containing subjobs CMDS, if can't findd, KEEP GOING
 cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
@@ -555,5 +555,19 @@ pty.c[, CASE_ID := rep(1:max.per.run, times = n_jobs)[idx] ]
 pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
-djob <- pty.c[, CMD:=.write.job(.SD), by=JOB_ID]
-djob <- djob[, .store.and.submit(.SD), by=JOB_ID]
+djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
+ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID]
+ids <- as.character(djob$ID)
+cat('Submitted job ids are:', ids, '...\n')
+
+# could be made into a function
+if(file.exists(args$controller))
+{
+  job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+  res <- min(args$walltime_idx + 1,3)
+  dir <- dirname(args$controller)
+  sh <- basename(args$controller)
+  cmd <- paste0('qsub -W depend=afterok:', job_ids, ' -v STEP=ali,RES=',res, ' ',sh)
+  cmd <- paste0('cd ', dir , '\n', cmd )
+  cat(cmd)
+}
