@@ -155,6 +155,25 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
     iqtree.args	<<- paste0(iqtree.args, ' -seed ', args$seed)
 }
 
+.write.job <- function(DT)
+{
+  # Define PBS header for job scheduler
+  pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, 
+                              hpc.nproc=hpc.nproc, hpc.mem=hpc.mem, 
+                              hpc.walltime=hpc.walltime,
+                              hpc.q=hpc.q,  
+                              hpc.array = max(DT$CASE_ID), 
+                              hpc.load=paste0('\n module load anaconda3/personal \n source activate ',args$env_name)
+                              )
+  
+  cmd <- DT[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+  cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+                         paste0(CASE, collapse = ''),
+                         'esac')]
+  cmd <- paste(pbshead, cmd, sep = '\n')
+  cmd
+}
+
 #
 # test
 #
@@ -164,12 +183,15 @@ if(0){
     pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     iqtree_method="GTR+F+R6",
     env_name = 'phylostan',
-    date = '2022-07-22',
+    date = '2022-07-23',
     seed = 42,
     walltime_idx=1,
     controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh"
   )
 }
+
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
 
 # 
 # Chose PBS specifications according to PBS index
@@ -202,9 +224,6 @@ args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
 
-# Source functions
-source(file.path(args$pkg.dir, "utility.R"))
-
 # sort sh.o* files in new directories
 move.logs(args$out.dir.work)
 
@@ -215,124 +234,99 @@ move.logs(args$out.dir.work)
 # iqtree option
 .make.iqtree.opt(args)
 
-# Load alignments:
-# and check how many did not run
-infiles <- list.files(args$out.dir.output, 
-                      pattern='InWindow_(.*)?_v2.fasta$',
-                      full.names=TRUE, recursive=TRUE)
+# Look for RDS file containing subjobs CMDS, if can't find, KEEP GOING
+cmds.path <- file.path(args$out.dir.work, 'trees_commands.rds')
 
-.check.alignments(infiles)
+if(file.exists(cmds.path))
+{
+  # Load commands
+  move.logs(args$out.dir.work)
+  infiles <- readRDS(cmds.path)
+  
+}else{
+  
+  # Load alignments:
+  # and check how many did not run
+  infiles <- list.files(args$out.dir.output, 
+                        pattern='InWindow_(.*)?_v2.fasta$',
+                        full.names=TRUE, recursive=TRUE)
+  
+  
+  .check.alignments(infiles)
+  
+  # If we haven't re-run alignments already, check if some are problematic:
+  # This step should be taken care of automatically
+  # if(cnd){.check.or.resubmit.incompleted.alignments()}
+  
+  # Extract info from name
+  .f <- function(reg, rep, x) as.integer(gsub(reg, rep, x))
+  
+  infiles	<- data.table(FI=infiles)
+  infiles[, FO:= gsub('.fasta$','',FI)]
+  infiles[, PTY_RUN:= .f('^ptyr([0-9]+)_.*','\\1',basename(FI))]
+  infiles[, W_FROM := .f( '^.*_([0-9]+)_to.*$' , '\\1', basename(FI) )]
+  infiles[,EXCISED:=grepl('PositionsExcised',FI)]
+  
+  # Delete the files without excision if the files with excision exist
+  setkey(infiles, PTY_RUN, W_FROM)
+  tmp <- infiles[,list(NUM=length(EXCISED)),by=c('PTY_RUN', 'W_FROM')]
+  infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
+  tmp <- infiles[(EXCISED==F & NUM==2),]
+  file.remove(tmp$FI)
+  
+  infiles <- infiles[!(EXCISED==F & NUM==2),]
+  infiles[,  `:=` (NUM=NULL, EXCISED=NULL) ]
+  
+  # check tree completed: treefiles.
+  infiles[,FO_NAME:=paste0(FO,'.treefile')]
+  
+  saveRDS(infiles, cmds.path)
+  
+}
 
-# If we haven't re-run alignments already, check if some are problematic:
-cnd <- length(list.files(args$out.dir.work, pattern='readali2')) == 0
-if(cnd){.check.or.resubmit.incompleted.alignments()}
-
-# Extract info from name
-.f <- function(reg, rep, x) as.integer(gsub(reg, rep, x))
-
-infiles	<- data.table(FI=infiles)
-infiles[, FO:= gsub('.fasta$','',FI)]
-infiles[, PTY_RUN:= .f('^ptyr([0-9]+)_.*','\\1',basename(FI))]
-infiles[, W_FROM := .f( '^.*_([0-9]+)_to.*$' , '\\1', basename(FI) )]
-infiles[,PositionsExcised:=grepl('PositionsExcised',FI)]
-
-# Delete the files without excision if the files with excision exist
-setkey(infiles, PTY_RUN, W_FROM)
-tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
-infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
-tmp <- infiles[(PositionsExcised==F & NUM==2),]
-file.remove(tmp$FI)
-
-infiles <- infiles[!(PositionsExcised==F & NUM==2),]
-
-# check tree completed: treefiles.
-infiles[,FO_NAME:=paste0(FO,'.treefile')]
 infiles[,FO_EXIST:=file.exists(FO_NAME)]
 infiles <- infiles[FO_EXIST==FALSE]
-if(args$verbose){
-  cat('These trees were not built sucessfully...\n')
-  print(head(infiles))
-  cat('Build again...\n')
-}
+
 
 if( nrow(infiles) == 0 )
 {
-  
-  # TODO: check that this is actually working...
-  `%+%` <- function(x,y) paste0( x,y )
-  cat('All trees were built, move on to next, analyse tree step...\n')
-  dir <- dirname(args$controller) 
-  
-  cmd <- 'cd ' %+% dir %+% '\n'
-  cmd <- cmd %+% "qsub -v STEP='atr' " %+% basename(args$controller) %+% '\n'
-
-  cat(cmd)
-  cat(system(cmd, intern=TRUE))
-  
-  stop( 'submitted next step of the analysis: atr)' )
+  # ISN'T THIS BEAUTIFUL?
+  qsub.next.step(file=args$controller,
+                 next_step='atr', 
+                 res=1,
+                 redo=0
+  )
+  stop('Building Trees step completed, submitted the following task')
 }
 
 
-# Set up jobs: put 2 iqtrees in a same subjob?
-# Maybe randomly permute? before doing it?
-djob <- infiles[, list(CMD=cmd.iqtree(FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
+# Write command for each alignment
+djob <- infiles[, list(CMD=cmd.iqtree(infile.fasta=FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
+
+# put 2 cmds per array job (not sure why XX did this but maybe some are really short)
+# at least permute though
+djob <- djob[sample(1:.N),  ]
 djob[, ID:=ceiling(seq_len(.N)/2)]
 djob<- djob[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
-# cat(djob$CMD[1])
+djob[,ID:=NULL]
 
-#	Create PBS job array
-if(nrow(djob) > max.per.run){
-  djob[, CASE_ID:= rep(1:max.per.run,times=ceiling(nrow(djob)/max.per.run))[1:nrow(djob)]]
-  djob[, JOB_ID:= rep(1:ceiling(nrow(djob)/max.per.run),each=max.per.run)[1:nrow(djob)]]
-  djob[,ID:=NULL]
-}else{
-  setnames(djob, 'ID', 'CASE_ID')
-  djob[, JOB_ID:=1]
-}
+# group into jobs
+n_jobs <- ceiling( nrow(djob) / max.per.run)
+idx <- 1:nrow(djob)
+djob[, CASE_ID := rep(1:max.per.run, times = n_jobs)[idx] ]
+djob[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 
-# now write header + cmd
+djob2 <- djob[, .(CMD=.write.job(.SD)), by=JOB_ID]
+ids <- djob2[, list(ID=.store.and.submit(.SD, prefix='srx')), by=JOB_ID, .SDcols=names(djob2)]
+ids <- as.character(ids$ID)
+cat('Submitted job ids are:', ids, '...\n')
 
-pbshead	<- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, hpc.walltime=hpc.walltime, hpc.q=hpc.q, hpc.mem=hpc.mem,  hpc.nproc=hpc.nproc, hpc.load=NULL)
 
-indexes <- djob[, unique(JOB_ID)]
-for (i in seq_along(indexes)) {
-
-  # Prepare Job command for submission
-  tmp<- djob[JOB_ID==i,]
-
-  hpc.array <- nrow(tmp)
-  pbsJ_bool <- hpc.array > 1
-
-  cmd <- tmp[, list(CASE=paste0(CASE_ID,')\n',CMD,';;\n')), by='CASE_ID']
-  
-  # Decide whether need -J (arrays) or not
-  if(pbsJ_bool)
-  {
-        cmd<-cmd[, paste0('case $PBS_ARRAY_INDEX in\n',paste0(CASE, collapse=''),'esac')]		
-        pbshead1 <- paste0(pbshead, "\n#PBS -J 1-", hpc.array)
-  }else{
-        cmd <- cmd[, paste0(CASE, collapse='')]
-        cmd <- gsub('1)', '', cmd)
-        cmd <- gsub(';;', '', cmd)
-        pbshead1 <- pbshead
-  }
-  
-  tmp <- paste0(pbshead1,
-                '\n module load anaconda3/personal \n source activate ',args$env_name)
-  cmd<-paste(tmp,cmd,sep='\n')	
-  # cat(substr(cmd, 1, 1000))
-  
-  #	Prepare sh file  
-  date <- paste(strsplit(date(),split=' ')[[1]],collapse='_',sep='')
-  date <- gsub(':','_',date)
-  outfile <- paste("srx",paste0('job',i), date,'sh',sep='.')
-  outfile <-file.path(args$out.dir.work, outfile)
-  cat(cmd, file=outfile)
-
-  # Change directory and submit job!
-  cmd <- paste('cd', dirname(outfile), '\n')
-  cmd <- paste(cmd, "qsub", outfile)
-  cat(system(cmd, intern=TRUE))
-}
-
+# qsub alignment step again, to check whether everything has run...
+qsub.next.step(file=args$controller,
+               ids=ids, 
+               next_step='ali', 
+               res=args$walltime_idx + 1, 
+               redo=1
+)
