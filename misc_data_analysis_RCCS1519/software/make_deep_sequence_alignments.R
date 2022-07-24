@@ -167,6 +167,8 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
 # Helpers
 #
 
+.percent <- function(x){paste0(format(round(x*100, 2), nsmall=2), '%') }
+
 .check.existing.outputs <- function(regex, outdir, pattern='')
 {
   # returns a vector of TRUE or FALSE based on whether regex is found in outdir
@@ -255,6 +257,9 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   x
 }
 
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
+
 #
 # test
 #
@@ -279,7 +284,7 @@ if(0){
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
     controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconverters3_alignXX.sh',
-    walltime_idx = 1
+    walltime_idx = 2
   )
 }
 
@@ -320,21 +325,28 @@ stopifnot(file.exists(infile.runs))
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
+
 .f <- function(x)  
 {
   dir <- file.path(args$out.dir, paste0(args$date, x))
+
+  # If date has been passed as par, check that everything exists...
+  cnd <-  as.Date(args$date, format='%Y_%m_%d') == as.character(Sys.Date()) 
+
   if(!dir.exists(dir))
-    dir.create(dir)
+  {
+          if ( ! cnd )
+                  stop('No existing directories prefixed by the input --date')
+          dir.create(dir)
+  }
   dir
 }
 args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
 
-# Source functions
-source(file.path(args$pkg.dir, "utility.R"))
 
-# Look for RDS file containing subjobs CMDS, if can't findd, KEEP GOING
+# Look for RDS file containing subjobs CMDS, if can't find, KEEP GOING
 cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
 
 if(file.exists(cmds.path))
@@ -495,13 +507,62 @@ if(file.exists(cmds.path))
 cols <- c('OUT1', 'OUT2')
 pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols=names(pty.c) %like% 'REGEX']
 
+pty.c[, cat(sum(!is.na(OUT2)),
+            '(', .percent(mean(!is.na(OUT2))),')', 
+            'of desired outputs were generated in the previous runs\n')]
+pty.c[, cat(sum(!is.na(OUT1)),
+        '(', .percent(mean(!is.na(OUT1))),')', 
+        .percent(mean(!is.na(OUT1))), 'of intermediary outputs were generated in the previous runs\n')]
+
+
+if(0)
+{
+  # check if file problematic_windows.csv exists
+  tmp <- list.files(args$out.dir.output, pattern='problematic_windows', 
+                    recursive = T, full.names = T)
+  names(tmp) <- basename(dirname(tmp))
+  dprob <- lapply(tmp, fread)
+  dprob <- rbindlist(dprob, idcol = 'PTY_RUN')
+  names(dprob) <- c('PTY_RUN', 'FROM', 'TO', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
+  dprob[,  PTY_RUN:=as.integer(gsub('[A-z]|_', '', PTY_RUN))]
+  
+  # names of logfiles
+  .f <- function(x)
+  {
+    # finds prefix for LOG, needs only PBS_ARRAY_INDEX
+    dir <- file.path(args$out.dir.work, gsub('.sh$','',x))
+    fil <- list.files(dir,  full.names = T)
+    pre <- unique(gsub('\\.[0-9]+$','.',fil))
+    if(length(pre) == 1) return(pre)
+    NA_character_
+  }
+  dprob[, LOG:=paste0(.f(SH), PBS_ARRAY_INDEX), by='SH']
+  
+  # compare with outputs 
+  merge(
+    pty.c[, .(W_FROM, PTY_RUN, OUT1, OUT2)],
+    dprob[, .(W_FROM = FROM, PTY_RUN, LOG)],
+    by=c('W_FROM', 'PTY_RUN')
+  ) -> dlogs
+  
+  dlogs[, table(is.na(OUT2))]
+  dlogs[is.na(OUT2)]
+  
+  dprob[, .(W_FROM = FROM, PTY_RUN, LOG)]
+  
+  # work on this after fixing
+}
+
+
 # Select jobs with missing final outcome.
 # if intermediary output is there, change CMD.
+# IT SEEMS LIKE V1 are not copied back to dir without V2?
 pty.c <- pty.c[ is.na(OUT2)]
 if(pty.c[ !is.na(OUT1), .N > 0])
 {
   pty.c[ ! is.na(OUT1) ,  .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
 }
+
 
 if(0)
 {
@@ -516,22 +577,6 @@ if(0)
   pty.c2 <- pty.c2[ is.na(OUT2)]
   pty.c2[ ! is.na(OUT1) ,  CMD := .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
   
-  # problematic windows...
-  tmp <- unique(pty.c2$OUTDIR)
-  names(tmp) <- gsub('[A-z]', '', basename(tmp))
-  .f <- function(x) fread(list.files(x, pattern='problematic', full.names = T)[1])
-  tmp <- lapply(tmp, .f)
-  tmp <- rbindlist(tmp, idcol = 'PTY_RUN')
-  names(tmp) <- c('PTY_RUN', 'W_FROM', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
-  tmp[, PTY_RUN := as.integer(PTY_RUN)]
-  
-  tmp <- merge(pty.c2, tmp, by=c('PTY_RUN', 'W_FROM'), all.x=T)
-  tmp[, LOG := file.path(args$out.dir.work, gsub('.sh$','', SH))]
-  tmp[, LOG := gsub('23', '22', LOG)]
-  tmp[, { z <- list.files(LOG, full.names = T); z1 <- gsub('^.*\\.([0-9]+)$', '\\1', z); z[which(as.integer(z1) %in% PBS_ARRAY_INDEX )] } , by=LOG]
-  
-  
-  pty.c2$W_FROM
 }
 
 #
@@ -543,7 +588,9 @@ if( nrow(pty.c) == 0 )
  # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
                  next_step='btr', 
-                 res=1)
+                 res=1,
+                 redo=0
+  )
   stop('Alignment step completed, submitted the following task')
 }
 
@@ -567,6 +614,6 @@ cat('Submitted job ids are:', ids, '...\n')
 qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='ali', 
-               res=args$walltime_idx + 1)
-
-
+               res=args$walltime_idx + 1, 
+               redo=1
+)
