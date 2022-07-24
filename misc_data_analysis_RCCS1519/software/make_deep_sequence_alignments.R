@@ -286,23 +286,6 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   cmd
 }
 
-.store.and.submit <- function(DT)
-{
-  JOB_ID <- unique(DT$JOB_ID)
-  
-  # store in 'readali'-prefixed .sh files
-  time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
-  outfile <- paste("readali",  paste0('job', JOB_ID), time, 'sh', sep='.')
-  outfile <- file.path(args$out.dir.work, outfile)
-  cat(DT$CMD, file = outfile)
-  
-  # change to work directory and submit to queue
-  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
-  cat(cmd, '\n')
-  x <- system(cmd, intern = TRUE)
-  cat(x, '\n')
-  x
-}
 
 
 #
@@ -600,7 +583,8 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
-ids <- djob[, list(ID=.store.and.submit(.SD)), by=JOB_ID, .SDcols=names(djob)]
+.store.and.submit(, prefix='readali')
+ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
 
