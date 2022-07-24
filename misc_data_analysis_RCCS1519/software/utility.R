@@ -430,7 +430,7 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         {
                 Sys.sleep(200)
                 job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
-                cmd_id <- paste0('-W depend=afterok:', job_ids)
+                cmd_id <- paste0('-W depend=after:', job_ids)
         }
 
         res <- min(res,3)
