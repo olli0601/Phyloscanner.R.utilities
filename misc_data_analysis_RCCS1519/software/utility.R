@@ -152,7 +152,8 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   #cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')		
 
   # check which windows are problematic problematic_windows.txt !
-  tmp <- paste0('\nif  ls AlignReads*.fasta  1> /dev/null 2>&1; then echo "', paste(as.character(window.coord), collapse=','), ', ${PBS_ARRAY_INDEX}, ${PBS_JOBNAME}, ${PBS_QUEUE}" >> problematic_windows.csv; fi\n')
+  # TODO: check whether we need to stop the job after this! 
+  tmp <- paste0('\nif ! ls AlignedReads*.fasta  1> /dev/null 2>&1; then echo "', paste(as.character(window.coord), collapse=','), ', ${PBS_ARRAY_INDEX}, ${PBS_JOBNAME}, ${PBS_QUEUE}" >> problematic_windows.csv; fi\n')
   cmd <- paste0(cmd, tmp)
 
   if(!is.na(alignments.file) & !is.na(keep.overhangs))
@@ -216,16 +217,16 @@ cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTR
   tmp.in			<- basename(infile.fasta)
   tmp.out			<- basename(outfile)	
   cmd<- paste0(cmd,"mkdir -p ",tmpdir,'\n')
-  cmd<- paste0(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n',)	
-  cmd<- paste0(cmd,'cd "',tmpdir,'"\n',)	
+  cmd<- paste0(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n')	
+  cmd<- paste0(cmd,'cd "',tmpdir,'"\n')	
   # cmd<- paste0(cmd, 'chmod a+r ', infile.fasta,' \n')
-  cmd<- paste0(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n',) 
+  cmd<- paste0(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n') 
   cmd<- paste0(cmd, "rm ", tmp.in,'\n')	
   cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n')
   cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n')
   cmd<- paste0(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n')	
   cmd<- paste0(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n')
-  cmd<- paste0(cmd,'cd $CWD\n',)
+  cmd<- paste0(cmd,'cd $CWD\n')
   cmd<- paste0(cmd, "rm -r ", tmpdir,'\n')
   cmd<- paste0(cmd, "#######################################################
   # end: IQTREE
@@ -426,11 +427,14 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         # Clean the job-ids of the jobs we need to wait completion for
         # also wait for the jobs to be submitted
         cmd_id <- ''
-        if( !is.na(ids) & length(ids) > 0 )
+        if (length(ids) > 0)
         {
-                Sys.sleep(200)
-                job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
-                cmd_id <- paste0('-W depend=after:', job_ids)
+                if( !is.na(ids) )
+                {
+                        Sys.sleep(200)
+                        job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+                        cmd_id <- paste0('-W depend=after:', job_ids)
+                }
         }
 
         res <- min(res,3)
@@ -444,4 +448,24 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         cmd <- paste0('cd ', dir , '\n', cmd, '\n' )
         cat(cmd)
         system(cmd, intern=TRUE)
+}
+
+
+# Store job in a sh file with prefix and date.
+.store.and.submit <- function(DT, prefix='srx')
+{
+  JOB_ID <- unique(DT$JOB_ID)
+  
+  # store in 'srx'-prefixed .sh files
+  time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
+  outfile <- paste(prefix,  paste0('job', JOB_ID), time, 'sh', sep='.')
+  outfile <- file.path(args$out.dir.work, outfile)
+  cat(DT$CMD, file = outfile)
+  
+  # change to work directory and submit to queue
+  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+  cat(cmd, '\n')
+  x <- system(cmd, intern = TRUE)
+  cat(x, '\n')
+  x
 }

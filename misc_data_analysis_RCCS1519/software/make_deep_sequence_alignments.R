@@ -3,7 +3,8 @@
 # Preamble
 # The set of scripts aims to run phyloscanner.
 # This script aims to make alignments in each potential transmission network.
-# TODO: check whether moving the pbshead to the for loop solves the issues of 'empty' subjobs
+# TODO: check whether problematic_windows is fixed...
+# Also qsub.next...
 
 # Load the required packages
 library(data.table)
@@ -181,6 +182,52 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   unlist(tmp)
 } 
 
+.remove_problematic_windows <- function(DT)
+{
+  # check if file problematic_windows.csv exists
+  tmp <- list.files(args$out.dir.output, pattern='problematic_windows.csv', 
+                    recursive = T, full.names = T)
+  if( length(tmp) == 0 )
+  {
+    cat('No problematic windows files found\n')
+    return(DT)
+  }
+  names(tmp) <- basename(dirname(tmp))
+  dprob <- lapply(tmp, fread)
+  dprob <- rbindlist(dprob, idcol = 'PTY_RUN')
+  names(dprob) <- c('PTY_RUN', 'FROM', 'TO', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
+  dprob[,  PTY_RUN:=as.integer(gsub('[A-z]|_', '', PTY_RUN))]
+  
+  # dprob <- dprob[!SH %in% c('readali.job1.Sat_Jul_23_205803_2022.sh', 'readali.job1.Sun_Jul_24_133928_2022.sh')]
+  
+  # This below is more for debugging purposes
+  # names of logfiles
+  .f <- function(x)
+  {
+    # finds prefix for LOG, needs only PBS_ARRAY_INDEX
+    dir <- file.path(args$out.dir.work, gsub('.sh$','',x))
+    fil <- list.files(dir,  full.names = T)
+    pre <- unique(gsub('\\.[0-9]+$','.',fil))
+    if(length(pre) == 1) return(pre)
+    NA_character_
+  }
+  dprob[, LOG:=paste0(.f(SH), PBS_ARRAY_INDEX), by='SH']
+  
+  # compare with outputs 
+  merge(
+    DT[, .(W_FROM, PTY_RUN, OUT1, OUT2)],
+    dprob[, .(W_FROM = FROM, PTY_RUN, LOG)],
+    all.x=TRUE,
+    by=c('W_FROM', 'PTY_RUN')
+  ) -> dlogs
+  
+  tmp <- dlogs[ is.na(LOG), .(W_FROM, PTY_RUN, OUT2) ]
+  stopifnot(tmp[, all(is.na(OUT2))])
+  tmp$OUT2 <- NULL
+  
+  merge(DT, tmp, by=c('W_FROM', 'PTY_RUN'))
+}
+
 .modify_cmd_for_existing_v1 <- function(cmd, outdir, out1)
 {
   if(length(out1) == 0){ stop('error: empty input to .modify_cmd_for_existing_v1')}
@@ -257,8 +304,6 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   x
 }
 
-# Source functions
-source(file.path(args$pkg.dir, "utility.R"))
 
 #
 # test
@@ -283,13 +328,15 @@ if(0){
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
-    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconverters3_alignXX.sh',
+    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh',
     walltime_idx = 2
   )
 }
 
-# I can run at most 1000 simultaneous jobs on the short q.
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
 
+# I can run at most 1000 simultaneous jobs on the short q.
 list(
   `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 1 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
   `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
@@ -308,17 +355,17 @@ dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
 dir.net <- file.path(args$out.dir, "potential_network")
 
 ifelse(
-       !is.na(args$window_cutoff),
-       paste0('_n_control_', args$n_control), ''
+  !is.na(args$window_cutoff),
+  paste0('_n_control_', args$n_control), ''
 ) -> tmp
 
 infile.runs <- file.path(
-    args$out.dir,
-    paste0(
-      'phscinput_runs_clusize_', args$cluster_size,
-      '_ncontrol_', args$n_control,
-      tmp,'.rds'
-    )
+  args$out.dir,
+  paste0(
+    'phscinput_runs_clusize_', args$cluster_size,
+    '_ncontrol_', args$n_control,
+    tmp,'.rds'
+  )
 )
 stopifnot(file.exists(infile.runs))
 
@@ -329,15 +376,15 @@ args$date <- gsub('-','_',args$date)
 .f <- function(x)  
 {
   dir <- file.path(args$out.dir, paste0(args$date, x))
-
+  
   # If date has been passed as par, check that everything exists...
   cnd <-  as.Date(args$date, format='%Y_%m_%d') == as.character(Sys.Date()) 
-
+  
   if(!dir.exists(dir))
   {
-          if ( ! cnd )
-                  stop('No existing directories prefixed by the input --date')
-          dir.create(dir)
+    if ( ! cnd )
+      stop('No existing directories prefixed by the input --date')
+    dir.create(dir)
   }
   dir
 }
@@ -393,7 +440,7 @@ if(file.exists(cmds.path))
     
   }
   stopifnot(file.exists(infile.consensus))
-
+  
   # Load sequences and remove duplicates if existing
   pty.runs <- data.table(readRDS(infile.runs))
   if ('ID_TYPE' %in% colnames(pty.runs)) {
@@ -511,48 +558,11 @@ pty.c[, cat(sum(!is.na(OUT2)),
             '(', .percent(mean(!is.na(OUT2))),')', 
             'of desired outputs were generated in the previous runs\n')]
 pty.c[, cat(sum(!is.na(OUT1)),
-        '(', .percent(mean(!is.na(OUT1))),')', 
-        .percent(mean(!is.na(OUT1))), 'of intermediary outputs were generated in the previous runs\n')]
+            '(', .percent(mean(!is.na(OUT1))),')', 
+            'of intermediary outputs were generated in the previous runs\n')]
 
-
-if(0)
-{
-  # check if file problematic_windows.csv exists
-  tmp <- list.files(args$out.dir.output, pattern='problematic_windows', 
-                    recursive = T, full.names = T)
-  names(tmp) <- basename(dirname(tmp))
-  dprob <- lapply(tmp, fread)
-  dprob <- rbindlist(dprob, idcol = 'PTY_RUN')
-  names(dprob) <- c('PTY_RUN', 'FROM', 'TO', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
-  dprob[,  PTY_RUN:=as.integer(gsub('[A-z]|_', '', PTY_RUN))]
-  
-  # names of logfiles
-  .f <- function(x)
-  {
-    # finds prefix for LOG, needs only PBS_ARRAY_INDEX
-    dir <- file.path(args$out.dir.work, gsub('.sh$','',x))
-    fil <- list.files(dir,  full.names = T)
-    pre <- unique(gsub('\\.[0-9]+$','.',fil))
-    if(length(pre) == 1) return(pre)
-    NA_character_
-  }
-  dprob[, LOG:=paste0(.f(SH), PBS_ARRAY_INDEX), by='SH']
-  
-  # compare with outputs 
-  merge(
-    pty.c[, .(W_FROM, PTY_RUN, OUT1, OUT2)],
-    dprob[, .(W_FROM = FROM, PTY_RUN, LOG)],
-    by=c('W_FROM', 'PTY_RUN')
-  ) -> dlogs
-  
-  dlogs[, table(is.na(OUT2))]
-  dlogs[is.na(OUT2)]
-  
-  dprob[, .(W_FROM = FROM, PTY_RUN, LOG)]
-  
-  # work on this after fixing
-}
-
+# remove problematic windows as informed by the shell scripts output
+pty.c <- .remove_problematic_windows(pty.c)
 
 # Select jobs with missing final outcome.
 # if intermediary output is there, change CMD.
@@ -563,29 +573,13 @@ if(pty.c[ !is.na(OUT1), .N > 0])
   pty.c[ ! is.na(OUT1) ,  .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
 }
 
-
-if(0)
-{
-  cols <- c('OUT1', 'OUT2')
-  pty.c2 <- copy(pty.c)
-  pty.c2[, OUTDIR := gsub('23','22',OUTDIR)]
-  pty.c2[, (cols):=lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols=names(pty.c) %like% 'REGEX']
-  pty.c2[, (cols) := lapply(.SD, unlist), .SDcols=cols ]
-  pty.c2$OUT2[ c(10, 20, 37)] <- NA_character_
-  pty.c2
-  
-  pty.c2 <- pty.c2[ is.na(OUT2)]
-  pty.c2[ ! is.na(OUT1) ,  CMD := .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
-  
-}
-
 #
 # IF ALL OUTPUTS WERE CREATED, GO TO NEXT STEP IN THE ANALYSIS
 #
 
 if( nrow(pty.c) == 0 )
 {
- # ISN'T THIS BEAUTIFUL?
+  # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
                  next_step='btr', 
                  res=1,
