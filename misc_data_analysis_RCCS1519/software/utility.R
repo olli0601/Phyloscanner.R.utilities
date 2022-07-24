@@ -427,11 +427,14 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         # Clean the job-ids of the jobs we need to wait completion for
         # also wait for the jobs to be submitted
         cmd_id <- ''
-        if( !is.na(ids) & length(ids) > 0 )
+        if (length(ids) > 0)
         {
-                Sys.sleep(200)
-                job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
-                cmd_id <- paste0('-W depend=after:', job_ids)
+                if( !is.na(ids) )
+                {
+                        Sys.sleep(200)
+                        job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
+                        cmd_id <- paste0('-W depend=after:', job_ids)
+                }
         }
 
         res <- min(res,3)
@@ -445,4 +448,24 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
         cmd <- paste0('cd ', dir , '\n', cmd, '\n' )
         cat(cmd)
         system(cmd, intern=TRUE)
+}
+
+
+# Store job in a sh file with prefix and date.
+.store.and.submit <- function(DT, prefix='srx')
+{
+  JOB_ID <- unique(DT$JOB_ID)
+  
+  # store in 'srx'-prefixed .sh files
+  time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
+  outfile <- paste(prefix,  paste0('job', JOB_ID), time, 'sh', sep='.')
+  outfile <- file.path(args$out.dir.work, outfile)
+  cat(DT$CMD, file = outfile)
+  
+  # change to work directory and submit to queue
+  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+  cat(cmd, '\n')
+  x <- system(cmd, intern = TRUE)
+  cat(x, '\n')
+  x
 }
