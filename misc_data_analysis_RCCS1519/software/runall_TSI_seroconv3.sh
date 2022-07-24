@@ -15,6 +15,7 @@ then
 fi
 
 ${RES:=1} 
+${REDO:=0}
 echo "running '${STEP:=sim}' analysis"
 
 # This includes all code necessary to run PHSC pipeline to produce TSI estimates
@@ -51,21 +52,40 @@ case $STEP in
         # This also has walltime flag but don't know what to do exactly about it...
         ali)
         echo "---- compute alignments ----"
-        Rscript $software_path/make_deep_sequence_alignments.R \
-        --out_dir_base $out_dir_base \
-        --pkg_dir $software_path \
-        --prog_dir $phyloscanner_path \
-        --windows_start 550 \
-        --windows_end 9500 \
-        --sliding_width 25 \
-        --n_control 0 \
-        --cluster_size $CLUSIZE \
-        --reference ConsensusGenomes.fasta \
-        --mafft " --globalpair --maxiterate 1000 " \
-        --rm_vloops FALSE \
-        --controller $controller \
-        --walltime_idx $RES \
-        --tsi_analysis FALSE
+
+        if [ "$REDO" = "0"]; then
+                Rscript $software_path/make_deep_sequence_alignments.R \
+                --out_dir_base $out_dir_base \
+                --pkg_dir $software_path \
+                --prog_dir $phyloscanner_path \
+                --windows_start 550 \
+                --windows_end 9500 \
+                --sliding_width 25 \
+                --n_control 0 \
+                --cluster_size $CLUSIZE \
+                --reference ConsensusGenomes.fasta \
+                --mafft " --globalpair --maxiterate 1000 " \
+                --rm_vloops FALSE \
+                --controller $controller \
+                --walltime_idx $RES \
+                --tsi_analysis FALSE
+        else
+                Rscript $software_path/make_deep_sequence_alignments.R \
+                --out_dir_base $out_dir_base \
+                --pkg_dir $software_path \
+                --prog_dir $phyloscanner_path \
+                --windows_start 550 \
+                --windows_end 9500 \
+                --sliding_width 25 \
+                --n_control 0 \
+                --cluster_size $CLUSIZE \
+                --reference ConsensusGenomes.fasta \
+                --mafft " --globalpair --maxiterate 1000 " \
+                --rm_vloops FALSE \
+                --controller $controller \
+                --walltime_idx $RES \
+                --date $DATE \
+                --tsi_analysis FALSE
         ;;
         
         # The 2 here should be run without changes the first time
