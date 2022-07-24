@@ -86,6 +86,7 @@ case $STEP in
                 --walltime_idx $RES \
                 --date $DATE \
                 --tsi_analysis FALSE
+        fi
         ;;
         
         # The 2 here should be run without changes the first time
