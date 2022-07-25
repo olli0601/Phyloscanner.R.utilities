@@ -71,8 +71,7 @@ option_list <- list(
 
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 
 ###############
@@ -353,4 +352,10 @@ cat(cmd, file=outfile)
 # Run the command
 cmd <- paste("cd ",dirname(outfile),'\n',"qsub ", outfile)
 cat(cmd)
-cat(system(cmd, intern = TRUE))
+ids <- system(cmd, intern = TRUE)
+
+
+# Qsub next
+qsub.next.step(file=args$controller,
+               ids=ids, 
+               next_step='dti')

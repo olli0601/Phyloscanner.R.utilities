@@ -326,7 +326,7 @@ cat('Submitted job ids are:', ids, '...\n')
 # qsub alignment step again, to check whether everything has run...
 qsub.next.step(file=args$controller,
                ids=ids, 
-               next_step='ali', 
+               next_step='btr', 
                res=args$walltime_idx + 1, 
                redo=1
 )

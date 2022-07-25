@@ -134,7 +134,9 @@ case $STEP in
         --relaxedAncestry \
         --zeroLengthAdjustment \
         --date $DATE \
-        --env_name "phylostan"
+        --controller $controller \
+        --env_name "phylostan" \
+        --verbose TRUE
         ;;
         
         # ... to here
@@ -147,6 +149,7 @@ case $STEP in
         --input_samples "$out_dir_base/220419_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
         --date $DATE \
+        --controller $controller \
         --env_name 'hivphylotsi'
         ;;
 
