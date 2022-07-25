@@ -261,8 +261,8 @@ print(args)
 
 # create phsc_phscrelationships output directory for the analyse tree results
 
-tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","pkg.dir","prog.dir",
-                             "out.dir","date","help",'out.dir.data','out.dir.work',
+tmp <- setdiff(names(args),c('verbose','if_save_data','env_name','pkg.dir','prog.dir',
+                             'out.dir','date','help','out.dir.data','out.dir.work', 'controller',
                              'out.dir.output','norm.ref.file.name', 'pkg.dir', 'script'))
 tmpv <- args[tmp]
 
