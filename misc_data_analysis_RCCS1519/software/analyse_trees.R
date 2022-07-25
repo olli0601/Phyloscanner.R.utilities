@@ -151,7 +151,7 @@ option_list <- list(
     type = "character",
     default = NA_character_,
     help = "Absolute file path to package directory, used as long we don t build an R package [default]",
-    dest = 'prj.dir'
+    dest = 'pkg.dir'
   ),
   optparse::make_option(
     "--prog_dir",
@@ -177,99 +177,95 @@ option_list <- list(
   )
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+
+#
+# Helpers
+#
+
+.write.job <- function(DT)
+{
+  control2 <- copy(control)
+  control2$output.string <- paste0('ptyr',DT$RUN)
+  
+  tree.input <- file.path(args$out.dir.output, DT$TREES)
+  cmd <- cmd.phyloscanner.analyse.trees(args$script, 
+                                        tree.input, 
+                                        control,
+                                        valid.input.args=valid.input.args)
+  cmd
+}
 
 #
 # test
 #
-# if(1){
-#   args$ort=T
-#   args$date = '19037'
-#   args$env_name = 'phylostan'
-#   args$norm.ref.file.name = "~/phyloscanner/InfoAndInputs/HIV_DistanceNormalisationOverGenome.csv"
-#   args$outgroup.name = "B.FR.83.HXB2_LAI_IIIB_BRU.K03455"
-#   args$output.nexus.tree = T
-#   args$ratio.blacklist.threshold = 0.005
-#   args$skip.summary.graph = T
-#   args$out.dir = NA
-#   args$prj.dir = NA
-#   args$prog.dir = NA
-# }
-
-
-#
-# use manually specified directories when args$out.dir is NA
-#
-tmp <- Sys.info()
-if (tmp["user"] == "xx4515")
-{
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-  if (is.na(args$prog.dir))
-  {
-    args$prog.dir <-
-      '/rds/general/user/xx4515/home/phyloscanner/phyloscanner_analyse_trees.R'
-  }
+if(0){
+  args <- list(
+    out.dir="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    prog.dir="/rds/general/user/ab1820/home/git/phyloscanner",
+    norm.ref.file.name = "$DEEPDATA/normalisation_ByPosition.csv",
+    outgroup.name = "REF_CON_H",
+    ratio.blacklist.threshold=0.01,
+    distance.threshold = "0.02 0.05",
+    max.reads.per.host = 100,
+    min.reads.per.host = 30,
+    multinomial = TRUE,
+    no.progress.bars = TRUE, 
+    post.hoc.count.blacklisting=TRUE  ,
+    relaxed.ancestry = TRUE ,
+    zero.length.adjustment=TRUE ,
+    date = '2022-07-23' ,
+    env_name="phylostan",
+    verbose=TRUE
+    # controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh"
+  )
 }
 
-# if prj.dir and out.dir are not manually set, default to here()
-if (is.na(args$prj.dir))
-{
-  args$prj.dir <- here::here()
-}
-if (is.na(args$out.dir))
-{
-  args$out.dir <- here::here()
-}
-if (is.na(args$prog.dir))
-{
-  args$prog.dir <- here::here()
-}
+# shouldn't these be better passed on
+
 if(is.null(args$distance.threshold)){
   args$distance.threshold <- -1
 }
 
 if(dir.exists(args$prog.dir))
 {
-        args$prog.dir <- file.path(args$prog.dir, 'phyloscanner_analyse_trees.R')
+        args$script <- file.path(args$prog.dir, 'phyloscanner_analyse_trees.R')
 }
-
-args$date <- gsub('-','_',args$date)
 
 #
 # Add constants that should not be changed by the user
 #
 max.per.run <- 4900
 
-# Set default output directories relative to out.dir
-args$out.dir.work <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_work"))
-args$out.dir.output <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_output"))
-
-if(args$verbose){
-  print(args)
+# Set default output directories relative to out.dirx
+args$date <- gsub('-','_',args$date)
+.f <- function(x)
+{
+  out <- file.path(args$out.dir, paste0(args$date, x))
+  stopifnot(file.exists(out))
+  out
 }
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('_phsc_output')
 
-tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","prj.dir","prog.dir",
+print(args)
+
+# create phsc_phscrelationships output directory for the analyse tree results
+
+tmp <- setdiff(names(args),c("verbose","if_save_data","env_name","pkg.dir","prog.dir",
                              "out.dir","date","help",'out.dir.data','out.dir.work',
-                             'out.dir.output','norm.ref.file.name'))
+                             'out.dir.output','norm.ref.file.name', 'pkg.dir', 'script'))
 tmpv <- args[tmp]
+
 out.dir.analyse.trees <- file.path(args$out.dir, 
                                    paste0(args$date,'_phsc_phscrelationships_',
                                    paste(gsub('\\.','_',names(tmpv)),
                                          gsub('\\.|-','',tmpv),collapse='_',sep = '_')))
-out.dir.analyse.trees <- gsub(' ','_',out.dir.analyse.trees)
+
 # simplify name
+out.dir.analyse.trees <- gsub(' ','_',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_TRUE','_T',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_seed','_sd',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_distance_threshold','_sdt',out.dir.analyse.trees)
@@ -282,14 +278,16 @@ out.dir.analyse.trees <- gsub('_post_hoc_count_blacklisting','_phcb',out.dir.ana
 out.dir.analyse.trees <- gsub('_ratio_blacklist_threshold','_rtt',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_relaxed_ancestry','_rla',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_zero_length_adjustment','_zla',out.dir.analyse.trees)
+
 print(out.dir.analyse.trees)
 dir.create(out.dir.analyse.trees)
 
 # Source functions
-source(file.path(args$prj.dir, "utility.R"))
+source(file.path(args$pkg.dir, "utility.R"))
 
 #	Set phyloscanner variables	
 control	<- list()
+
 control$allow.mt <- TRUE
 control$alignment.file.directory = NULL 
 control$alignment.file.regex = NULL
@@ -338,83 +336,59 @@ control$user.blacklist.file.regex = NULL
 control$verbosity = 1	
 control$zero.length.adjustment = args$zero.length.adjustment
 
-#	Make scripts
-df <- tibble(F=list.files(args$out.dir.output,pattern = 'ptyr*'))
-df <- df %>%
-  mutate(TYPE:= gsub('ptyr([0-9]+)_(.*)','\\2', F),
-         RUN:= as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))) %>%
-  mutate(TYPE:= gsub('^[^\\.]+\\.([a-z]+)$','\\1',TYPE)) %>%
-  spread(TYPE, F) %>%
-  set_names(~ str_to_upper(.))
+#
+#	Make sh scripts
+#
 
-valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(args$prog.dir)
+# write individuals job components
+
+df <- data.table(F=list.files(args$out.dir.output,pattern = 'ptyr*'))
+df[, `:=` ( TYPE = gsub('ptyr([0-9]+)_(.*)','\\2', F), 
+            RUN = as.integer(gsub('ptyr([0-9]+)_(.*)','\\1', F))
+            )]
+df[,TYPE:= gsub('^[^\\.]+\\.([a-z]+)$','\\1',TYPE) ]
+df <- spread(df, TYPE, F)
+names(df) <- toupper(names(df))
+
+valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(args$script)
 cmds <- vector('list',nrow(df))
 
-for(i in seq_len(nrow(df)))
-{
-  #	Set input args
-  control$output.string <- paste0('ptyr',df$RUN[i])
-  
-  #	Make script
-  tree.input <- file.path(args$out.dir.output, df$TREES[i])
-  cmd <- cmd.phyloscanner.analyse.trees(args$prog.dir, 
-                                        tree.input, 
-                                        control,
-                                        valid.input.args=valid.input.args)
-  cmds[[i]] <- cmd		
-}	
-if(args$verbose){
-  cat(cmds[[1]])
-}
+djob <- df[, .(CMD=.write.job(.SD)), by='RUN', .SDcols=names(df)]
 
 
-#
-# Submit array job to HPC
-#
+# Make headers
+hpc.load        <- paste0("module load anaconda3/personal \n source activate ", args$env_name)
+hpc.select	<- 1
+hpc.nproc	<- 1
+hpc.walltime	<- 23
+hpc.q		<- NA
+hpc.mem		<- "36gb"
+hpc.array	<- nrow(djob)
 
-#	Make header
-hpc.load			<- paste0("module load anaconda3/personal \n source activate ", args$env_name)
-hpc.select			<- 1
-hpc.nproc			<- 1
-hpc.walltime		<- 23
-if(1)
-{
-  hpc.q			<- NA
-  hpc.mem			<- "36gb"
-}
-hpc.array			<- length(cmds)
-pbshead		<- "#!/bin/sh"
-tmp			<- paste("#PBS -l walltime=", hpc.walltime, ":59:00,pcput=", hpc.walltime, ":45:00", sep = "")
-pbshead		<- paste(pbshead, tmp, sep = "\n")
-tmp			<- paste("#PBS -l select=", hpc.select, ":ncpus=", hpc.nproc,":mem=", hpc.mem, sep = "")
-pbshead 	<- paste(pbshead, tmp, sep = "\n")
-pbshead 	<- paste(pbshead, "#PBS -j oe", sep = "\n")
-if(!is.na(hpc.array))
-  pbshead	<- paste(pbshead, "\n#PBS -J 1-", hpc.array, sep='')
-if(!is.na(hpc.q))
-  pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
-pbshead 	<- paste(pbshead, hpc.load, sep = "\n")
-cat(pbshead)
+pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select = hpc.select, 
+                            hpc.nproc = hpc.nproc, hpc.mem = hpc.mem, 
+                            hpc.walltime = hpc.walltime,
+                            hpc.q = hpc.q,  
+                            hpc.array = hpc.array,
+                            hpc.load = hpc.load
+                            )
+# cat(pbshead)
 
-#	Make array job
-for(i in 1:length(cmds))
-  cmds[[i]]<- paste0(i,')\n',cmds[[i]],';;\n')
-cmd		<- paste0('case $PBS_ARRAY_INDEX in\n',paste0(cmds, collapse=''),'esac')
-cmd		<- paste(pbshead,cmd,sep='\n')
-
-#	Submit job
-cmd0 <- paste('cd', args$out.dir.work)
-cat('\n', cmd0)
-cat(system(cmd0, intern=TRUE))
-
-outfile		<- gsub(':','',paste("phsc",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
-outfile		<- file.path(args$out.dir.work, outfile)
-cat(cmd, file=outfile)
+# Collapse everything into an array job
+djob[, CASE_ID := 1:.N ]
+cmd <- djob[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+cmd <- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+                         paste0(CASE, collapse = ''),
+                         'esac')]
+cmd <- paste(pbshead, cmd, sep = '\n')
 
 
-cmd 		<- paste("qsub", outfile)
-cat('\n', cmd)
-cat(system(cmd, intern= TRUE))
+# submit
+djob1 <- data.table(JOB_ID = 1, CMD = cmd)
+ids <- .store.and.submit(djob1, prefix='phsc')
 
-
+# qsub next step in the analysis: time sinfe infection estimation
+qsub.next.step(file=args$controller,
+               ids=ids, 
+               next_step='tsi')
 

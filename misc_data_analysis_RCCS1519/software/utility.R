@@ -467,5 +467,5 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
   cat(cmd, '\n')
   x <- system(cmd, intern = TRUE)
   cat(x, '\n')
-  x
+  as.character(x)
 }
