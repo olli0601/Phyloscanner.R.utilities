@@ -198,7 +198,7 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
   tree.input <- file.path(args$out.dir.output, DT$TREES)
   cmd <- cmd.phyloscanner.analyse.trees(args$script, 
                                         tree.input, 
-                                        control,
+                                        control2,
                                         valid.input.args=valid.input.args)
   cmd
 }
