@@ -168,6 +168,13 @@ option_list <- list(
     dest = 'out.dir'
   ),
   optparse::make_option(
+    "--controller",
+    type = "character",
+    default = NA_character_, 
+    help = "Path to sh script irecting the full analysis",
+    dest = 'controller'
+  ),
+  optparse::make_option(
     "--date",
     type = 'character',
     default = '2022-02-04',
