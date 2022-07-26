@@ -67,7 +67,7 @@ file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_
 
 tmp <- c(indir.deepsequence.analyses.old,
          file.phsc.input.samples.bf,
-         file.path.chains.data)
+         file.path.chains)
 if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chaings)
 if( ! is.na(args$include.input) ) tmp <- c(tmp, args$include.input)
 stopifnot(all(file.exists(tmp)))
@@ -93,7 +93,7 @@ if(! dir.exists(args$out.dir))
 if( ! is.na(args$file.path.chains) )
 {
         tmp <- new.env()
-        load(file.path.chains.data, envir=tmp )
+        load(args$file.path.chains, envir=tmp )
         dchain <- as.data.table(tmp$dchain)
         rm(tmp)
         include_pairs_aid <- dchain[, unique(c(H1, H2))]
