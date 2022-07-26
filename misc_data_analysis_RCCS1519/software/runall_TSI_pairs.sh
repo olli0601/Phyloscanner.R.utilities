@@ -50,7 +50,6 @@ case $STEP in
         net)
         echo "---- initialise analysis ----"
         Rscript $software_path/TSI_initialise.R \
-                lalala
         --out_dir_base $out_dir_base \
         --transmission_chains "$XIAOYUE/Rakai_phscnetworks.rda" \
         --include_input "$DEEPANALYSES/seroconverters3_alignXX/220419_phscinput_samples.rds"
