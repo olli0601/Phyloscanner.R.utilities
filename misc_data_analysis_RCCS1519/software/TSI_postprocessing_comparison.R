@@ -79,12 +79,12 @@ dtsi.all.path <- list.files(args$rel.dir, pattern='tsi', full.names=TRUE)
 dtsi.aggregated.path <- file.path(args$rel.dir, "aggregated_TSI_with_estimated_dates.csv")
 
 # Meta data
-indir.deepsequence.analyses_old <- file.path(indir.deepsequence.analyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
+indir.deepsequence.analyses.old <- file.path(indir.deepsequence.analyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
 file.db.sharing <- file.path(indir.deepsequencedata,"/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv")
-file.anonymisation.keys <- file.path(indir.deepsequence.analyses.xiaoyue,'important_anonymisation_keys_210119.csv')
+file.anonymisation.keys <- file.path(indir.deepsequence.analyses.old,'important_anonymisation_keys_210119.csv')
 file.seroconverters <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '220329_TSI_seroconverters.csv')
 
-tmp <-file.exists(indir.deepsequence.analyses_old, file.db.sharing,
+tmp <-file.exists(indir.deepsequence.analyses.old, file.db.sharing,
                   file.anonymisation.keys, file.seroconverters)
 
 print(tmp)
