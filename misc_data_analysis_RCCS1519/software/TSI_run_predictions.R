@@ -12,6 +12,13 @@ option_list <- list(
     dest = 'out.dir'
   ),
   optparse::make_option(
+    "--pkg_dir",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to package directory, used as long we don t build an R package [default]",
+    dest = 'pkg.dir'
+  ),
+  optparse::make_option(
     "--relationship_dir",
     type = "character",
     default = NA_character_,
@@ -251,20 +258,6 @@ write.mafs.and.cmds <-function(pty_idx)
 ###############
 # testing
 ###############
-user <- Sys.info()[['user']]
-if (user=='andrea') {
-        args <- list(
-                out.dir='~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_output',
-                rel.dir= "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/",
-                TSI.dir='~/git/HIV-phyloTSI-main',
-                env_name='hivphylotsi',
-                walltime = 3L,
-                memory = 2L,
-                controller=NA,
-                phsc.samples="~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds"
-        )
-}
-
 
 if(0)
 {
@@ -284,18 +277,20 @@ if(0)
 # main
 ################
 
+source(file.path(args$pkg.dir, "utility.R"))
+
 args$date <- gsub('-','_',args$date)
-if( ! grepl('output$', args$out.dir))
+.f <- function(x)
 {
-        args$out.dir <- 
-                file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+        out <- file.path(args$out.dir, paste0(args$date, x))
+        stopifnot(file.exists(out))
+        out
 }
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('_phsc_output')
 
-work.dir <- gsub('_output$','_work',args$out.dir)
-
-stopifnot(dir.exists(work.dir))
 stopifnot(dir.exists(args$rel.dir))
-stopifnot(dir.exists(args$out.dir))
 stopifnot(file.exists(args$phsc.samples))
 
 # dates of collection for samples.
@@ -304,7 +299,7 @@ ddates <- get.sampling.dates(phsc.samples=args$phsc.samples)
 # Collect pty files allowing to run Tanya's algorithm
 patstats_zipped <- list.files(args$rel.dir, pattern='zip$', full.name=TRUE)
 tmp <- gsub('^.*?ptyr|_otherstuff.zip','',patstats_zipped)
-phsc_inputs <- file.path(args$out.dir, 
+phsc_inputs <- file.path(args$out.dir.output, 
                          paste0('ptyr', tmp, '_trees'), 
                          paste0('ptyr', tmp, '_input.csv' ))
 
@@ -346,7 +341,7 @@ header <- paste0(
 cmd <- paste0(header, cmd)
 datetime <- paste(strsplit(date(), split = ' ')[[1]], collapse = '_', sep = '')
 datetime <- gsub(':','',datetime)
-outfile <- file.path(work.dir, paste0('phylo_tsi_',datetime,'.sh'))
+outfile <- file.path(args$out.dir.work, paste0('phylo_tsi_',datetime,'.sh'))
 cat(cmd, file=outfile)
 
 # Run the command
@@ -355,7 +350,6 @@ cat(cmd)
 ids <- system(cmd, intern = TRUE)
 
 
-# Qsub next
 qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='dti')
