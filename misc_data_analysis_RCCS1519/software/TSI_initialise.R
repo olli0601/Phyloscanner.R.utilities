@@ -1,9 +1,15 @@
 cat("\n\n===== TSI_initialise.R =====\n\n")
 
 require(data.table)
-require(ggplot2)
 
 option_list <- list(
+  optparse::make_option(
+    "--pkg_dir",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to package directory, used as long we don t build an R package [default]",
+    dest = 'pkg.dir'
+  ),
   optparse::make_option(
     "--out_dir_base",
     type = "character",
@@ -24,36 +30,53 @@ option_list <- list(
     default = NA_character_, 
     help = "Path to sh script directing the full analysis",
     dest = 'controller'
-  )
+  ),
+  optparse::make_option(
+    "--transmission_chains",
+    type = "character",
+    default = NA_character_,
+    help = "Optional: absolute file path to `phscnetwork.rda` containing individuals in potential transmission pairs"
+    dest = 'file.path.chains'
+  ),
+  optparse::make_option(
+    "--include_input",
+    type = "character",
+    default = NA_character_,
+    help = "Optional: path to phscinput*rds file of individuals to include in the analysis (eg seroconverters)",
+    dest = 'include.input'
+  ),
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 usr <- Sys.info()[['user']]
 if (usr == 'andrea')
 {
-        indir.deepsequence_analyses <- '~/Documents/Box/ratmann_deepseq_analyses/live'
+        args$pkg.dir <- '~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/'
+        indir.deepsequence.analyses <- '~/Documents/Box/ratmann_deepseq_analyses/live'
+        indir.deepsequence.xiaoyue <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live'
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
-        tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
 }else{
-        indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
+        indir.deepsequence.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
+        indir.deepsequence.analyses.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
-        tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
 }
+indir.deepsequence.analyses.old <- file.path(indir.deepsequence.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
+file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_RCCSUVRI_phscinput_samples_with_bf.rds' )
 
+tmp <- c(indir.deepsequence.analyses.old,
+         file.phsc.input.samples.bf,
+         file.path.chains.data)
+if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chaings)
+if( ! is.na(args$include.input) ) tmp <- c(tmp, args$include.input)
+stopifnot(all(file.exists(tmp)))
 
-# other paths 
-indir.deepsequence_analyses_old <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI')
-file.db.sharing <- file.path(indir.deepsequencedata,"/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv")
-file.anonymisation.keys <- file.path(indir.deepsequence_analyses_old,'important_anonymisation_keys_210119.csv')
-file.phsc.input.samples.bf<- file.path(indir.deepsequence_analyses_old, '220331_RCCSUVRI_phscinput_samples_with_bf.rds' )
 
 ###
 # Main 
 ###
 
-# 
+# Create ouput directory
 if(! dir.exists(args$out.dir))
 {
         cat('Creating output directory\n')
@@ -63,10 +86,57 @@ if(! dir.exists(args$out.dir))
         cat('Warning: output directory already exists\n')
 }
 
-# copy phsc_input_samples from old directory to new:
+# load individuals in potential transmission pairs if given
+#__________________________________________________________
+
+if( ! is.na(args$file.path.chains) )
+{
+        tmp <- new.env()
+        load(file.path.chains.data, envir=tmp )
+        dchain <- as.data.table(tmp$dchain)
+        rm(tmp)
+        include_pairs_aid <- dchain[, unique(c(H1, H2))]
+}
+
+if( ! is.na(args$include.input))
+{
+        tmp <- readRDS(args$include.input)
+        include_rename_id <- unique(tmp$RENAME_ID)
+        rm(tmp)
+}
+
+# Load old phsc input samples, and subset as required
+#____________________________________________________
+
 phsc_samples <- readRDS(file.phsc.input.samples.bf)
+phsc_samples[, AID := gsub('-fq[0-9]+$', '', RENAME_ID)]
+phsc_samples[, INCLUDE := TRUE]
+
+if( ! is.na(args$file.path.chains))
+{
+        stopifnot( all(include_pairs_aid %in% phsc_samples$AID ))
+        phsc_samples[! AID %in% include_pairs_aid, INCLUDE := FALSE]
+}
+if( ! is.na(args$include.input))
+{
+        stopifnot( all(include_rename_id %in% phsc_samples$RENAME_ID ))
+        phsc_samples[ RENAME_ID %in% include_rename_id, INCLUDE := TRUE]
+}
+
 filename=file.path(args$out.dir, basename(file.phsc.input.samples.bf))
+if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
+{
+        tmp <- basename(filename)        
+        date <- format(Sys.Date(), '%y%m%d')
+        tmp <- gsub('^[0-9]+', date, tmp)
+        tmp <- gsub('\\.rds$', '_subset.rds', tmp)
+        filename <- file.path(dirname(filename), tmp)
+}
+
+phsc_samples <- phsc_samples[INCLUDE == TRUE]
+phsc_samples[, `:=` (RENAME_ID=NULL, INCLUDE=NULL)]
 saveRDS(phsc_samples, filename)
+
 
 # Make clusters.rds
 # ______________________________
