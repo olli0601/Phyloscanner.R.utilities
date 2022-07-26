@@ -167,6 +167,7 @@ case $STEP in
 
         pst)
         echo "----- Make plots -----"
+        conda activate phylostan
         Rscript $software_path/TSI_postprocessing_comparison.R \
         --relationship_dir $out_dir_rel \
         --TSI_dir $hivtsipath \
