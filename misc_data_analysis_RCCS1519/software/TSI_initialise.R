@@ -66,8 +66,7 @@ indir.deepsequence.analyses.old <- file.path(indir.deepsequence.xiaoyue, 'PANGEA
 file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_RCCSUVRI_phscinput_samples_with_bf.rds' )
 
 tmp <- c(indir.deepsequence.analyses.old,
-         file.phsc.input.samples.bf,
-         file.path.chains)
+         file.phsc.input.samples.bf)
 if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chaings)
 if( ! is.na(args$include.input) ) tmp <- c(tmp, args$include.input)
 stopifnot(all(file.exists(tmp)))
