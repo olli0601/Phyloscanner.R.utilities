@@ -27,7 +27,7 @@ software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/so
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/seroconverters3_alignXX"
-out_dir_rel="$out_dir_base/TODO" # TODO
+out_dir_rel="$out_dir_base/2022_07_23_phsc_phscrelationships_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_BFR83HXB2_LAI_IIIB_BRUK03455_phcb_T_rtt_001_rla_T_zla_T"
 controller="$software_path/$PBS_JOBNAME" #current script location
 CLUSIZE='50'
 DATE='2022-07-23'
@@ -145,6 +145,7 @@ case $STEP in
         echo "----- Run HIV-TSI -----"
         Rscript $software_path/TSI_run_predictions.R \
         --out_dir_base $out_dir_base \
+        --pkg_dir $software_path \
         --relationship_dir $out_dir_rel \
         --input_samples "$out_dir_base/220419_phscinput_samples.rds" \
         --TSI_dir $hivtsipath \
