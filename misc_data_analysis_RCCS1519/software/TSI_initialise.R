@@ -35,7 +35,7 @@ option_list <- list(
     "--transmission_chains",
     type = "character",
     default = NA_character_,
-    help = "Optional: absolute file path to `phscnetwork.rda` containing individuals in potential transmission pairs"
+    help = "Optional: absolute file path to `phscnetwork.rda` containing individuals in potential transmission pairs",
     dest = 'file.path.chains'
   ),
   optparse::make_option(
