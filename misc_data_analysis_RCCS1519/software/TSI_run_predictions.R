@@ -315,7 +315,7 @@ header <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=1,
                                       hpc.mem=args$memory,
                                       hpc.nproc=1, 
                                       hpc.q=NA, 
-                                      hpc.load=paste0('anaconda3/personal\nsource activate ', args$env_name)
+                                      hpc.load=paste0('anaconda3/personal\nsource activate ', args$env_name),
                                       hpc.array=nrow(dfiles))
 
 # Patch together and write 
