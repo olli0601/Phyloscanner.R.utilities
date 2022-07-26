@@ -123,7 +123,7 @@ case $STEP in
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
         --normRefFileName "$DEEPDATA/normalisation_ByPosition.csv" \
-        --outgroupName "REF_CON_H" \
+        --outgroupName "REF_B.FR.83.HXB2_LAI_IIIB_BRU_K03455" \
         --ratioBlacklistThreshold 0.01 \
         --distanceThreshold "0.02 0.05"   \
         --maxReadsPerHost 100 \
