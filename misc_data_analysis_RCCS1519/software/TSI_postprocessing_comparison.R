@@ -54,7 +54,6 @@ stopifnot(all(tmp))
 
 # Paths
 #________ 
-cat("...loading paths\n")
 
 usr <- Sys.info()[['user']]
 if (usr == 'andrea')
@@ -64,12 +63,13 @@ if (usr == 'andrea')
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
         tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
 
-        args$rel.dir <-  file.path(indir.deepsequence_analyses, 'seroconverters2/phscrel')
-        tmp <- dirname(args$rel.dir)
-        args$phsc.samples <- list.files(tmp, pattern='phscinput_samples', full.names=T)
+        # args$rel.dir <-  file.path(indir.deepsequence_analyses, 'seroconverters2/phscrel')
+        # tmp <- dirname(args$rel.dir)
+        # args$phsc.samples <- list.files(tmp, pattern='phscinput_samples', full.names=T)
 }else{
         # if HPC
         indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
+        indir.deepsequence_anayses.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
         tanya.rakai.dir <- file.path(args$TSI.dir, 'RakExample_Tanya')
 }
@@ -79,9 +79,9 @@ dtsi.all.path <- list.files(args$rel.dir, pattern='tsi', full.names=TRUE)
 dtsi.aggregated.path <- file.path(args$rel.dir, "aggregated_TSI_with_estimated_dates.csv")
 
 # Meta data
-indir.deepsequence_analyses_old <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI')
+indir.deepsequence_analyses_old <- file.path(indir.deepsequence_analyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
 file.db.sharing <- file.path(indir.deepsequencedata,"/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv")
-file.anonymisation.keys <- file.path(indir.deepsequence_analyses_old,'important_anonymisation_keys_210119.csv')
+file.anonymisation.keys <- file.path(indir.deepsequence_analyses.xiaoyue,'important_anonymisation_keys_210119.csv')
 file.seroconverters <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '220329_TSI_seroconverters.csv')
 
 tmp <-file.exists(indir.deepsequence_analyses_old, file.db.sharing,
@@ -89,8 +89,6 @@ tmp <-file.exists(indir.deepsequence_analyses_old, file.db.sharing,
 
 print(tmp)
 stopifnot(all(tmp))
-
-
 
 
 
@@ -332,3 +330,4 @@ ttl=gsub('_phsc_.*?$',' ',ttl)
 g <- plot.sero.predictions(dtsi, title=ttl)
 filename <- file.path(args$rel.dir, 'sero_predictions_vs_known.png')
 ggsave(filename,g, width=10, height=8)
+

@@ -22,6 +22,13 @@ option_list <- list(
     dest = 'rel.dir'
   ),
   optparse::make_option(
+    "--pkg_dir",
+    type = "character",
+    default = NA_character_,
+    help = "Absolute file path to package directory, used as long we don t build an R package [default]",
+    dest = 'pkg.dir'
+  ),
+  optparse::make_option(
     "--input_samples",
     type = "character",
     default = NA_character_, 
@@ -55,8 +62,7 @@ option_list <- list(
 )
 
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 
 ################
@@ -193,5 +199,13 @@ filename <- ifelse(sampling.dates.available,
 )
 cat('Saving aggregated estimates to:\n', filename, '\n')
 write.csv(dpreds, filename, quote=FALSE)
+
+
+# Queue next step
+#________________
+
+source(file.path(args$pkg.dir, "utility.R"))
+qsub.next.step(file=args$controller,
+               next_step='pst')
 
 cat('\n\n=====  end of script =====\n\n')

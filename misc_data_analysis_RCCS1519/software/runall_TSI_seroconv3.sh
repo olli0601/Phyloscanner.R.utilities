@@ -159,7 +159,17 @@ case $STEP in
         Rscript $software_path/TSI_estimate_dates.R \
         --out_dir_base $out_dir_base \
         --relationship_dir $out_dir_rel \
+        --pkg_dir $software_path \
         --date $DATE \
+        --input_samples "$out_dir_base/220419_phscinput_samples.rds" \
+        --controller $controller 
+        ;;
+
+        pst)
+        echo "----- Make plots -----"
+        Rscript $software_path/TSI_postprocessing_comparison.R \
+        --relationship_dir $out_dir_rel \
+        --TSI_dir $hivtsipath \
         --input_samples "$out_dir_base/220419_phscinput_samples.rds" 
         ;;
 
