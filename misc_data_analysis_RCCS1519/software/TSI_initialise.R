@@ -44,7 +44,7 @@ option_list <- list(
     default = NA_character_,
     help = "Optional: path to phscinput*rds file of individuals to include in the analysis (eg seroconverters)",
     dest = 'include.input'
-  ),
+  )
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
