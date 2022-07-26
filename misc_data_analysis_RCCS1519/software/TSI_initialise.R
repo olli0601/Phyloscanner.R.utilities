@@ -67,7 +67,7 @@ file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_
 
 tmp <- c(indir.deepsequence.analyses.old,
          file.phsc.input.samples.bf)
-if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chaings)
+if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chains)
 if( ! is.na(args$include.input) ) tmp <- c(tmp, args$include.input)
 stopifnot(all(file.exists(tmp)))
 
@@ -114,11 +114,13 @@ phsc_samples[, INCLUDE := TRUE]
 
 if( ! is.na(args$file.path.chains))
 {
+        cat('Subsetting to individuals in chains...\n')
         stopifnot( all(include_pairs_aid %in% phsc_samples$AID ))
         phsc_samples[! AID %in% include_pairs_aid, INCLUDE := FALSE]
 }
 if( ! is.na(args$include.input))
 {
+        cat('Including seroconverters samples... \n')
         stopifnot( all(include_rename_id %in% phsc_samples$RENAME_ID ))
         phsc_samples[ RENAME_ID %in% include_rename_id, INCLUDE := TRUE]
 }
@@ -134,7 +136,7 @@ if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
 }
 
 phsc_samples <- phsc_samples[INCLUDE == TRUE]
-phsc_samples[, `:=` (RENAME_ID=NULL, INCLUDE=NULL)]
+phsc_samples[, `:=` (AID=NULL, INCLUDE=NULL)]
 saveRDS(phsc_samples, filename)
 
 
