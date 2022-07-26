@@ -124,30 +124,27 @@ generate.sample <- function(maf) {
 get.sampling.dates <- function(phsc.samples = args$phsc.samples)
 {
         # Find files containing all sample collection dates 
-        if(user != 'andrea')
-        {
-                db.sharing.path.rccs <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
-                db.sharing.path.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
-        }else{
-                db.sharing.path.rccs <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
-                db.sharing.path.mrc <-  '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv' 
-        }
+        db.sharing.path.rccs <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
+        db.sharing.path.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
 
         tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc, phsc.samples)
         stopifnot(all(file.exists(tmp)))
 
+        # Convert PANGEA_IDs to RENAME_ID (sample IDs)
         dsamples <- setDT(readRDS(phsc.samples))
         dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
         dsamples[, PANGEA_ID:=gsub('^.*?_','',PANGEA_ID)]
 
+        # Get sampling dates 
         ddates <- setDT(read.csv(db.sharing.path.mrc))
         ddates <- unique(ddates[, .(pangea_id, visit_dt)])
         tmp <- fread(db.sharing.path.rccs)
-        tmp <- unique(tmp[, .(pangea_id, visit_dt)])
+        tmp <- unique(tmp[, .(pangea_id, visit_dt=as.character(visit_dt))])
         ddates <- rbind(tmp, ddates)
         ddates[, visit_dt:=as.Date(visit_dt, format="%Y-%m-%d")]
         stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
 
+        # Subset to pop of interest
         ddates <- merge(dsamples, ddates, all.x=TRUE,
                         by.x='PANGEA_ID', by.y='pangea_id')
         ddates[, PANGEA_ID := NULL]
@@ -183,21 +180,11 @@ write.mafs.and.cmds <-function(pty_idx)
 
         # Find BAM_PATH then get the MAF
         ph.input[, HXB2_PATH := gsub('.bam$','_BaseFreqs_WithHXB2.csv', basename(BAM_PATH))]
-        if(user == 'andrea')
-        {
-                fraser.dir <- '~/Documents/Box/ratmann_pangea_deepsequencedata/fraserupload-KoPKvNP7dgmnfnxE/well/fraser/DATA/processing'
-                hxb2files <- as.character(list.files(fraser.dir, recursive=TRUE, pattern='^.*?HXB2.csv', full.names = TRUE))
-                hxb2files <- data.table(FULL=hxb2files, BASE=basename(hxb2files))
-                ph.input <- merge(ph.input, hxb2files, by.x='HXB2_PATH', by.y='BASE', all.x=TRUE)
-                ph.input[, `:=`(HXB2_PATH=FULL, FULL=NULL)]
-                ph.input[, HXB2_EXISTS:=file.exists(HXB2_PATH) ]
-        }else{
-                ph.input[, HXB2_PATH := file.path(dirname(BAM_PATH), HXB2_PATH)]
-                ph.input[, HXB2_EXISTS := file.exists(HXB2_PATH)]
-        }
+        ph.input[, HXB2_PATH := file.path(dirname(BAM_PATH), HXB2_PATH)]
+        ph.input[, HXB2_EXISTS := file.exists(HXB2_PATH)]
         maf <- ph.input[, .(SAMPLE_ID, HXB2_PATH, HXB2_EXISTS)]
         maf_mat <- generate.sample(maf)
-        cat(maf_mat[2, 1:10], '\n')
+        # cat(maf_mat[2, 1:10], '\n')
 
         # If there are multiple sequences associated to one AID:
         # take sequence with associated BaseFreq file ("HXB2")
@@ -259,18 +246,17 @@ write.mafs.and.cmds <-function(pty_idx)
 # testing
 ###############
 
-if(0)
-{
-        args <- list(
-                out.dir='/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/2022_04_25_phsc_output',
-                rel.dir= "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/2022_04_25_phsc_phscrelationships_sd_42_blacklist_report_T_mr_1_og_A1UGANDA2007p191845JX236671_output_nexus_tree_T_rtt_0005_skip_summary_graph_T_sdt_1",
-                TSI.dir='~/git/HIV-phyloTSI-main',
-                env_name='hivphylotsi',
-                walltime = 3L,
-                memory = 2L,
-                controller=NA,
-                phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters2/210419_phscinput_samples.rds"
-        )
+if(0){
+  args <- list(
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    rel.dir= "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/2022_07_23_phsc_phscrelationships_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_BFR83HXB2_LAI_IIIB_BRUK03455_phcb_T_rtt_001_rla_T_zla_T",
+    phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/220419_phscinput_samples.rds",
+    TSI.dir="/rds/general/user/ab1820/home/git/HIV-phyloTSI",
+    date = '2022-07-23',
+    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh',
+    env_name = 'hivphylotsi'
+  )
 }
 
 ################
@@ -324,32 +310,22 @@ dfiles[, CMD := paste0(IDX, ')\n',CMD, ';;\n')]
 cmd <- paste0(dfiles$CMD, collapse='\n')
 cmd <- paste0('case $PBS_ARRAY_INDEX in\n', cmd, 'esac\n')
 
-cmd <- paste0('\n module load anaconda3/personal \n',
-              'source activate ',args$env_name, '\n',
-              cmd)
-
-#make header
-header <- paste0(
-                 "#!/bin/sh \n",
-                 "#PBS -l walltime=",  args$walltime,":00:00,pcput=",args$walltime - 1,":50:00 \n",
-                 "#PBS -l select=1:ncpus=1:mem=",  args$memory,  "gb \n",
-                 "#PBS -j oe \n",
-                 "#PBS -J 1-", dfiles[, max(IDX)] ,"\n"
-)
+header <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=1, 
+                                      hpc.walltime=args$walltime,
+                                      hpc.mem=args$memory,
+                                      hpc.nproc=1, 
+                                      hpc.q=dfiles[, length(CMD)],
+                                      hpc.load=paste0('anaconda3/personal\nsource activate ', args$env_name)
+                                      hpc.array=)
 
 # Patch together and write 
-cmd <- paste0(header, cmd)
-datetime <- paste(strsplit(date(), split = ' ')[[1]], collapse = '_', sep = '')
-datetime <- gsub(':','',datetime)
-outfile <- file.path(args$out.dir.work, paste0('phylo_tsi_',datetime,'.sh'))
-cat(cmd, file=outfile)
+cmd <- paste0(header, cmd, sep='\n')
 
-# Run the command
-cmd <- paste("cd ",dirname(outfile),'\n',"qsub ", outfile)
-cat(cmd)
-ids <- system(cmd, intern = TRUE)
+djob <- data.table(JOB_ID=1, CMD=cmd)
+ids <- djob[, list(ID=.store.and.submit(.SD, prefix='tsi')), by=JOB_ID, .SDcols=names(djob)]
 
-
+# queue the next step
 qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='dti')
+
