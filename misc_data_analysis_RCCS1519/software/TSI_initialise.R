@@ -44,7 +44,7 @@ option_list <- list(
     default = NA_character_,
     help = "Optional: path to phscinput*rds file of individuals to include in the analysis (eg seroconverters)",
     dest = 'include.input'
-  ),
+  )
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
@@ -57,8 +57,9 @@ if (usr == 'andrea')
         indir.deepsequence.xiaoyue <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live'
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
 }else{
+        args$pkg.dir <- '~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/'
         indir.deepsequence.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-        indir.deepsequence.analyses.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
+        indir.deepsequence.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
 }
 indir.deepsequence.analyses.old <- file.path(indir.deepsequence.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
@@ -66,7 +67,7 @@ file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_
 
 tmp <- c(indir.deepsequence.analyses.old,
          file.phsc.input.samples.bf,
-         file.path.chains.data)
+         file.path.chains)
 if( ! is.na(args$file.path.chains) ) tmp <- c(tmp, args$file.path.chaings)
 if( ! is.na(args$include.input) ) tmp <- c(tmp, args$include.input)
 stopifnot(all(file.exists(tmp)))
@@ -92,7 +93,7 @@ if(! dir.exists(args$out.dir))
 if( ! is.na(args$file.path.chains) )
 {
         tmp <- new.env()
-        load(file.path.chains.data, envir=tmp )
+        load(args$file.path.chains, envir=tmp )
         dchain <- as.data.table(tmp$dchain)
         rm(tmp)
         include_pairs_aid <- dchain[, unique(c(H1, H2))]
@@ -160,11 +161,11 @@ filename=file.path(args$out.dir,
 setkey(dclus, IDCLU)
 saveRDS(dclus, filename)
 
-if(file.exists(args$controller))
-{
-        cat('\nTry to set up next step step:\n')
 
-        cmd <- paste0('cd ', dirname(args$controller),'\n')
-        cmd <- paste0(cmd, 'qsub -v STEP="ali" ',args$controller, '\n')
-        cat(system(cmd), TRUE)
-}
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
+qsub.next.step(file=args$controller,
+               next_step='ali', 
+               res=1, 
+               redo=0
+)
