@@ -55,8 +55,8 @@ option_list <- list(
   ),
   optparse::make_option(
     "--memory",
-    type = "integer",
-    default = 2L,
+    type = "character",
+    default = "2gb",
     help = "Job memory (GB) [default]",
     dest = 'memory'
   ),
