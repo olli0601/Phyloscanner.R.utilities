@@ -58,7 +58,7 @@ if (usr == 'andrea')
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
 }else{
         indir.deepsequence.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-        indir.deepsequence.analyses.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
+        indir.deepsequence.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
 }
 indir.deepsequence.analyses.old <- file.path(indir.deepsequence.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
