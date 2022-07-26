@@ -57,6 +57,7 @@ if (usr == 'andrea')
         indir.deepsequence.xiaoyue <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live'
         indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
 }else{
+        args$pkg.dir <- '~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/'
         indir.deepsequence.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
         indir.deepsequence.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
@@ -160,11 +161,11 @@ filename=file.path(args$out.dir,
 setkey(dclus, IDCLU)
 saveRDS(dclus, filename)
 
-if(file.exists(args$controller))
-{
-        cat('\nTry to set up next step step:\n')
 
-        cmd <- paste0('cd ', dirname(args$controller),'\n')
-        cmd <- paste0(cmd, 'qsub -v STEP="ali" ',args$controller, '\n')
-        cat(system(cmd), TRUE)
-}
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
+qsub.next.step(file=args$controller,
+               next_step='ali', 
+               res=1, 
+               redo=0
+)
