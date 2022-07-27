@@ -174,7 +174,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
     # Copy intermediary results back to to direcotry
     cmd	<- paste0(cmd, 'echo Performing realignment...\n')
     cmd <- paste0(cmd, 'for file in AlignedReads*.fasta; do\n', 
-                 '\t cp "$file" "', out.dir2, '/${file//AlignedReads/',run.id,'_}"\n'
+                 '\t cp "$file" "', out.dir2, '/${file//AlignedReads/',run.id,'_}"\n',
                  '\t', gsub('"','', prog.mafft) , ' "$file" > "${file//.fasta/_v2.fasta}" \n done \n')
   }
 
