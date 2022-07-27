@@ -147,7 +147,7 @@ option_list <- list(
     "--controller",
     type = "character",
     default = NA_character_, 
-    help = "Path to sh script irecting the full analysis",
+    help = "Path to sh script irecting the full anlysis",
     dest = 'controller'
   ),
   optparse::make_option(
@@ -158,7 +158,6 @@ option_list <- list(
     dest = "walltime_idx"
   )
 )
-
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 # stop if arguments are not provided:
@@ -222,7 +221,7 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   ) -> dlogs
   
   tmp <- dlogs[ is.na(LOG), .(W_FROM, PTY_RUN, OUT2) ]
-  stopifnot(tmp[, all(is.na(OUT2))])
+  # stopifnot(tmp[, all(is.na(OUT2))])
   tmp$OUT2 <- NULL
   
   merge(DT, tmp, by=c('W_FROM', 'PTY_RUN'))
@@ -286,8 +285,6 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   cmd
 }
 
-
-
 #
 # test
 #
@@ -303,8 +300,8 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-07-23',
-    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    date = '2022-07-26',
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
     reference = 'ConsensusGenomes.fasta',
@@ -321,9 +318,9 @@ source(file.path(args$pkg.dir, "utility.R"))
 
 # I can run at most 1000 simultaneous jobs on the short q.
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 1 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=4900),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "63gb",hpc.q = NA, max.per.run=4900)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "2gb",hpc.q = NA, max.per.run=1000)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
@@ -351,7 +348,6 @@ infile.runs <- file.path(
   )
 )
 stopifnot(file.exists(infile.runs))
-
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
@@ -535,7 +531,7 @@ if(file.exists(cmds.path))
 
 # Now check which outputs are not ready yet and need re-running
 cols <- c('OUT1', 'OUT2')
-pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols=names(pty.c) %like% 'REGEX']
+pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols= names(pty.c) %like% 'REGEX']
 
 pty.c[, cat(sum(!is.na(OUT2)),
             '(', .percent(mean(!is.na(OUT2))),')', 
@@ -544,13 +540,12 @@ pty.c[, cat(sum(!is.na(OUT1)),
             '(', .percent(mean(!is.na(OUT1))),')', 
             'of intermediary outputs were generated in the previous runs\n')]
 
+# Select jobs with missing final outcome.
 # remove problematic windows as informed by the shell scripts output
+pty.c <- pty.c[ is.na(OUT2)]
 pty.c <- .remove_problematic_windows(pty.c)
 
-# Select jobs with missing final outcome.
 # if intermediary output is there, change CMD.
-# IT SEEMS LIKE V1 are not copied back to dir without V2?
-pty.c <- pty.c[ is.na(OUT2)]
 if(pty.c[ !is.na(OUT1), .N > 0])
 {
   pty.c[ ! is.na(OUT1) ,  .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
