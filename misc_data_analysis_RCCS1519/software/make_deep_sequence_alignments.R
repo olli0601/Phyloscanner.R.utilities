@@ -583,7 +583,6 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
-.store.and.submit(, prefix='readali')
 ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
