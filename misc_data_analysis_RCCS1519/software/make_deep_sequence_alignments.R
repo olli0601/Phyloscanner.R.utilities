@@ -320,7 +320,7 @@ source(file.path(args$pkg.dir, "utility.R"))
 list(
   `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
   `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "2gb",hpc.q = NA, max.per.run=1000)
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "2gb",hpc.q = NA, max.per.run=500)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
@@ -578,6 +578,15 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
+if(args$walltime_idx == 3){
+  # Assign one every 3 jobs to pqeelab 
+  djob[, Q := {
+    idx <- seq(3, .N, 3)
+    z <- rep('', .N)
+    z[idx] <- 'pqeelab'
+    z
+    }]
+}
 ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
