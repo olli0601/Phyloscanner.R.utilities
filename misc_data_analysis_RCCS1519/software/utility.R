@@ -1,5 +1,3 @@
-
-
 #' @export
 #' @title Generate bash commands for multiple phyloscanner runs
 #' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
@@ -68,7 +66,7 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 #' @title Generate bash command for a single phyloscanner run
 #' @param pty.args List of phyloscanner input variables. See examples.
 #' @param file.input File name of the file that contains the list of bam files, reference files, and potentially aliases
-#' @param file.patient File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit. 
+#' @param file.patent File name of the file that contains the list of unique individuals/units to which the bam files correspond. Multiple bam files are allowed per individual/unit. 
 #' @return Character string of phyloscanner commands.
 #' @description This function generates bash commands for a single phyloscanner run, that can be called via 'system' in R, or written to file to run on a UNIX system.
 #' @example example/ex.cmd.phyloscanner.one.R    
@@ -467,10 +465,16 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
   outfile <- file.path(args$out.dir.work, outfile)
   cat(DT$CMD, file = outfile)
   
+  # if Q exists, submit to a chosen queue
+  cmd_q <- ifelse( is.null(DT$Q) | DT$Q== '', 
+                   yes='',
+                   no= paste0('-q ', DT$Q, ' '))
+  
   # change to work directory and submit to queue
-  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
+  cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", cmd_q, outfile)
   cat(cmd, '\n')
   x <- system(cmd, intern = TRUE)
   cat(x, '\n')
   as.character(x)
 }
+
