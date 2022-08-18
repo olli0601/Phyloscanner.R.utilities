@@ -229,6 +229,7 @@ if(0){
   )
 }
 
+
 # shouldn't these be better passed on
 
 if(is.null(args$distance.threshold)){
@@ -256,6 +257,9 @@ args$date <- gsub('-','_',args$date)
 args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
+
+# clean work dir
+move.logs(args$out.dir.work)
 
 print(args)
 
@@ -287,6 +291,7 @@ out.dir.analyse.trees <- gsub('_relaxed_ancestry','_rla',out.dir.analyse.trees)
 out.dir.analyse.trees <- gsub('_zero_length_adjustment','_zla',out.dir.analyse.trees)
 
 print(out.dir.analyse.trees)
+out.dir.analyse.trees.tsi <- gsub('phsc_phscrelationships_','_phsc_phscTSI_',out.dir.analyse.trees)
 dir.create(out.dir.analyse.trees)
 
 # Source functions
@@ -360,11 +365,18 @@ names(df) <- toupper(names(df))
 valid.input.args <- cmd.phyloscanner.analyse.trees.valid.args(args$script)
 cmds <- vector('list',nrow(df))
 
+# need to submit one job for pair analyises and one for TSI's 
+# the only difference is concerns the grouping of the tips:
+# and need an extra out dir....
 djob <- df[, .(CMD=.write.job(.SD)), by='RUN', .SDcols=names(df)]
+
+control$output.dir = out.dir.analyse.trees.tsi
+control$tip.regex = '^(.*)_read_([0-9]+)_count_([0-9]+)$'
+djob1 <- df[, .(CMD=.write.job(.SD)), by='RUN', .SDcols=names(df)]
 
 
 # Make headers
-hpc.load        <- paste0("module load anaconda3/personal \n source activate ", args$env_name)
+hpc.load    <- paste0("module load anaconda3/personal \n source activate ", args$env_name)
 hpc.select	<- 1
 hpc.nproc	<- 1
 hpc.walltime	<- 23
@@ -382,20 +394,28 @@ pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select = hpc.select,
 # cat(pbshead)
 
 # Collapse everything into an array job
-djob[, CASE_ID := 1:.N ]
-cmd <- djob[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
-cmd <- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
-                         paste0(CASE, collapse = ''),
-                         'esac')]
-cmd <- paste(pbshead, cmd, sep = '\n')
+.f <- function(DT)
+{
+  # job <- copy(djob)
+  job <- copy(DT)
+  job[, CASE_ID := 1:.N ]
+  cmd <- job[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+  cmd <- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+                           paste0(CASE, collapse = ''),
+                           'esac')]
+  cmd <- paste(pbshead, cmd, sep = '\n')
+  
+  # submit
+  job <- data.table(JOB_ID = 1, CMD = cmd)
+  ids <- .store.and.submit(job, prefix='phsc')
+  ids
+}
 
+# submit for both type of PHSC analyses + store ids
+ids <- .f(djob)
+ids <- c(ids, .f(djob1))
 
-# submit
-djob1 <- data.table(JOB_ID = 1, CMD = cmd)
-ids <- .store.and.submit(djob1, prefix='phsc')
-
-# qsub next step in the analysis: time sinfe infection estimation
+# qsub next step in the analysis: time since infection estimation
 qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='tsi')
-
