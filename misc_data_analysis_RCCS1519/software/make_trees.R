@@ -179,14 +179,14 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 #
 if(0){
   args <- list(
-    out.dir="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/",
     pkg.dir="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     iqtree_method="GTR+F+R6",
     env_name = 'phylostan',
-    date = '2022-07-23',
+    date = '2022-07-26',
     seed = 42,
     walltime_idx=1,
-    controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh"
+    controller="/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs.sh"
   )
 }
 
@@ -196,10 +196,9 @@ source(file.path(args$pkg.dir, "utility.R"))
 # 
 # Chose PBS specifications according to PBS index
 # Idea is that this script can be run multiple times with increasing res reqs
-
 list(
   `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 23, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=475),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "40gb" ,hpc.q = NA, max.per.run=950),
   `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
 ) -> pbs_headers
 
@@ -285,8 +284,9 @@ if(file.exists(cmds.path))
 }
 
 infiles[,FO_EXIST:=file.exists(FO_NAME)]
+infiles[, mean(FO_EXIST)]
+infiles[, sum(!FO_EXIST)]
 infiles <- infiles[FO_EXIST==FALSE]
-
 
 if( nrow(infiles) == 0 )
 {
@@ -322,7 +322,6 @@ ids <- djob2[, list(ID=.store.and.submit(.SD, prefix='srx')), by=JOB_ID, .SDcols
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')
 
-
 # qsub alignment step again, to check whether everything has run...
 qsub.next.step(file=args$controller,
                ids=ids, 
@@ -330,3 +329,4 @@ qsub.next.step(file=args$controller,
                res=args$walltime_idx + 1, 
                redo=1
 )
+
