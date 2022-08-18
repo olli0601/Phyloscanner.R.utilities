@@ -318,9 +318,10 @@ source(file.path(args$pkg.dir, "utility.R"))
 
 # I can run at most 1000 simultaneous jobs on the short q.
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "2gb" ,hpc.q = NA, max.per.run=1000),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "2gb",hpc.q = NA, max.per.run=500)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb",hpc.q = NA, max.per.run=1000),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=500),
+  `4`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=500)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
@@ -395,7 +396,6 @@ if(file.exists(cmds.path))
     recursive = FALSE,
     copy.mode = TRUE
   )
-  
   
   # Set consensus sequences.
   # (default consensus/reference for tsi and pair analyses if no arg is passed)
@@ -533,6 +533,7 @@ if(file.exists(cmds.path))
 cols <- c('OUT1', 'OUT2')
 pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols= names(pty.c) %like% 'REGEX']
 
+pty.c[, sum(is.na(OUT2))]
 pty.c[, cat(sum(!is.na(OUT2)),
             '(', .percent(mean(!is.na(OUT2))),')', 
             'of desired outputs were generated in the previous runs\n')]
@@ -587,6 +588,7 @@ if(args$walltime_idx == 3){
     z
     }]
 }
+
 ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
 cat('Submitted job ids are:', ids, '...\n')

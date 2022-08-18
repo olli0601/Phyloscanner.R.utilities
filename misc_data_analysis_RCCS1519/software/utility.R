@@ -141,15 +141,15 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
     }
   }
 
+  run.id	<- gsub('_input.csv','',basename(file.input))
   out.dir2<- out.dir	
   if(!is.na(no.trees))
   {
-    out.dir2<- file.path(out.dir,paste0(run.id,'_trees'))
+    out.dir2 <- file.path(out.dir,paste0(run.id,'_trees'))
     cmd		<- paste(cmd,'\nmkdir -p ',out.dir2)		
   }
 
   cmd		<- paste(cmd, '\n')
-  run.id	<- gsub('_input.csv','',basename(file.input))
   #	process RAxML files
   if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
     cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',run.id,'_}"\ndone\n',sep='')
@@ -477,4 +477,3 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
   cat(x, '\n')
   as.character(x)
 }
-
