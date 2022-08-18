@@ -241,10 +241,6 @@ if(dir.exists(args$prog.dir))
         args$script <- file.path(args$prog.dir, 'phyloscanner_analyse_trees.R')
 }
 
-#
-# Add constants that should not be changed by the user
-#
-max.per.run <- 4900
 
 # Set default output directories relative to out.dirx
 args$date <- gsub('-','_',args$date)
@@ -257,6 +253,10 @@ args$date <- gsub('-','_',args$date)
 args$out.dir.data <- .f('_phsc_input')
 args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
+
+
+# Source functions
+source(file.path(args$pkg.dir, "utility.R"))
 
 # clean work dir
 move.logs(args$out.dir.work)
@@ -295,8 +295,6 @@ out.dir.analyse.trees.tsi <- gsub('phsc_phscrelationships_','_phsc_phscTSI_',out
 dir.create(out.dir.analyse.trees)
 dir.create(out.dir.analyse.trees.tsi)
 
-# Source functions
-source(file.path(args$pkg.dir, "utility.R"))
 
 #	Set phyloscanner variables	
 control	<- list()
@@ -395,7 +393,7 @@ pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select = hpc.select,
 # cat(pbshead)
 
 # Collapse everything into an array job
-.f <- function(DT)
+.f <- function(DT, pref)
 {
   # job <- copy(djob)
   job <- copy(DT)
@@ -408,13 +406,13 @@ pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select = hpc.select,
   
   # submit
   job <- data.table(JOB_ID = 1, CMD = cmd)
-  ids <- .store.and.submit(job, prefix='phsc')
+  ids <- .store.and.submit(job, prefix=pref)
   ids
 }
 
 # submit for both type of PHSC analyses + store ids
-ids <- .f(djob)
-ids <- c(ids, .f(djob1))
+ids <- .f(djob, pref='phsc_pairs')
+ids <- c(ids, .f(djob1, pref='phsc_tsi'))
 
 # qsub next step in the analysis: time since infection estimation
 qsub.next.step(file=args$controller,
