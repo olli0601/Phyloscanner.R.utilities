@@ -51,6 +51,7 @@ case $STEP in
         net)
         echo "---- initialise analysis ----"
         Rscript $software_path/TSI_initialise.R \
+        --controller $controller \
         --out_dir_base $out_dir_base
         ;;
 
