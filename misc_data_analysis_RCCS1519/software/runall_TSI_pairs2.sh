@@ -52,6 +52,7 @@ case $STEP in
         echo "---- initialise analysis ----"
         Rscript $software_path/TSI_initialise.R \
         --controller $controller \
+        --include_least_recent_only TRUE \
         --out_dir_base $out_dir_base
         ;;
 
