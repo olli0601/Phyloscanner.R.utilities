@@ -147,7 +147,7 @@ option_list <- list(
     "--controller",
     type = "character",
     default = NA_character_, 
-    help = "Path to sh script irecting the full anlysis",
+    help = "Path to sh script irecting the full anysis",
     dest = 'controller'
   ),
   optparse::make_option(
@@ -318,10 +318,10 @@ source(file.path(args$pkg.dir, "utility.R"))
 
 # I can run at most 1000 simultaneous jobs on the short q.
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb",hpc.q = NA, max.per.run=1000),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=500),
-  `4`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=500)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7 , hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
+  # `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=500),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=500)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')

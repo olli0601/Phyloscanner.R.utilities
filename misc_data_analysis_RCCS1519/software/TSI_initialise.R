@@ -44,10 +44,61 @@ option_list <- list(
     default = NA_character_,
     help = "Optional: path to phscinput*rds file of individuals to include in the analysis (eg seroconverters)",
     dest = 'include.input'
+  ),
+  optparse::make_option(
+    "--include_most_recent_only",
+    type = "logical",
+    default = FALSE,
+    help = "Optional: Logical, indicating whether we want to only include the most recent blood sample for each individual, or not",
+    dest = 'include.most.recent.only'
   )
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+
+###
+# Helpers
+###
+
+get.sampling.dates <- function(phsc.samples = args$phsc.samples)
+{
+        # Find files containing all sample collection dates 
+        db.sharing.path.rccs <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
+        db.sharing.path.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
+
+        tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc, phsc.samples)
+        stopifnot(all(file.exists(tmp)))
+
+        # Convert PANGEA_IDs to RENAME_ID (sample IDs)
+        dsamples <- setDT(readRDS(phsc.samples))
+        dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
+        dsamples[, PANGEA_ID:=gsub('^.*?_','',PANGEA_ID)]
+
+        # Get sampling dates 
+        ddates <- setDT(read.csv(db.sharing.path.mrc))
+        ddates <- unique(ddates[, .(pangea_id, visit_dt)])
+        tmp <- fread(db.sharing.path.rccs)
+        tmp <- unique(tmp[, .(pangea_id, visit_dt=as.character(visit_dt))])
+        ddates <- rbind(tmp, ddates)
+        ddates[, visit_dt:=as.Date(visit_dt, format="%Y-%m-%d")]
+        stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
+
+        # Subset to pop of interest
+        ddates <- merge(dsamples, ddates, all.x=TRUE,
+                        by.x='PANGEA_ID', by.y='pangea_id')
+        ddates[, PANGEA_ID := NULL]
+        
+        # Order based on sampling dates 
+        setnames(ddates, 'RENAME_ID', 'SAMPLE_ID')
+        ddates[, AID := gsub('-fq.*?$','', SAMPLE_ID)]
+        setorder(ddates, AID, -visit_dt)
+
+        return(ddates)
+}
+
+###
+# Paths
+###
 
 usr <- Sys.info()[['user']]
 if (usr == 'andrea')
@@ -62,8 +113,9 @@ if (usr == 'andrea')
         indir.deepsequence.xiaoyue <- "/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live"
         indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
 }
+
 indir.deepsequence.analyses.old <- file.path(indir.deepsequence.xiaoyue, 'PANGEA2_RCCS1519_UVRI')
-file.phsc.input.samples.bf<- file.path(indir.deepsequence.analyses.old, '220331_RCCSUVRI_phscinput_samples_with_bf.rds' )
+file.phsc.input.samples.bf <- file.path(indir.deepsequence.analyses.old, '220331_RCCSUVRI_phscinput_samples_with_bf.rds' )
 
 tmp <- c(indir.deepsequence.analyses.old,
          file.phsc.input.samples.bf)
@@ -105,12 +157,24 @@ if( ! is.na(args$include.input))
         rm(tmp)
 }
 
+
+
 # Load old phsc input samples, and subset as required
 #____________________________________________________
 
 phsc_samples <- readRDS(file.phsc.input.samples.bf)
 phsc_samples[, AID := gsub('-fq[0-9]+$', '', RENAME_ID)]
 phsc_samples[, INCLUDE := TRUE]
+
+if( args$include.most.recent.only)
+{
+        cat('Only use most recently collected sample per individual...\n')
+        ddates <- get.sampling.dates(phsc.samples=file.phsc.input.samples.bf)
+        setorder(ddates, AID, -visit_dt)
+        .f <- function(x) x[[1]]
+        ddates <- ddates[, lapply(.SD, .f), by='AID']
+        phsc_samples[ ! RENAME_ID %in% ddates$SAMPLE_ID, INCLUDE:=FALSE ]
+}
 
 if( ! is.na(args$file.path.chains))
 {
