@@ -36,7 +36,7 @@ out_dir_rel="$out_dir_base/TODO"
 controller="$software_path/$PBS_JOBNAME" #current script location
 inputsamples="$out_dir_base/#TODO"
 CLUSIZE='50'
-DATE='2022-07-26'
+DATE='2022-08-22'
 
 echo "Check that DATE, CLUSIZE, out_dir_rel and inputsamples are correctly specified"
 

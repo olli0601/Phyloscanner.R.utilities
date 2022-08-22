@@ -357,8 +357,9 @@ args$date <- gsub('-','_',args$date)
 {
   dir <- file.path(args$out.dir, paste0(args$date, x))
   
-  # If date has been passed as par, check that everything exists...
-  cnd <-  as.Date(args$date, format='%Y_%m_%d') == as.character(Sys.Date()) 
+  # If date has been passed as par, (ie. args$date != today's date) 
+  # check that everything exists...
+  cnd <-  as.Date(args$date, format='%Y_%m_%d') != as.character(Sys.Date()) 
   
   if(!dir.exists(dir))
   {
@@ -598,5 +599,5 @@ qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='ali', 
                res=args$walltime_idx + 1, 
-               redo=1
+               redo=0
 )
