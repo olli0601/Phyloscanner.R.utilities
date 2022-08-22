@@ -46,11 +46,11 @@ option_list <- list(
     dest = 'include.input'
   ),
   optparse::make_option(
-    "--include_most_recent_only",
+    "--include_least_recent_only",
     type = "logical",
     default = FALSE,
     help = "Optional: Logical, indicating whether we want to only include the most recent blood sample for each individual, or not",
-    dest = 'include.most.recent.only'
+    dest = 'include.least.recent.only'
   )
 )
 
@@ -166,11 +166,11 @@ phsc_samples <- readRDS(file.phsc.input.samples.bf)
 phsc_samples[, AID := gsub('-fq[0-9]+$', '', RENAME_ID)]
 phsc_samples[, INCLUDE := TRUE]
 
-if( args$include.most.recent.only)
+if( args$include.least.recent.only)
 {
-        cat('Only use most recently collected sample per individual...\n')
+        cat('Only use least recently/first collected sample per individual...\n')
         ddates <- get.sampling.dates(phsc.samples=file.phsc.input.samples.bf)
-        setorder(ddates, AID, -visit_dt)
+        setorder(ddates, AID, visit_dt)
         .f <- function(x) x[[1]]
         ddates <- ddates[, lapply(.SD, .f), by='AID']
         phsc_samples[ ! RENAME_ID %in% ddates$SAMPLE_ID, INCLUDE:=FALSE ]
