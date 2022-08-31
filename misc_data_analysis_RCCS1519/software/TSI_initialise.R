@@ -189,7 +189,6 @@ if( ! is.na(args$include.input))
         phsc_samples[ RENAME_ID %in% include_rename_id, INCLUDE := TRUE]
 }
 
-filename=file.path(args$out.dir, basename(file.phsc.input.samples.bf))
 if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
 {
         tmp <- basename(filename)        
@@ -201,14 +200,16 @@ if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
 
 phsc_samples <- phsc_samples[INCLUDE == TRUE]
 phsc_samples[, `:=` (AID=NULL, INCLUDE=NULL)]
+filename=file.path(args$out.dir, basename(file.phsc.input.samples.bf))
 saveRDS(phsc_samples, filename)
 
 
 # Make clusters.rds
 # ______________________________
 set.seed(42)
-NCLU = phsc_samples[, floor(uniqueN(UNIT_ID) / args$cluster_size) ]
-dclus <- phsc_samples[, list(ID=sample(UNIT_ID), IDCLU= 1:NCLU)]
+idx <- unique(phsc_samples$UNIT_ID)
+NCLU <- phsc_samples[, floor(length(idx) / args$cluster_size) ]
+dclus <- phsc_samples[, list(ID=sample(idx), IDCLU=1:NCLU)]
 dclus[, CLU_SIZE:=.N, by='IDCLU']
 setkey(dclus, IDCLU)
 filename=file.path(args$out.dir, 'potential_network', 'clusters.rds')
@@ -221,9 +222,9 @@ suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
 dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
 dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
 setnames(dclus, 'ID', 'UNIT_ID')
+setkey(dclus, IDCLU)
 filename=file.path(args$out.dir,
                    paste0('phscinput_runs_clusize_', args$cluster_size,'_ncontrol_0.rds'))
-setkey(dclus, IDCLU)
 saveRDS(dclus, filename)
 
 
