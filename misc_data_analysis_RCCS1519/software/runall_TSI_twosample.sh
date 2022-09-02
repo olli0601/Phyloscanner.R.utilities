@@ -10,7 +10,7 @@
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
+        echo 'qsub -v STEP="xxx" runall_TSI_twosample.sh'
         exit 1
 fi
 
