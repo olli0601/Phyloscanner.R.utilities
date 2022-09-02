@@ -53,7 +53,7 @@ option_list <- list(
     dest = 'include.least.recent.only'
   ),
   optparse::make_option(
-    "--include_least_recent_only",
+    "--include_twosample_individuals_only",
     type = "logical",
     default = FALSE,
     help = "Optional: Logical, indicating whether we want to only include participants with exactly two collected samples(test)", 
