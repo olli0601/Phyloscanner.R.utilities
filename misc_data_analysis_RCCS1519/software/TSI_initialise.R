@@ -51,6 +51,13 @@ option_list <- list(
     default = FALSE,
     help = "Optional: Logical, indicating whether we want to only include the most recent blood sample for each individual, or not",
     dest = 'include.least.recent.only'
+  ),
+  optparse::make_option(
+    "--include_least_recent_only",
+    type = "logical",
+    default = FALSE,
+    help = "Optional: Logical, indicating whether we want to only include participants with exactly two collected samples(test)", 
+    dest = 'include.twosample.individuals.only'
   )
 )
 
@@ -63,8 +70,9 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 get.sampling.dates <- function(phsc.samples = args$phsc.samples)
 {
         # Find files containing all sample collection dates 
-        db.sharing.path.rccs <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv'
-        db.sharing.path.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv'
+        .f <- function(x) file.path(indir.deepsequencedata, x)
+        db.sharing.path.rccs <- .f('PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+        db.sharing.path.mrc  <- .f('PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
 
         tmp <- c(db.sharing.path.rccs,db.sharing.path.mrc, phsc.samples)
         stopifnot(all(file.exists(tmp)))
@@ -182,6 +190,7 @@ if( ! is.na(args$file.path.chains))
         stopifnot( all(include_pairs_aid %in% phsc_samples$AID ))
         phsc_samples[! AID %in% include_pairs_aid, INCLUDE := FALSE]
 }
+
 if( ! is.na(args$include.input))
 {
         cat('Including seroconverters samples... \n')
@@ -189,7 +198,6 @@ if( ! is.na(args$include.input))
         phsc_samples[ RENAME_ID %in% include_rename_id, INCLUDE := TRUE]
 }
 
-filename=file.path(args$out.dir, basename(file.phsc.input.samples.bf))
 if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
 {
         tmp <- basename(filename)        
@@ -199,18 +207,67 @@ if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
         filename <- file.path(dirname(filename), tmp)
 }
 
+if( args$include.twosample.individuals.only)
+{
+        # Extract individuals with only two samples, and differing visit dates
+        idx <- phsc_samples[, uniqueN(RENAME_ID) == 2, by='AID']
+        idx <- idx[V1==TRUE, AID]
+        phsc_samples[! AID %in% idx, INCLUDE := FALSE]
+
+        # Get sampling dates, so we can make sure the samples were taken at different dates. 
+        ddates <- get.sampling.dates(phsc.samples=file.phsc.input.samples.bf)
+        tmp <- phsc_samples[INCLUDE == TRUE]
+        tmp <- merge(tmp, ddates[,.(RENAME_ID=SAMPLE_ID, visit_dt)], by='RENAME_ID')
+        setkey(tmp, AID, visit_dt)
+
+        idx <- tmp[, visit_dt[2] - visit_dt[1] == 0, by='AID'][V1 == TRUE, AID]
+        tmp <- tmp[! AID %in% idx, ]
+
+        tmp <- rbind(
+                tmp[, lapply(.SD, function(x) x[1]) ,  by='AID'][1:100],
+                tmp[, lapply(.SD, function(x) x[2]) ,  by='AID'][1:100]
+        ) 
+
+        tmp[101:200,UNIT_ID := paste0(UNIT_ID, '+')]
+
+        phsc_samples <- copy(tmp)
+}
+
 phsc_samples <- phsc_samples[INCLUDE == TRUE]
 phsc_samples[, `:=` (AID=NULL, INCLUDE=NULL)]
+filename=file.path(args$out.dir, basename(file.phsc.input.samples.bf))
 saveRDS(phsc_samples, filename)
 
 
 # Make clusters.rds
 # ______________________________
 set.seed(42)
-NCLU = phsc_samples[, floor(uniqueN(UNIT_ID) / args$cluster_size) ]
-dclus <- phsc_samples[, list(ID=sample(UNIT_ID), IDCLU= 1:NCLU)]
-dclus[, CLU_SIZE:=.N, by='IDCLU']
-setkey(dclus, IDCLU)
+
+make.clusters <- function(DT)
+{
+        idx <- unique(DT$UNIT_ID)
+        NCLU <- DT[, floor(length(idx) / args$cluster_size) ]
+        dclus <- DT[, list(ID=sample(idx), IDCLU=1:NCLU)]
+        dclus[, CLU_SIZE:=.N, by='IDCLU']
+        setkey(dclus, IDCLU)
+
+        if(args$include.twosample.individuals.only)
+        {
+                cat('Samples from same individual run in different clusters\n',
+                    '\tCheck whether this done on purpose.\n')
+                dclus1 <- dclus[, list(
+                                       ID = paste0(ID, '+'),
+                                       IDCLU = IDCLU + max(IDCLU),
+                                       CLU_SIZE = CLU_SIZE
+                                       )]
+                dclus <- rbind(dclus, dclus1)
+        }
+                dclus
+}
+
+dclus <- make.clusters(phsc_samples[! UNIT_ID %like% '\\+', ])
+
+
 filename=file.path(args$out.dir, 'potential_network', 'clusters.rds')
 saveRDS(dclus, filename)
 
@@ -221,9 +278,9 @@ suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
 dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
 dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
 setnames(dclus, 'ID', 'UNIT_ID')
+setkey(dclus, IDCLU)
 filename=file.path(args$out.dir,
                    paste0('phscinput_runs_clusize_', args$cluster_size,'_ncontrol_0.rds'))
-setkey(dclus, IDCLU)
 saveRDS(dclus, filename)
 
 

@@ -30,13 +30,13 @@ phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 
 # analysis specific paths & args
-out_dir_base="$DEEPANALYSES/PANGEA2_RCCS_UVRI_TSI2"
-out_dir_rel="$out_dir_base/2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T"
-
+out_dir_base="$DEEPANALYSES/twosamples"
+out_dir_rel="$out_dir_base/2022_09_02_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T"
 controller="$software_path/$PBS_JOBNAME" #current script location
-inputsamples="$out_dir_base/220726_RCCSUVRI_phscinput_samples_with_bf_subset.rds"
+inputsamples="$out_dir_base/220902_RCCSUVRI_phscinput_samples_with_bf_subset.rds"
 CLUSIZE='50'
-DATE='2022-07-26'
+DATE='2022-09-02'
+
 
 echo "Check that DATE, CLUSIZE, out_dir_rel and inputsamples are correctly specified"
 
@@ -53,7 +53,8 @@ case $STEP in
         Rscript $software_path/TSI_initialise.R \
         --out_dir_base $out_dir_base \
         --transmission_chains "$XIAOYUE/Rakai_phscnetworks.rda" \
-        --include_input "$DEEPANALYSES/seroconverters3_alignXX/220419_phscinput_samples.rds"
+        --include_twosample_individuals_only TRUE \
+        --cluster_size $CLUSIZE 
         ;;
 
         # modified this step adding the reference flag 

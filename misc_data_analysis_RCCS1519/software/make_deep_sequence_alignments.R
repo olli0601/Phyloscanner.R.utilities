@@ -300,15 +300,15 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-07-26',
-    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/",
+    date = '2022-08-22',
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
     reference = 'ConsensusGenomes.fasta',
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
-    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh',
+    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs2.sh',
     walltime_idx = 2
   )
 }
@@ -363,7 +363,7 @@ args$date <- gsub('-','_',args$date)
   
   if(!dir.exists(dir))
   {
-    if ( ! cnd )
+    if ( cnd )
       stop('No existing directories prefixed by the input --date')
     dir.create(dir)
   }
@@ -380,11 +380,13 @@ cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
 if(file.exists(cmds.path))
 {
   # Load commands
+  cat('Cleaning work directory...\n')
   move.logs(args$out.dir.work)
   pty.c <- readRDS(cmds.path)
   
 }else{
   
+  cat('Writing .rds of commands...\n')
   # Write commands
   
   # Copy files into input folder
@@ -534,7 +536,6 @@ if(file.exists(cmds.path))
 cols <- c('OUT1', 'OUT2')
 pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols= names(pty.c) %like% 'REGEX']
 
-pty.c[, sum(is.na(OUT2))]
 pty.c[, cat(sum(!is.na(OUT2)),
             '(', .percent(mean(!is.na(OUT2))),')', 
             'of desired outputs were generated in the previous runs\n')]
@@ -581,14 +582,15 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
 if(args$walltime_idx == 3){
-  # Assign one every 3 jobs to pqeelab 
+  # Assign one every 5 jobs to pqeelab 
   djob[, Q := {
-    idx <- seq(3, .N, 3)
+    idx <- seq(5, .N, 5)
     z <- rep('', .N)
     z[idx] <- 'pqeelab'
     z
     }]
 }
+
 
 ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
 ids <- as.character(ids$ID)
