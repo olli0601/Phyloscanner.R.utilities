@@ -198,14 +198,14 @@ if( ! is.na(args$include.input))
         phsc_samples[ RENAME_ID %in% include_rename_id, INCLUDE := TRUE]
 }
 
-if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
-{
-        tmp <- basename(filename)        
-        date <- format(Sys.Date(), '%y%m%d')
-        tmp <- gsub('^[0-9]+', date, tmp)
-        tmp <- gsub('\\.rds$', '_subset.rds', tmp)
-        filename <- file.path(dirname(filename), tmp)
-}
+# if( ! is.na(args$file.path.chains) | ! is.na(args$include.input) )
+# {
+#         tmp <- basename(filename)        
+#         date <- format(Sys.Date(), '%y%m%d')
+#         tmp <- gsub('^[0-9]+', date, tmp)
+#         tmp <- gsub('\\.rds$', '_subset.rds', tmp)
+#         filename <- file.path(dirname(filename), tmp)
+# }
 
 if( args$include.twosample.individuals.only)
 {
