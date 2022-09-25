@@ -60,7 +60,7 @@ option_list <- list(
     type = "character",
     default = NA_character_,
     help = "Absolute file path to package directory, used as long we don t build an R package [default]",
-    dest = 'prj.dir'
+    dest = 'pkg.dir'
   ),
   optparse::make_option(
     "--out_dir_base",
@@ -89,9 +89,19 @@ option_list <- list(
 args <-
   optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
+
 #
 # test
 #
+
+if(0)
+{
+        args$out.dir <- '~/Dropbox/CONDESAPopSample_phsc_stage1_output_close/'
+        args$pkg.dir <- '~/git/phyloscanner/misc_data_analysis_RCCS1519/software'
+        args$phylo.dir <- '~/Dropbox/CONDESAPopSample_phsc_stage1_output_close/2022-09-22_phsc_phscrelationships_posthoccount_im_mrca_fixpd/'
+        args$date <- '2022-09-22'
+}
+
 if(0)
 {
   args <- list(
@@ -102,7 +112,7 @@ if(0)
     env_name = 'phylo',
     classif_rule = 'o',
     out.dir = NA,
-    prj.dir = NA,
+    pkg.dir = NA,
     phylo.dir = NA
   )
 }
@@ -112,123 +122,104 @@ if(0)
 # use manually specified directories when args$out.dir is NA
 #
 tmp <- Sys.info()
+
+.f <- function(x, path)
 if (tmp["user"] == "xx4515")
 {
-  if (is.na(args$out.dir))
-  {
-    args$out.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/"
-  }
-  if (is.na(args$prj.dir))
-  {
-    args$prj.dir <-
-      "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/"
-  }
-  if (is.na(args$phylo.dir))
-  {
-    args$phylo.dir <-
-      "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd"
-  }
+                if(is.na(x)) x <<- path
+    .f(args$out.dir, "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/")
+    .f(args$pkg.dir, "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/")
+    .f(args$phylo.dir, "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd")
 }
 
-# if prj.dir and out.dir are not manually set, default to here()
-if (is.na(args$prj.dir))
-{
-  args$prj.dir <- here::here()
-}
-if (is.na(args$out.dir))
-{
-  args$out.dir <- here::here()
-}
-if (is.na(args$phylo.dir))
-{
-  args$phylo.dir <- here::here()
-}
+# if pkg.dir and out.dir are not manually set, default to here()
+.f(args$pkg.dir, here::here())
+.f(args$out.dir, here::here())
+.f(args$phylo.dir, here::here())
 
 #
 # Add constants that should not be changed by the user
 #
 max.per.run <- 4900
 
-args$date <- gsub('-','_',args$date)
 # Set default output directories relative to out.dir
-args$out.dir.data <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_input"))
-args$out.dir.work <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_work"))
-args$out.dir.output <-
-  file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+args$date <- gsub('-','_',args$date)
+.f <- function(x) file.path(args$out.dir, paste0(args$date, x))
+args$out.dir.data <- .f('_phsc_input')
+args$out.dir.work <- .f('_phsc_work')
+args$out.dir.output <- .f('_phsc_output')
 
 
 cat('Load phyloscanner outputs... \n')
 infiles	<- data.table(F=list.files(args$phylo.dir, pattern='*workspace.rda$', full.names=TRUE))
 infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 setkey(infiles, PTY_RUN)
-dca	<- infiles[, {
-  cat(PTY_RUN,'\n')
-  load(F)
-  dc
-}, by='PTY_RUN']
-dwina <- infiles[, {
-  cat(PTY_RUN,'\n')
-  load(F)
-  dwin
-}, by='PTY_RUN']
 
+# 'dwin' : pairwise relationships between the host in each tree
+# 'dc' :  summarises pairwise relationships between hosts across ALL trees. 
+# 'a' suffix stands for aggregated
+dca <-   infiles[, { cat(PTY_RUN,'\n'); load(F); dc }, by='PTY_RUN']
+dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
 
 # Change the format
-dca[,CNTRL1:=FALSE]
-dca[,CNTRL2:=FALSE]
-dca[grepl('CNTRL-',host.1),CNTRL1:=TRUE]
-dca[grepl('CNTRL-',host.2),CNTRL2:=TRUE]
-dca[grepl('CNTRL-',host.1),host.1:=gsub('CNTRL-','',host.1)]
-dca[grepl('CNTRL-',host.2),host.2:=gsub('CNTRL-','',host.2)]
-dwina[,CNTRL1:=FALSE]
-dwina[,CNTRL2:=FALSE]
-dwina[grepl('CNTRL-',host.1),CNTRL1:=TRUE]
-dwina[grepl('CNTRL-',host.2),CNTRL2:=TRUE]
-dwina[grepl('CNTRL-',host.1),host.1:=gsub('CNTRL-','',host.1)]
-dwina[grepl('CNTRL-',host.2),host.2:=gsub('CNTRL-','',host.2)]
+.format.controls <- function(DT)
+{
+        DT[, `:=` (CNTRL1=FALSE, CNTRL2=FALSE)]
+        DT[ host.1 %like% 'CNTRL-', `:=` (CNTRL1=TRUE, host.1=gsub('CNTRL-', '', host.1))]
+        DT[ host.2 %like% 'CNTRL-', `:=` (CNTRL2=TRUE, host.2=gsub('CNTRL-', '', host.2))]
+}
+.format.controls(dca)
+.format.controls(dwina)
 
 # Sort
-tmp			<- subset(dwina, host.1>host.2)
-setnames(tmp, c('host.1','host.2','paths12','paths21','nodes1','nodes2','CNTRL1','CNTRL2'),
-         c('host.2','host.1','paths21','paths12','nodes2','nodes1','CNTRL2','CNTRL1'))
-set(tmp, NULL, 'close.and.contiguous.and.directed.cat',
-    tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.contiguous.and.directed.cat)))])
-set(tmp, NULL, 'close.and.adjacent.and.directed.cat',
-    tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.adjacent.and.directed.cat)))])
-set(tmp, NULL, 'close.and.contiguous.and.ancestry.cat',
-    tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.contiguous.and.ancestry.cat)))])
-set(tmp, NULL, 'close.and.adjacent.and.ancestry.cat',
-    tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',close.and.adjacent.and.ancestry.cat)))])
-dwina		<- rbind(subset(dwina, !(host.1>host.2)), tmp)
+.reorder.labels <- function(DT)
+{
+        tmp <- subset(DT, host.1 > host.2)
 
-# Sort
-tmp			<- subset(dca, host.1>host.2)
-setnames(tmp, c('host.1','host.2','CNTRL1','CNTRL2'),
-         c('host.2','host.1','CNTRL2','CNTRL1'))
-set(tmp, NULL, 'type',
-    tmp[,gsub('xx','21',gsub('21','12',gsub('12','xx',type)))])
-dca		<- rbind(subset(dca, !(host.1>host.2)), tmp)  
+        cols1 <- c('host.1','host.2','paths12','paths21','nodes1','nodes2','CNTRL1','CNTRL2')
+        cols2 <- c('host.2','host.1','paths21','paths12','nodes2','nodes1','CNTRL2','CNTRL1')
+        cols1 <- cols1[cols1 %in% names(DT)]
+        cols2 <- cols2[cols2 %in% names(DT)]
+        setnames(tmp, cols1, cols2)
+
+        .gs <- function(x)
+                gsub('xx','21',gsub('21','12',gsub('12','xx',x)))
+        
+        cols <- c('close.and.contiguous.and.directed.cat',
+                  'close.and.adjacent.and.directed.cat',
+                  'close.and.contiguous.and.ancestry.cat',
+                  'close.and.adjacent.and.ancestry.cat', 
+                  'type')
+        cols <- cols[ cols %in% names(DT)]
+
+        tmp[, (cols) := lapply(.SD, .gs) , .SDcols=cols]
+        DT <- rbind(DT[!(host.1>host.2)], tmp)
+        return(DT)
+}
+dca   <- .reorder.labels(dca)
+dwina <- .reorder.labels(dwina)
+
+# subset to relevant windows
 tmp <- unique(subset(dwina,select=c('PTY_RUN','host.1','host.2')))
 tmp <- tmp[,list(PTY_RUN=PTY_RUN[1]),by=c('host.1','host.2')]
 dwina <- merge(dwina,tmp, by=c('host.1','host.2'))
 dca <- merge(dca,tmp, by=c('host.1','host.2','PTY_RUN'))
-
-if('PTY_RUN.y' %in% colnames(dwina)){
-  dwina$PTY_RUN.y=NULL
-  setnames(dwina,'PTY_RUN.x','PTY_RUN',skip_absent=T)
+.f <- function(DT)
+{
+        if('PTY_RUN.y' %in% colnames(DT))
+                DT$PTY_RUN.y=NULL; setnames(DT,'PTY_RUN.x','PTY_RUN',skip_absent=T)
+        return(DT)
 }
-if('PTY_RUN.y' %in% colnames(dca)){
-  dca$PTY_RUN.y=NULL
-  setnames(dca,'PTY_RUN.x','PTY_RUN',skip_absent=T)
-}
+dwina <- .f(dwina)
+dca <- .f(dca)
 
-
-
+# find pairs according to classification rule and thresholds.
+# classification rule o: Oliver Ratmann's
+# classification rule m: Matthew Hall's
+# classification rule b: both
 
 if(args$classif_rule=='o'|args$classif_rule=='b'){
+
   control <- list(linked.group='close.and.adjacent.cat',
                   linked.no='not.close.or.nonadjacent',
                   linked.yes='close.and.adjacent', 
@@ -280,6 +271,3 @@ if(args$classif_rule=='m'|args$classif_rule=='b'){
 if(!args$classif_rule %in% c('o','m','b')){
   stop('Please input --classification_rule as o, m or b')
 }
-
-
-
