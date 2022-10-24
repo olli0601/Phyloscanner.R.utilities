@@ -73,6 +73,12 @@ phsc.cmd.phyloscanner.multi <- function(pty.runs, pty.args)
 phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 {	
   stopifnot(is.character(file.input),is.character(file.patient))
+
+  # default options, which can be overwritten by the user through pty.args
+  default.coord=NA
+  discard.improper.pairs=NA
+  realignment=TRUE
+
   #	copy input variables into namespace	 
   attach(pty.args)	
   #	sense checks
@@ -435,8 +441,8 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
                 if( !is.na(ids) )
                 {
                         Sys.sleep(200)
-                        job_ids <- paste0(gsub('.pbs$', '', ids), collapse=',')
-                        cmd_id <- paste0('-W depend=afterany:', job_ids)
+                        job_ids <- paste0('afterany:', gsub('.pbs$', '', ids), collapse=',')
+                        cmd_id <- paste0('-W depend=', job_ids)
                 }
         }
 
