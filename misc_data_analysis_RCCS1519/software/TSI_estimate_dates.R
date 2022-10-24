@@ -66,15 +66,37 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 
 ################
+# Helpers
+################
+
+.get.dates <- function(files)
+{
+        .f <- function(file)
+        {
+                ddates <- fread(file)
+                ddates <- unique(ddates[, .(pangea_id, visit_dt)])
+                ddates[, as.Date(visit_dt, format="%Y-%m-%d")]
+                ddates
+        }
+        ddates <- lapply(files, .f)
+        ddates <- rbindlist(ddates)
+        stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
+        ddates
+}
+
+
+################
 # Testing
 ################
 
 user <- Sys.info()[['user']]
-if(user == 'andrea'){
+if(user == 'andrea')
+{
         args <- list(
-                     out.dir='~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_output',
-                     rel.dir= "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_phscrelationships_seed_42_blacklist_report_TRUE_distance_threshold_1_min_reads_per_host_1_multinomial_TRUE_outgroup_name_BFR83HXB2_LAI_IIIB_BRUK03455_output_nexus_tree_TRUE_ratio_blacklist_threshold_0005_skip_summary_graph_TRUE/",
-                     phsc.samples="~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phscinput_samples.rds"
+                     out.dir='~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/',
+                     rel.dir= "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_00/",
+                     phsc.samples="~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/220331_RCCSUVRI_phscinput_samples_with_bf.rds",
+                     date='2022-08-22'
         )
 }
 
@@ -85,8 +107,7 @@ if(user == 'andrea'){
 args$date <- gsub('-','_',args$date)
 if( ! grepl('output$', args$out.dir))
 {
-        args$out.dir <- 
-                file.path(args$out.dir, paste0(args$date, "_phsc_output"))
+        args$out.dir <- file.path(args$out.dir, paste0(args$date, "_phsc_output"))
 }
 
 stopifnot(dir.exists(args$rel.dir))
@@ -96,34 +117,55 @@ stopifnot(dir.exists(args$out.dir))
 dsamples <- setDT(readRDS(args$phsc.samples))
 dsamples <- unique(dsamples[, .(PANGEA_ID, RENAME_ID)])
 
-# Load results from prev
-tmp <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
-tmp <- data.table(tsi.path=tmp, 
-                  pty=gsub('^.*?ptyr|_tsi.csv', '', tmp))
-tmp1 <- list.files(args$rel.dir, pattern='basefreqs_used.csv$', full.names=TRUE)
-tmp1 <- data.table(bfs.paths=tmp1, 
-                  pty=gsub('^.*?ptyr|_basefreqs_used.csv', '', tmp1))
-dfiles <- merge(tmp, tmp1, by='pty')
-dfiles[, pty:=as.integer(pty)]
-setkey(dfiles, pty)
 
-dbfs <- dfiles[,{
-        bfs <- read.csv(bfs.paths)[, 2]
-        list(RENAME_ID=bfs[which(bfs != "pos")])
-}, by=pty]
-dbfs <- merge(dbfs, dsamples, by='RENAME_ID')
-dbfs[, AID:=gsub('-fq[0-9]$', '', RENAME_ID)]
-stopifnot(dbfs[, .N == 1 , by=c('pty', 'AID')][, all(V1)])
+file.basefreqs <- list.files(dirname(args$out.dir), 'samples_with_bf.rds', full.names=T)
+file.basefreqs_old <- list.files(args$rel.dir, pattern='basefreqs_used.csv$', full.names=TRUE)
 
-dpreds <- dfiles[,{
-        tsi <- read.csv(tsi.path)
-        cols <- grep('^RF', colnames(tsi), value=T)
-        tsi[, c('host.id', cols)]
-}, by=pty]
-dpreds <- merge(dbfs[, .(pty, AID, RENAME_ID)],
-      dpreds,
-      by.y=c('pty', 'host.id'),
-      by.x=c('pty', 'AID'))
+if(length(file.basefreqs))
+{
+        dfiles <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
+        dpreds <- lapply(dfiles, fread)
+        names(dpreds) <- .gs(dfiles)
+        cols <- grep('host.id|^RF', colnames(dpreds[[1]]), value=T)
+        dpreds <- lapply(dpreds, function(DT) subset(DT, select=cols) )
+        dpreds <- rbindlist(dpreds, idcol = 'PTY')
+        dpreds[, AID := gsub('-fq[0-9]$','',host.id)]
+        
+        setnames(dpreds, 'host.id', 'RENAME_ID')
+        if(dpreds[1, RENAME_ID == AID])
+                dpreds[, RENAME_ID := NULL]
+
+}else if( length(file.basefreqs_old) ) 
+{
+        # Load results from prev
+        tmp <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
+        tmp <- data.table(tsi.path=tmp, 
+                          pty=gsub('^.*?ptyr|_tsi.csv', '', tmp))
+        tmp1 <- data.table(bfs.paths=tmp1, 
+                          pty=gsub('^.*?ptyr|_basefreqs_used.csv', '', tmp1))
+        dfiles <- merge(tmp, tmp1, by='pty')
+        dfiles[, pty:=as.integer(pty)]
+        setkey(dfiles, pty)
+
+        dbfs <- dfiles[,{
+                bfs <- read.csv(bfs.paths)[, 2]
+                list(RENAME_ID=bfs[which(bfs != "pos")])
+        }, by=pty]
+        dbfs <- merge(dbfs, dsamples, by='RENAME_ID')
+        dbfs[, AID:=gsub('-fq[0-9]$', '', RENAME_ID)]
+        stopifnot(dbfs[, .N == 1 , by=c('pty', 'AID')][, all(V1)])
+
+        dpreds <- dfiles[,{
+                tsi <- fread(tsi.path)
+                cols <- grep('^RF', colnames(tsi), value=T)
+                tsi[, c('host.id', cols)]
+        }, by=pty]
+        dpreds <- merge(dbfs[, .(pty, AID, RENAME_ID)],
+              dpreds,
+              by.y=c('pty', 'host.id'),
+              by.x=c('pty', 'AID'))
+}
+
 
 # Check if results for same sequence are consistent among ptys.
 # Are median prediction always in the interestion of all CrInt?
@@ -141,14 +183,17 @@ if(0)
 
 # Take median of predictions and cc's in sqrt space, then transform to linear space
 # Alternatively could pick prediciton with minimum MAE
-cols <- grep('RF',colnames(dpreds), value=T)
-cols <- grep('linear', cols, value=T, invert = TRUE)
-dpreds <- dpreds[, lapply(.SD, median) ,by='RENAME_ID', .SDcols=cols]
-cols = grep('pred_sqrt|cc',cols, value=T)
-cols1 <- gsub('sqrt', 'linear',cols)
-cols1 <- gsub('cc025', 'pred_min_linear',cols1)
-cols1 <- gsub('cc975', 'pred_max_linear',cols1)
-dpreds [, (cols1):=lapply(.SD, function(x) x^2), .SDcols=cols, by='RENAME_ID']
+if( dpreds[, .N,by='RENAME_ID'][, any(N>1)] ) 
+{
+        cols <- grep('RF',colnames(dpreds), value=T)
+        cols <- grep('linear', cols, value=T, invert = TRUE)
+        dpreds <- dpreds[, lapply(.SD, median) ,by='RENAME_ID', .SDcols=cols]
+        cols = grep('pred_sqrt|cc',cols, value=T)
+        cols1 <- gsub('sqrt', 'linear',cols)
+        cols1 <- gsub('cc025', 'pred_min_linear',cols1)
+        cols1 <- gsub('cc975', 'pred_max_linear',cols1)
+        dpreds [, (cols1):=lapply(.SD, function(x) x^2), .SDcols=cols, by='RENAME_ID']
+}
 
 
 # if dataset with dates of collection exists, also compute date of infection estimates!
@@ -165,18 +210,12 @@ sampling.dates.available <- all(file.exists(c(db.sharing.path.mrc, db.sharing.pa
 if(sampling.dates.available)
 {
 
-        ddates <- setDT(read.csv(db.sharing.path.mrc))
-        ddates <- unique(ddates[, .(pangea_id, visit_dt)])
-        ddates[, as.Date(visit_dt, format="%Y-%m-%d")]
-        tmp <- setDT(read.csv(db.sharing.path.rccs))
-        tmp <- unique(tmp[, .(pangea_id, visit_dt)])
-        ddates <- rbind(tmp, ddates)
-        ddates[, visit_dt := as.Date(visit_dt, "%Y-%m-%d")]
-        stopifnot(ddates[, anyDuplicated(pangea_id) == 0,])
+        files <- c(db.sharing.path.rccs, db.sharing.path.mrc)
+        ddates <- .get.dates(files)
 
-        tmp <- dsamples[, `:=` (pangea_id=gsub('^.*?_','', PANGEA_ID),
-                         PANGEA_ID=NULL)]
+        tmp <- dsamples[, .(RENAME_ID, pangea_id)]
         ddates <- merge(tmp, ddates, by='pangea_id', all.x=T)
+
         dpreds <- merge(dpreds, ddates[, .(RENAME_ID, visit_dt)], by='RENAME_ID', all.x=TRUE)
         cat(dpreds[, sum(is.na(visit_dt))], 'base frequency files have no associated sample collection date\n')
 
@@ -198,7 +237,7 @@ filename <- ifelse(sampling.dates.available,
                file.path(args$rel.dir,'aggregated_TSI.csv')
 )
 cat('Saving aggregated estimates to:\n', filename, '\n')
-write.csv(dpreds, filename, quote=FALSE)
+fwrite(dpreds, filename, quote=FALSE)
 
 
 # Queue next step
