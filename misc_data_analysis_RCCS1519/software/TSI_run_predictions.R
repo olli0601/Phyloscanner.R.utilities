@@ -157,6 +157,7 @@ get.sampling.dates <- function(phsc.samples = args$phsc.samples)
         return(ddates)
 }
 
+# Should break this into two!
 write.mafs.and.cmds <-function(pty_idx)
 {
         # For each PTY index, computes the MAF matrix and stores it in the phscrel directory
@@ -248,16 +249,17 @@ write.mafs.and.cmds <-function(pty_idx)
 
 if(0){
   args <- list(
-    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
-    rel.dir= "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/2022_07_23_phsc_phscrelationships_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_BFR83HXB2_LAI_IIIB_BRUK03455_phcb_T_rtt_001_rla_T_zla_T",
-    phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/220419_phscinput_samples.rds",
+    rel.dir="/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/2022_07_26_phsc_phscrelationships_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T",
+    phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_UVRI_TSI2/220726_RCCSUVRI_phscinput_samples_with_bf_subset.rds",
     TSI.dir="/rds/general/user/ab1820/home/git/HIV-phyloTSI",
-    date = '2022-07-23',
+    date = '2022-07-26',
     controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh',
     env_name = 'hivphylotsi'
   )
 }
+
 
 ################
 # main
