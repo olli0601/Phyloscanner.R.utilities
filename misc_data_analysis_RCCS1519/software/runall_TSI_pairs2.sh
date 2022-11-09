@@ -31,10 +31,10 @@ hivtsipath="$HOME/git/HIV-phyloTSI"
 
 # analysis specific paths & args
 out_dir_base="$DEEPANALYSES/PANGEA2_RCCS_MRC_UVRI_TSI"
-out_dir_rel="$out_dir_base/TODO"
+out_dir_rel="$out_dir_base/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T"
 
 controller="$software_path/$PBS_JOBNAME" #current script location
-inputsamples="$out_dir_base/#TODO"
+inputsamples="$out_dir_base/220331_RCCSUVRI_phscinput_samples_with_bf.rds"
 CLUSIZE='50'
 DATE='2022-08-22'
 
