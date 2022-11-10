@@ -1,8 +1,6 @@
 # The phyloscanner run - find transmission networks 
 
-# Preamble
-# This script aims to find transmission networks and the most likely transmission chains 
-# using the phyloscanner outputs.
+# Preamble This script aims to find transmission networks and the most likely transmission chains using the phyloscanner outputs.
 
 # Load the required packages
 library(data.table)
@@ -86,8 +84,7 @@ option_list <- list(
   )
 )
 
-args <-
-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 
 #
@@ -102,40 +99,9 @@ if(0)
         args$date <- '2022-09-22'
 }
 
-if(0)
-{
-  args <- list(
-    verbose = T,
-    seed = 42,
-    if_save_data = T,
-    date = '2022-02-04',
-    env_name = 'phylo',
-    classif_rule = 'o',
-    out.dir = NA,
-    pkg.dir = NA,
-    phylo.dir = NA
-  )
-}
-
-
 #
 # use manually specified directories when args$out.dir is NA
 #
-tmp <- Sys.info()
-
-.f <- function(x, path)
-if (tmp["user"] == "xx4515")
-{
-                if(is.na(x)) x <<- path
-    .f(args$out.dir, "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/")
-    .f(args$pkg.dir, "~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/")
-    .f(args$phylo.dir, "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd")
-}
-
-# if pkg.dir and out.dir are not manually set, default to here()
-.f(args$pkg.dir, here::here())
-.f(args$out.dir, here::here())
-.f(args$phylo.dir, here::here())
 
 #
 # Add constants that should not be changed by the user
@@ -218,7 +184,8 @@ dca <- .f(dca)
 # classification rule m: Matthew Hall's
 # classification rule b: both
 
-if(args$classif_rule=='o'|args$classif_rule=='b'){
+if(args$classif_rule=='o'|args$classif_rule=='b')
+{
 
   control <- list(linked.group='close.and.adjacent.cat',
                   linked.no='not.close.or.nonadjacent',
@@ -240,7 +207,8 @@ if(args$classif_rule=='o'|args$classif_rule=='b'){
   save(dpl, dc, dw, dnet, dchain, file=file.path(args$phylo.dir,'Rakai_phscnetworks_ruleo.rda'))
 }
 
-if(args$classif_rule=='m'|args$classif_rule=='b'){
+if(args$classif_rule=='m'|args$classif_rule=='b')
+{
   # Find pairs
   control <- list(linked.group='close.and.adjacent.cat',
                   linked.no='not.close.or.nonadjacent',
@@ -268,6 +236,7 @@ if(args$classif_rule=='m'|args$classif_rule=='b'){
 }
 
   
-if(!args$classif_rule %in% c('o','m','b')){
+if(!args$classif_rule %in% c('o','m','b'))
+{
   stop('Please input --classification_rule as o, m or b')
 }
