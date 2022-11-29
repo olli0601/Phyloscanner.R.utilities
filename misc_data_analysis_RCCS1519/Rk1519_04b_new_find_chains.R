@@ -195,6 +195,8 @@ setkey(infiles, PTY_RUN)
 # 'a' suffix stands for aggregated
 dca <-   infiles[, { cat(PTY_RUN,'\n'); load(F); dc }, by='PTY_RUN']
 dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
+DCA1 <- copy(dca)
+DWINA <- copy(dwina)
 
 if(0)
 {   # FOR MY OWN UNDERSTANDING.
@@ -235,7 +237,7 @@ if(0)
 
         .gs <- function(x)
                 gsub('xx','21',gsub('21','12',gsub('12','xx',x)))
-        
+
         cols <- c('close.and.contiguous.and.directed.cat',
                   'close.and.adjacent.and.directed.cat',
                   'close.and.contiguous.and.ancestry.cat',
@@ -244,6 +246,7 @@ if(0)
         cols <- cols[ cols %in% names(DT)]
 
         tmp[, (cols) := lapply(.SD, .gs) , .SDcols=cols]
+
         DT <- rbind(DT[!(host.1>host.2)], tmp)
         return(DT)
 }
@@ -252,23 +255,21 @@ dwina <- .reorder.host.labels(dwina)
 setkey(dwina, PTY_RUN, host.1, host.2)
 setkey(dca, PTY_RUN, host.1, host.2)
 
-# subset to relevant windows (WHY)
-tmp <- unique(subset(dwina,select=c('PTY_RUN','host.1','host.2')))
-tmp <- tmp[,list(PTY_RUN=PTY_RUN[1]),by=c('host.1','host.2')]
-dwina <- merge(dwina,tmp, by=c('host.1','host.2'))
-dca <- merge(dca,tmp, by=c('host.1','host.2','PTY_RUN'))
-.f <- function(DT)
-{
-        if('PTY_RUN.y' %in% colnames(DT))
-                DT$PTY_RUN.y=NULL; setnames(DT,'PTY_RUN.x','PTY_RUN',skip_absent=T)
-        return(DT)
-}
-dwina <- .f(dwina)
-dca <- .f(dca)
+# subset to phylogenies with strongest data on linkage 
+idx <- dca[ categorisation %in% 'close.and.adjacent.cat',
+           .(n.eff=unique(n.eff)),
+           by=c('host.1', 'host.2', 'PTY_RUN')]
+idx <- idx[ ,
+           .(PTY_RUN=PTY_RUN[which.max(n.eff)]),
+           by=c('host.1', 'host.2')]
+setcolorder(idx, c('PTY_RUN','host.1', 'host.2'))
+dca <- merge(idx, dca)
+dwina <- merge(idx, dwina)
 
 # 
 if(file.exists(args$meta.data))
 {   # Now, whenever a pairwise transmission is not supported by the serohistory, we need to remove the counts supporting that direction.
+    cat('Using serohistory + demographic data to reweight evidence of direction\n')
     
     # Load anon. keys
     file.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv')
@@ -290,10 +291,10 @@ if(file.exists(args$meta.data))
     dexclude <- dca[, .(host.1, host.2)] |> unique()
     dexclude <- merge(dexclude, drange[, .(host.2=AID, MIN.H2=MIN, MAX.H2=MAX)] , by='host.2', all.x=TRUE)
     dexclude <- merge(dexclude, drange[, .(host.1=AID, MIN.H1=MIN, MAX.H1=MAX)] , by='host.1', all.x=TRUE)
-    dexclude[ MAX.H1 <= MIN.H2, EXCLUDE := '12']
-    dexclude[ MAX.H2 <= MIN.H1, EXCLUDE := '21']
+    dexclude[ MAX.H1 <= MIN.H2, EXCLUDE := '21']
+    dexclude[ MAX.H2 <= MIN.H1, EXCLUDE := '12']
 
-    # check that for each '12' entry, there is a '21' entry
+    # check that for each '12' entry, there is a '21' entry in the count data.table
     fill.in.missing.reverse.direction <- function(DCA)
     {
         cols <- c('PTY_RUN', 'host.1', 'host.2', 'categorisation', 'categorical.distance', 'CNTRL1', 'CNTRL2')
@@ -324,6 +325,7 @@ if(file.exists(args$meta.data))
     # Now, modify dca and dwina accordingly, by removing the counts supporting that direction
     categories.to.update <- c("close.and.adjacent.and.ancestry.cat", "close.and.adjacent.and.directed.cat",
                               "close.and.contiguous.and.ancestry.cat", "close.and.contiguous.and.directed.cat")
+    dca_sero_only <- dca[categorisation %in% categories.to.update, ]
 
     # label.to.update <- function(ctg)
     #   fcase(ctg %like% 'directed', NA_character_, ctg %like% 'ancestry.cat', 'complex.or.no.ancestry')
@@ -366,34 +368,6 @@ if(file.exists(args$meta.data))
                     }
 
                     return(TMP)
-
-                    # stopifnot(sum(which.dir) == 1)
-                    # k.dir <- k[which.dir]
-                    # k.eff.dir <- k.eff[which.dir]
-                    # TMP$k[which.dir] <- TMP$k.eff[which.dir] <- 0 
-
-                    # # Update new label
-                    # lbl <- setdiff(c('12', '21'), dir)
-
-                    # if(is.na(lbl)) # ... also remove from n.eff
-                    # {
-                    #     TMP$n.eff[which.dir] <- TMP$n.eff[which.dir] - TMP$k.eff[which.dir]
-                    #     TMP$score[which.dir] <- TMP$k.eff[which.dir]/TMP$n.eff[which.dir]
-                    #     return(TMP)
-                    # }
-
-                    # which.lbl <- type == lbl
-                    # #if(sum(which.lbl) < 1)
-                    # #{
-                    # #    TMP$n.eff[which.dir] <- TMP$n.eff[which.dir] - TMP$k.eff[which.dir]
-                    # #    TMP$score[which.dir] <- TMP$k.eff[which.dir]/TMP$n.eff[which.dir]
-                    # #    return(TMP)
-                    # #}
-                    # stopifnot(sum(which.lbl) == 1)
-                    # TMP$k[which.lbl] <- TMP$k[which.lbl] + k.dir
-                    # TMP$k.eff[which.lbl] <- TMP$k.eff[which.lbl] + k.eff.dir
-                    # TMP$score <- TMP$k.eff/TMP$n.eff
-                    # return(TMP)
                 })
             }
             cols <- setdiff(names(DT),'categorisation')
@@ -418,10 +392,23 @@ if(file.exists(args$meta.data))
         DCA <- rbind(DCA[!dca.update], dca.update)
     }
 
-    dca <- update.category.counts(dexclude, dca)
+    dca_sero_only <- update.category.counts(dexclude, dca_sero_only)
+    dca_sero_only[, categorisation:=paste0(categorisation, '.sero')]
+    dca <- rbind(dca, dca_sero_only)
 
     setkey(dca, host.1, host.2)
-    args$phylo.dir <- '/home/andrea/Downloads'
+    # args$phylo.dir <- '/home/andrea/Downloads'
+}
+
+if(0)
+{
+    # checking that redistribution of count has beem done in the correct direction
+    tmp <- dca_sero_only[type %in% c('12', '21') & categorisation %like% 'sero', .(host.1, host.2, type, score)]
+    tmp <- merge(tmp, drange[, .(host.1=AID, MIN.1=MIN, MAX.1=MAX)], by='host.1')
+    tmp <- merge(tmp, drange[, .(host.2=AID, MIN.2=MIN, MAX.2=MAX)], by='host.2')
+    tmp[MAX.1 < MIN.2]
+    stopifnot(tmp[MAX.1 < MIN.2, mean(score[type=='12'], na.rm=TRUE) == 1 & mean(score[type=='21'], na.rm=TRUE) == 0])
+    stopifnot(tmp[MAX.2 < MIN.1, mean(score[type=='12'], na.rm=TRUE) == 0 & mean(score[type=='21'], na.rm=TRUE) == 1])
 }
 
 # find pairs according to classification rule and thresholds.
@@ -431,59 +418,66 @@ if(file.exists(args$meta.data))
 
 if(args$classif_rule=='o'|args$classif_rule=='b')
 {
+    dir_group <- dca[categorisation %like% 'close.and.adjacent.and.directed.cat', unique(categorisation)]
+    idx <- dir_group %like% 'sero'
+    dir_group <- ifelse(any(idx), dir_group[idx], dir_group[1])
 
-  control <- list(linked.group='close.and.adjacent.cat',
-                  linked.no='not.close.or.nonadjacent',
-                  linked.yes='close.and.adjacent', 
-                  dir.group = "close.and.adjacent.and.directed.cat",
-                  conf.cut=0.6, 
-                  neff.cut=3,
-                  weight.complex.or.no.ancestry=0.5)
-  # Find pairs
-  tmp <- find.pairs.in.networks(dwina, dca, control=control, verbose=TRUE)
-  dpl <- copy(tmp$network.pairs)
-  dc <- copy(tmp$relationship.counts)
-  dw <- copy(tmp$windows)
-  save(dpl, dc, dw, file=file.path('~/Downloads','Rakai_phscnetworks_allpairs_ruleo.rda'))
+    control <- list(linked.group='close.and.adjacent.cat',
+                    linked.no='not.close.or.nonadjacent',
+                    linked.yes='close.and.adjacent', 
+                    dir.group = dir_group,
+                    conf.cut=0.6, 
+                    neff.cut=3,
+                    weight.complex.or.no.ancestry=0.5)
+    # Find pairs
+    tmp <- find.pairs.in.networks(dwina, dca, control=control, verbose=TRUE)
+    dpl <- copy(tmp$network.pairs)
+    dc <- copy(tmp$relationship.counts)
+    dw <- copy(tmp$windows)
+    filename <- file.path(args$phylo.dir, paste0('Rakai_phscnetworks_allpairs_ruleo_sero.rda'))
+    save(dpl, dc, dw, file=filename)
 
-  # Find chains
-  tmp <- find.networks(dc1, control=control, verbose=TRUE)
-  dnet <- copy(tmp$transmission.networks)
-  dchain <- copy(tmp$most.likely.transmission.chains)
-  save(dpl, dc, dw, dnet, dchain, file=file.path('~/Downloads', 'Rakai_phscnetworks_ruleo.rda'))
-
+    # Find chains
+    tmp <- find.networks(dc, control=control, verbose=TRUE)
+    dnet <- copy(tmp$transmission.networks)
+    dchain <- copy(tmp$most.likely.transmission.chains)
+    filename <- file.path('~/Downloads', paste0('Rakai_phscnetworks_ruleo_sero.rda'))
+    save(dpl, dc, dw, dnet, dchain, file=filename)
 }
 
 if(args$classif_rule=='m'|args$classif_rule=='b')
 {
-  # Find pairs
-  control <- list(linked.group='close.and.adjacent.cat',
-                  linked.no='not.close.or.nonadjacent',
-                  linked.yes='close.and.adjacent',
-                  dir.group="close.and.adjacent.and.ancestry.cat",
-                  conf.cut=0.5, 
-                  neff.cut=3,
-                  weight.complex.or.no.ancestry=0.5)
-  tmp <- find.pairs.in.networks(dwina, dca, control=control)
-  dpl <- copy(tmp$network.pairs)
-  dc <- copy(tmp$relationship.counts)
-  dw <- copy(tmp$windows)
-  save(dpl, dc, dw, file=file.path('~/Downloads','Rakai_phscnetworks_allpairs_rulem.rda'))
-  # Find chains
-  control<- list(linked.group='close.and.adjacent.cat',
-                 linked.no='not.close.or.nonadjacent',
-                 linked.yes='close.and.adjacent',
-                 dir.group="close.and.adjacent.and.ancestry.cat", 
-                 neff.cut=3, 
-                 weight.complex.or.no.ancestry=0.5)
-  tmp <- find.networks(dc, control=control, verbose=TRUE)
-  dnet <- copy(tmp$transmission.networks)
-  dchain <- copy(tmp$most.likely.transmission.chains)
-  save(dpl, dc, dw, dnet, dchain, file=file.path('~/Downloads','Rakai_phscnetworks_rulem.rda'))
+    dir_group <- dca[categorisation %like% 'close.and.adjacent.and.ancestry.cat', unique(categorisation)]
+    idx <- dir_group %like% 'sero'
+    dir_group <- ifelse(any(idx), dir_group[idx], dir_group[1])
+
+    # Find pairs
+    control <- list(linked.group='close.and.adjacent.cat',
+                    linked.no='not.close.or.nonadjacent',
+                    linked.yes='close.and.adjacent',
+                    dir.group="close.and.adjacent.and.ancestry.cat",
+                    conf.cut=0.5, 
+                    neff.cut=3,
+                    weight.complex.or.no.ancestry=0.5)
+    tmp <- find.pairs.in.networks(dwina, dca, control=control)
+    dpl <- copy(tmp$network.pairs)
+    dc <- copy(tmp$relationship.counts)
+    dw <- copy(tmp$windows)
+    save(dpl, dc, dw, file=file.path('~/Downloads','Rakai_phscnetworks_allpairs_rulem.rda'))
+    # Find chains
+    control<- list(linked.group='close.and.adjacent.cat',
+                   linked.no='not.close.or.nonadjacent',
+                   linked.yes='close.and.adjacent',
+                   dir.group="close.and.adjacent.and.ancestry.cat", 
+                   neff.cut=3, 
+                   weight.complex.or.no.ancestry=0.5)
+    tmp <- find.networks(dc, control=control, verbose=TRUE)
+    dnet <- copy(tmp$transmission.networks)
+    dchain <- copy(tmp$most.likely.transmission.chains)
+    save(dpl, dc, dw, dnet, dchain, file=file.path(args$phylo.dir,'Rakai_phscnetworks_rulem_sero.rda'))
 }
 
-  
 if(!args$classif_rule %in% c('o','m','b'))
 {
-  stop('Please input --classification_rule as o, m or b')
+    stop('Please input --classification_rule as o, m or b')
 }
