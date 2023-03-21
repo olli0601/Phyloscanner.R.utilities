@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# TODO: specify tidyverse versions
+# check ggnet
+# do we need separate conda calls?
+# Is it possible to download directly from conda.
 
 # Load anaconda3/personal module and install if not installed already
 module load anaconda3/personal

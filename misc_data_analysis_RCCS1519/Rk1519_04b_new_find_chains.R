@@ -198,22 +198,6 @@ dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
 DCA1 <- copy(dca)
 DWINA <- copy(dwina)
 
-if(0)
-{   # FOR MY OWN UNDERSTANDING.
-    idx <- dca[10, .(host.1, host.2)]
-    setkey(dca, host.1, host.2)
-    setkey(dwina, host.1, host.2)
-    dca[, uniqueN(n), by=c('host.1', 'host.2', 'categorisation')][, table(V1)]
-    dca[idx, unique(n)]
-    view_xl(dca[idx])
-    idx2 <- dca[!is.na(score), uniqueN(n), by=c('host.1', 'host.2', 'PTY_RUN')][V1 > 1, .(host.1, host.2)  ]
-    view_xl(dca[idx2[1]])
-                  
-    # dwina[, .N, by=c('PTY_RUN', 'host.1', 'host.2', 'tree.id')][, table(N)]
-    view_xl(dwina[idx2[1]])
-    dca[idx2[1]]
-}
-
 # Change the format
 .format.controls <- function(DT)
 {
@@ -259,6 +243,7 @@ setkey(dca, PTY_RUN, host.1, host.2)
 idx <- dca[ categorisation %in% 'close.and.adjacent.cat',
            .(n.eff=unique(n.eff)),
            by=c('host.1', 'host.2', 'PTY_RUN')]
+
 idx <- idx[ ,
            .(PTY_RUN=PTY_RUN[which.max(n.eff)]),
            by=c('host.1', 'host.2')]
@@ -268,7 +253,7 @@ dwina <- merge(idx, dwina)
 
 # 
 if(file.exists(args$meta.data))
-{   # Now, whenever a pairwise transmission is not supported by the serohistory, we need to remove the counts supporting that direction.
+{   # Now, whenever a pairwise transmission is not supported by the serohistory, we need to "switch" the counts supporting that direction.
     cat('Using serohistory + demographic data to reweight evidence of direction\n')
     
     # Load anon. keys
@@ -293,10 +278,13 @@ if(file.exists(args$meta.data))
     dexclude <- merge(dexclude, drange[, .(host.1=AID, MIN.H1=MIN, MAX.H1=MAX)] , by='host.1', all.x=TRUE)
     dexclude[ MAX.H1 <= MIN.H2, EXCLUDE := '21']
     dexclude[ MAX.H2 <= MIN.H1, EXCLUDE := '12']
+    dexclude[, table(EXCLUDE, useNA = 'always' )/.N * 100 ]
 
     # check that for each '12' entry, there is a '21' entry in the count data.table
     fill.in.missing.reverse.direction <- function(DCA)
     {
+
+        # the all.x and all.y options allow us to know which entries weren't previously in DCA
         cols <- c('PTY_RUN', 'host.1', 'host.2', 'categorisation', 'categorical.distance', 'CNTRL1', 'CNTRL2')
         merge(
             DCA[type == '12', ..cols],
@@ -309,11 +297,14 @@ if(file.exists(args$meta.data))
         tmp.21[is.na(type), type := '21']
         tmp <- rbind(tmp.12, tmp.21)
 
-        # update
+        # check
         idx <- tmp[!is.na(n),uniqueN(n), by=cols][ V1 > 1, ..cols]
         stopifnot(nrow(idx)==0)
-        tmp[, n:=na.omit(n)[1], by=cols]
-        tmp[, n.eff:=na.omit(n.eff)[1], by=cols]
+
+        # and update: for each "by" group, n & n_eff should be constant.
+        # some scores will still be NA
+        tmp[, n:=na.omit(n)[1], by=cols] 
+        tmp[, n.eff:=na.omit(n.eff)[1], by=cols] 
         tmp[, score:= k.eff/n.eff]
         
         out <- rbind(DCA[! type %in% c('12', '21')], tmp)
@@ -396,6 +387,20 @@ if(file.exists(args$meta.data))
     dca_sero_only[, categorisation:=paste0(categorisation, '.sero')]
     dca <- rbind(dca, dca_sero_only)
 
+    if(0)
+    {
+        classes <- dca[categorisation %like% '.sero', unique(categorisation)]
+
+        for ( class in classes )
+        {
+            dca_class <- dca[ categorisation %in% class | categorisation %in% gsub( '.sero', '', class) ]
+            dca_class <- dca_class[ type %in% c('12', '21')]
+            dca_class[, .N , by=c('host.1', 'host.2')]
+            dca_class[, .(N=uniqueN(score), anyNA=any(is.na(score))) , by=c('host.1', 'host.2', 'type')][, table(N, anyNA)]
+            any(is.na(c(NA, 1, 2)))
+        }
+    }
+
     setkey(dca, host.1, host.2)
     # args$phylo.dir <- '/home/andrea/Downloads'
 }
@@ -409,6 +414,32 @@ if(0)
     tmp[MAX.1 < MIN.2]
     stopifnot(tmp[MAX.1 < MIN.2, mean(score[type=='12'], na.rm=TRUE) == 1 & mean(score[type=='21'], na.rm=TRUE) == 0])
     stopifnot(tmp[MAX.2 < MIN.1, mean(score[type=='12'], na.rm=TRUE) == 0 & mean(score[type=='21'], na.rm=TRUE) == 1])
+}
+
+if(0)
+{
+    # get pairs whose direction was changed according to serohistory
+    class <- 'close.and.adjacent.and.directed.cat.sero'
+    dca_class <- dca[categorisation == class | categorisation == gsub( '.sero', '', class)]
+    # in the majority of cases, scores sum to 0
+    summed_scores <- dca_class[, sum( score, na.rm=T), by=c('host.1', 'host.2', 'categorisation')]
+    summed_scores[, table(V1)/.N*100 ]
+    # in 8 cases, the sum of the scores went from 1 to 0... (why?)
+    summed_scores |>
+        dcast(host.1 + host.2 ~ categorisation) |> 
+        with( table(close.and.adjacent.and.directed.cat, close.and.adjacent.and.directed.cat.sero)) 
+    summed_scores[, table(), by=c('host.1', 'host.2')][, table(V1)]
+    
+    # subset to cases where summed scores were always one ? 
+    idx <- summed_scores[ , all(V1==1) , by=c('host.1', 'host.2') ][V1 == TRUE, .(host.1, host.2)]
+
+    idx <- dca_class[idx][, uniqueN(score), by=c('host.1', 'host.2', 'type')][V1>1, .(host.1, host.2)]
+    stopifnot( uniqueN(idx) == nrow(idx)/2 )
+    idx <- unique(idx)
+
+    # when changes, mass is moving towards 0
+    dca_class[idx][categorisation %like% 'sero', table(score)]
+
 }
 
 # find pairs according to classification rule and thresholds.
@@ -434,15 +465,64 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
     dpl <- copy(tmp$network.pairs)
     dc <- copy(tmp$relationship.counts)
     dw <- copy(tmp$windows)
+
+    summarise_serohistory_impact_on_pairs <- function(DC, categ = 'close.and.adjacent.and.directed')
+    {
+        # DC <- copy(dc); categ = 'close.and.adjacent.and.directed'
+
+        # check that both cat and cat.sero categories are available.
+        categ <- gsub( '.sero', '', categ)
+        stopifnot( DC[, unique(CATEGORISATION) %like% categ |> sum() == 2 ] ) 
+
+        # subset of interest
+        dc_cat <- DC[ CATEGORISATION %like% categ ]
+        cat( "in how many cases were the scores changed?\n")
+        dc_changed <- dc_cat[, uniqueN(SCORE) > 1, by=c('H1', 'H2', 'TYPE') ]
+        dc_changed <- dc_changed[, .(CHANGED_SCORE = any(V1)) , by=c('H1', 'H2')]
+        dc_changed[, table(CHANGED_SCORE)] |> knitr::kable() |> print()
+
+        cat( "in how many cases were the directions changed?\n")
+        idx <- dc_changed[CHANGED_SCORE == TRUE, .(H1, H2)]
+        dc_changed_dir <- dc_cat[idx]
+        # dc_changed_dir[is.na(SCORE)]
+
+        # for each pair and class type, evaluate whether score in dir 1->2 is larger
+        dc_changed_dir <- dc_changed_dir[ , {
+            dir12 <- TYPE %like% '12'
+            dir21 <- TYPE %like% '21'
+            list(DIR12 = SCORE[dir12] >= SCORE[dir21])
+        } , by=c('H1', 'H2', 'CATEGORISATION') ] 
+
+        # for each pair, look whether categorisations disagree.
+        dc_changed_dir <- dc_changed_dir[, .(CHANGED_DIR = uniqueN(DIR12) == 2 ) , by=c('H1', 'H2')]
+        dc_changed_dir[, table(CHANGED_DIR)] 
+
+        # now let's output a DT with the pairs, indicating whether 
+        # - serohistory changed scores
+        # - serohistory changed directions! 
+        .f <- function(DT1, DT2) merge(DT1, DT2, all.x = TRUE, all.y=TRUE)
+        out <- list( unique(dc_cat[, .(H1, H2)]), dc_changed, dc_changed_dir) |> Reduce(f=.f)
+        out[is.na(CHANGED_DIR), CHANGED_DIR := FALSE]
+        out[, table(CHANGED_SCORE, CHANGED_DIR, useNA='ifany')]
+
+        return(out)
+    }
+
     filename <- file.path(args$phylo.dir, paste0('Rakai_phscnetworks_allpairs_ruleo_sero.rda'))
-    save(dpl, dc, dw, file=filename)
+    if(! file.exists(filename))
+    {
+        save(dpl, dc, dw, file=filename)
+    }
 
     # Find chains
     tmp <- find.networks(dc, control=control, verbose=TRUE)
     dnet <- copy(tmp$transmission.networks)
     dchain <- copy(tmp$most.likely.transmission.chains)
     filename <- file.path('~/Downloads', paste0('Rakai_phscnetworks_ruleo_sero.rda'))
-    save(dpl, dc, dw, dnet, dchain, file=filename)
+    if(! file.exists(filename ))
+    {
+        save(dpl, dc, dw, dnet, dchain, file=filename)
+    }
 }
 
 if(args$classif_rule=='m'|args$classif_rule=='b')

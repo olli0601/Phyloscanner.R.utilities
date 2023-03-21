@@ -9,9 +9,9 @@
 # If unset default to "sim"
 if [ -z "$STEP" ]
 then
-        echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
-        exit 1
+    echo "Intended use:\n"
+    echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
+    exit 1
 fi
 
 ${RES:=1} 
@@ -47,20 +47,17 @@ source activate phylo_alignments
 
 case $STEP in
 
-        # In this analysis we avoid the first step of computing similarities, as there exist already
-        net)
-        echo "---- initialise analysis ----"
-        Rscript $software_path/TSI_initialise.R \
+    # In this analysis we avoid the first step of computing similarities, as there exist already
+    net)
+    echo "---- initialise analysis ----"
+    Rscript $software_path/TSI_initialise.R \
         --controller $controller \
         --include_least_recent_only TRUE \
         --out_dir_base $out_dir_base
-        ;;
+            ;;
 
-        # modified this step adding the reference flag 
-        # This also has walltime flag but don't know what to do exactly about it...
-        ali)
-        echo "---- compute alignments ----"
-
+    ali)
+    echo "---- compute alignments ----"
         if [ "$REDO" = "0"]; then
                 Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -78,7 +75,7 @@ case $STEP in
                 --walltime_idx $RES \
                 --tsi_analysis FALSE
         else
-                Rscript $software_path/make_deep_sequence_alignments.R \
+            Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
                 --prog_dir $phyloscanner_path \
