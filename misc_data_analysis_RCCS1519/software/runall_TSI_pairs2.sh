@@ -9,9 +9,9 @@
 # If unset default to "sim"
 if [ -z "$STEP" ]
 then
-        echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
-        exit 1
+    echo "Intended use:\n"
+    echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
+    exit 1
 fi
 
 ${RES:=1} 
@@ -31,10 +31,10 @@ hivtsipath="$HOME/git/HIV-phyloTSI"
 
 # analysis specific paths & args
 out_dir_base="$DEEPANALYSES/PANGEA2_RCCS_MRC_UVRI_TSI"
-out_dir_rel="$out_dir_base/TODO"
+out_dir_rel="$out_dir_base/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T"
 
 controller="$software_path/$PBS_JOBNAME" #current script location
-inputsamples="$out_dir_base/#TODO"
+inputsamples="$out_dir_base/220331_RCCSUVRI_phscinput_samples_with_bf.rds"
 CLUSIZE='50'
 DATE='2022-08-22'
 
@@ -47,20 +47,17 @@ source activate phylo_alignments
 
 case $STEP in
 
-        # In this analysis we avoid the first step of computing similarities, as there exist already
-        net)
-        echo "---- initialise analysis ----"
-        Rscript $software_path/TSI_initialise.R \
+    # In this analysis we avoid the first step of computing similarities, as there exist already
+    net)
+    echo "---- initialise analysis ----"
+    Rscript $software_path/TSI_initialise.R \
         --controller $controller \
         --include_least_recent_only TRUE \
         --out_dir_base $out_dir_base
-        ;;
+            ;;
 
-        # modified this step adding the reference flag 
-        # This also has walltime flag but don't know what to do exactly about it...
-        ali)
-        echo "---- compute alignments ----"
-
+    ali)
+    echo "---- compute alignments ----"
         if [ "$REDO" = "0"]; then
                 Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -78,7 +75,7 @@ case $STEP in
                 --walltime_idx $RES \
                 --tsi_analysis FALSE
         else
-                Rscript $software_path/make_deep_sequence_alignments.R \
+            Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
                 --prog_dir $phyloscanner_path \

@@ -319,7 +319,6 @@ source(file.path(args$pkg.dir, "utility.R"))
 # I can run at most 1000 simultaneous jobs on the short q.
 list(
   `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7 , hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
-  # `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
   `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=500),
   `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=500)
 ) -> pbs_headers
@@ -342,11 +341,7 @@ ifelse(
 
 infile.runs <- file.path(
   args$out.dir,
-  paste0(
-    'phscinput_runs_clusize_', args$cluster_size,
-    '_ncontrol_', args$n_control,
-    tmp,'.rds'
-  )
+  paste0( 'phscinput_runs_clusize_', args$cluster_size, '_ncontrol_', args$n_control, tmp,'.rds')
 )
 stopifnot(file.exists(infile.runs))
 
@@ -408,10 +403,10 @@ if(file.exists(cmds.path))
   
   if(is.na(infile.consensus))
   {
-    # if NA, look in args$out.dir.data
+    # if NA, look in args$out.dir.data: TODO:check below
     tmp <- ifelse(args$tsi_analysis,
-                  yes='220419_reference_set_for_PARTNERS_mafft.fasta',
-                  no='ConsensusGenomes.fasta')
+            yes='220419_reference_set_for_PARTNERS_mafft.fasta',
+            no='ConsensusGenomes.fasta')
     infile.consensus <- file.path(args$out.dir.data, tmp)
   }else{
     # If does not exists, look within args$out.dir.data
@@ -536,6 +531,7 @@ if(file.exists(cmds.path))
 cols <- c('OUT1', 'OUT2')
 pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='fasta' ) , by=OUTDIR, .SDcols= names(pty.c) %like% 'REGEX']
 
+# print statments documenting completed things
 pty.c[, cat(sum(!is.na(OUT2)),
             '(', .percent(mean(!is.na(OUT2))),')', 
             'of desired outputs were generated in the previous runs\n')]
@@ -562,10 +558,10 @@ if( nrow(pty.c) == 0 )
 {
   # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
-                 next_step='btr', 
-                 res=1,
-                 redo=0
-  )
+        next_step='btr', 
+        res=1,
+        redo=0
+    )
   stop('Alignment step completed, submitted the following task')
 }
 

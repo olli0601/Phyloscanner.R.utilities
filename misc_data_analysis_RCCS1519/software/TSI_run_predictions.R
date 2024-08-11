@@ -85,7 +85,8 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 # helper f's
 ###############
 
-.unzip.patstats <- function(x){
+.unzip.patstats <- function(x)
+{
         csv.name <- unzip(x, list = TRUE)$Name
         csv.name <- grep('_patStats.csv$',csv.name,value = T)
         patstat <- as.data.table(read.csv(unz(x, csv.name), header = TRUE, sep = ","))
@@ -94,8 +95,8 @@ args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
         return(csv.name)
 }
 
-generate.sample <- function(maf) {
-
+generate.sample <- function(maf) 
+{
         cat('\n', 'Running generate.sample()...', '\n')
         # Lele's function to compute Minor Allele Frequencies. 
         MAF_matrix<-matrix(0,ncol=10000,nrow=(nrow(maf)+1))
@@ -157,6 +158,60 @@ get.sampling.dates <- function(phsc.samples = args$phsc.samples)
         return(ddates)
 }
 
+
+# TODO:
+write.allmafs.from.samples.with.bf <- function(path.samples.with.bf,
+                                               bf.prefix='/rds/general/project/ratmann_pangea_deepsequencedata/live')
+{
+    # Load files 
+    dsamples <- readRDS(path.samples.with.bf)
+
+    # select samples for which we can compute base frequencies.
+    idx <- dsamples[!is.na(BF), .(RENAME_ID, BF), ]
+
+    # function to read bf files and compute Minore allele freqs.
+    .get.minor.allele.freqs <- function(path)
+    {
+
+        # prepare output 
+        out <- rep(NA, 10000)
+
+        # read input base frequency files and rename columns
+        # path <- idx[file.exists(file.path(prefix, BF)),BF]
+        dbfs <- fread(path, header=TRUE)
+        names(dbfs)[names(dbfs) %like% 'HXB2'] <- 'Position_HXB2'
+        dbfs <- dbfs[Position_HXB2 != '-', ]
+
+        # Compute MAFs for given file
+        names(dbfs) <- gsub(' ', '_', names(dbfs))
+        dbfs[,{ 
+             z <- c(A_count, C_count, G_count, T_count)
+             list(maf=1 - (max(z, na.rm=TRUE)/sum(z, na.rm=TRUE)))
+        }, by='Position_HXB2'] -> dmafs
+
+        # put into output
+        out[as.integer(dmafs$Position_HXB2)] <- dmafs$maf
+        return(out)
+    }
+
+    # Apply to every file and combine
+    idx <- idx[file.exists(file.path(bf.prefix, BF)), ]
+    idx[, BF := file.path(prefix, BF)]
+    maf_all <- lapply(idx$BF, .get.minor.allele.freqs)
+    maf_all <- Reduce('rbind', maf_all)
+    maf_all <- as.data.table(maf_all)
+    names(maf_all) <- as.character(1:10000)
+    maf_all[, pos := idx$RENAME_ID]
+    setcolorder(maf_all, 'pos')
+
+    # save 
+    stopifnot(nrow(maf_all) == nrow(idx))
+    path.output <- gsub('samples_with_bf.rds$', 'samples_maf.csv', path.samples.with.bf)
+    fwrite(maf_all, file = path.output)
+}
+
+
+# Should break this into two!
 write.mafs.and.cmds <-function(pty_idx)
 {
         # For each PTY index, computes the MAF matrix and stores it in the phscrel directory
@@ -242,22 +297,43 @@ write.mafs.and.cmds <-function(pty_idx)
         gc()
 }
 
+write.cmds <- function(pty_idx, maf.path)
+{
+    # writes bash command to set up HIV-phylo-TSI
+    cat('Processing PTY index: ', pty_idx, '...\n')
+    files_pty <- dfiles[]
+
+    # writing command
+    #________________
+    cmd <- paste0('python ',args$TSI.dir,'/HIVPhyloTSI.py \\\n',
+                  ' -d ', args$TSI.dir, '/Model \\\n',
+                  ' -p ', files_pty$pat.path,' \\\n',
+                  ' -m ', maf.path,' \\\n',
+                  ' -o ', files_pty$tsi.path, '\n'
+    )
+    dfiles[pty==pty_idx, CMD:=cmd]
+
+    # guess I may need to free up some memory here
+    gc()
+}
+
 ###############
 # testing
 ###############
 
 if(0){
   args <- list(
-    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX",
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
-    rel.dir= "/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/2022_07_23_phsc_phscrelationships_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_BFR83HXB2_LAI_IIIB_BRUK03455_phcb_T_rtt_001_rla_T_zla_T",
-    phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/seroconverters3_alignXX/220419_phscinput_samples.rds",
+    rel.dir="/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T",
+    phsc.samples="/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/220331_RCCSUVRI_phscinput_samples_with_bf.rds",
     TSI.dir="/rds/general/user/ab1820/home/git/HIV-phyloTSI",
-    date = '2022-07-23',
-    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_seroconv3.sh',
+    date = '2022-08-22',
+    controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs2.sh',
     env_name = 'hivphylotsi'
   )
 }
+
 
 ################
 # main
@@ -279,6 +355,11 @@ args$out.dir.output <- .f('_phsc_output')
 stopifnot(dir.exists(args$rel.dir))
 stopifnot(file.exists(args$phsc.samples))
 
+# get mafs file if it doesn't exist already
+path.all.maf <- gsub('samples_with_bf.rds$', 'samples_maf.csv', args$phsc.samples)
+if(! file.exists(path.all.maf) )
+    write.allmafs.from.samples.with.bf(path.samples.with.bf=args$phsc.samples)
+
 # dates of collection for samples.
 ddates <- get.sampling.dates(phsc.samples=args$phsc.samples)
 
@@ -289,17 +370,33 @@ phsc_inputs <- file.path(args$out.dir.output,
                          paste0('ptyr', tmp, '_trees'), 
                          paste0('ptyr', tmp, '_input.csv' ))
 
-dfiles <- data.table(pty=as.integer(tmp), 
-                     zip.path=patstats_zipped, 
-                     phi.path=phsc_inputs)
-setkey(dfiles, pty)
-dfiles <- dfiles[ file.exists(zip.path) & file.exists(phi.path)]
-dfiles[, pat.path:=.unzip.patstats(zip.path), by='pty']
-dfiles[, maf.path:=gsub('patStats.csv$','maf.csv',pat.path)]
-dfiles[, tsi.path:=gsub('patStats.csv$','tsi.csv',pat.path)]
-dfiles[, CMD:=NA_character_]
 
-lapply(dfiles$pty, write.mafs.and.cmds)
+if(! file.exists(path.all.maf) )
+{
+    dfiles <- data.table(pty=as.integer(tmp), 
+                         zip.path=patstats_zipped, 
+                         phi.path=phsc_inputs)
+    setkey(dfiles, pty)
+    dfiles <- dfiles[ file.exists(zip.path) & file.exists(phi.path)]
+    dfiles[, pat.path:=.unzip.patstats(zip.path), by='pty']
+    dfiles[, maf.path:=gsub('patStats.csv$','maf.csv',pat.path)]
+    dfiles[, tsi.path:=gsub('patStats.csv$','tsi.csv',pat.path)]
+    dfiles[, CMD:=NA_character_]
+
+    lapply(dfiles$pty, write.mafs.and.cmds)
+
+}else{
+
+    dfiles <- data.table(pty=as.integer(tmp), 
+                         zip.path=patstats_zipped)
+    setkey(dfiles, pty)
+    dfiles <- dfiles[ file.exists(zip.path)]
+    dfiles[, pat.path:=.unzip.patstats(zip.path), by='pty']
+    dfiles[, tsi.path:=gsub('patStats.csv$','tsi.csv',pat.path)]
+    dfiles <- dfiles[!file.exists(tsi.path)]
+                         
+    lapply(dfiles$pty, write.cmds, maf.path=path.all.maf)
+}
 
 ##################################
 # submit jobs 
@@ -328,4 +425,3 @@ ids <- djob[, list(ID=.store.and.submit(.SD, prefix='tsi')), by=JOB_ID, .SDcols=
 qsub.next.step(file=args$controller,
                ids=ids, 
                next_step='dti')
-
