@@ -1,8 +1,6 @@
 rk.seq.get.mappeable.samples.Rakai <- function()
 {
-	#module purge
-	#module add tools/prod
-	#module add R/4.3.2-gfbf-2023a
+	#module purge; module add tools/prod; module add R/4.3.2-gfbf-2023a
 	require(data.table)
 	indir.rk <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS'
 	outdir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
@@ -414,8 +412,132 @@ rk.seq.get.best.mappeable.samples.Rakai <- function()
 	ds2 <- subset(ds, !(MX_RUN_GRACE_1 < 125 & N_NUC < 250) )
 	tmp <- ds2[, list(VISIT_DT= VISIT_DT, PT_ID_SEQ_NO = seq_along(VISIT_DT)), by = 'PT_ID']
 	ds2 <- merge(subset(ds2, select = -PT_ID_SEQ_NO ), tmp, by = c('PT_ID','VISIT_DT'))
-	
+		
 	# 7836 sequences 
 	saveRDS(ds2, file=file.path(indir, '240809_PANGEA2_RCCS_final_samples_minrun125_minnuc250.rds'))
+}
+
+rk.seq.remove.poor.samples.Rakai <- function()
+{
+	require(data.table)
+	require(ape)
 	
+	indir <- '~/Library/CloudStorage/OneDrive-ImperialCollegeLondon/OR_Work/PANGEA/2024_PANGEA_Rakai_analyses'
+	file <- '240809_PANGEA2_RCCS_final_samples_minrun125_minnuc250.rds'
+	ds <- readRDS(file = file.path(indir, file))
+	
+	# remove poor quality samples if there are multiple sequences per individual
+	tmp <- ds[,
+		list( N_SEQ = length(FORGLOBALALN_FASTA),
+			  CONSIDER_SEQ = N_NUC < 750 & MX_RUN_GRACE_1 < 500,
+			  CONSIDER_ALLSEQ = all(N_NUC < 750 & MX_RUN_GRACE_1 < 500),
+			  CONSIDER_IND = any(N_NUC < 750 & MX_RUN_GRACE_1 < 500),
+			  PANGEA_ID = PANGEA_ID
+			  ),			   		 
+		by = c('PT_ID')
+		]
+	tmp <- merge(ds, subset(tmp, N_SEQ > 1), by = c('PT_ID','PANGEA_ID'))
+	tmp <- subset(tmp, CONSIDER_IND)
+	
+	# for manual review
+	write.csv(subset(tmp,  CONSIDER_ALLSEQ), file = file.path(indir, '240809_PANGEA2_RCCS_final_samples_minrun125_minnuc250_all_seqs_of_ind_poor.csv'))
+	
+	# remove all of these
+	tmp <- subset(tmp, CONSIDER_IND & !CONSIDER_ALLSEQ & CONSIDER_SEQ)
+	tmp[, REMOVE := TRUE]
+	ds <- merge(ds, subset(tmp, select = c(PT_ID, PANGEA_ID, REMOVE)), by = c('PT_ID','PANGEA_ID'), all.x = TRUE )
+	ds <- subset(ds, is.na(REMOVE), select = -c(REMOVE, PT_ID_SEQ_NO))
+	
+	# rebuild seq no
+	tmp <- ds[, 
+				list(VISIT_DT= VISIT_DT, 
+					 N_SEQ = length(FORGLOBALALN_FASTA),
+					 PT_ID_SEQ_NO = seq_along(VISIT_DT)
+					 ), 
+				by = 'PT_ID']
+	ds <- merge(ds, tmp, by = c('PT_ID','VISIT_DT'))	
+	
+	# 7691 sequences
+	saveRDS(ds, file=file.path(indir, '240809_PANGEA2_RCCS_final_samples_minrun125_minnuc250_minusPoor1.rds'))
+}
+
+rkuvri.make.anonymised.id <- function()
+{   
+  #' input person ids, return ananymise ids
+
+  # file names
+  outfile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521_UVRI/important_anonymisation_keys_240817.csv'
+  
+  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+  infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
+  infile.ind.rccs2 <- file.path(data.dir, 'PANGEA2_RCCS/240709_pangea2_extract_longview_olli.csv')
+
+  infile.ind.anonymised.2021 <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'	
+	
+
+  # load person IDs
+  id.dt <- data.table(read.csv(infile.ind.rccs))
+  id.dt <- unique(subset(id.dt,select = c("pt_id")))
+  
+  tmp <- data.table(read.csv(infile.ind.rccs2))
+  tmp <- subset(tmp,select = c("pt_id"))
+  id.dt <- unique(rbind(id.dt, tmp))
+  
+  tmp <- data.table(read.csv(infile.ind.mrc))
+  tmp <- unique(subset(tmp,select = c("pt_id")))
+  id.dt <- rbind(id.dt,tmp)
+  
+  setkey(id.dt,pt_id)
+  setnames(id.dt,colnames(id.dt),toupper(colnames(id.dt)))
+
+  # load previous anonymised IDs
+  tmp <- as.data.table(read.csv( file = infile.ind.anonymised.2021 ))
+  set(tmp, NULL, "X", NULL)
+  set(tmp, NULL, "AID_NO", tmp[, as.integer(gsub('AID','',AID))])
+  id.dt <- merge(id.dt, tmp, by = "PT_ID", all.x = TRUE)
+
+  # set seed and sample identifier at random
+  set.seed(42)
+  tmp <- subset(id.dt, is.na(AID))
+  tmp[,AID_NO:=sample(1:nrow(tmp) + id.dt[, max(AID_NO, na.rm = TRUE)],replace = F)]
+  tmp[,AID:=formatC(AID_NO, width=floor(log10(nrow(tmp))) +1, flag="0")]
+  tmp[,AID:=paste0('AID',AID)]
+  id.dt <- rbind(subset(id.dt, !is.na(AID)), tmp)
+  id.dt <- subset(id.dt, select = - AID_NO)
+  write.csv(id.dt,file = outfile.ind.anonymised)
+  Sys.chmod(outfile.ind.anonymised,mode = '0444')
+}
+
+rkuvri.seq.make.consensus.alignment <- function()
+{
+	# TODO update
+	require(data.table)
+	require(ape)
+	indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS'
+	infile.rk <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/200422_PANGEA2_RCCS_selected_samples.rds'
+	infile.mrc <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_MRC/200422_PANGEA2_MRCUVRI_selected_samples.rds'
+	outfile <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/200422_PANGEA2_RCCSMRC_alignment.fasta'
+	
+	#	add consensus sequences to alignment
+	file.remove(outfile)
+	dr <- readRDS(infile.rk)
+	invisible( dr[, {
+				z <- paste0('cat ',FORGLOBALALN_FASTA,' >> ', outfile)
+				system(z)
+				NULL
+			}, by='PANGEA_ID'])
+	dm <- readRDS(infile.mrc)
+	invisible( dm[, {
+						z <- paste0('cat ',FORGLOBALALN_FASTA,' >> ', outfile)
+						system(z)
+						NULL
+					}, by='PANGEA_ID'])	
+	
+	#	new taxa names
+	ds <- read.dna(outfile, format='fasta')
+	dr[, LABEL:= paste0('RCCS_',PANGEA_ID)]
+	dm[, LABEL:= paste0('MRCUVRI_',PANGEA_ID)]	
+	rownames(ds) <- c(dr$LABEL, dm$LABEL)
+	write.dna(ds, file=outfile, format='fa', colsep='', nbcol=-1)
 }
