@@ -104,7 +104,7 @@ make.PBS.header <- function(hpc.walltime=47, hpc.select=1, hpc.nproc=1, hpc.mem=
   pbshead
 }
 
-rk.seq.make.subsequences <- function()
+rk.seq.make.subsequence <- function()
 {
   #' break sequences into subsequences by windows
   #' it takes sequences and break them into overlapping windows of length 500 and defines batches for distance calculation
@@ -233,16 +233,21 @@ rk.seq.make.distance <- function()
 
 
 rkuvri.submit.make.distance <- function(){
+  
   #' write script to calculate distance
+  
+  library(ape)
   
   window_size <- 500
   batch_size <- 100
   
   # files
   #
+  scriptdir <- '~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521/'
   indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
   outdir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
   infile <- file.path(indir, '240809_PANGEA2_RCCS_final_samples_alignment_minusPoor1.fasta')
+  source(paste0(scriptdir,"Rk1521_02_potential_nets.R"))
   
   # load data
   alignment <- read.dna(file = infile, format = "fasta")
@@ -265,14 +270,14 @@ rkuvri.submit.make.distance <- function(){
                           hpc.select=1, 
                           hpc.nproc=1, 
                           hpc.mem= "5gb", 
-                          hpc.load= "module load anaconda3/personal\nsource activate MakePotentialSubpgraphs", 
+                          hpc.load= "module load anaconda3/personal\nsource activate phyloenv", 
                           hpc.array= jobn,
                           hpc.q = NA)
   
   cmd <- paste0(cmd ,'\n case $PBS_ARRAY_INDEX in \n')
   for (i in seq_len(jobn)) {
     cmd <- paste0(cmd, i,') \n')
-    cmd <- paste0(cmd, 'Rscript ', '~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521/distance.R -data_dir ',  data.dir, 
+    cmd <- paste0(cmd, 'Rscript ', '~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521/distance.R -data_dir ',  outdir, 
                   ' -out_dir ', outdir,
                   ' -batchi ', batchs[i],
                   ' -windowi ', windows[i], '\n')
@@ -281,7 +286,7 @@ rkuvri.submit.make.distance <- function(){
   cmd <- paste0(cmd, 'esac \n')
   
   # write submission file	
-  processing.file <- file.path(potential.networks.analysis.dir, 'processing.sh')
+  processing.file <- file.path(outdir, 'processing.sh')
   cat(cmd, file=processing.file)
   
   # set permissions
@@ -293,4 +298,51 @@ rkuvri.submit.make.distance <- function(){
   cmd 	<- paste0(cmd,'\tqsub ', basename(processing.file),'\n')
   cat(cmd)
   
+}
+
+
+
+rk.seq.summarise.distance <- function(){
+  #' input similarities per batch and per window
+  #' combine similarities to one data.table for each window 
+  #' summarise basic infomations per window and clean by removing invalid pairs
+  
+  batch_size <- 100
+  windown <- 99
+  
+  # file names
+  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
+  infile.dist.base <- file.path(potential.networks.analysis.dir, paste0('subsequence_window_',1:windown))
+  
+  # clean results 
+  # gather outputs for each window
+  for (w in 1:windown) {
+    base <- infile.dist.base[w]
+    distancei <- data.table()
+    for (i in 1:batch_size) {
+      tmp <- readRDS(paste0(base,'_batch',i,'.rds'))
+      distancei <- rbind(distancei,tmp)
+      file.remove(file.path(potential.networks.analysis.dir,paste0(base,'_batch',i,'.rds')))
+    }
+    
+    # summarise
+    metai <- data.table(window=k,
+                        all_pairs=nrow(distancei),
+                        valid_pairs=nrow(distancei[LENGTH!=-1]),
+                        length200=nrow(distancei[LENGTH>=200]),
+                        length250=nrow(distancei[LENGTH>=250]),
+                        length300=nrow(distancei[LENGTH>=300]),
+                        max_length=max(distancei[LENGTH>=0,LENGTH]),
+                        min_length=min(distancei[LENGTH>=0,LENGTH]),
+                        max_percentage=max(distancei[PERC>=0,PERC]),
+                        min_percentage=min(distancei[PERC>=0,PERC]))
+    
+    # remove invalid pairs
+    distancei <- distancei[LENGTH>=0]
+    distancei[,WINDOW:=k]
+    
+    # save combined results per window
+    save(distancei,metai,file=paste0(infile.dist.base[w],'_results.rda'))
+    gc()
+  }
 }

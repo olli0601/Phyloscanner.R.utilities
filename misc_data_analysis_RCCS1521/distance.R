@@ -1,3 +1,42 @@
+# rk.seq.make.distance
+#'  calculate length of valid sequences, total match scores, percentage of matches of pair of sequences in one batch and in one window
+#' it inputs the subsequence and batch info, and returns a data.table with distances
+
+library(seqinr)
+library(data.table)
+# if(1)
+# {
+#   args_dir <- list()
+#   indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
+#   args_dir[['data_dir']] <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
+#   args_dir[['out_dir']] <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
+#   args_dir[['batchi']] <- 61
+#   args_dir[['windowi']] <- 48
+# }
+
+args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+if(length(args_line) > 0) 
+{
+  stopifnot(args_line[[1]]=='-data_dir')
+  stopifnot(args_line[[3]]=='-out_dir')
+  stopifnot(args_line[[5]]=='-batchi')
+  stopifnot(args_line[[7]]=='-windowi')
+  args_dir <- list()
+  args_dir[['data_dir']] <- args_line[[2]]
+  args_dir[['out_dir']] <- args_line[[4]]
+  args_dir[['batchi']] <- as.integer(args_line[[6]])
+  args_dir[['windowi']] <- as.integer(args_line[[8]])
+} 
+
+# file names
+infileb <- file.path(args_dir[['out_dir']],paste0('batch_size100.rds'))
+infiles <- file.path(args_dir[['out_dir']], paste0('subsequence', args_dir[['windowi']], '.fasta'))
+
+#	load
+sq<- read.fasta(infiles)
+dfo <- readRDS(infileb)
+
+
 # helper function
 is.match <- function(x,y){
   #' returns match score for each position
@@ -38,44 +77,6 @@ is.match <- function(x,y){
   return(ans)
 }
 
-# rk.seq.make.distance
-library(seqinr)
-library(data.table)
-if(1)
-{
-  args_dir <- list()
-  indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
-  args_dir[['data_dir']] <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
-  args_dir[['out_dir']] <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
-  args_dir[['script_dir']] <- '~/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521/'
-  args_dir[['batchi']] <- 61
-  args_dir[['windowi']] <- 48
-}
-
-args_line <-  as.list(commandArgs(trailingOnly=TRUE))
-if(length(args_line) > 0) 
-{
-  stopifnot(args_line[[1]]=='-data_dir')
-  stopifnot(args_line[[3]]=='-out_dir')
-  stopifnot(args_line[[5]]=='-script_dir')
-  stopifnot(args_line[[7]]=='-batchi')
-  stopifnot(args_line[[9]]=='-windowi')
-  args_dir <- list()
-  args_dir[['data_dir']] <- args_line[[2]]
-  args_dir[['out_dir']] <- args_line[[4]]
-  args_dir[['script_dir']] <- args_line[[6]]
-  args_dir[['batchi']] <- as.integer(args_line[[8]])
-  args_dir[['windowi']] <- as.integer(args_line[[10]])
-} 
-
-# file names
-infileb <- file.path(args_dir[['out_dir']],paste0('batch_size100.rds'))
-infiles <- file.path(args_dir[['out_dir']], paste0('subsequence', args_dir[['windowi']], '.fasta'))
-
-#	load
-sq<- read.fasta(infiles)
-dfo <- readRDS(infileb)
-
 # take batchi
 dfo	<- subset(dfo, BATCH==args_dir[['batchi']])
 setkey(dfo, TAXA1, TAXA2)
@@ -113,4 +114,4 @@ dfo[,PERC:=MATCHES/LENGTH]
 dfo <- rbind(dfo,tmp)
 
 #	save
-saveRDS(dfo, file=paste0(gsub('.fasta$','',inputFile),'_batch',args_dir[['batchi']],'.rds')	)
+saveRDS(dfo, file=paste0(gsub('.fasta$','',infiles),'_batch',args_dir[['batchi']],'.rds')	)
