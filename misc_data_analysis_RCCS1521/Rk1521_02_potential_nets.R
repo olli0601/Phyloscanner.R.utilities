@@ -979,6 +979,98 @@ rk.seq.classify.pairs <- function(){
 
 
 
+rk.seq.make.scores <- function()
+{
+  #' count valid length, match scores and match percentages
+  #' 
+  library(seqinr)
+  library(data.table)
+  
+  args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+  print(args_line)
+  if(length(args_line) > 0) 
+  {
+    stopifnot(args_line[[1]]=='-jobi')
+    i <- as.integer(args_line[[2]])
+  } 
+  
+  #
+  indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
+  outdir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
+  infile <- paste0(indir, "240809_PANGEA2_RCCS_final_samples_alignment_minusPoor1.fasta")
+  
+  #	load
+  sq <- read.fasta(infile)
+  
+  # remove sequence with all n
+  # sq	<- sq[ dfo[, unique(c(TAXA1, TAXA2))] ]
+  # sq.n <- unlist(lapply(sq, function(x){sum(x=='?' | x=='-' | x=='n')==length(x)}))
+  # sq.n.names <- names(sq.n[sq.n==TRUE])
+  # tmp <- dfo[TAXA1 %in% sq.n.names|TAXA2 %in% sq.n.names]
+  # tmp[,LENGTH:=-1.0]
+  # tmp[,MATCHES:=-1.0]
+  # tmp[,PERC:=-1.0]
+  # dfo <- dfo[!TAXA1 %in% sq.n.names & !TAXA2 %in% sq.n.names]
+  
+  cat(i,"\n")
+  dfo <- data.table(TAXA1 = names(sq)[i],
+                    TAXA2 = names(sq)[-i])
+  #	get similarity
+  dfo		<- dfo[,{ 
+    seq1 <- sq[[TAXA1]]
+    seq2 <- sq[[TAXA2]]
+    pos <- which(seq1 !='-' & seq1 !='?' & seq1 !='n' & seq2 !='-' & seq2 !='?' &  seq2 !='n')
+    if (length(pos)==0 ){
+      len <- as.integer(-1.0)
+      match <- -1.0
+    }else{
+      seq1 <- seq1[pos]
+      seq2 <- seq2[pos]
+      len <- length(pos)
+      # cat(TAXA1,'\n',seq1,'\n',TAXA2,'\n',seq2,'\n')
+      match <- sum(sapply(1:length(pos),function(pos){is.match(seq1[pos],seq2[pos])}))
+    }
+    list(LENGTH= len,
+         MATCHES= match)
+  }, by=c('TAXA1','TAXA2')]
+  dfo[,PERC:=MATCHES/LENGTH]
+  saveRDS(dfo, file = paste0(outdir, "avescores_",names(sq)[i], ".rds"))
+  
+  
+  
+  
+  # make scripts
+  jobn <- length(sq)
+  cmd <-  make.PBS.header(hpc.walltime=24, 
+                          hpc.select=1, 
+                          hpc.nproc=1, 
+                          hpc.mem= "20gb", 
+                          hpc.load= "module load anaconda3/personal\nsource activate phyloenv", 
+                          hpc.array= jobn,
+                          hpc.q = NA)
+  
+  cmd <- paste0(cmd ,'\n case $PBS_ARRAY_INDEX in \n')
+  for (i in seq_len(jobn)) {
+    cmd <- paste0(cmd, i,') \n')
+    cmd <- paste0(cmd, 'Rscript ', '~/ave_score.R -jobi ',  i, 
+                  '\n')
+    cmd <- paste0(cmd, ';; \n')
+  }
+  cmd <- paste0(cmd, 'esac \n')
+  
+  # write submission file	
+  processing.file <- file.path(outdir, 'processing_avescore.sh')
+  cat(cmd, file=processing.file)
+  
+  # set permissions
+  Sys.chmod(processing.file, mode='644')	
+  
+  # run
+  cmd <-''
+  cmd 	<- paste0(cmd, '\tcd ', dirname(processing.file),'\n')
+  cmd 	<- paste0(cmd,'\tqsub ', basename(processing.file),'\n')
+  cat(cmd)
+}
 
 rk.seq.cluster <- function(){
   library(data.table)
@@ -1023,13 +1115,16 @@ rk.seq.cluster <- function(){
   # length(unique(c(tmp$PT_ID1, tmp$PT_ID2)))# 2405
   # 
   dc <- unique(dc[PT_ID1!=PT_ID2,c("PT_ID1", "PT_ID2")])
-  cat("Unique sequences in potential networks after removing pairs from the same individual: ",
+  cat("Unique individuals in potential networks after removing pairs from the same individual: ",
   length(unique(c(dc$PT_ID1, dc$PT_ID2)))) # 5094 (1) # 2637 (4)
   cat("Number of close pairs: ", nrow(dc),"\n")
   
   # make graph
   chains <- graph.data.frame(dc[,c("PT_ID1","PT_ID2")], directed=FALSE, vertices=NULL)
+  print(length(V(chains)))
   chains2 <- delete_vertices(chains, dts[dts$PANGEA_ID %in% dcs[dcs$N_IND_CLOSE > 50, ]$TAXA,]$PT_ID)
+  print(length(V(chains2)))
+  print(length(unique(dts[dts$PANGEA_ID %in% dcs[dcs$N_IND_CLOSE > 50, ]$TAXA,]$PT_ID)))
   
   rtc	<- data.table(ID=V(chains2)$name, CLU=clusters(chains2, mode="weak")$membership)
   
@@ -1073,10 +1168,8 @@ rk.seq.cluster <- function(){
          MATCHES = match)
   }, by=c('PT_ID1','PT_ID2')]
 
-  save(dcl_sc, rtc, file = "~/cluster_",window_cut,".rda") # need igraph 2.0.3 - cannot solve envir on hpc
-  # load("~/cluster.rda")
+  # save(dcl_sc, rtc, file = paste0("~/cluster_",window_cut,".rda")) # need igraph 2.0.3 - cannot solve envir on hpc
   # load("~/cluster_1.rda")
-  # chains <- upgrade_graph(chains)
 
   # set similar scores to 1
   #
@@ -1209,26 +1302,170 @@ rk.seq.cluster <- function(){
 
   cat('Write clusters to ', paste0(indir,'clusters.rds'),'...\n')
   saveRDS(df, file = paste0(indir,'clusters_potential_nets_1.rds'))
-  # 
-  # 1   2   3   4   5   6   7   8   9  10  12  13  14  15  19  22  24  26  28  29 
-  # 223 485 138  60  40  15   9   5   4   5   2   2   2   1   1   1   1   1   1   2 
-  # 32  44 
-  # 1   1 
   
   # not in close pairs
   length(unique(df$ID))
   
+  #
+  df <- readRDS(paste0(indir,'clusters_potential_nets_1.rds'))
+  dts <- readRDS("~/dts.rds")
+  load("~/cluster_1.rda")
   
-  inds <- setdiff(unique(dts$PT_ID), unique(df$ID)) # 2628 in
-  inds <- c(inds, dts[dts$PANGEA_ID %in% dcs[dcs$N_IND_CLOSE > 50, ]$TAXA,]$PT_ID) # 3206 outside
+  #
+  inds_notin <- setdiff(unique(dts$PT_ID), unique(df$ID)) 
+  inds_in_iso <- df$ID[df$CLU_SIZE==1]
   
+  #
+  inds_in_rmneign <- dts[dts$PANGEA_ID %in% dcs[dcs$N_IND_CLOSE > 50, ]$TAXA,]
+  
+  # for those removed due to massive neighbors, add 10 closest individuals
+  nclose <- 10
+  minperc <- c()
+  for(i in 1:nrow(inds_in_rmneign)){
+    id <- inds_in_rmneign$PANGEA_ID[i]
+    das <- readRDS(paste0("avescores_",id,".rds"))
+    das <- merge(das, dts, by.x = "TAXA1", by.y = "PANGEA_ID", all.x = T)
+    das <- merge(das, dts, by.x = "TAXA2", by.y = "PANGEA_ID", all.x = T)
+    das$TAXA1 <- das$TAXA2 <- NULL
+    setnames(das, c("PT_ID.x","PT_ID.y"), c("TAXA1", "TAXA2"))
+    # sort(das$LENGTH)
+    # print(sort(das$PERC, decreasing = T))
+    # only trust scores if LEN > 500 or median length (some lengths are small)
+    # CLOSE if >= 0.975
+    # max add 10
+    tmp <- das[das$LENGTH >= min(500, median(das$LENGTH)),]
+    tmp <- tmp[order(-tmp$PERC),]
+    # in case closest few sequences are from the same ind
+    tmptx <- unique(tmp$TAXA2)
+    tmptx <- tmptx[1:min(nclose, nrow(tmp))]
+    # record min scores among these closest ind
+    tmp <- tmp[tmp$TAXA2 %in% tmptx,]
+    tmp <- tmp[,list(PERC = max(PERC)), by =c("TAXA1","TAXA2")]
+    minperc <- c(minperc, min(tmp$PERC))
+    # & das$PERC >= 0.9
+    if(i == 1){
+      df_in_rmneigh <- data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                                  IDCLU = i)
+    }else{
+      df_in_rmneigh <- rbind(df_in_rmneigh, data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                                                       IDCLU = i))
+    }
+  }
+  
+  range(minperc) # 0.9410569 0.9969040
+ 
+  
+  # for those isolated vertex and those not in potential nets, add 3 closest individuals
+  nclose <- 3
+  minperc <- c()
+  # which(inds_in_iso == "RK-K127989")
+  for(i in 1:length(inds_in_iso)){
+    cat (i,"\n")
+    ids <- dts[dts$PT_ID %in% inds_in_iso[i],]$PANGEA_ID
+    dass <- list()
+    for(id in ids){
+      dass[[id]] <- readRDS(paste0("avescores_",id,".rds"))
+    }
+    das <- rbindlist(dass)
+    das <- merge(das, dts, by.x = "TAXA1", by.y = "PANGEA_ID", all.x = T)
+    das <- merge(das, dts, by.x = "TAXA2", by.y = "PANGEA_ID", all.x = T)
+    das$TAXA1 <- das$TAXA2 <- NULL
+    setnames(das, c("PT_ID.x","PT_ID.y"), c("TAXA1", "TAXA2"))
+    
+    # sort(das$LENGTH)
+    # print(sort(das$PERC, decreasing = T))
+    # only trust scores if LEN > 500 or median length (some lengths are small)
+    # max add 3
+    #
+    tmp <- das[das$LENGTH >= min(500, median(das$LENGTH)),]
+    tmptx <- unique(tmp[order(-tmp$PERC),]$TAXA2)
+    tmptx <- tmptx[1:min(nclose, nrow(tmp))]
+    #
+    tmp <- tmp[tmp$TAXA2 %in% tmptx,]
+    tmp <- tmp[,list(PERC = max(PERC)), by =c("TAXA1","TAXA2")]
+    minperc <- c(minperc, min(tmp$PERC))
+    #
+    if(i == 1){
+      df_in_iso <- data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                              IDCLU = i)
+    }else{
+      df_in_iso <- rbind(df_in_iso, data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                                               IDCLU = i))
+    }
+  }
+  range(minperc) 
+  # 0.8681818 0.9833659
+  # which(minperc < 0.9) # 193 # check
+  # das <- das[das$LENGTH !=-1,]
+  # das <- das[das$LENGTH>200,] # there are closer inds but length ~ 250, not sure whether enough
+  # das[order(-das$PERC),]
+  # hist(das$LENGTH,plot=F)
+  # names(which(table(dts$PT_ID) >1))[names(which(table(dts$PT_ID) >1)) %in% inds_in_iso]
+  
+  # for those not in potential nets, same as isolated vertices
+  nclose <- 3
+  minperc <- c()
+  # which(inds_notin == "RK-K127989")
+  for(i in 1:length(inds_notin)){
+    cat (i,"\n")
+    ids <- dts[dts$PT_ID %in% inds_notin[i],]$PANGEA_ID
+    dass <- list()
+    for(id in ids){
+      dass[[id]] <- readRDS(paste0("avescores_",id,".rds"))
+    }
+    das <- rbindlist(dass)
+    das <- merge(das, dts, by.x = "TAXA1", by.y = "PANGEA_ID", all.x = T)
+    das <- merge(das, dts, by.x = "TAXA2", by.y = "PANGEA_ID", all.x = T)
+    das$TAXA1 <- das$TAXA2 <- NULL
+    setnames(das, c("PT_ID.x","PT_ID.y"), c("TAXA1", "TAXA2"))
+    
+    # sort(das$LENGTH)
+    # print(sort(das$PERC, decreasing = T))
+    # only trust scores if LEN > 500 or median length (some lengths are small)
+    # max add 3
+    #
+    tmp <- das[das$LENGTH >= min(500, median(das$LENGTH)),]
+    tmptx <- unique(tmp[order(-tmp$PERC),]$TAXA2)
+    tmptx <- tmptx[1:min(nclose, nrow(tmp))]
+    #
+    tmp <- tmp[tmp$TAXA2 %in% tmptx,]
+    tmp <- tmp[,list(PERC = max(PERC)), by =c("TAXA1","TAXA2")]
+    minperc <- c(minperc, min(tmp$PERC))
+    #
+    if(i == 1){
+      df_notin <- data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                              IDCLU = i)
+    }else{
+      df_notin <- rbind(df_notin, data.table(ID = c(unique(tmp$TAXA1),tmptx),
+                                               IDCLU = i))
+    }
+  }
+  range(minperc) # 0.8811189 1.0000000
+  
+  # combine
+  # unique(df$ID)
+  df <- df[df$CLU_SIZE !=1, ]
+  
+  df_in_rmneigh[, IDCLU := IDCLU + max(df$IDCLU)]
+  df <- rbind(df[,c("ID", "IDCLU")], df_in_rmneigh)
+  
+  df_in_iso[, IDCLU := IDCLU + max(df$IDCLU)]
+  df <- rbind(df, df_in_iso)
+  
+  df_notin[, IDCLU := IDCLU + max(df$IDCLU)]
+  df <- rbind(df, df_notin)
+  
+  tmp <- df[,list(CLU_SIZE = length(ID)),by = 'IDCLU']
+  df <- merge(df, tmp, by = "IDCLU", all.x=T)
+  
+  #
+  table(table(df$IDCLU))
+  
+  length(unique(dts$PT_ID))
+  length(unique(df$ID)) # 5825
+  saveRDS(df, paste0(indir, 'clusters_all_1.rds'))
   
 
-  
-
-  
-
-  
 }
 
 rkuvri.make.phyloscanner.input.samples <- function()
@@ -1239,59 +1476,47 @@ rkuvri.make.phyloscanner.input.samples <- function()
   require(data.table)
   
   # file names
-  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
-  infile.rccs <- file.path(data.dir, 'PANGEA2_RCCS/200422_PANGEA2_RCCS_selected_samples.rds')
-  infile.mrc <- file.path(data.dir, 'PANGEA2_MRC/200422_PANGEA2_MRCUVRI_selected_samples.rds')
-  infile.ind.rccs <- file.path(data.dir,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
-  infile.ind.mrc <- file.path(data.dir,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
-  infile.ind.anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv'
+  indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
+  netdir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
+  infile <- file.path(indir, "240809_PANGEA2_RCCS_final_samples_minrun125_minnuc250_minusPoor1.rds")
+  infile_anonymised <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521_UVRI/important_anonymisation_keys_240817.csv'
+  outbase <- paste0(indir, "240809_RCCSUVRI_")
+  #
+  ds <- readRDS(infile)
+  hivc.db.Date2numeric<- function( x )
+  {
+    if(!class(x)%in%c('Date','character'))	return( x )
+    x	<- as.POSIXlt(x)
+    tmp	<- x$year + 1900
+    x	<- tmp + round( x$yday / ifelse((tmp%%4==0 & tmp%%100!=0) | tmp%%400==0,366,365), d=3 )
+    x	
+  }
+  ds$VISIT_DT_N <- hivc.db.Date2numeric(ds$VISIT_DT)
+  ds <- ds[ , .SD[which.min(VISIT_DT_N)], by = "PT_ID"]
+  # ds[order(VISIT_DT_N),]
   
-  # read selected files
-  mapping_rccs <- readRDS(infile.rccs)
-  mapping_rccs <- subset(mapping_rccs,select=c('PANGEA_ID','REMAP_BAM','REMAP_REF_FASTA'))
-  mapping_rccs[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
-  
-  mapping_mrc <- readRDS(infile.mrc)
-  mapping_mrc <- subset(mapping_mrc,select=c('PANGEA_ID','REMAP_BAM','REMAP_REF_FASTA'))
-  mapping_mrc[,PANGEA_ID:=paste0('MRCUVRI_',PANGEA_ID)]
-  
-  ds <- rbind(mapping_rccs, mapping_mrc)
-  ds <- subset(ds, !is.na(REMAP_BAM))
+  ds <- subset(ds, select = c("PANGEA_ID", "PT_ID", "REMAP_BAM", "REMAP_REF_FASTA"))
   
   # simplify REMAP_BAM and REMAP_REF_FASTA
-  ds[, REMAP_BAM:=gsub(data.dir,'', REMAP_BAM)]
-  ds[, REMAP_REF_FASTA:=gsub(data.dir,'', REMAP_REF_FASTA)]
+  ds[, REMAP_BAM:= gsub(indir,'', REMAP_BAM)]
+  ds[, REMAP_REF_FASTA:= gsub(indir,'', REMAP_REF_FASTA)]
   
   # double check file names as expected
   set(ds, NULL, 'SAMPLE_ID', ds[, gsub('\\.bam','',REMAP_BAM)])
   set(ds, NULL, 'SAMPLE_ID_CHECK', ds[, gsub('_ref.fasta','',REMAP_REF_FASTA)])
-  stopifnot( ds[, all(SAMPLE_ID==SAMPLE_ID_CHECK)] )
+  # ds[SAMPLE_ID!=SAMPLE_ID_CHECK, ]
   
   # finalise SAMPLE_ID
   set(ds, NULL, c('SAMPLE_ID_CHECK','REMAP_REF_FASTA','REMAP_BAM'), NULL)
   
-  # read individual ids
-  id.dt <- data.table(read.csv(infile.ind.rccs))
-  id.dt <- subset(id.dt,select = c("PT_ID","sex","pangea_id"))
-  id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
-  tmp <- data.table(read.csv(infile.ind.mrc))
-  tmp <- subset(tmp,select = c("PT_ID","sex","pangea_id"))
-  tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
-  id.dt <- rbind(id.dt,tmp)
-  id.dt <- unique(id.dt)
-  setnames(id.dt, c('PT_ID','pangea_id'), c("UNIT_ID","PANGEA_ID"))
-  set(id.dt, NULL, 'sex', NULL)
-  
   # add anonymised ids
-  aid <- as.data.table(read.csv(infile.ind.anonymised, stringsAsFactors = FALSE))
-  aid <- subset(data.table(aid),select=c('PT_ID','AID'))
-  setnames(aid,c('PT_ID','AID'),c('UNIT_ID','RENAME_ID'))
-  id.dt <- merge(id.dt, aid, by='UNIT_ID', all.x=TRUE)
-  # note: 92  Person IDs are NA, remove
-  
-  # merge with sample ids
-  ds <- merge(id.dt, ds, by='PANGEA_ID')
+  aid <- data.table(read.csv(infile_anonymised, stringsAsFactors = FALSE))
+  aid <- subset(aid, select=c('PT_ID','AID'))
+  ds <- merge(ds, aid, by.x = "PT_ID", by.y = "PT_ID", all.x = T)
+  # ds[is.na(AID),]
+  setnames(ds, c('PT_ID','AID'), c('UNIT_ID','RENAME_ID'))
+
+
   # finalise RENAME_ID
   ds[,FQ:=seq_len(length(SAMPLE_ID)), by='RENAME_ID']
   ds[,FQ:=paste0('fq',FQ)]
@@ -1299,8 +1524,8 @@ rkuvri.make.phyloscanner.input.samples <- function()
   ds[,FQ:=NULL]
   
   # write processed samples
-  cat('\nWriting to file ', paste0(out.base,'phscinput_samples.rds') )
-  saveRDS(ds, file=paste0(out.base,'phscinput_samples.rds'))
+  cat('\nWriting to file ', paste0(outbase,'phscinput_samples.rds') )
+  saveRDS(ds, file=paste0(outbase,'phscinput_samples.rds'))
 }
 
 rkuvri.make.phyloscanner.input.runs <- function()
@@ -1311,87 +1536,100 @@ rkuvri.make.phyloscanner.input.runs <- function()
   require(data.table)
   require(tidyverse)
   
-  data.dir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-  out.base <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_'
-  potential.networks.analysis.dir <- "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/200929_SIMILARTY_windowsize500_batchsize100"
-  infile.potential.networks <- file.path(potential.networks.analysis.dir, 'clusters.rda')
-  infile.clostest.three.per.cluster <- file.path(potential.networks.analysis.dir, 'closest_3_percluster.rds')
-  infile.couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
+  indir <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/PANGEA2_RCCS/'
+  outbase <- paste0(indir, '240809_RCCSUVRI_')
+  netdir <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/potential_nets/'
+  infile_net <- file.path(netdir, 'clusters_all_1.rds')
+  infile_couple <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/RakaiPangeaMetaData_v2.rda'
   
   # load data on individuals, sample locations, and rename ids
-  pty.runs <- readRDS(paste0(out.base,'phscinput_samples.rds'))
+  pty.runs <- readRDS(paste0(outbase,'phscinput_samples.rds'))
   
   # load potential transmission networks of close pairs and redefine IDCLU
-  load( infile.potential.networks )
-  tmp <- unique(subset(df,select=c('CLU_SIZE','IDCLU')))
+  df <- readRDS(infile_net)
+  tmp <- unique(subset(df, select=c('CLU_SIZE','IDCLU')))
   setkey(tmp, CLU_SIZE)
-  tmp[, IDCLU2:=seq_len(nrow(tmp))]
-  tmp[, CLU_SIZE:=NULL]
-  rtc	<- subset( merge(df, tmp, by='IDCLU'),select=c('ID','IDCLU2','CLU_SIZE'))
-  setnames(rtc,'IDCLU2','IDCLU')
-  setkey(rtc, IDCLU)
-  cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ',
-      unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
-      'individuals appear in more than one clusters','\n')
-  # 808  potential transmission networks of  2364  individuals, the ten largest cluster sizes are  17 18 21 22 26 37 38 45 50 55 ,  150 individuals appear in more than one clusters
+  tmp[, IDCLU2 := seq_len(nrow(tmp))]
+  tmp[, CLU_SIZE := NULL]
   
-  #
+  rtc	<- subset( merge(df, tmp, by='IDCLU'),
+                 select = c('ID', 'IDCLU2', 'CLU_SIZE'))
+  setnames(rtc, 'IDCLU2', 'IDCLU')
+  setkey(rtc, IDCLU)
+  cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, \nThe ten largest cluster sizes are ',
+      unique(subset(rtc, select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], "\n")
+  # 3754  potential transmission networks of  5825  individuals, 
+  # The ten largest cluster sizes are  33 35 39 40 42 46 50 51 51 55 
+  
   #	add couples that are not a close pair and redefine IDCLU
   #
-  
   #	find which couples are in potential transmission networks
-  load(infile.couple)
-  rp <- data.table(unique(subset(coupdat,select=c('male.RCCS_studyid', 'female.RCCS_studyid'))))
+  load(infile_couple)
+  rp <- data.table(unique(subset(coupdat, select=c('male.RCCS_studyid', 'female.RCCS_studyid'))))
   setnames(rp, c('male.RCCS_studyid', 'female.RCCS_studyid'), c('MALE_RID','FEMALE_RID'))
   rp <- subset(rp, MALE_RID!=FEMALE_RID)
-  rp[,FEMALE_RID:=paste0('RK-',FEMALE_RID)]
-  rp[,MALE_RID:=paste0('RK-',MALE_RID)]
-  tmp <- sort(unique(as.character(pty.runs[['UNIT_ID']])))
-  rp <- unique(subset(rp, FEMALE_RID%in%tmp & MALE_RID%in%tmp, select=c(FEMALE_RID,MALE_RID)))
-  setnames(rp, 'FEMALE_RID', 'ID')
-  rp <- merge(rp, subset(rtc, select=c(ID, IDCLU)), all.x=1, by='ID')
-  setnames(rp, c('ID','IDCLU','MALE_RID'), c('FEMALE_RID', 'FEMALE_IDCLU','ID'))
-  rp <- merge(rp, subset(rtc, select=c(ID, IDCLU)), all.x=1, by='ID')
-  setnames(rp, c('ID','IDCLU'), c('MALE_RID', 'MALE_IDCLU'))
+  rp[, FEMALE_RID:=paste0('RK-',FEMALE_RID)]
+  rp[, MALE_RID:=paste0('RK-',MALE_RID)]
+  tmp <- pty.runs$UNIT_ID
+  rp <- unique(subset(rp, FEMALE_RID %in% tmp & MALE_RID %in% tmp, select = c(FEMALE_RID,MALE_RID)))
+
+  # 
+  rp <- merge(rp, subset(rtc, select = c(ID, IDCLU)), by.x = "FEMALE_RID", by.y = "ID", all.x = T)
+  setnames(rp, "IDCLU", "FEMALE_IDCLU")
+  rp <- merge(rp, subset(rtc, select = c(ID, IDCLU)), by.x = "MALE_RID", by.y = "ID", all.x = T)
+  setnames(rp, "IDCLU", "MALE_IDCLU")
   rp[, COUP_ID := seq_len(nrow(rp))]
   
   #	reassign partners that are not in the same network as their partner
-  tmp <- subset(rp, !is.na(FEMALE_IDCLU) & !is.na(MALE_IDCLU))
-  tmp2 <- tmp[, list(NOT_IN_SAME = !any(FEMALE_IDCLU == MALE_IDCLU)),by=c('MALE_RID','FEMALE_RID')]
+  tmp <- subset(rp, !is.na(FEMALE_IDCLU) & !is.na(MALE_IDCLU)) 
+  tmp2 <- tmp[, list(NOT_IN_SAME = !any(FEMALE_IDCLU == MALE_IDCLU)),
+              by=c('MALE_RID','FEMALE_RID')]
   tmp2 <- subset(tmp2, NOT_IN_SAME)
-  tmp2 <- merge(tmp2, rp, by=c('MALE_RID','FEMALE_RID'))
-  tmp <- rp[, which(COUP_ID %in% tmp2$COUP_ID)]
-  set(rp, tmp, 'MALE_IDCLU', rp[tmp, FEMALE_IDCLU])
-  set(tmp2, NULL, 'FEMALE_IDCLU', tmp2[,MALE_IDCLU])
-  set(tmp2, NULL, 'NOT_IN_SAME', NULL)
-  rp <- rbind(rp, tmp2)
-  
-  tmp <- rp[, which(is.na(FEMALE_IDCLU) & !is.na(MALE_IDCLU))]
-  set(rp, tmp, 'FEMALE_IDCLU', rp[tmp, MALE_IDCLU])
-  tmp <- rp[, which(!is.na(FEMALE_IDCLU) & is.na(MALE_IDCLU))]
-  set(rp, tmp, 'MALE_IDCLU', rp[tmp, FEMALE_IDCLU])
-  
-  #	make a new potential transmission network for couples that are in no network so far
-  tmp <- rp[, which(is.na(FEMALE_IDCLU) & is.na(MALE_IDCLU))]
-  set(rp, tmp, c('FEMALE_IDCLU','MALE_IDCLU'), rtc[, max(IDCLU)]+seq_along(tmp))
+  for(i in 1:nrow(tmp2)){
+    tmp2_male <- rtc[ID == tmp2$MALE_RID[i],]
+    tmp2_male$CAT <- "M"
+    tmp2_female <- rtc[ID == tmp2$FEMALE_RID[i],]  
+    tmp2_female$CAT <- "F"
+    tmp2_all <- rbind(tmp2_male, tmp2_female)
+    tmp2_all <-  tmp2_all[order(CLU_SIZE),]
+    # add to smallest cluster one of the couple is in
+    if(tmp2_all$CAT[1] == "M"){
+      rtc <- rbind(rtc, data.table(ID = tmp2$FEMALE_RID[i], IDCLU = tmp2_all$IDCLU[1]), fill = T)
+    }else{
+      rtc <- rbind(rtc, data.table(ID = tmp2$MALE_RID[i], IDCLU = tmp2_all$IDCLU[1]), fill = T)
+    }
+  }
+
+  # tmp2 <- merge(tmp2, rp, by = c('MALE_RID','FEMALE_RID'))
+  # 
+  # tmp <- rp[, which(COUP_ID %in% tmp2$COUP_ID)]
+  # set(rp, tmp, 'MALE_IDCLU', rp[tmp, FEMALE_IDCLU])
+  # set(tmp2, NULL, 'FEMALE_IDCLU', tmp2[,MALE_IDCLU])
+  # set(tmp2, NULL, 'NOT_IN_SAME', NULL)
+  # rp <- rbind(rp, tmp2)
+  # setnames(rp, c('MALE_IDCLU'), c('IDCLU'))
+  # rp <- subset(melt(rp, id.vars=c('IDCLU'), 
+  #                   measure.vars=c('MALE_RID','FEMALE_RID'), 
+  #                   value.name='ID'), select=c(ID, IDCLU))
+  # rtc <- unique(rbind(subset(rtc,select=c('ID','IDCLU')), rp))
   
   #	recalculate length of clusters
-  setnames(rp, c('MALE_IDCLU'), c('IDCLU'))
-  rp <- subset(melt(rp, id.vars=c('IDCLU'), measure.vars=c('MALE_RID','FEMALE_RID'), value.name='ID'), select=c(ID, IDCLU))
-  rtc <- unique(rbind(subset(rtc,select=c('ID','IDCLU')), rp))
+  rtc$CLU_SIZE <- NULL
   tmp <- rtc[, list(CLU_SIZE=length(ID)), by='IDCLU']
   setkey(tmp, CLU_SIZE)
-  tmp[, IDCLU2:=seq_len(nrow(tmp))]
-  rtc <- subset(merge(rtc, tmp, by='IDCLU'),select=c('ID','IDCLU2','CLU_SIZE'))
+  tmp[, IDCLU2 := seq_len(nrow(tmp))]
+  rtc <- subset(merge(rtc, tmp, by='IDCLU', all.x = T),
+                select=c('ID','IDCLU2','CLU_SIZE'))
   setnames(rtc, 'IDCLU2', 'IDCLU')
   setkey(rtc,IDCLU)
-  cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ',
-      unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
-      'individuals appear in more than one clusters','\n')
-  # 1059  potential transmission networks of  3032  individuals, the ten largest cluster sizes are  22 22 23 31 31 43 49 51 52 67 ,  277 individuals appear in more than one clusters
+  cat(max(rtc$IDCLU),' potential transmission networks of ',length(unique(rtc$ID)), ' individuals, \nThe ten largest cluster sizes are ',
+      unique(subset(rtc, select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], "\n")
   
-  #	merge up to 8 individuals into the same phyloscanner run
-  tn	<- 8
+  # 3754  potential transmission networks of  5825  individuals, 
+  # The ten largest cluster sizes are  35 37 39 40 42 46 50 51 52 55
+  # 
+  #	merge up to 50 individuals into the same phyloscanner run
+  tn	<- 50
   tmp	<- unique(subset(rtc, select=c(IDCLU, CLU_SIZE)))
   tmp[, PTY_RUN:= IDCLU]
   tmp[, PTY_SIZE:= CLU_SIZE]
@@ -1413,75 +1651,40 @@ rkuvri.make.phyloscanner.input.runs <- function()
   set(tmp,NULL,c('PTY_RUN', 'PTY_SIZE'),NULL)
   setnames(tmp,c('PTY_RUN2', 'PTY_SIZE2'), c('PTY_RUN', 'PTY_SIZE'))
   rtc <- merge(rtc,tmp,by=c('IDCLU', 'CLU_SIZE'))
+  # table(rtc$PTY_SIZE)
+  saveRDS(rtc, file=paste0(outbase,'phscinput_runs_without_ctrl.rds'))
+  
   #	for all individuals in a cluster
   #	find 3 closest others
-  
-  if(file.exists(infile.clostest.three.per.cluster))
-  {
-    dcl <- readRDS(infile.clostest.three.per.cluster)
-  }else{
-    infile.average.distance.per.pair <- file.path(potential.networks.analysis.dir, 'average_distance_perpair.rds')
-    if(file.exists(infile.average.distance.per.pair))
-    {
-      dcl_sc <- readRDS(infile.average.distance.per.pair)
-    }else{
-      infile.average.distance.per.pair.per.window <- file.path(potential.networks.analysis.dir, 'distance_overall_method2_sequence_level_v4.rda')
-      load(infile.average.distance.per.pair.per.window)
-      dcl_sc <- subset(distance,select=c('TAXA1','TAXA2'))
-      dcl_sc$DIST <- rowMeans(distance[,3:ncol(distance)],na.rm = TRUE)
-      setnames(id.dt, colnames(id.dt),paste0(colnames(id.dt),'1'))
-      dcl_sc <- merge(dcl_sc, id.dt, by.x='TAXA1', by.y='PANGEA_ID1',all.x=TRUE)
-      setnames(id.dt, colnames(id.dt),gsub('1','2',colnames(id.dt)))
-      dcl_sc <- merge(dcl_sc, id.dt, by.x='TAXA2', by.y='PANGEA_ID2',all.x=TRUE)
-      setnames(id.dt, colnames(id.dt),gsub('2','',colnames(id.dt)))
-      dcl_sc <- dcl_sc[,list(DIST=mean(DIST)),by=c('UNIT_ID1','UNIT_ID2')]
-      saveRDS(dcl_sc,file=infile.average.distance.per.pair)
-    }
-    dcl <- rtc[,{
-      tmp <- dcl_sc[UNIT_ID1 %in% ID, c('UNIT_ID2','DIST')]
-      tmp2 <- dcl_sc[UNIT_ID2 %in% ID, c('UNIT_ID1','DIST')]
-      tmp <- rbind(tmp,tmp2,use.names=F)
-      colnames(tmp) <- c('UNIT_ID','DIST')
-      tmp <- tmp[!UNIT_ID%in% ID,]
-      tmp <- tmp[,list(mean(DIST)),by='UNIT_ID']
-      tmp <- tmp[order(V1),]
-      list(ID_CLOSE1=tmp$UNIT_ID[nrow(tmp)],DISTANCE1=tmp$V1[nrow(tmp)],
-           ID_CLOSE2=tmp$UNIT_ID[nrow(tmp)-1],DISTANCE2=tmp$V1[nrow(tmp)-1],
-           ID_CLOSE3=tmp$UNIT_ID[nrow(tmp)-2],DISTANCE3=tmp$V1[nrow(tmp)-2])
-    },by=c('CLU_SIZE','IDCLU')]
-    saveRDS(dcl,file=infile.clostest.three.per.cluster)
+  dts <- readRDS("~/dts.rds")
+  rtc <- readRDS(paste0(outbase,'phscinput_runs_without_ctrl.rds'))
+  nclose <- 3
+  for(i in 1:max(rtc$PTY_RUN)){
+    cat(i, "\n")
+    ptids <- rtc[PTY_RUN == i,]$ID
+    pgids <- dts$PANGEA_ID[dts$PT_ID %in% ptids]
+    das <- lapply(pgids, function(pgid) {readRDS(paste0(netdir, "avescores_",pgid,".rds"))})
+    das <- rbindlist(das)
+    das <- merge(das, dts, by.x = "TAXA2", by.y = "PANGEA_ID", all.x = T)
+    das <- das[LENGTH >= 500, list(PERC = mean(PERC)), by = c("PT_ID")]
+    das <- das[order(-das$PERC),]
+    rtc <- rbind(rtc, data.table(ID = das$PT_ID[1:nclose], PTY_RUN = i), fill = T)
+    saveRDS(das, paste0(netdir, "avescores_ptyrun",i,".rds"))
   }
+  # those with PTY_RUN but without IDCLU are controls
+  rtc[, PTY_SIZE:=length(ID), by='PTY_RUN']
   
-  # add the 3 closest individuals to each potential transmission network
-  tmp <- subset(dcl, select=c('CLU_SIZE', 'IDCLU', 'ID_CLOSE1', 'ID_CLOSE2', 'ID_CLOSE3'))
-  tmp <- melt(tmp, id.vars=c('CLU_SIZE', 'IDCLU'), variable.name= 'CLOSEST', value.name='ID')
-  tmp[,CLOSEST:=as.integer(gsub('ID_CLOSE','',CLOSEST))]
-  tmp2 <- unique(subset(rtc,select=c('IDCLU','PTY_RUN')))
-  set(rtc, NULL ,c('PTY_SIZE', 'PTY_RUN'), NULL)
-  set(tmp, NULL, 'CLOSEST',NULL)
-  tmp[, ID_TYPE:='control']
-  rtc[, ID_TYPE:='target']
-  rtc <- rbind(rtc,tmp)
-  rtc <- unique(rtc)
-  rtc[, CLU_SIZE:=length(ID),by='IDCLU']
-  rtc <- merge(rtc, tmp2, by='IDCLU')
-  rtc[, PTY_SIZE:=length(ID),by='PTY_RUN']
-  
-  cat(max(rtc$IDCLU),' clusters of ',length(unique(rtc$ID)), ' individuals, the ten largest cluster sizes are ',
-      unique(subset(rtc,select=c('CLU_SIZE','IDCLU')))$CLU_SIZE[(max(rtc$IDCLU)-10+1):max(rtc$IDCLU)], ', ', nrow(rtc)-length(unique(rtc$ID)),
-      'individuals appear in more than one clusters','\n')
-  # 1059  clusters of  3253  individuals, the ten largest cluster sizes are  25 25 26 34 34 46 52 54 55 70 ,  3131 individuals appear in more than one clusters
-  
-  tmp <- unique(subset(rtc,select=c('PTY_RUN','PTY_SIZE')))
+  tmp <- unique(subset(rtc, select=c('PTY_RUN','PTY_SIZE')))
   table(tmp$PTY_SIZE)
-  #
-  # combine with sample info
-  setnames(rtc, 'ID', 'UNIT_ID')
-  pty.runs <- merge(rtc, pty.runs, by='UNIT_ID',all.x=T)
   
+  #
+  # load("~/phsinput_runs_except_last.rda")
+  # combine with sample info
+  pty.runs <- merge(rtc, pty.runs, by.x = "ID", by.y ="UNIT_ID", all.x = T)
+  pty.runs <- pty.runs[order(pty.runs$PTY_RUN),]
   
   # write processed samples
-  cat('\nWriting to file ', paste0(out.base,'phscinput_runs.rds') )
-  saveRDS(pty.runs, file=paste0(out.base,'phscinput_runs.rds'))
+  cat('\nWriting to file ', paste0(outbase,'phscinput_runs.rds') )
+  saveRDS(pty.runs, file = paste0(outbase,'phscinput_runs.rds'))
 }
 
