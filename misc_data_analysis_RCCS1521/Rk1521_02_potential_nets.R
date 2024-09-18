@@ -1492,10 +1492,11 @@ rkuvri.make.phyloscanner.input.samples <- function()
     x	
   }
   ds$VISIT_DT_N <- hivc.db.Date2numeric(ds$VISIT_DT)
-  ds <- ds[ , .SD[which.min(VISIT_DT_N)], by = "PT_ID"]
+  # ds <- ds[order(VISIT_DT_N),]
+  # ds <- ds[ , .SD[which.min(VISIT_DT_N)], by = "PT_ID"]
   # ds[order(VISIT_DT_N),]
   
-  ds <- subset(ds, select = c("PANGEA_ID", "PT_ID", "REMAP_BAM", "REMAP_REF_FASTA"))
+  ds <- subset(ds, select = c("PANGEA_ID", "PT_ID", "REMAP_BAM", "REMAP_REF_FASTA", "VISIT_DT_N"))
   
   # simplify REMAP_BAM and REMAP_REF_FASTA
   ds[, REMAP_BAM:= gsub(indir,'', REMAP_BAM)]
@@ -1518,9 +1519,12 @@ rkuvri.make.phyloscanner.input.samples <- function()
 
 
   # finalise RENAME_ID
+  setkey(ds, VISIT_DT_N)
   ds[,FQ:=seq_len(length(SAMPLE_ID)), by='RENAME_ID']
   ds[,FQ:=paste0('fq',FQ)]
   ds[,RENAME_ID:= paste0(RENAME_ID,'-',FQ)]
+  # sort(table(ds$UNIT_ID))
+  # ds[ds$UNIT_ID == "RK-J036545",]
   ds[,FQ:=NULL]
   
   # write processed samples
@@ -1678,7 +1682,8 @@ rkuvri.make.phyloscanner.input.runs <- function()
   table(tmp$PTY_SIZE)
   
   #
-  # load("~/phsinput_runs_except_last.rda")
+  load("~/phsinput_runs_except_last.rda")
+  ds <- readRDS(paste0(outbase,'phscinput_samples.rds'))
   # combine with sample info
   pty.runs <- merge(rtc, pty.runs, by.x = "ID", by.y ="UNIT_ID", all.x = T)
   pty.runs <- pty.runs[order(pty.runs$PTY_RUN),]
