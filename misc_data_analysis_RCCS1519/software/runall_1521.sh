@@ -10,7 +10,7 @@
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx",RES=2 runall_TSI_seroconv3.sh'
+        echo 'qsub -v STEP="xxx",RES=2 runall_1521.sh'
         exit 1
 fi
 
