@@ -156,6 +156,7 @@ case $STEP in
         --TSI_dir $hivtsipath \
         --date $DATE \
         --controller $controller \
+        --input_samples $inputsamples \
         --env_name 'hivphylotsi'
         ;;
 
