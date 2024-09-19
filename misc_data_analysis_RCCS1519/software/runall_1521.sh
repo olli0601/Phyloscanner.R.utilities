@@ -9,9 +9,9 @@
 # If unset default to "sim"
 if [ -z "$STEP" ]
 then
-    echo "Intended use:\n"
-    echo 'qsub -v STEP="xxx" runall_TSI_pairs.sh'
-    exit 1
+        echo "Intended use:\n"
+        echo 'qsub -v STEP="xxx",RES=2 runall_TSI_seroconv3.sh'
+        exit 1
 fi
 
 ${RES:=1} 
@@ -22,23 +22,21 @@ echo "running '${STEP:=sim}' analysis"
 DEEPDATA="/rds/general/project/ratmann_pangea_deepsequencedata/live"
 DEEPANALYSES="/rds/general/project/ratmann_deepseq_analyses/live"
 HOME="/rds/general/user/ab1820/home"
-XIAOYUE="/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/"
 
-# User specific paths
 software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software"
+input_samples="$out_dir_base/240809_RCCSUVRI_phscinput_runs.rds"
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
-
-# analysis specific paths & args
-out_dir_base="$DEEPANALYSES/PANGEA2_RCCS_MRC_UVRI_TSI"
-out_dir_rel="$out_dir_base/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T"
-
+out_dir_base="$DEEPANALYSES/PANGEA2_RCCS1521"
+# out_dir_rel="$out_dir_base/..."
 controller="$software_path/$PBS_JOBNAME" #current script location
-inputsamples="$out_dir_base/220331_RCCSUVRI_phscinput_samples_with_bf.rds"
-CLUSIZE='50'
-DATE='2022-08-22'
+# For TSI's 25 is fine, for networks 10:
+sliding_width=10
 
-echo "Check that DATE, CLUSIZE, out_dir_rel and inputsamples are correctly specified"
+CLUSIZE='50'
+DATE='2022-07-23'
+
+echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
 cwd=$(pwd)
 echo $cwd
@@ -47,17 +45,18 @@ source activate phylo_alignments
 
 case $STEP in
 
-    # In this analysis we avoid the first step of computing similarities, as there exist already
-    net)
-    echo "---- initialise analysis ----"
-    Rscript $software_path/TSI_initialise.R \
-        --controller $controller \
-        --include_least_recent_only TRUE \
-        --out_dir_base $out_dir_base
-            ;;
+        # In this analysis we avoid the first step of computing similarities, as there exist already
+        net)
+        echo "---- initialise analysis ----"
+        Rscript $software_path/TSI_initialise_sero2analysis.R \
+        --out_dir_base $out_dir_base 
+        ;;
 
-    ali)
-    echo "---- compute alignments ----"
+        # modified this step adding the reference flag 
+        # This also has walltime flag but don't know what to do exactly about it...
+        ali)
+        echo "---- compute alignments ----"
+
         if [ "$REDO" = "0"]; then
                 Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -65,28 +64,28 @@ case $STEP in
                 --prog_dir $phyloscanner_path \
                 --windows_start 550 \
                 --windows_end 9500 \
-                --sliding_width 25 \
+                --sliding_width $sliding_width \
                 --n_control 0 \
                 --cluster_size $CLUSIZE \
                 --reference ConsensusGenomes.fasta \
                 --mafft " --globalpair --maxiterate 1000 " \
-                --rm_vloops FALSE \
+                --rm_vloops TRUE \
                 --controller $controller \
                 --walltime_idx $RES \
                 --tsi_analysis FALSE
         else
-            Rscript $software_path/make_deep_sequence_alignments.R \
+                Rscript $software_path/make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
                 --prog_dir $phyloscanner_path \
                 --windows_start 550 \
                 --windows_end 9500 \
-                --sliding_width 25 \
+                --sliding_width $sliding_width \
                 --n_control 0 \
                 --cluster_size $CLUSIZE \
                 --reference ConsensusGenomes.fasta \
                 --mafft " --globalpair --maxiterate 1000 " \
-                --rm_vloops FALSE \
+                --rm_vloops TRUE \
                 --controller $controller \
                 --walltime_idx $RES \
                 --date $DATE \
@@ -94,6 +93,8 @@ case $STEP in
         fi
         ;;
         
+        # The 2 here should be run without changes the first time
+        # I believe there is no reason for having 2 separate scripts...
         btr)
         echo "----- build trees ----"
         Rscript $software_path/make_trees.R \
@@ -150,10 +151,10 @@ case $STEP in
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --relationship_dir $out_dir_rel \
+        --input_samples $input_samples \
         --TSI_dir $hivtsipath \
         --date $DATE \
         --controller $controller \
-        --input_samples $inputsamples \
         --env_name 'hivphylotsi'
         ;;
 
@@ -164,7 +165,7 @@ case $STEP in
         --relationship_dir $out_dir_rel \
         --pkg_dir $software_path \
         --date $DATE \
-        --input_samples $inputsamples \
+        --input_samples $input_samples \
         --controller $controller 
         ;;
 
@@ -174,10 +175,11 @@ case $STEP in
         Rscript $software_path/TSI_postprocessing_comparison.R \
         --relationship_dir $out_dir_rel \
         --TSI_dir $hivtsipath \
-        --input_samples $inputsamples \
+        --input_samples $input_samples \
         ;;
 
         *)
         echo "no R script run. STEP does not match any task.\n" 
         ;;
 esac
+

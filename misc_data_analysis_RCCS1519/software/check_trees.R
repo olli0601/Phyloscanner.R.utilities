@@ -177,7 +177,7 @@ tmp <- infiles[,list(NUM=length(PositionsExcised)),by=c('PTY_RUN', 'W_FROM')]
 infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
 infiles <- infiles[!(PositionsExcised==F & NUM==2),]
 
-# check tree completed tree files.
+# check tree completed: treefiles.
 infiles[,FO_NAME:=paste0(FO,'.treefile')]
 infiles[,FO_EXIST:=file.exists(FO_NAME)]
 infiles <- infiles[FO_EXIST==FALSE]

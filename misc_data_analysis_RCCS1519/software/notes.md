@@ -19,8 +19,10 @@ Here I write my comments and notes on XX code. Objectives:
   Can we check that we have those? If not, ask Oli/Tanya on what to do.
   
 - Also, as a feasibility check, why don t we just train something similar to Tanya's algorithm by ourselves? They say linear regression is not too bad, so why not just extract predictors we are interested in and run lin reg? (this may not be easy, but still should not take weeks as TSI analysis)
+  *this could be done but ideally should be avoided*
 
-
+- Can we run the analysis by sequence rather than by individual?
+  *Yes this could be done. Eg: using the AID-fq1 names. However, importantly, do not put frequences from the same individual in 2 different runs*.
 
 
 
@@ -28,14 +30,21 @@ Here I write my comments and notes on XX code. Objectives:
 - XX: can we have an option not to excise them?
 - do not really like how sometimes out.dir and args$out.dir point to different locations. What to do about this
 
+**INTERESTING**
+
+For about 7% of base frequencies that appeared more than once in the TSI analysis, 7% of the median predictions did not fall in the interesections of all CrInt. 
+
+
+
 
 
 **TODO:**
 
+- 42/50 TSI run. Find what s the [bug](/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/19037_phsc_work/phylo_tsi_Tue_Mar_22_095246_2022.sh.o5330209.27).
+
 - need to pass the --infile from TSIcalculate_similarity_over_genome.R to calculate_similarity (shouldn t be hard)
-- ldpaths issue (see [here](https://github.com/conda-forge/r-base-feedstock/issues/67)): for the moment I use a while loop that re-runs the Rscript until the output is produced. However, the conda env was called at the beginning of the script. Should I activate the environment justbefore running the script?
-
-
+- ldpaths issue (see [here](https://github.com/conda-forge/r-base-feedstock/issues/67)): for the moment I use a while loop that re-runs the Rscript until the output is produced. However, the conda env was called at the beginning of the script. Should I activate the environment just before running the script?
+- make sure that the `*_output/ptyr*_input.csv` are readable when created. 
 
 
 
@@ -46,11 +55,12 @@ FILL THIS TABLE IN AS YOU WORK THROUGH MRC EXAMPLE
 | `TSIcalculate_similarity_over_genome` | [consensus seqs](/rds/general/project/ratmann_pangea_deepsequencedata/live/200422_PANGEA2_MRC_alignment.fasta) | [bash scripts](script_calculate_similarity_job1.qsub)        | [1](phylo_alignments) | sim  |
 | ↘ `calculate_similarity`<br />        |                                                              | [similarity scores](out_dir_base/potential_network/similarityX.rds) | [1](phylo_alignments) |      |
 | `TSIcreate_network`                   | similarity scores +<br />[db_sharing_extract](PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv ---- PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv' )<br />[phscinput_samples]('/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/210120_RCCSUVRI_phsci    nput_samples.rds')<br /> | [cluster assignments](clusters.rds) <br />[phscinput](phscinput_runs_clusize_100_ncontrol_0.rds) | [1](phylo_alignments) | net  |
-| `make_deep_sequence_alignments`       | above                                                        | bash scripts 4<br />[groupings](out_dir_base/potential_network/phscinput_runs_clusize_X_ncontrol_Y.rds.) | [1](phylo_alignments) |      |
-| BUILD TREE                            |                                                              |                                                              |                       |      |
-| CHECK TREES                           |                                                              |                                                              |                       |      |
-| `analyse_trees.R`                     |                                                              |                                                              |                       |      |
-|                                       |                                                              |                                                              |                       |      |
+| `make_deep_sequence_alignments`       | above +<br />consensus [1](ConsensusGenomes.fasta),[2](2019_New_ConsensusGenomesOneEach_GeneCut.fasta) +<br /><br />I guess these are the background sequences!!!! | bash scripts 4 [groupings](out_dir_base/potential_network/phscinput_runs_clusize_X_ncontrol_Y.rds.) | [1](phylo_alignments) | ali  |
+| `make_trees`                          |                                                              |                                                              | [2](phylostan)        | btr  |
+| `check_trees`                         |                                                              |                                                              |                       | ctr  |
+| `analyse_trees`                       | uses [phsc f](cmd.phyloscanner.analyse.trees) for sh         |                                                              |                       | atr  |
+| `TSI_run_predictions`                 |                                                              |                                                              |                       | tsi  |
+| `TSI_estimate_dates`                  |                                                              |                                                              |                       | dti  |
 |                                       |                                                              |                                                              |                       |      |
 
 
@@ -81,3 +91,8 @@ The idea, is then to have the last of this completed jobs to 'inform' the contro
 
 
 
+## SEROCONVERTERS RUN
+
+running on seroconverter directory.
+
+run similarity on full genome and then set up the PTY run, I will need the file:  similarity_whole_genome or something like this, where I should get the "top 10 SC and then pick" top 5 matches.

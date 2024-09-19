@@ -6,13 +6,13 @@ require(ggplot2)
 usr <- Sys.info()[['user']]
 if (usr == 'andrea')
 {
-        indir.deepsequence_analyses <- '~/Documents/Box/ratmann_deepseq_analyses/live'
-        indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
-        tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
+    indir.deepsequence_analyses <- '~/Documents/Box/ratmann_deepseq_analyses/live'
+    indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
+    tanya.rakai.dir <- '~/git/HIV-phyloTSI-main/RakExample_Tanya'
 }else{
-        indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-        indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
-        tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
+    indir.deepsequence_analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
+    indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
+    tanya.rakai.dir <- '~/git/HIV-phyloTSI/RakExample_Tanya'
 }
 
 option_list <- list(
@@ -107,90 +107,89 @@ preprocess.tanya <- function()
 
 preprocess.ours <- function()
 {
-        # Load all outputs from HIVphyloTSI
-        dtsi <- fread(dtsi.1.path)
-        dtsi[, V1 := NULL]
-        tmp <- lapply(dtsi.all.path, fread)
-        dtsi.all <- rbindlist(tmp, use.names=TRUE)
-        dtsi.all <- merge(aik, dtsi.all, by.y='host.id',by.x='AID')
+    # Load all outputs from HIVphyloTSI
+    dtsi <- fread(dtsi.1.path)
+    dtsi[, V1 := NULL]
+    tmp <- lapply(dtsi.all.path, fread)
+    dtsi.all <- rbindlist(tmp, use.names=TRUE)
+    dtsi.all <- merge(aik, dtsi.all, by.y='host.id',by.x='AID')
 
-        if(0)
-        {
-                # It seems like lrtt vary for different runs of the same ID
-                # On the other hand the mafs dont. This makes sense
-                dtsi.all.counts <- dtsi.all[, .(N=.N, 
-                                                Nmaf=uniqueN(genome_maf3c),
-                                                Nlrtt=uniqueN(genome_lrtt)), by='host.id']
-        }
+    if(0)
+    {
+            # It seems like lrtt vary for different runs of the same ID
+            # On the other hand the mafs dont. This makes sense
+            dtsi.all.counts <- dtsi.all[, .(N=.N, 
+                                            Nmaf=uniqueN(genome_maf3c),
+                                            Nlrtt=uniqueN(genome_lrtt)), by='host.id']
+    }
 
-        # extract predictors and predictions
-        tmp <- grep('sqrt|cc', colnames(dtsi.all), value=TRUE)
-        cols <- c("AID", "PT_ID", predictors.hiv.phylo.tsi, tmp)
-        predictors.ours <- dtsi.all[, .SD, .SDcols=cols]
-        predictors.ours <- predictors.ours[grepl('^RK',PT_ID)]
-        predictors.ours[, PT_ID := gsub('RK-', '',PT_ID)] 
-        predictors.ours
+    # extract predictors and predictions
+    tmp <- grep('sqrt|cc', colnames(dtsi.all), value=TRUE)
+    cols <- c("AID", "PT_ID", predictors.hiv.phylo.tsi, tmp)
+    predictors.ours <- dtsi.all[, .SD, .SDcols=cols]
+    predictors.ours <- predictors.ours[grepl('^RK',PT_ID)]
+    predictors.ours[, PT_ID := gsub('RK-', '',PT_ID)] 
+    predictors.ours
 }
 
 compare.predictors <- function(predictors.ours, predictors.tanya)
 {
 
-        # merge data and sort by differences in preds
-        cols <- colnames(predictors.ours)
-        cols <- cols[cols %in% colnames(predictors.tanya)]
-        predictors.merged <- merge(predictors.ours[,..cols], predictors.tanya[,..cols], by='PT_ID')
-        predictors.merged[, error := (RF_pred_sqrt.x - RF_pred_sqrt.y)]
+    # merge data and sort by differences in preds
+    cols <- colnames(predictors.ours)
+    cols <- cols[cols %in% colnames(predictors.tanya)]
+    predictors.merged <- merge(predictors.ours[,..cols], predictors.tanya[,..cols], by='PT_ID')
+    predictors.merged[, error := (RF_pred_sqrt.x - RF_pred_sqrt.y)]
 
-        # plot comparisons
-        .plot.pred.comparison <- function(tx)
-        {
-                ty <- gsub('x$', 'y', tx)
-                t <- c(tx,ty, 'error')
+    # plot comparisons
+    .plot.pred.comparison <- function(tx)
+    {
+            ty <- gsub('x$', 'y', tx)
+            t <- c(tx,ty, 'error')
 
-                dplot <- predictors.merged[, .SD, .SDcols=t]
-                colnames(dplot) <- c('x','y','c')
-                gg <- ggplot(dplot, aes(x=x, y=y, color=c)) +
-                        geom_abline(slope=1, color='black') + 
-                        geom_smooth(method='lm', formula= y~x, color="grey50", linetype='dotted', se=FALSE)+ 
-                        geom_point() +
-                        guides(colour='none') +
-                        # scale_colour_gradient(low="blue", high="red", midpoint=0)
-                        scale_colour_gradient2(low = "blue", mid = "yellow", high = "red", midpoint = 0) +
-                        labs(x="our", y="tanya's",                             title=gsub('.x$','',tx)) +
-                        theme_bw() +
-                        expand_limits(x = 0, y = 0) +
-                        theme(plot.title = element_text(hjust = 0.5))
-                gg
-        }
-        cols <- colnames(predictors.merged)
-        tmp <- grep('\\.x$',cols, value=T)
-        gg_list <- lapply(tmp, .plot.pred.comparison)
+            dplot <- predictors.merged[, .SD, .SDcols=t]
+            colnames(dplot) <- c('x','y','c')
+            gg <- ggplot(dplot, aes(x=x, y=y, color=c)) +
+                    geom_abline(slope=1, color='black') + 
+                    geom_smooth(method='lm', formula= y~x, color="grey50", linetype='dotted', se=FALSE)+ 
+                    geom_point() +
+                    guides(colour='none') +
+                    # scale_colour_gradient(low="blue", high="red", midpoint=0)
+                    scale_colour_gradient2(low = "blue", mid = "yellow", high = "red", midpoint = 0) +
+                    labs(x="our", y="tanya's",                             title=gsub('.x$','',tx)) +
+                    theme_bw() +
+                    expand_limits(x = 0, y = 0) +
+                    theme(plot.title = element_text(hjust = 0.5))
+            gg
+    }
+    cols <- colnames(predictors.merged)
+    tmp <- grep('\\.x$',cols, value=T)
+    gg_list <- lapply(tmp, .plot.pred.comparison)
 
-        if(user=='andrea')
-        {
-                predictors.merged[, .N]
-                require(gridExtra)
-                do.call("grid.arrange", c(gg_list, ncol=3)) -> gg
-                ggsave(file="220408_inputs_outputs_comparison.png", gg, w=10, h=14)
-        }
+    if(user=='andrea')
+    {
+            predictors.merged[, .N]
+            require(gridExtra)
+            do.call("grid.arrange", c(gg_list, ncol=3)) -> gg
+            ggsave(file="220408_inputs_outputs_comparison.png", gg, w=10, h=14)
+    }
 
-        
-        .plot.compare.95ci <- function(predictors.merged)
-        {
-                grep('RF',colnames(predictors.merged), value=T) -> cols
-                tmp <- predictors.merged[, .SD, .SDcols=cols]
-                gg <- ggplot(tmp, aes(x=RF_pred_sqrt.x, y=RF_pred_sqrt.y)) + 
-                        geom_abline(slope=1, linetype='dotted', color='red') + 
-                        geom_point() + 
-                        geom_crossbar(aes(ymin=RF_cc025.y, ymax=RF_cc975.y)) + 
-                        geom_linerange(aes(xmin=RF_cc025.x, xmax=RF_cc975.x))
-                gg
-        }
+    
+    .plot.compare.95ci <- function(predictors.merged)
+    {
+            grep('RF',colnames(predictors.merged), value=T) -> cols
+            tmp <- predictors.merged[, .SD, .SDcols=cols]
+            gg <- ggplot(tmp, aes(x=RF_pred_sqrt.x, y=RF_pred_sqrt.y)) + 
+                    geom_abline(slope=1, linetype='dotted', color='red') + 
+                    geom_point() + 
+                    geom_crossbar(aes(ymin=RF_cc025.y, ymax=RF_cc975.y)) + 
+                    geom_linerange(aes(xmin=RF_cc025.x, xmax=RF_cc975.x))
+            gg
+    }
 
-        predictors.ours[, range(gp120_tips)]
-        predictors.tanya[, range(gp120_tips)]
-        colnames(predictors.ours)
-
+    predictors.ours[, range(gp120_tips)]
+    predictors.tanya[, range(gp120_tips)]
+    colnames(predictors.ours)
 }
 
 
@@ -253,48 +252,47 @@ find.common.seroconverters.pangeaids <- function(predictors.ours, predictors.tan
 
 make_new_input_samples <- function(ddates)
 {
-        phsc_input_samples_path <- file.path(indir.deepsequence_analyses_old,"210120_RCCSUVRI_phscinput_samples.rds")
-        phsc_input_samples <- readRDS(phsc_input_samples_path)
-        phsc_input_samples[, pangea_id := gsub('^.*?_', '', PANGEA_ID)]
+    phsc_input_samples_path <- file.path(indir.deepsequence_analyses_old,"210120_RCCSUVRI_phscinput_samples.rds")
+    phsc_input_samples <- readRDS(phsc_input_samples_path)
+    phsc_input_samples[, pangea_id := gsub('^.*?_', '', PANGEA_ID)]
 
-        phsc_input_new <- phsc_input_samples[pangea_id %in% ddates$pangea_id]
-        phsc_input_new[, pangea_id :=NULL]
-        
-        msg <- 'all pangeaIDs end by fq1\n'
-        if(phsc_input_new[, all(gsub('^.*?-','',RENAME_ID)=='fq1')])    cat(msg)
-        phsc_input_new
+    phsc_input_new <- phsc_input_samples[pangea_id %in% ddates$pangea_id]
+    phsc_input_new[, pangea_id :=NULL]
+    
+    msg <- 'all pangeaIDs end by fq1\n'
+    if(phsc_input_new[, all(gsub('^.*?-','',RENAME_ID)=='fq1')])    cat(msg)
+    phsc_input_new
 }
 
 write.hpc.input <- function(ddates, out.dir)
 {
-        
-        # Stores on the HPC everything is needed to initialise the analysis.
+    # Stores on the HPC everything is needed to initialise the analysis.
 
-        # make phscinput_samples.rds
-        # ______________________________
-        phsc_samples <- make_new_input_samples(ddates)
-        colnames(phsc_samples)
-        filename=file.path(out.dir, paste0('220419_phscinput_samples.rds'))
-        saveRDS(phsc_samples, filename)
+    # make phscinput_samples.rds
+    # ______________________________
+    phsc_samples <- make_new_input_samples(ddates)
+    colnames(phsc_samples)
+    filename=file.path(out.dir, paste0('220419_phscinput_samples.rds'))
+    saveRDS(phsc_samples, filename)
 
-        # Make clusters.rds
-        # ______________________________
-        tmp <- ddates[, pt_id]
-        dclus <- data.table(ID=tmp, IDCLU=1:3)
-        dclus[,CLU_SIZE:=.N,by='IDCLU']
-        setkey(dclus, IDCLU)
-        filename=file.path(out.dir, 'potential_network', 'clusters.rds')
-        saveRDS(dclus, filename)
+    # Make clusters.rds
+    # ______________________________
+    tmp <- ddates[, pt_id]
+    dclus <- data.table(ID=tmp, IDCLU=1:3)
+    dclus[,CLU_SIZE:=.N,by='IDCLU']
+    setkey(dclus, IDCLU)
+    filename=file.path(out.dir, 'potential_network', 'clusters.rds')
+    saveRDS(dclus, filename)
 
 
-        # make phscinput_runs_clusize...
-        # ______________________________
-        suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
-        dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
-        dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
-        setnames(dclus, 'ID', 'UNIT_ID')
-        filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLU_SIZE]),'_ncontrol_0.rds'))
-        saveRDS(dclus, filename)
+    # make phscinput_runs_clusize...
+    # ______________________________
+    suffix <- phsc_samples[, .(UNIT_ID,PANGEA_ID, RENAME_ID, SAMPLE_ID)]
+    dclus[, `:=` (PTY_RUN=IDCLU,  PTY_SIZE=CLU_SIZE) ]
+    dclus <- merge(dclus, suffix, by.x='ID', by.y='UNIT_ID')
+    setnames(dclus, 'ID', 'UNIT_ID')
+    filename=file.path(out.dir, paste0('phscinput_runs_clusize_',max(dclus[,CLU_SIZE]),'_ncontrol_0.rds'))
+    saveRDS(dclus, filename)
 }
 
 

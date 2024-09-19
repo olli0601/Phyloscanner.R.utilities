@@ -107,7 +107,7 @@ if(user == 'andrea')
     args <- list(
              out.dir=file.path(indir.deepseqdata, 'PANGEA2_RCCS_MRC_UVRI_TSI'),
              rel.dir=file.path(indir.deepseqdata, 'PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_00'),
-             phas.samples=file.path(indir.deepseqanalyses, "PANGEA2_RCCS_MRC_UVRI_TSI/220331_RCCSUVRI_phscinput_samples_with_bf.rds"),
+             phsc.samples=file.path(indir.deepseqanalyses, "PANGEA2_RCCS_MRC_UVRI_TSI/220331_RCCSUVRI_phscinput_samples_with_bf.rds"),
              date='2022-08-22'
     )
 }
@@ -159,6 +159,7 @@ if(length(file.basefreqs))
 {
     dfiles <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
     dpreds <- lapply(dfiles, fread)
+    .gs <- function(x) gsub('[A-z]|_|\\.', '', x)
     names(dpreds) <- .gs(dfiles)
     cols <- grep('host.id|^RF', colnames(dpreds[[1]]), value=T)
     dpreds <- lapply(dpreds, function(DT) subset(DT, select=cols) )
