@@ -163,8 +163,14 @@ option_list <- list(
     default = FALSE,
     help = "Indicator for whether to submit (some) jobs to pqeelab queue. [default FALSE]",
     dest = "pqeelab"
+  ),
+  optparse::make_option(
+    "--split_jobs_by_n",
+    type = "integer",
+    default = 0L,
+    help = "Number of people that can run scripts. This will create at least `split_jobs_by_n` scripts (unless remaining tasks < 500)",
+    dest = "split_jobs_by_n"
   )
-    
 )
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
@@ -303,22 +309,22 @@ if(0){
     seed = 42,
     windows_start=550L,
     windows_end=9500L,
-    sliding_width = 25L,
+    sliding_width = 10L,
     window_size = 250L,
     window_cutoff = NA,
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2022-08-22',
-    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/",
-    pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software",
+    date = '2024-09-19',
+    out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521",
+    pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
     reference = 'ConsensusGenomes.fasta',
     tsi_analysis=FALSE,
     rm_vloops=FALSE,
     mafft.opt='--globalpair --maxiterate 1000',
     controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs2.sh',
-    walltime_idx = 2
+    walltime_idx = 1
   )
 }
 
@@ -326,10 +332,11 @@ if(0){
 source(file.path(args$pkg.dir, "utility.R"))
 
 # I can run at most 1000 simultaneous jobs on the short q.
+# however, 10'000 can be put in the same job.
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7 , hpc.mem = "4gb",hpc.q = NA, max.per.run=1000),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=500),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=500)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7 , hpc.mem = "4gb",hpc.q = NA, max.per.run=10000),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 24, hpc.mem = "64gb",hpc.q = NA, max.per.run=10000),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "64gb",hpc.q = NA, max.per.run=10000)
 ) -> pbs_headers
 tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
@@ -341,7 +348,7 @@ invisible(list2env(tmp,globalenv()))
 #
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
-dir.net <- file.path(args$out.dir, "potential_network")
+dir.net <- file.path(args$out.dir, "potential_nets")
 infile.runs <- file.path(args$out.dir,'240809_RCCSUVRI_phscinput_runs.rds')
   
 ifelse(
@@ -386,9 +393,8 @@ if(file.exists(cmds.path))
   pty.c <- readRDS(cmds.path)
   
 }else{
-  
-  cat('Writing .rds of commands...\n')
   # Write commands
+  cat('Writing .rds of commands...\n')
   
   # Copy files into input folder
   tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
@@ -420,7 +426,6 @@ if(file.exists(cmds.path))
     {
       infile.consensus <- file.path(args$out.dir.data, basename(infile.consensus))
     }
-    
   }
   stopifnot(file.exists(infile.consensus))
   
@@ -551,9 +556,10 @@ pty.c <- pty.c[ is.na(OUT2)]
 pty.c <- .remove_problematic_windows(pty.c)
 
 # if intermediary output is there, change CMD.
-if(pty.c[ !is.na(OUT1), .N > 0])
+any_existing_v1 <- pty.c[ !is.na(OUT1), .N > 0]
+if( any_existing_v1)
 {
-  pty.c[ ! is.na(OUT1) ,  .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
+  pty.c[ ! is.na(OUT1) , .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
 }
 
 #
@@ -593,15 +599,26 @@ if(args$walltime_idx == 3 & args$pqeelab){
     }]
 }
 
+if (args$split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
+  ids <- submit_jobs_from_djob(djob)
+  # qsub alignment step again, 
+  # to check whether everything has run...
+  qsub.next.step(file=args$controller,
+                 ids=ids, 
+                 next_step='ali', 
+                 res=args$walltime_idx + 1, 
+                 redo=0
+  )
+}else{
+  # split djob in split_jobs_by_n data.tables
+  # then perform the above individually
+  person_to_run <- rep(1:args$split_jobs_by_n, length.out = nrow(djob))
 
-ids <- djob[, list(ID=.store.and.submit(.SD, prefix='readali')), by=JOB_ID, .SDcols=names(djob)]
-ids <- as.character(ids$ID)
-cat('Submitted job ids are:', ids, '...\n')
-
-# qsub alignment step again, to check whether everything has run...
-qsub.next.step(file=args$controller,
-               ids=ids, 
-               next_step='ali', 
-               res=args$walltime_idx + 1, 
-               redo=0
-)
+  for (person in 1:args$split_djobs_list){
+    # Submit job for each person, and write a sh file they can run to submit
+    djob_person <- djob[person_to_run == person]
+    pbs_file_person <- submit_jobs_from_djob(djob_person)
+    write(pbs_file_person, 
+            file = file.path(args$out.dir.work, paste0('submit_jobs_', person, '.sh')))
+  }
+}

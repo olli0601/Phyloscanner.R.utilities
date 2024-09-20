@@ -461,8 +461,11 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
 
 
 # Store job in a sh file with prefix and date.
-.store.and.submit <- function(DT, prefix='srx')
+.store.and.submit <- function(DT, prefix='srx', output_type="id")
 {
+
+  output_type <- match.arg(output_type, c('id', 'outfile'))
+  
   JOB_ID <- unique(DT$JOB_ID)
   
   # store in 'srx'-prefixed .sh files
@@ -479,7 +482,23 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
   # change to work directory and submit to queue
   cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", cmd_q, outfile)
   cat(cmd, '\n')
-  x <- system(cmd, intern = TRUE)
-  cat(x, '\n')
-  as.character(x)
+  # Return id or output file depending on desired behaviour
+  if (output_type == 'id') {
+    id <- system(cmd, intern = TRUE)
+    cat(id, '\n')
+    return(as.character(id))
+  }
+  return(outfile)
+}
+
+submit_jobs_from_djob <- function(DT){
+  # Takes a djob  data.table, splits the tasks into pbs
+  # files, submits them and returns jobs ids.
+  pbs_files <- DT[, list(
+        ID=.store.and.submit(.SD, prefix='readali', output_type = "outfile")
+    ), by=JOB_ID, 
+    .SDcols=names(djob)]
+  pbs_files <- as.character(pbs_files$ID)
+  cat('Submitted job ids are:', pbs_files, '...\n')
+  return(pbs_files)
 }
