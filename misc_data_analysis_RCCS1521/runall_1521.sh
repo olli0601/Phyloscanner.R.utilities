@@ -68,8 +68,8 @@ case $STEP in
                 --n_control 0 \
                 --cluster_size $CLUSIZE \
                 --reference ConsensusGenomes.fasta \
-                --mafft " --globalpair --maxiterate 1000 " \
-                --rm_vloops TRUE \
+                --mafft "--globalpair --maxiterate 1000 " \
+                --rm_vloops \
                 --controller $controller \
                 --walltime_idx $RES \
                 --tsi_analysis FALSE \
@@ -86,7 +86,7 @@ case $STEP in
                 --cluster_size $CLUSIZE \
                 --reference ConsensusGenomes.fasta \
                 --mafft " --globalpair --maxiterate 1000 " \
-                --rm_vloops TRUE \
+                --rm_vloops \
                 --controller $controller \
                 --walltime_idx $RES \
                 --date $DATE \

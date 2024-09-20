@@ -321,7 +321,7 @@ if(0){
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
     reference = 'ConsensusGenomes.fasta',
     tsi_analysis=FALSE,
-    rm_vloops=FALSE,
+    rm_vloops=TRUE,
     mafft.opt='--globalpair --maxiterate 1000',
     controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs2.sh',
     walltime_idx = 1
@@ -393,8 +393,6 @@ if(file.exists(cmds.path))
   pty.c <- readRDS(cmds.path)
   
 }else{
-  # Write commands
-  cat('Writing .rds of commands...\n')
   
   # Copy files into input folder
   tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
@@ -411,6 +409,7 @@ if(file.exists(cmds.path))
   # (default consensus/reference for tsi and pair analyses if no arg is passed)
   # not really sure whether oneeach is needed anywhere
   
+  cat("Load consensus sequences\n")
   infile.consensus <- args$reference 
   
   if(is.na(infile.consensus))
@@ -429,7 +428,7 @@ if(file.exists(cmds.path))
   }
   stopifnot(file.exists(infile.consensus))
   
-  # Load sequences and remove duplicates if existing
+  cat("Load sequences and remove duplicates if existing...\n")
   pty.runs <- data.table(readRDS(infile.runs))
   if ('ID_TYPE' %in% colnames(pty.runs)) {
     setorder(pty.runs, PTY_RUN, -ID_TYPE, ID)
@@ -446,7 +445,7 @@ if(file.exists(cmds.path))
   tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
   stopifnot( all(tmp$V1) )
   
-  # Load backgrounds and extract HXB2 for pairwise MSA. 
+  cat("Load backgrounds and extract HXB2 for pairwise MSA... \n")
   consensus_seq <- seqinr::read.fasta(infile.consensus)
   consensus_seq_names <- names(consensus_seq)
   hxb2 <- grep('HXB2', names(consensus_seq), value = T)
@@ -462,29 +461,21 @@ if(file.exists(cmds.path))
   pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
   setkey(pty.runs, PTY_RUN, RENAME_ID)
   
-  # 
-  # Set the alignment options
-  #
-  
+  cat("Set the alignment options...\n") 
   # MAFFT: reformat options so they are readily pasted in sh command.
-  # args$mafft.opt <- '"mafft --globalpair --maxiterate 1000"'
   args$mafft.opt <- gsub('mafft|"', '', args$mafft.opt)
   args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
-  # cat(args$mafft.opt)
   
   # GENOMIC WINDOWS
   # excision.default will excise more positions, atm I group together with remove vloops
-  
   stopifnot(args$windows_start <= args$window_end)
   ptyi <- seq(args$windows_start, args$windows_end, by=args$sliding_width)
   
-  # by remove loops, I also perform different 
-  if(args$rm_vloops)
+  excision.default.bool <- args$rm_vloops
+  if(excision.default.bool)
   {
+    cat("Remove vloops...\n")
     ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
-    excision.default.bool <- TRUE
-  }else{
-    excision.default.bool <- FALSE
   }
   
   # Now write command
