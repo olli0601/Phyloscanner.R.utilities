@@ -34,7 +34,7 @@ controller="$software_path/$PBS_JOBNAME" #current script location
 sliding_width=10
 
 CLUSIZE='50'
-DATE='2024-09-19'
+DATE='2024-09-20'
 
 echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
@@ -58,7 +58,7 @@ case $STEP in
         echo "---- compute alignments ----"
 
         if [ "$REDO" = "0"]; then
-                Rscript $software_path/make_deep_sequence_alignments.R \
+                Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
                 --prog_dir $phyloscanner_path \
@@ -74,7 +74,7 @@ case $STEP in
                 --walltime_idx $RES \
                 --tsi_analysis FALSE
         else
-                Rscript $software_path/make_deep_sequence_alignments.R \
+                Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
                 --prog_dir $phyloscanner_path \
