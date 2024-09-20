@@ -23,7 +23,7 @@ DEEPDATA="/rds/general/project/ratmann_pangea_deepsequencedata/live"
 DEEPANALYSES="/rds/general/project/ratmann_deepseq_analyses/live"
 HOME="/rds/general/user/ab1820/home"
 
-software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software"
+software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521"
 input_samples="$out_dir_base/240809_RCCSUVRI_phscinput_runs.rds"
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
@@ -34,7 +34,7 @@ controller="$software_path/$PBS_JOBNAME" #current script location
 sliding_width=10
 
 CLUSIZE='50'
-DATE='2022-07-23'
+DATE='2024-09-19'
 
 echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
