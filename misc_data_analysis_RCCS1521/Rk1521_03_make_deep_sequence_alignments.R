@@ -156,9 +156,18 @@ option_list <- list(
     default = 2,
     help = "Indicator for amount of resources required by job. Values ranging from 1 (lala) to 3 (lala)",
     dest = "walltime_idx"
+  ),
+  optparse::make_option(
+    "--pqeelab",
+    type = "logical",
+    default = FALSE,
+    help = "Indicator for whether to submit (some) jobs to pqeelab queue. [default FALSE]",
+    dest = "pqeelab"
   )
+    
 )
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+
 
 # stop if arguments are not provided:
 if( is.na(args$sliding_width) ) stop('No sliding_width provided')
@@ -563,7 +572,7 @@ if( nrow(pty.c) == 0 )
 }
 
 #
-# NOW THAT WE HAVE THE IND CMDs to RUN, WE NEED TO AGGREGATE THEM
+# NOW THAT WE HAVE THE CMDs to RUN, WE NEED TO AGGREGATE THEM
 #
 
 n_jobs <- ceiling( nrow(pty.c) / max.per.run)
@@ -574,7 +583,7 @@ pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
 djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
-if(args$walltime_idx == 3){
+if(args$walltime_idx == 3 & args$pqeelab){
   # Assign one every 5 jobs to pqeelab 
   djob[, Q := {
     idx <- seq(5, .N, 5)
