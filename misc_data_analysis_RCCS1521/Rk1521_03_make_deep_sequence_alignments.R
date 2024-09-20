@@ -600,7 +600,7 @@ if(args$walltime_idx == 3 & args$pqeelab){
 }
 
 if (args$split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
-  ids <- submit_jobs_from_djob(djob)
+  ids <- submit_jobs_from_djob(djob, output_type = "id")
   # qsub alignment step again, 
   # to check whether everything has run...
   qsub.next.step(file=args$controller,
@@ -617,7 +617,7 @@ if (args$split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
   for (person in 1:args$split_djobs_list){
     # Submit job for each person, and write a sh file they can run to submit
     djob_person <- djob[person_to_run == person]
-    pbs_file_person <- submit_jobs_from_djob(djob_person)
+    pbs_file_person <- submit_jobs_from_djob(djob_person, output_type = "outfile")
     write(pbs_file_person, 
             file = file.path(args$out.dir.work, paste0('submit_jobs_', person, '.sh')))
   }

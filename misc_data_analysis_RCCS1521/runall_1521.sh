@@ -6,17 +6,22 @@
 # The key driver of this analysis is the STEP parameter
 # which should be passed through the qsub command.
 # qsub -v STEP="net" runall_TSI_seroconv2.sh
-# If unset default to "sim"
+# If unset default to "none"
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx",RES=2 runall_1521.sh'
+        echo 'qsub -v STEP="xxx",RES=0 runall_1521.sh'
+        echo "OPTIONs:"
+        echo "    STEP : one of ali, btr, atr                           [default: none]"
+        echo "    RES: determines resources fr pbs jobs (1 to 3)        [default: 1]"
+        echo "    N_JOB_RUNNER: number of people that can submit jobs   [default: 1]"
         exit 1
 fi
 
 ${RES:=1} 
 ${REDO:=0}
-echo "running '${STEP:=sim}' analysis"
+${N_JOB_RUNNER:=1}
+echo "running '${STEP:=none}' analysis"
 
 # This includes all code necessary to run PHSC pipeline to produce TSI estimates
 DEEPDATA="/rds/general/project/ratmann_pangea_deepsequencedata/live"
@@ -45,12 +50,7 @@ source activate phylo_alignments
 
 case $STEP in
 
-        # In this analysis we avoid the first step of computing similarities, as there exist already
-        net)
-        echo "---- initialise analysis ----"
-        Rscript $software_path/TSI_initialise_sero2analysis.R \
-        --out_dir_base $out_dir_base 
-        ;;
+    # The initial steps producing nets were done by Xiaoyue
 
         # modified this step adding the reference flag 
         # This also has walltime flag but don't know what to do exactly about it...
@@ -72,7 +72,8 @@ case $STEP in
                 --rm_vloops TRUE \
                 --controller $controller \
                 --walltime_idx $RES \
-                --tsi_analysis FALSE
+                --tsi_analysis FALSE \
+                --split_jobs_by_n $N_JOB_RUNNER
         else
                 Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -89,7 +90,8 @@ case $STEP in
                 --controller $controller \
                 --walltime_idx $RES \
                 --date $DATE \
-                --tsi_analysis FALSE
+                --tsi_analysis FALSE \
+                --split_jobs_by_n $N_JOB_RUNNER
         fi
         ;;
         
@@ -97,7 +99,7 @@ case $STEP in
         # I believe there is no reason for having 2 separate scripts...
         btr)
         echo "----- build trees ----"
-        Rscript $software_path/make_trees.R \
+        Rscript $software_path/Rk1521_04_make_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
@@ -107,9 +109,10 @@ case $STEP in
         --walltime_idx $RES
         ;;
 
+        # We may not need this.
         ctr)
         echo "----- check trees ----"
-        Rscript $software_path/check_trees.R \
+        Rscript $software_path/Rk1521_05_check_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --iqtree_method "GTR+F+R6" \
@@ -118,11 +121,10 @@ case $STEP in
         --walltime_idx $RES
         ;;
 
-
-        # atm modified from here...
+        # DOUBLE CHECK HERE AGAINST ORIGINAL!!!
         atr)
         conda activate phylostan
-        Rscript $software_path/analyse_trees.R \
+        Rscript $software_path/Rk1521_06_analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
@@ -141,41 +143,6 @@ case $STEP in
         --controller $controller \
         --env_name "phylostan" \
         --verbose TRUE
-        ;;
-        
-        # ... to here
-
-        tsi)
-        echo "----- Run HIV-TSI -----"
-        Rscript $software_path/TSI_run_predictions.R \
-        --out_dir_base $out_dir_base \
-        --pkg_dir $software_path \
-        --relationship_dir $out_dir_rel \
-        --input_samples $input_samples \
-        --TSI_dir $hivtsipath \
-        --date $DATE \
-        --controller $controller \
-        --env_name 'hivphylotsi'
-        ;;
-
-        dti)
-        echo "----- get dates of infection -----"
-        Rscript $software_path/TSI_estimate_dates.R \
-        --out_dir_base $out_dir_base \
-        --relationship_dir $out_dir_rel \
-        --pkg_dir $software_path \
-        --date $DATE \
-        --input_samples $input_samples \
-        --controller $controller 
-        ;;
-
-        pst)
-        echo "----- Make plots -----"
-        conda activate phylostan
-        Rscript $software_path/TSI_postprocessing_comparison.R \
-        --relationship_dir $out_dir_rel \
-        --TSI_dir $hivtsipath \
-        --input_samples $input_samples \
         ;;
 
         *)

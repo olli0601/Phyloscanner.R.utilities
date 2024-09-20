@@ -491,11 +491,14 @@ qsub.next.step <- function(file=args$controller, ids=NA_character_, next_step, r
   return(outfile)
 }
 
-submit_jobs_from_djob <- function(DT){
+submit_jobs_from_djob <- function(DT, output_type="id"){
+
+  output_type <- match.arg(output_type, c('id', 'outfile'))
+
   # Takes a djob  data.table, splits the tasks into pbs
   # files, submits them and returns jobs ids.
   pbs_files <- DT[, list(
-        ID=.store.and.submit(.SD, prefix='readali', output_type = "outfile")
+        ID=.store.and.submit(.SD, prefix='readali', output_type = output_type)
     ), by=JOB_ID, 
     .SDcols=names(djob)]
   pbs_files <- as.character(pbs_files$ID)
