@@ -73,6 +73,7 @@ case $STEP in
                 --controller $controller \
                 --walltime_idx $RES \
                 --tsi_analysis FALSE \
+                --runs $input_samples \
                 --split_jobs_by_n $N_JOB_RUNNER \
                 --dryrun
 
@@ -93,6 +94,7 @@ case $STEP in
                 --walltime_idx $RES \
                 --date $DATE \
                 --tsi_analysis FALSE \
+                --runs $input_samples \
                 --split_jobs_by_n $N_JOB_RUNNER \
                 --dryrun
         fi

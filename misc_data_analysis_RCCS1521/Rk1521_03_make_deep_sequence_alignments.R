@@ -1,5 +1,4 @@
 # The phyloscanner run - make alignments
-
 # Preamble
 # The set of scripts aims to run phyloscanner.
 # This script aims to make alignments in each potential transmission network.
@@ -165,6 +164,13 @@ option_list <- list(
     dest = "pqeelab"
   ),
   optparse::make_option(
+    "--phsc-runs",
+    type = "character",
+    default = NA_character_, 
+    help = "Path to RDS file containing phyloscanner runs",
+    dest = 'infile.runs'
+  ),
+  optparse::make_option(
     "--split_jobs_by_n",
     type = "integer",
     default = 0L,
@@ -183,6 +189,7 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 
 # stop if arguments are not provided:
+stopifnot("Path to infile.runs is misspecified" = file.exists(args$infile.runs))
 if( is.na(args$sliding_width) ) stop('No sliding_width provided')
 
 #
@@ -310,7 +317,8 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
 #
 # test
 #
-if(0){
+if(0)
+{
   args <- list(
     verbose = T,
     seed = 42,
@@ -322,7 +330,7 @@ if(0){
     n_control = 0,
     cluster_size = 50,
     if_save_data = T,
-    date = '2024-09-19',
+    date = '2024-09-23',
     out.dir = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521",
     pkg.dir = "/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521",
     prog.dir = "/rds/general/user/ab1820/home/git/phyloscanner",
@@ -331,8 +339,18 @@ if(0){
     rm_vloops=TRUE,
     mafft.opt='--globalpair --maxiterate 1000',
     controller='/rds/general/user/ab1820/home/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1519/software/runall_TSI_pairs2.sh',
-    walltime_idx = 1
+    walltime_idx = 1,
+    infile.runs = "/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/240923_RCCSUVRI_phscinput_runs.rds",
+    dryrun = TRUE
   )
+
+  if (Sys.info()['user'] == "andrea") {
+    args$out.dir = "/home/andrea/HPC/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521"
+    args$pkg.dir = "~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521"
+    args$prog.dir = "~/git/phyloscanner"
+    args$controller= "~/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521/runall_dryrun.sh"
+    args$infile.runs = "/home/andrea/HPC/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1521/240923_RCCSUVRI_phscinput_runs.rds"
+  }
 }
 
 # Source functions
@@ -349,21 +367,24 @@ tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
 print(tmp)
 invisible(list2env(tmp,globalenv()))
-
+)
 #
 # Add constants that should not be changed by the user
 #
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
 dir.net <- file.path(args$out.dir, "potential_nets")
-infile.runs <- file.path(args$out.dir,'240809_RCCSUVRI_phscinput_runs.rds')
+
+if (Sys.info()['user'] == "andrea") {
+    dir.data <-  "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
+    dir.analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
+}
   
 ifelse(
   !is.na(args$window_cutoff),
   paste0('_n_control_', args$n_control), ''
 ) -> tmp
 
-stopifnot(file.exists(infile.runs))
 
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
@@ -400,18 +421,18 @@ if(file.exists(cmds.path))
   pty.c <- readRDS(cmds.path)
   
 }else{
-  
+
   # Copy files into input folder
   tmp  <- file.path(dir.data, 'PANGEA2_RCCS/phyloscanner_input_data')
   tmp1 <- file.path(dir.data, 'PANGEA2_RCCS/220419_reference_set_for_PARTNERS_mafft.fasta')
-  tmp <- c(list.files( tmp, full.name=T), tmp1)
+  tmp <- c(list.files( tmp, full.names=T), tmp1)
   file.copy(
     tmp,  args$out.dir.data,
     overwrite = T,
     recursive = FALSE,
     copy.mode = TRUE
   )
-  
+
   # Set consensus sequences.
   # (default consensus/reference for tsi and pair analyses if no arg is passed)
   # not really sure whether oneeach is needed anywhere
@@ -436,7 +457,7 @@ if(file.exists(cmds.path))
   stopifnot(file.exists(infile.consensus))
   
   cat("Load sequences and remove duplicates if existing...\n")
-  pty.runs <- data.table(readRDS(infile.runs))
+  pty.runs <- data.table(readRDS(args$infile.runs))
 
   if (args$dryrun){
      cat("Dry run: only running for first 2 ptyr\n")
@@ -448,23 +469,23 @@ if(file.exists(cmds.path))
   } else{
     setorder(pty.runs, PTY_RUN, ID)
   }
-  
+
   tmp <- pty.runs[, list(idx=duplicated(SAMPLE_ID)), by = 'PTY_RUN']
   tmp <- tmp[, which(idx)]
   if(length(tmp)!=0){
     pty.runs <- pty.runs[-tmp, ]
   }
-  
+
   tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
   stopifnot( all(tmp$V1) )
-  
+
   cat("Load backgrounds and extract HXB2 for pairwise MSA... \n")
   consensus_seq <- seqinr::read.fasta(infile.consensus)
   consensus_seq_names <- names(consensus_seq)
   hxb2 <- grep('HXB2', names(consensus_seq), value = T)
   hxb2_seq <- consensus_seq[[hxb2]]
   # removed root_seq as it seemed useless
-  
+
   # Change the format
   if ('ID_TYPE' %in% colnames(pty.runs)) {
     pty.runs[ID_TYPE == 'control', UNIT_ID := paste0('CNTRL-', UNIT_ID)]
@@ -490,10 +511,9 @@ if(file.exists(cmds.path))
     cat("Remove vloops...\n")
     ptyi <- c(ptyi[ptyi <= 6615 - args$window_size], 6825, 6850, ptyi[ptyi >= 7636])
   }
-  
+
   # Now write command
-  write.pty.command <- function(w_from)
-  {
+  write.pty.command <- function(w_from) {
     pty.args <- list(
       prog.pty = file.path(args$prog.dir, "phyloscanner_make_trees.py"),
       prog.mafft = args$mafft.opt,
@@ -522,14 +542,13 @@ if(file.exists(cmds.path))
       mem.save = 0,
       verbose = TRUE,
       select = NA,
-      default.coord = excision.default.bool,
-      realignment = TRUE
+      default.coord = TRUE,
+      realignment = FALSE
     )
     pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
     pty.c[, W_FROM := w_from ]
-    pty.c
   }
-  
+
   pty.c	<- lapply(ptyi, write.pty.command)
   pty.c	<- do.call('rbind', pty.c)
   setkey(pty.c, PTY_RUN, W_FROM)

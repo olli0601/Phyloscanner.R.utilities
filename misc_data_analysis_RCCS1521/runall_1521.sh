@@ -72,6 +72,7 @@ case $STEP in
                 --rm_vloops \
                 --controller $controller \
                 --walltime_idx $RES \
+                --phsc-runs $input_samples \
                 --tsi_analysis FALSE \
                 --split_jobs_by_n $N_JOB_RUNNER
         else
@@ -89,6 +90,7 @@ case $STEP in
                 --rm_vloops \
                 --controller $controller \
                 --walltime_idx $RES \
+                --phsc-runs $input_samples \
                 --date $DATE \
                 --tsi_analysis FALSE \
                 --split_jobs_by_n $N_JOB_RUNNER
