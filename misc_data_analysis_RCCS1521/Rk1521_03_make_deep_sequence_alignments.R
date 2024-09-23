@@ -170,6 +170,13 @@ option_list <- list(
     default = 0L,
     help = "Number of people that can run scripts. This will create at least `split_jobs_by_n` scripts (unless remaining tasks < 500)",
     dest = "split_jobs_by_n"
+  ),
+  optparse::make_option(
+    "--dryrun",
+    type = "logical",
+    default = FALSE,
+    help = "Runs only for the first 2 ptyr",
+    dest = "dryrun"
   )
 )
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
@@ -430,6 +437,12 @@ if(file.exists(cmds.path))
   
   cat("Load sequences and remove duplicates if existing...\n")
   pty.runs <- data.table(readRDS(infile.runs))
+
+  if (args$dryrun){
+     cat("Dry run: only running for first 2 ptyr\n")
+     pty.runs <- subset(pty.runs, PTY_RUN %in% c(1,2))
+  }
+
   if ('ID_TYPE' %in% colnames(pty.runs)) {
     setorder(pty.runs, PTY_RUN, -ID_TYPE, ID)
   } else{
@@ -572,6 +585,10 @@ if( nrow(pty.c) == 0 )
 # NOW THAT WE HAVE THE CMDs to RUN, WE NEED TO AGGREGATE THEM
 #
 
+# print  the first cmd to console for checking purposes
+cat(pty.c$CMD[1])
+
+# aggregate jobs and run
 n_jobs <- ceiling( nrow(pty.c) / max.per.run)
 idx <- 1:nrow(pty.c)
 

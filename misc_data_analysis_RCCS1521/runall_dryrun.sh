@@ -73,7 +73,9 @@ case $STEP in
                 --controller $controller \
                 --walltime_idx $RES \
                 --tsi_analysis FALSE \
-                --split_jobs_by_n $N_JOB_RUNNER
+                --split_jobs_by_n $N_JOB_RUNNER \
+                --dryrun
+
         else
                 Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -91,7 +93,8 @@ case $STEP in
                 --walltime_idx $RES \
                 --date $DATE \
                 --tsi_analysis FALSE \
-                --split_jobs_by_n $N_JOB_RUNNER
+                --split_jobs_by_n $N_JOB_RUNNER \
+                --dryrun
         fi
         ;;
         
