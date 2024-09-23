@@ -367,8 +367,7 @@ tmp <- pbs_headers[[args$walltime_idx]]
 cat('selected the following PBS specifications:\n')
 print(tmp)
 invisible(list2env(tmp,globalenv()))
-)
-#
+
 # Add constants that should not be changed by the user
 #
 dir.data <-  '/rds/general/project/ratmann_pangea_deepsequencedata/live/'

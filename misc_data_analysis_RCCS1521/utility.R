@@ -75,9 +75,9 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   stopifnot(is.character(file.input),is.character(file.patient))
 
   # default options, which can be overwritten by the user through pty.args
-  default.coord=NA
-  discard.improper.pairs=NA
-  realignment=TRUE
+  if (! "default.coord" %in% names(pty.args)) pty.args$default.coord <- NA
+  if (! "discard.improper.pairs" %in% names(pty.args)) pty.args$discard.improper.pairs <- NA
+  if (! "realignment" %in% names(pty.args)) realignment <- TRUE
 
   #	copy input variables into namespace	 
   attach(pty.args)	
