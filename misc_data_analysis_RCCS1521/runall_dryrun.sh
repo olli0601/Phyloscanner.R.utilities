@@ -5,12 +5,11 @@
 
 # The key driver of this analysis is the STEP parameter
 # which should be passed through the qsub command.
-# qsub -v STEP="net" runall_TSI_seroconv2.sh
-# If unset default to "none"
+
 if [ -z "$STEP" ]
 then
         echo "Intended use:\n"
-        echo 'qsub -v STEP="xxx",RES=0 runall_1521.sh'
+        echo 'qsub -v STEP="xxx",RES=0 runall_dryrun.sh'
         echo "OPTIONs:"
         echo "    STEP : one of ali, btr, atr                           [default: none]"
         echo "    RES: determines resources fr pbs jobs (1 to 3)        [default: 1]"
