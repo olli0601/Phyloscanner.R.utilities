@@ -14,13 +14,14 @@ then
         echo "OPTIONs:"
         echo "    STEP : one of ali, btr, atr                           [default: none]"
         echo "    RES: determines resources fr pbs jobs (1 to 3)        [default: 1]"
-        echo "    N_JOB_RUNNER: number of people that can submit jobs   [default: 1]"
+        echo "    MULTI_RUNNER: indicates whether many runners job runners are required as specified by jobs_runner.csv [default: FALSE]"
         exit 1
 fi
 
 ${RES:=1} 
 ${REDO:=0}
-${N_JOB_RUNNER:=1}
+${MULTI_RUNNER:=FALSE}
+
 echo "running '${STEP:=none}' analysis"
 
 # This includes all code necessary to run PHSC pipeline to produce TSI estimates
@@ -37,6 +38,13 @@ out_dir_base="$DEEPANALYSES/PANGEA2_RCCS1521"
 controller="$software_path/$PBS_JOBNAME" #current script location
 # For TSI's 25 is fine, for networks 10:
 sliding_width=10
+
+if [ "$MULTI_RUNNER" = "TRUE" ]; then
+    runner_cmd = "--csv-runners $software_path/jobs_runner.csv"
+else
+    runner_cmd = ""
+fi
+
 
 CLUSIZE='50'
 DATE='2024-09-23'
@@ -73,8 +81,8 @@ case $STEP in
                 --controller $controller \
                 --walltime_idx $RES \
                 --phsc-runs $input_samples \
+                $runner_cmd \
                 --tsi_analysis FALSE \
-                --split_jobs_by_n $N_JOB_RUNNER
         else
                 Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
@@ -92,8 +100,8 @@ case $STEP in
                 --walltime_idx $RES \
                 --phsc-runs $input_samples \
                 --date $DATE \
-                --tsi_analysis FALSE \
-                --split_jobs_by_n $N_JOB_RUNNER
+                $runner_cmd \
+                --tsi_analysis FALSE
         fi
         ;;
 
@@ -108,8 +116,8 @@ case $STEP in
         --env_name "phylostan" \
         --date $DATE \
         --controller $controller \
+        $runner_cmd \
         --walltime_idx $RES \
-        --split_jobs_by_n $N_JOB_RUNNER
         ;;
 
         # DOUBLE CHECK HERE AGAINST ORIGINAL!!!
