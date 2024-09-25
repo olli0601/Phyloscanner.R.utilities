@@ -625,7 +625,7 @@ if(args$walltime_idx == 3 & args$pqeelab){
     }]
 }
 
-if (args$split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
+if (split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
   ids <- submit_jobs_from_djob(djob, output_type = "id")
   # qsub alignment step again, 
   # to check whether everything has run...
@@ -638,13 +638,33 @@ if (args$split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
 }else{
   # split djob in split_jobs_by_n data.tables
   # then perform the above individually
-  person_to_run <- rep(1:args$split_jobs_by_n, length.out = nrow(djob))
+  person_to_run <- rep(1:split_jobs_by_n, length.out = nrow(djob))
+  submit_user_script <- NA_character_
 
-  for (person in 1:args$split_djobs_list){
-    # Submit job for each person, and write a sh file they can run to submit
+  for (person in 1:split_jobs_by_n){
+
+    # Subset to jobs for specific person
     djob_person <- djob[person_to_run == person]
+    # Adapt the job specifications according to the person/runner
+    djob_person <- adapt_jobspecs_to_runner(
+            djob_person,
+            drunners,
+            idx = person
+        )
+    # write the pbs files
     pbs_file_person <- submit_jobs_from_djob(djob_person, output_type = "outfile")
-    write(pbs_file_person, 
-            file = file.path(args$out.dir.work, paste0('submit_jobs_', person, '.sh')))
+    # Append the pbs files to the script that each user can submit to queue them
+    submit_user_script <- append_pbs_file_person(
+            script = submit_user_script,
+            pbs = pbs_file_person,
+            usr = drunners[index == person,  user_name]
+        )
   }
+
+  # Write the script that each user can submit
+  outfile = file.path(args$out.dir.work, 'submit_user_readali.sh')
+  write( submit_user_script, file = outfile)
+
 }
+
+cat("End of script\n")

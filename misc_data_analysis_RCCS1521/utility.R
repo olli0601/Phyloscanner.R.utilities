@@ -505,3 +505,38 @@ submit_jobs_from_djob <- function(DT, output_type="id", prefix = "readali"){
   cat('Submitted job ids are:', pbs_files, '...\n')
   return(pbs_files)
 }
+
+
+adapt_jobspecs_to_runner <- function(DT, DR, idx)
+{
+    # DT usually a djob;
+    # DR usually a data.table with the runner specs
+    # idx is the index of the runner for which to adapt the job specs
+
+    values_to_replace <- names(DR)[names(DR) %like% 'path']
+
+    for (name in names(DR)){
+        pat <- DR[index == 1,   get(name)]
+        rep <- DR[index == idx, get(name)]
+        DT$CMD <- gsub(
+            x=DT$CMD, 
+            pattern = pat, 
+            replacemnet = rep)
+    }
+
+    return(DT)
+}
+
+append_pbs_file_person <- function(script, pbs, usr)
+{
+    stopifnot("Only one user allowed in `append_pbs_file_person`" = length(usr) == 1)
+    pbs <- paste("qsub", pbs)
+    pbs <- paste(pbs, collapse = '\n')
+    to_append <- sprintf(
+        'if [ $USER == "%s"]; then
+            %s
+        fi',
+        usr, pbs)
+    new_script <- paste(script, to_append, sep = '\n\n')
+    return(new_script)
+}
