@@ -96,7 +96,7 @@ case $STEP in
                 --split_jobs_by_n $N_JOB_RUNNER
         fi
         ;;
-        
+
         # The 2 here should be run without changes the first time
         # I believe there is no reason for having 2 separate scripts...
         btr)
@@ -108,25 +108,14 @@ case $STEP in
         --env_name "phylostan" \
         --date $DATE \
         --controller $controller \
-        --walltime_idx $RES
-        ;;
-
-        # We may not need this.
-        ctr)
-        echo "----- check trees ----"
-        Rscript $software_path/Rk1521_05_check_trees.R \
-        --out_dir_base $out_dir_base \
-        --pkg_dir $software_path \
-        --iqtree_method "GTR+F+R6" \
-        --env_name "phylostan" \
-        --date $DATE \
-        --walltime_idx $RES
+        --walltime_idx $RES \
+        --split_jobs_by_n $N_JOB_RUNNER
         ;;
 
         # DOUBLE CHECK HERE AGAINST ORIGINAL!!!
         atr)
         conda activate phylostan
-        Rscript $software_path/Rk1521_06_analyse_trees.R \
+        Rscript $software_path/Rk1521_05_analyse_trees.R \
         --out_dir_base $out_dir_base \
         --pkg_dir $software_path \
         --prog_dir $phyloscanner_path \
