@@ -515,7 +515,7 @@ adapt_jobspecs_to_runner <- function(DT, DR, idx)
 
     values_to_replace <- names(DR)[names(DR) %like% 'path']
 
-    for (name in names(DR)){
+    for (name in values_to_replace){
         pat <- DR[index == 1,   get(name)]
         rep <- DR[index == idx, get(name)]
         DT$CMD <- gsub(
