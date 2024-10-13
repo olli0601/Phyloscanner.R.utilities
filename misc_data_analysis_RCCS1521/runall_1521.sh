@@ -1,7 +1,7 @@
 #!/bin/sh
 #PBS -lselect=1:ncpus=1:mem=10GB
 #PBS -lwalltime=05:00:00
-#PBS -j oe 
+#PBS -j oe
 
 # The key driver of this analysis is the STEP parameter
 # which should be passed through the qsub command.
@@ -18,31 +18,31 @@ then
         exit 1
 fi
 
-${RES:=1} 
-${REDO:=0}
-${MULTI_RUNNER:=FALSE}
+RES=${RES:=1}
+REDO=${REDO:=0}
+MULTI_RUNNER=${MULTI_RUNNER:=FALSE}
 
 echo "running '${STEP:=none}' analysis"
 
 # This includes all code necessary to run PHSC pipeline to produce TSI estimates
 DEEPDATA="/rds/general/project/ratmann_pangea_deepsequencedata/live"
 DEEPANALYSES="/rds/general/project/ratmann_deepseq_analyses/live"
-HOME="/rds/general/user/ab1820/home"
+HOME="/rds/general/user/ablenkin/home"
 
 software_path="$HOME/git/Phyloscanner.R.utilities/misc_data_analysis_RCCS1521"
-input_samples="$out_dir_base/240923_RCCSUVRI_phscinput_runs.rds"
 phyloscanner_path="$HOME/git/phyloscanner"
 hivtsipath="$HOME/git/HIV-phyloTSI"
 out_dir_base="$DEEPANALYSES/PANGEA2_RCCS1521"
 # out_dir_rel="$out_dir_base/..."
+input_samples="$out_dir_base/240923_RCCSUVRI_phscinput_runs.rds"
 controller="$software_path/$PBS_JOBNAME" #current script location
 # For TSI's 25 is fine, for networks 10:
 sliding_width=10
 
 if [ "$MULTI_RUNNER" = "TRUE" ]; then
-    runner_cmd = "--csv-runners $software_path/jobs_runner.csv"
+    runner_cmd="--csv-runners $software_path/jobs_runner.csv"
 else
-    runner_cmd = ""
+    runner_cmd=""
 fi
 
 
@@ -54,18 +54,18 @@ echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 cwd=$(pwd)
 echo $cwd
 module load anaconda3/personal
-source activate phylo_alignments
+source activate phylostan
 
 case $STEP in
 
     # The initial steps producing nets were done by Xiaoyue
 
-        # modified this step adding the reference flag 
+        # modified this step adding the reference flag
         # This also has walltime flag but don't know what to do exactly about it...
         ali)
         echo "---- compute alignments ----"
 
-        if [ "$REDO" = "0"]; then
+        if [ "$REDO" = "0" ]; then
                 Rscript $software_path/Rk1521_03_make_deep_sequence_alignments.R \
                 --out_dir_base $out_dir_base \
                 --pkg_dir $software_path \
@@ -145,7 +145,7 @@ case $STEP in
         ;;
 
         *)
-        echo "no R script run. STEP does not match any task.\n" 
+        echo "no R script run. STEP does not match any task.\n"
         ;;
 esac
 
