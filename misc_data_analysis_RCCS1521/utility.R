@@ -533,7 +533,7 @@ append_pbs_file_person <- function(script, pbs, usr)
     pbs <- paste("qsub", pbs)
     pbs <- paste(pbs, collapse = '\n')
     to_append <- sprintf(
-        'if [ $USER == "%s" ]; then
+        'if [ "$USER" = "%s" ]; then
             %s
         fi',
         usr, pbs)
