@@ -124,15 +124,15 @@ option_list <- list(
   optparse::make_option(
     "--tsi_analysis",
     type = 'logical',
-    default = FALSE,  
+    default = FALSE,
     help = 'Indicator on whether we want to perform a Time Since Infection analysis[default]. Close to being deprecated',
     dest = 'tsi_analysis'
   ),
   optparse::make_option(
     "--mafft",
     type = 'character',
-    default = '--globalpair --maxiterate 1000',  
-    help = 'options for alignment program mafft', 
+    default = '--globalpair --maxiterate 1000',
+    help = 'options for alignment program mafft',
     dest = 'mafft.opt'
   ),
   optparse::make_option(
@@ -145,7 +145,7 @@ option_list <- list(
   optparse::make_option(
     "--controller",
     type = "character",
-    default = NA_character_, 
+    default = NA_character_,
     help = "Path to sh script irecting the full anysis",
     dest = 'controller'
   ),
@@ -166,7 +166,7 @@ option_list <- list(
   optparse::make_option(
     "--phsc-runs",
     type = "character",
-    default = NA_character_, 
+    default = NA_character_,
     help = "Path to RDS file containing phyloscanner runs",
     dest = 'infile.runs'
   ),
@@ -202,18 +202,18 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
 {
   # returns a vector of TRUE or FALSE based on whether regex is found in outdir
   if( ! file.exists(outdir) ){return(rep(NA_character_, length(regex)))}
-  
+
   files <- list.files(outdir, pattern=pattern)
   # .f <- function(rgx) any(grepl(x=files,rgx))
   .f <- function(rgx) grep(x=files,rgx, value=T)[1]
   sapply(regex, .f) -> tmp
   unlist(tmp)
-} 
+}
 
 .remove_problematic_windows <- function(DT)
 {
   # check if file problematic_windows.csv exists
-  tmp <- list.files(args$out.dir.output, pattern='problematic_windows.csv', 
+  tmp <- list.files(args$out.dir.output, pattern='problematic_windows.csv',
                     recursive = T, full.names = T)
   if( length(tmp) == 0 )
   {
@@ -225,9 +225,9 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   dprob <- rbindlist(dprob, idcol = 'PTY_RUN')
   names(dprob) <- c('PTY_RUN', 'FROM', 'TO', 'PBS_ARRAY_INDEX', 'SH', 'QUEUE')
   dprob[,  PTY_RUN:=as.integer(gsub('[A-z]|_', '', PTY_RUN))]
-  
+
   # dprob <- dprob[!SH %in% c('readali.job1.Sat_Jul_23_205803_2022.sh', 'readali.job1.Sun_Jul_24_133928_2022.sh')]
-  
+
   # This below is more for debugging purposes
   # names of logfiles
   .f <- function(x)
@@ -240,19 +240,19 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
     NA_character_
   }
   dprob[, LOG:=paste0(.f(SH), PBS_ARRAY_INDEX), by='SH']
-  
-  # compare with outputs 
+
+  # compare with outputs
   merge(
     DT[, .(W_FROM, PTY_RUN, OUT1, OUT2)],
     dprob[, .(W_FROM = FROM, PTY_RUN, LOG)],
     all.x=TRUE,
     by=c('W_FROM', 'PTY_RUN')
   ) -> dlogs
-  
+
   tmp <- dlogs[ is.na(LOG), .(W_FROM, PTY_RUN, OUT2) ]
   # stopifnot(tmp[, all(is.na(OUT2))])
   tmp$OUT2 <- NULL
-  
+
   merge(DT, tmp, by=c('W_FROM', 'PTY_RUN'))
 }
 
@@ -263,22 +263,22 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   out1 <- basename(out1)
   out2 <- gsub('\\.fasta', '\\_v2.fasta', out1)
   lines <- strsplit(cmd, '\n')[[1]]
-  
+
   # remove useless parts
   rm1_start <- grep('phyloscanner_make_trees', lines)
-  rm1_end <- grep('Performing realignment', lines) - 1 
+  rm1_end <- grep('Performing realignment', lines) - 1
   rm1 <- rm1_start:rm1_end
   rm2 <- grep("(?=.*mv.*)(?=.*AlignedReads.*)", lines, perl = TRUE)
   rm2 <- (rm2-1):(rm2+1)
   rm3 <- grep('problematic_windows.csv', lines)
   lines <- lines[ -c(rm1, rm2, rm3)]
-  
+
   # copy out1 to work dir
   cp_pos <- grep('^cp', lines)[1]
   cp <- lines[cp_pos]
   cp <- gsub('^cp "(.*?)" (.*?)$', paste0('cp "', file.path(outdir, out1)  ,'" \\2'), cp)
   lines[cp_pos] <- cp
-  
+
   # substitute AlignedReads* with the name of our file
   mafft_pos <- grep('mafft', lines)[1]
   mafft <- lines[mafft_pos]
@@ -288,12 +288,12 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
   lines[mafft_pos] <- mafft2
   rm4 <- c(mafft_pos + 1, mafft_pos -1)
   lines <- lines[ -rm4]
-  
+
   cmd <- paste0(lines, collapse='\n')
   return(cmd)
 }
 
-.write.job <- function(DT)
+.write.job <- function(DT,path)
 {
   # Define PBS header for job scheduler
   pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(
@@ -305,11 +305,27 @@ if( is.na(args$sliding_width) ) stop('No sliding_width provided')
     hpc.array = DT[, max(CASE_ID)],
     hpc.load = "module load intel-suite/2015.1 mpi raxml/8.2.9 mafft/7 anaconda/2.3.0 samtools"
   )
-  
-  cmd <- DT[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
-  cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
-                         paste0(CASE, collapse = ''),
-                         'esac')]
+
+  #cmd <- DT[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
+  cmd <- paste(
+    paste0('\nLIST_NAME=$EPHEMERAL/input_list.txt'),
+    'INPUTS=$(head -n $PBS_ARRAY_INDEX $LIST_NAME | tail -1)',
+    'PREFIX=$(awk \'{print $1}\' <<< "$INPUTS")',
+    'WINDOW=$(awk \'{print $2}\' <<< "$INPUTS")',
+    'WINDOW_START=$(echo $WINDOWS | awk -F\',\' \'{print $1}\')',
+    'WINDOW_END=$(echo $WINDOWS | awk -F\',\' \'{print $2}\')',
+    '\n',
+    'echo "PBS Job Id PBS_JOBID is ${PBS_JOBID}"',
+    'echo "PBS job array index PBS_ARRAY_INDEX value is ${PBS_ARRAY_INDEX}"',
+    '\n',
+    paste0('EXCISION_COORDS=$(cat ',path,'/excision_coords.txt)'),
+    sep = "\n"
+  )
+  cmd <- paste0(cmd,'\n')
+  cmd <- paste0(cmd, DT$CMD[1]) # just print the first generic command
+  #cmd <-    cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
+  #                       paste0(CASE, collapse = ''),
+  #                       'esac')]
   cmd <- paste(pbshead, cmd, sep = '\n')
   cmd
 }
@@ -375,10 +391,10 @@ dir.analyses <- '/rds/general/project/ratmann_deepseq_analyses/live'
 dir.net <- file.path(args$out.dir, "potential_nets")
 
 if (Sys.info()['user'] == "andrea") {
-    dir.data <-  "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
-    dir.analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
+  dir.data <-  "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
+  dir.analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
 }
-  
+
 ifelse(
   !is.na(args$window_cutoff),
   paste0('_n_control_', args$n_control), ''
@@ -388,14 +404,14 @@ ifelse(
 # Set default output directories relative to out.dir
 args$date <- gsub('-','_',args$date)
 
-.f <- function(x)  
+.f <- function(x)
 {
   dir <- file.path(args$out.dir, paste0(args$date, x))
-  
-  # If date has been passed as par, (ie. args$date != today's date) 
+
+  # If date has been passed as par, (ie. args$date != today's date)
   # check that everything exists...
-  cnd <-  as.Date(args$date, format='%Y_%m_%d') != as.character(Sys.Date()) 
-  
+  cnd <-  as.Date(args$date, format='%Y_%m_%d') != as.character(Sys.Date())
+
   if(!dir.exists(dir))
   {
     if ( cnd )
@@ -411,14 +427,25 @@ args$out.dir.output <- .f('_phsc_output')
 
 # Look for RDS file containing subjobs CMDS, if can't find, KEEP GOING
 cmds.path <- file.path(args$out.dir.work, 'align_commands.rds')
+#cmds.path <- file.path(args$out.dir.work, 'input_list.txt')
+
+# write excision coords file
+if(!is.na(default.coord)){
+  if(default.coord){
+    coords <- paste0('823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069', paste(seq(6615,6811,by=1),collapse = ','),  ",", paste(seq(7110,7636,by=1),collapse = ',') ,',7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886,', paste(seq(9400,9719,by=1),collapse=','))
+  }else{
+    coords <- paste0('823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069,7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886',sep='')
+  }
+  writeLines(paste0("'",coords,"'"), file.path(args$out.dir.work, 'excision_coords.txt'))
+}
 
 if(file.exists(cmds.path))
 {
   # Load commands
   cat('Cleaning work directory...\n')
   move.logs(args$out.dir.work)
-  pty.c <- readRDS(cmds.path)
-  
+  pty.c <- read.delim(tmp,header=F)
+
 }else{
 
   # Copy files into input folder
@@ -435,16 +462,16 @@ if(file.exists(cmds.path))
   # Set consensus sequences.
   # (default consensus/reference for tsi and pair analyses if no arg is passed)
   # not really sure whether oneeach is needed anywhere
-  
+
   cat("Load consensus sequences\n")
-  infile.consensus <- args$reference 
-  
+  infile.consensus <- args$reference
+
   if(is.na(infile.consensus))
   {
     # if NA, look in args$out.dir.data: TODO:check below
     tmp <- ifelse(args$tsi_analysis,
-            yes='220419_reference_set_for_PARTNERS_mafft.fasta',
-            no='ConsensusGenomes.fasta')
+                  yes='220419_reference_set_for_PARTNERS_mafft.fasta',
+                  no='ConsensusGenomes.fasta')
     infile.consensus <- file.path(args$out.dir.data, tmp)
   }else{
     # If does not exists, look within args$out.dir.data
@@ -454,13 +481,13 @@ if(file.exists(cmds.path))
     }
   }
   stopifnot(file.exists(infile.consensus))
-  
+
   cat("Load sequences and remove duplicates if existing...\n")
   pty.runs <- data.table(readRDS(args$infile.runs))
 
   if (args$dryrun){
-     cat("Dry run: only running for first 2 ptyr\n")
-     pty.runs <- subset(pty.runs, PTY_RUN %in% c(1,2))
+    cat("Dry run: only running for first 2 ptyr\n")
+    pty.runs <- subset(pty.runs, PTY_RUN %in% c(1,2))
   }
 
   if ('ID_TYPE' %in% colnames(pty.runs)) {
@@ -493,17 +520,17 @@ if(file.exists(cmds.path))
   pty.runs[, BAM := paste0(dir.data, SAMPLE_ID, '.bam')]
   pty.runs[, REF := paste0(dir.data, SAMPLE_ID, '_ref.fasta')]
   setkey(pty.runs, PTY_RUN, RENAME_ID)
-  
-  cat("Set the alignment options...\n") 
+
+  cat("Set the alignment options...\n")
   # MAFFT: reformat options so they are readily pasted in sh command.
   args$mafft.opt <- gsub('mafft|"', '', args$mafft.opt)
   args$mafft.opt <- paste0('"mafft ', args$mafft.opt, '"')
-  
+
   # GENOMIC WINDOWS
   # excision.default will excise more positions, atm I group together with remove vloops
   stopifnot(args$windows_start <= args$window_end)
   ptyi <- seq(args$windows_start, args$windows_end, by=args$sliding_width)
-  
+
   excision.default.bool <- args$rm_vloops
   if(excision.default.bool)
   {
@@ -542,7 +569,8 @@ if(file.exists(cmds.path))
       verbose = TRUE,
       select = NA,
       default.coord = TRUE,
-      realignment = FALSE
+      realignment = TRUE,
+      excision.coords = "$EXCISION_COORDS"  # Assuming $EXCISION_COORDS is defined in the shell environment
     )
     pty.c <- phsc.cmd.phyloscanner.multi(pty.runs, pty.args)
     pty.c[, W_FROM := w_from ]
@@ -552,11 +580,11 @@ if(file.exists(cmds.path))
   pty.c	<- do.call('rbind', pty.c)
   setkey(pty.c, PTY_RUN, W_FROM)
   stopifnot(pty.c[, .N, by=c('PTY_RUN', 'W_FROM')][, all(N == 1)])
-  
+
   pty.c[ , OUTDIR := file.path(args$out.dir.output, paste0('ptyr', PTY_RUN, '_trees')) ]
   pty.c[, OUT_REGEX_V1 := paste0( W_FROM, '_to_', W_FROM + args$window_size - 1,  '.fasta') ]
   pty.c[, OUT_REGEX_V2 := paste0( W_FROM, '_to_', W_FROM + args$window_size - 1,  '_v2.fasta') ]
-  
+
   saveRDS(pty.c, cmds.path)
 }
 
@@ -566,10 +594,10 @@ pty.c[, (cols) := lapply(.SD, .check.existing.outputs, outdir=OUTDIR, pattern='f
 
 # print statments documenting completed things
 pty.c[, cat(sum(!is.na(OUT2)),
-            '(', .percent(mean(!is.na(OUT2))),')', 
+            '(', .percent(mean(!is.na(OUT2))),')',
             'of desired outputs were generated in the previous runs\n')]
 pty.c[, cat(sum(!is.na(OUT1)),
-            '(', .percent(mean(!is.na(OUT1))),')', 
+            '(', .percent(mean(!is.na(OUT1))),')',
             'of intermediary outputs were generated in the previous runs\n')]
 
 # Select jobs with missing final outcome.
@@ -592,10 +620,10 @@ if( nrow(pty.c) == 0 )
 {
   # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
-        next_step='btr', 
-        res=1,
-        redo=0
-    )
+                 next_step='btr',
+                 res=1,
+                 redo=0
+  )
   stop('Alignment step completed, submitted the following task')
 }
 
@@ -614,16 +642,27 @@ pty.c[, CASE_ID := rep(1:max.per.run, times = n_jobs)[idx] ]
 pty.c[, JOB_ID := rep(1:n_jobs, each = max.per.run)[idx] ]
 
 # Write and submit:
-djob <- pty.c[, .(CMD=.write.job(.SD)), by=JOB_ID]
+djob <- pty.c[, .(CMD=.write.job(.SD,path=args$out.dir.work)), by=JOB_ID]
 if(args$walltime_idx == 3 & args$pqeelab){
-  # Assign one every 5 jobs to pqeelab 
+  # Assign one every 5 jobs to pqeelab
   djob[, Q := {
     idx <- seq(5, .N, 5)
     z <- rep('', .N)
     z[idx] <- 'pqeelab'
     z
-    }]
+  }]
 }
+
+# save input_list for incomplete jobs
+ephemeral_dir <- Sys.getenv("EPHEMERAL")
+file_name <- "input_list.txt"
+file_path <- file.path(ephemeral_dir, file_name)
+input_list <- pty.c[, c('PTY_RUN','W_FROM')]
+input_list[, PTY_RUN:= paste0('ptyr', PTY_RUN)]
+input_list[, WINDOW:= paste(W_FROM,W_FROM + args$window_size - 1, sep=',')]
+input_list <- input_list[, c('PTY_RUN','WINDOW')]
+fwrite(input_list, file_path, sep = " ", col.names=FALSE)
+cat("File saved to:", file_path, "\n")
 
 # Load runners specifications
 split_jobs_by_n <- 1
@@ -635,12 +674,12 @@ if(!is.na(args$runners))
 
 if (split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
   ids <- submit_jobs_from_djob(djob, output_type = "id")
-  # qsub alignment step again, 
+  # qsub alignment step again,
   # to check whether everything has run...
   qsub.next.step(file=args$controller,
-                 ids=ids, 
-                 next_step='ali', 
-                 res=args$walltime_idx + 1, 
+                 ids=ids,
+                 next_step='ali',
+                 res=args$walltime_idx + 1,
                  redo=0
   )
 }else{
@@ -655,18 +694,18 @@ if (split_jobs_by_n == 1 | nrow(djob) <= 1000 ){
     djob_person <- djob[person_to_run == person]
     # Adapt the job specifications according to the person/runner
     djob_person <- adapt_jobspecs_to_runner(
-            djob_person,
-            drunners,
-            idx = person
-        )
+      djob_person,
+      drunners,
+      idx = person
+    )
     # write the pbs files
     pbs_file_person <- submit_jobs_from_djob(djob_person, output_type = "outfile")
     # Append the pbs files to the script that each user can submit to queue them
     submit_user_script <- append_pbs_file_person(
-            script = submit_user_script,
-            pbs = pbs_file_person,
-            usr = drunners[index == person,  user_name]
-        )
+      script = submit_user_script,
+      pbs = pbs_file_person,
+      usr = drunners[index == person,  user_name]
+    )
   }
 
   # Write the script that each user can submit

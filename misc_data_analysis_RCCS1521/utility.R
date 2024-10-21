@@ -1,5 +1,5 @@
 #' @export
-#' @title Generate bash commands for multiple phyloscanner runs
+#' @title Generate bash commands for multiple phyloscanner runs using array job
 #' @param pty.runs Data.table of individual assignments to phyloscanner runs, with columns 'PTY_RUN' (run id), 'SAMPLE_ID' (ID of individuals that are assigned to that run). Optional columns: 'RENAME_ID' (new ID for each bam file in phyloscanner output).
 #' @param pty.args List of phyloscanner input variables. See examples.
 #' @return Data.table with columns 'PTY_RUN' (run id) and 'CMD' (bash commands for that run).
@@ -74,6 +74,9 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
 {
   stopifnot(is.character(file.input),is.character(file.patient))
 
+  file.input <- gsub('ptyr[0-9]+','\\${PREFIX}',file.input)
+  file.patient <- gsub('ptyr[0-9]+','\\${PREFIX}',file.patient)
+
   # default options, which can be overwritten by the user through pty.args
   if (! "default.coord" %in% names(pty.args)) pty.args$default.coord <- NA
   if (! "discard.improper.pairs" %in% names(pty.args)) pty.args$discard.improper.pairs <- NA
@@ -101,16 +104,17 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   dont.check.duplicates		<- ifelse(!is.na(dont.check.duplicates) & dont.check.duplicates, '--dont-check-duplicates', NA_character_)
   dont.check.recombination	<- ifelse(!is.na(dont.check.recombination) & dont.check.recombination==FALSE, '--check-recombination', NA_character_)
   #	create local tmp dir
-  cmd		<- paste("CWD=$(pwd)\n",sep='\n')
-  cmd		<- paste(cmd,"echo $CWD\n",sep='')
-  tmpdir	<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
-  tmpdir	<- paste("$CWD/",tmpdir,sep='')
-  cmd		<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
+  #cmd		<- paste("CWD=$(pwd)\n",sep='\n')
+  #cmd		<- paste(cmd,"echo $CWD\n",sep='')
+  #tmpdir	<- paste('pty','_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"),sep='')
+  #tmpdir	<- paste("$CWD/",tmpdir,sep='')
+  #cmd		<- paste(cmd,'mkdir -p "',tmpdir,'"\n',sep='')
   #	copy files to local tmp dir
-  cmd		<- paste(cmd,'cp "',file.input,'" "',tmpdir,'"\n',sep='')
-  cmd		<- paste(cmd,'cp "',file.patient,'" "',tmpdir,'"\n',sep='')
+  cmd		<- paste('\n','cp "',file.input,'" ','$TMPDIR','\n',sep='')
+  cmd		<- paste(cmd,'cp "',file.patient,'" ','$TMPDIR','\n',sep='')
+  cmd		<- paste(cmd,'cp "',alignments.file,'" ','$TMPDIR','\n',sep='')
   #	cd to tmp dir
-  cmd		<- paste(cmd, 'cd "',tmpdir,'"\n', sep='')
+  cmd		<- paste(cmd, 'cd ','$TMPDIR','\n', sep='')
   cmd		<- paste(cmd, prog.pty,' "',basename(file.input),'" ',sep='')
   cmd		<- paste(cmd, '--merging-threshold-a', merge.threshold,'--min-read-count',min.read.count,'--quality-trim-ends', quality.trim.ends, '--min-internal-quality',min.internal.quality,'--keep-output-together')
   if(!is.na(merge.paired.reads))
@@ -125,9 +129,9 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   if(nchar(window.automatic))
     cmd	<- paste(cmd,' --auto-window-params ', window.automatic,sep='')
   if(!nchar(window.automatic))
-    cmd	<- paste(cmd,' --windows ', paste(as.character(window.coord), collapse=','),sep='')
+    cmd	<- paste(cmd,' --windows ', '${WINDOW}',sep='')
   if(!is.na(alignments.file))
-    cmd	<- paste(cmd,' --alignment-of-other-refs "',alignments.file,'"',sep='')
+    cmd	<- paste(cmd,' --alignment-of-other-refs "',basename(alignments.file),'"',sep='')
   if(!is.na(no.trees))
     cmd	<- paste(cmd, no.trees)
   if(!is.na(num.bootstraps))
@@ -140,51 +144,56 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   if(is.na(no.trees))
     cmd	<- paste(cmd, '--x-raxml',prog.raxml)
   if(!is.na(default.coord)){
-    if(default.coord){
-      cmd	<- paste0(cmd, " --excision-coords \'823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069,", paste(seq(6615,6811,by=1),collapse = ','),  ",", paste(seq(7110,7636,by=1),collapse = ',') ,",7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886,", paste(seq(9400,9719,by=1),collapse=','),"\' ")
-    }else{
-      cmd	<- paste(cmd, " --excision-coords \'823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069,7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886\' ",sep='')
-    }
+    cmd	<- paste0(cmd, " --excision-coords ${EXCISION_COORDS} ")
+    cmd		<- paste(cmd, '\n')
+    #if(default.coord){
+    #  cmd	<- paste0(cmd, " --excision-coords \'823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069,", paste(seq(6615,6811,by=1),collapse = ','),  ",", paste(seq(7110,7636,by=1),collapse = ',') ,",7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886,", paste(seq(9400,9719,by=1),collapse=','),"\' ")
+    #}else{
+    #  cmd	<- paste(cmd, " --excision-coords \'823,824,825,892,893,894,907,908,909,1012,1013,1014,1156,1157,1158,1384,1385,1386,1444,1445,1446,1930,1931,1932,1957,1958,1959,2014,2015,2016,2023,2024,2025,2080,2081,2082,2134,2135,2136,2191,2192,2193,2280,2281,2282,2283,2284,2285,2298,2299,2300,2310,2311,2312,2316,2317,2318,2319,2320,2321,2322,2323,2324,2340,2341,2342,2346,2347,2348,2349,2350,2351,2352,2353,2354,2355,2356,2357,2358,2359,2360,2373,2374,2375,2379,2380,2381,2385,2386,2387,2388,2389,2390,2391,2392,2393,2394,2395,2396,2400,2401,2402,2409,2410,2411,2412,2413,2414,2415,2416,2417,2424,2425,2426,2430,2431,2432,2436,2437,2438,2439,2440,2441,2442,2443,2444,2457,2458,2459,2460,2461,2462,2463,2464,2465,2469,2470,2471,2472,2473,2474,2478,2479,2480,2481,2482,2483,2496,2497,2498,2499,2500,2501,2502,2503,2504,2505,2506,2507,2514,2515,2516,2517,2518,2519,2520,2521,2522,2526,2527,2528,2529,2530,2531,2535,2536,2537,2670,2671,2672,2679,2680,2681,2703,2704,2705,2709,2710,2711,2733,2734,2735,2742,2743,2744,2748,2749,2750,2751,2752,2753,2754,2755,2756,2757,2758,2759,2769,2770,2771,2772,2773,2774,2778,2779,2780,2811,2812,2813,2814,2815,2816,2817,2818,2819,2823,2824,2825,2841,2842,2843,2847,2848,2849,2850,2851,2852,2856,2857,2858,2865,2866,2867,2871,2872,2873,2892,2893,2894,2895,2896,2897,2901,2902,2903,2904,2905,2906,2952,2953,2954,2961,2962,2963,3000,3001,3002,3015,3016,3017,3018,3019,3020,3030,3031,3032,3042,3043,3044,3084,3085,3086,3090,3091,3092,3099,3100,3101,3111,3112,3113,3117,3118,3119,3135,3136,3137,3171,3172,3173,3177,3178,3179,3180,3181,3182,3189,3190,3191,3192,3193,3194,3204,3205,3206,3210,3211,3212,3222,3223,3224,3228,3229,3230,3237,3238,3239,3246,3247,3248,3249,3250,3251,3255,3256,3257,3261,3262,3263,3396,3397,3398,3501,3502,3503,3546,3547,3548,3705,3706,3707,4425,4426,4427,4449,4450,4451,4503,4504,4505,4518,4519,4520,4590,4591,4592,4641,4642,4643,4647,4648,4649,4656,4657,4658,4668,4669,4670,4671,4672,4673,4692,4693,4694,4722,4723,4724,4782,4783,4784,4974,4975,4976,5016,5017,5018,5067,5068,5069,7863,7864,7865,7866,7867,7868,7869,7870,7871,7872,7873,7874,7875,7876,7877,7881,7882,7883,7884,7885,7886\' ",sep='')
+    #}
   }
 
-  run.id	<- gsub('_input.csv','',basename(file.input))
+  #run.id	<- gsub('_input.csv','',basename(file.input))
   out.dir2<- out.dir
   if(!is.na(no.trees))
   {
-    out.dir2 <- file.path(out.dir,paste0(run.id,'_trees'))
-    cmd		<- paste(cmd,'\nmkdir -p ',out.dir2)
+    out.dir2 <- file.path(out.dir,paste0('${PREFIX}','_trees'))
+    cmd		<- paste(cmd, '\n')
+    cmd <- paste0(cmd, 'OUTPUT_DIR=',out.dir2)
+    cmd		<- paste(cmd, '\n')
+    cmd		<- paste(cmd,'\nmkdir -p ','$OUTPUT_DIR')
   }
 
   cmd		<- paste(cmd, '\n')
   #	process RAxML files
   if(is.na(no.trees) & (is.na(num.bootstraps) | (!is.na(num.bootstraps) & all.bootstrap.trees)))
-    cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./',run.id,'_}"\ndone\n',sep='')
+    cmd	<- paste(cmd, 'for file in RAxML_bestTree*.tree; do\n\tmv "$file" "${file//RAxML_bestTree\\./','${PREFIX}','_}"\ndone\n',sep='')
   if(is.na(no.trees) & !is.na(num.bootstraps) & !all.bootstrap.trees)
-    cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/',run.id,'_}"\ndone\n',sep='')
+    cmd	<- paste(cmd, 'for file in RAxML_bipartitions.MLtreeWbootstraps*.tree; do\n\tmv "$file" "${file//RAxML_bipartitions.MLtreeWbootstraps/','${PREFIX}','_}"\ndone\n',sep='')
   #cmd	<- paste(cmd, "for file in AlignedReads*.fasta; do\n\tsed 's/<unknown description>//' \"$file\" > \"$file\".sed\n\tmv \"$file\".sed \"$file\"\ndone\n",sep='')
 
   # check which windows are problematic problematic_windows.txt !
-  tmp <- paste0('\nif ! ls AlignedReads*.fasta  1> /dev/null 2>&1; then echo "', paste(as.character(window.coord), collapse=','), ', ${PBS_ARRAY_INDEX}, ${PBS_JOBNAME}, ${PBS_QUEUE}" >> problematic_windows.csv; fi\n')
+  tmp <- paste0('\nif ! ls AlignedReads*.fasta  1> /dev/null 2>&1; then echo "', '${WINDOW}, ${PBS_ARRAY_INDEX}, ${PBS_JOBNAME}, ${PBS_QUEUE}" >> problematic_windows.csv; fi\n')
   cmd <- paste0(cmd, tmp)
 
   if(!is.na(alignments.file) & !is.na(keep.overhangs))
   {
     cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tcat "$file" | awk \'{if (substr($0,1,4) == ">REF") censor=1; else if (substr($0,1,1) == ">") censor=0; if (censor==0) print $0}\' > NoRef$file\ndone\n', sep='')
     cmd	<- paste(cmd, 'for file in NoRefAlignedReads*.fasta; do\n\t',phsc.cmd.mafft.add(alignments.file,'"$file"','Ref"$file"', options='--keeplength --memsave --parttree --retree 1'),'\ndone\n',sep='')
-    cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/',run.id,'_}"\ndone\n',sep='')
+    cmd	<- paste(cmd, 'for file in RefNoRefAlignedReads*.fasta; do\n\t','mv "$file" "${file//RefNoRefAlignedReads/','${PREFIX}','_}"\ndone\n',sep='')
   }
 
   if(realignment==TRUE){
     # Copy intermediary results back to to direcotry
     cmd	<- paste0(cmd, 'echo Performing realignment...\n')
     cmd <- paste0(cmd, 'for file in AlignedReads*.fasta; do\n',
-                 '\t cp "$file" "', out.dir2, '/${file//AlignedReads/',run.id,'_}"\n',
+                 '\t cp "$file" "', '$OUTPUT_DIR', '/${file//AlignedReads/','${PREFIX}','_}"\n',
                  '\t', gsub('"','', prog.mafft) , ' "$file" > "${file//.fasta/_v2.fasta}" \n done \n')
   }
 
   if(is.na(alignments.file) || is.na(keep.overhangs))
   {
-    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/',run.id,'_}"\ndone\n',sep='')
+    cmd	<- paste(cmd, 'for file in AlignedReads*.fasta; do\n\tmv "$file" "${file//AlignedReads/','${PREFIX}','_}"\ndone\n',sep='')
   }
 
   #	move Duplicate Read Counts - only for backward compatibility
@@ -193,19 +202,15 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
   if(is.na(no.trees))
     cmd	<- paste(cmd, phsc.cmd.process.phyloscanner.output.in.directory(tmpdir, file.patient, pty.args), sep='\n')
   #
-  cmd		<- paste(cmd, '\ncp ',run.id,'* "',out.dir2,'"\n',sep='')
+  cmd		<- paste(cmd, '\ncp ','${PREFIX}','* ','$OUTPUT_DIR','\n',sep='')
   #	zip up everything else
-  tmp		<- ''
-  if(length(window.coord)==2)
-    tmp	<- window.coord[1]
   if(is.null(mem.save) || is.na(mem.save) || mem.save==0)
   {
-    cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "$file"\ndone\n',sep='')
-    cmd		<- paste(cmd, 'cp ',paste(run.id,'_otherstuff',tmp,'.zip',sep=''),' "',out.dir2,'"\n',sep='')
-    cmd		<- paste(cmd, 'cat problematic_windows.csv >> ', file.path(out.dir2, 'problematic_windows.csv'),'\n',sep='')
+    cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' "$file"\ndone\n',sep='')
+    cmd		<- paste(cmd, 'cp ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' ','$OUTPUT_DIR','\n',sep='')
+    cmd		<- paste(cmd, 'cat problematic_windows.csv >> ', file.path('$OUTPUT_DIR', 'problematic_windows.csv'),'\n',sep='')
   }
   #	clean up
-  cmd		<- paste(cmd,'cd $CWD\nrm -r "',tmpdir,'"\n',sep='')
   detach(pty.args)
   cmd
 }
