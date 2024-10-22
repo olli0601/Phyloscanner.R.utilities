@@ -690,13 +690,15 @@ if (split_jobs_by_n == 1 | nrow(pty.c) <= 1000 ){
 }else{
   # split djob in split_jobs_by_n data.tables
   # then perform the above individually
-  person_to_run <- rep(1:split_jobs_by_n, length.out = nrow(pty.c))
+  person_to_run <- rep(1:split_jobs_by_n, length.out = nrow(djob))
   submit_user_script <- NA_character_
 
   for (person in 1:split_jobs_by_n){
 
     # Subset to jobs for specific person
-    djob_person <- pty.c[person_to_run == person]
+
+    tmp <- djob[person_to_run == person]
+    djob_person <- pty.c[JOB_ID %in% tmp$JOB_ID,]
     djob_person[,CMD:= djob[1,CMD]]
     # Adapt the job specifications according to the person/runner
     djob_person <- adapt_jobspecs_to_runner(
