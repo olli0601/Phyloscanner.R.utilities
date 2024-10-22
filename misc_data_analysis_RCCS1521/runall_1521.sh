@@ -47,7 +47,7 @@ fi
 
 
 CLUSIZE='50'
-DATE='2024-10-21'
+DATE='2024-10-22'
 
 echo Check that DATE, CLUSIZE and out_dir_rel are well defined.
 
