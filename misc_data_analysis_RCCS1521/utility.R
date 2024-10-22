@@ -209,6 +209,7 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
     cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' "$file"\ndone\n',sep='')
     cmd		<- paste(cmd, 'cp ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' ','$OUTPUT_DIR','\n',sep='')
     cmd		<- paste(cmd, 'cat problematic_windows.csv >> ', file.path('$OUTPUT_DIR', 'problematic_windows.csv'),'\n',sep='')
+    cmd		<- paste(cmd, 'cp readali.job*.sh.o.* $OUTPUT_DIR','\n',sep='')
   }
   #	clean up
   detach(pty.args)
@@ -512,7 +513,7 @@ submit_jobs_from_djob <- function(DT, output_type="id", prefix = "readali"){
 }
 
 
-adapt_jobspecs_to_runner <- function(DT, DR, idx)
+adapt_jobspecs_to_runner <- function(DT, DR, DC, idx)
 {
     # DT usually a djob;
     # DR usually a data.table with the runner specs
@@ -528,6 +529,9 @@ adapt_jobspecs_to_runner <- function(DT, DR, idx)
         pattern = pat,
         replacement = rep)
     }
+    DT[,array_IDX:=paste0("#PBS -J ", 1 + 10000 * (JOB_ID - 1), "-", 10000 + 10000 * (JOB_ID - 1))]
+
+    DT[,CMD:=gsub('#PBS -J 1-1000',array_IDX,CMD)]
 
     return(DT)
 }
