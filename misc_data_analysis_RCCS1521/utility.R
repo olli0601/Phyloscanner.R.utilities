@@ -531,7 +531,7 @@ adapt_jobspecs_to_runner <- function(DT, DR, DC, idx)
     }
     DT[,array_IDX:=paste0("#PBS -J ", 1 + 10000 * (JOB_ID - 1), "-", 10000 + 10000 * (JOB_ID - 1))]
 
-    DT[,CMD:=gsub('#PBS -J 1-1000',array_IDX,CMD)]
+    DT[, CMD := Vectorize(gsub)('#PBS -J 1-10000', array_IDX, CMD)]
 
     return(DT)
 }

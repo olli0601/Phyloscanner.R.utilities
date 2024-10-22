@@ -706,6 +706,8 @@ if (split_jobs_by_n == 1 | nrow(pty.c) <= 1000 ){
       idx = person
     )
     # write the pbs files
+    djob_person <- djob_person[, .(CMD = CMD[1]), by = 'JOB_ID']
+
     pbs_file_person <- submit_jobs_from_djob(djob_person, output_type = "outfile")
     # Append the pbs files to the script that each user can submit to queue them
     submit_user_script <- append_pbs_file_person(
