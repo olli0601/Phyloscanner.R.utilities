@@ -209,7 +209,6 @@ phsc.cmd.phyloscanner.one<- function(pty.args, file.input, file.patient)
     cmd		<- paste(cmd, 'for file in *; do\n\tzip -ur9XTjq ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' "$file"\ndone\n',sep='')
     cmd		<- paste(cmd, 'cp ',paste('${PREFIX}','_otherstuff','${WINDOW_START}','.zip',sep=''),' ','$OUTPUT_DIR','\n',sep='')
     cmd		<- paste(cmd, 'cat problematic_windows.csv >> ', file.path('$OUTPUT_DIR', 'problematic_windows.csv'),'\n',sep='')
-    cmd		<- paste(cmd, 'cp readali.job*.sh.o.* $OUTPUT_DIR','\n',sep='')
   }
   #	clean up
   detach(pty.args)
