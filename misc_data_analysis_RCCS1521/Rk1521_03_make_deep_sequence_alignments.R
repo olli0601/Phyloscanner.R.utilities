@@ -463,6 +463,10 @@ if(file.exists(cmds.path))
     copy.mode = TRUE
   )
 
+  # change file permissions so all users can copy
+  files <- file.path(args$out.dir.data,basename(tmp))
+  Sys.chmod(files, "666", use_umask = FALSE)
+
   # Set consensus sequences.
   # (default consensus/reference for tsi and pair analyses if no arg is passed)
   # not really sure whether oneeach is needed anywhere
