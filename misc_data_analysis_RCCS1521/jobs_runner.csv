@@ -1,5 +1,5 @@
-index, user_name, path_software, path_phyloscanner
-1,sd121,/rds/general/user/sd121/home/Phyloscanner.R.utilities,/rds/general/user/sd121/home/phyloscanner
-2, ablenkin,/rds/general/user/ablenkin/home/git/Phyloscanner.R.utilities, /rds/general/user/ablenkin/home/git/phyloscanner
-3, xx4515, /rds/general/user/xx4515/home/Phyloscanner.R.utilities, /rds/general/user/xx4515/home/phyloscanner
-4, or105, /rds/general/user/or105/TODO/Phyloscanner.R.utilities, /rds/general/user/TODO/phyloscanner
+index, user_name, path_software, path_phyloscanner,env_name
+1,sd121,/rds/general/user/sd121/home/Phyloscanner.R.utilities,/rds/general/user/sd121/home/phyloscanner,phylo
+2, ablenkin,/rds/general/user/ablenkin/home/git/Phyloscanner.R.utilities, /rds/general/user/ablenkin/home/git/phyloscanner,phylostan
+3, xx4515, /rds/general/user/xx4515/home/Phyloscanner.R.utilities, /rds/general/user/xx4515/home/phyloscanner,phylo
+4, or105, /rds/general/user/or105/TODO/Phyloscanner.R.utilities, /rds/general/user/TODO/phyloscanner,phylo
