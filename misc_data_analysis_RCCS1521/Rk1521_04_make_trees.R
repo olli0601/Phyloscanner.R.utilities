@@ -74,7 +74,7 @@ option_list <- list(
   make_option(
     "--controller",
     type = "character",
-    default = NA_character_, 
+    default = NA_character_,
     help = "Path to sh script directing the full analysis",
     dest = 'controller'
   ),
@@ -117,11 +117,11 @@ args <-  parse_args(OptionParser(option_list = option_list))
 
 .check.alignments <- function(infiles)
 {
-  check <- list.files(args$out.dir.output, 
+  check <- list.files(args$out.dir.output,
                       pattern='InWindow_(.*)?[0-9]{2}.fasta$',
                       full.names=TRUE, recursive=TRUE)
   check <- gsub('.fasta', '_v2.fasta', check)
-  
+
   check <- round(mean(check %in% infiles)*100, 2)
   if( check == 100){
     cat('For each v1 align, there is a v2_align')
@@ -136,11 +136,11 @@ args <-  parse_args(OptionParser(option_list = option_list))
   dlogs[, F :=  gsub( paste0(args$out.dir.work,'/'), '', F)]
   tmp <- dlogs[ done == 0, .(conda, bam, algRds, kill, F)]
   tmp[ conda == 0]
-  
-  daligns <- tmp[algRds == 0] 
+
+  daligns <- tmp[algRds == 0]
   daligns[, SH := paste0(dirname(F), '.sh')]
   daligns[, PBS := as.numeric(   gsub('^.*\\.([0-9]+)$', '\\1', F) )]
-  
+
   cmd <- rewrite_job(daligns, double_walltime = TRUE)
   if(str_count(cmd, ';;') > 20)
   {
@@ -148,7 +148,7 @@ args <-  parse_args(OptionParser(option_list = option_list))
     time <- paste0(gsub(':', '', strsplit(date(), split = ' ')[[1]]), collapse='_')
     outfile <- paste("readali2", time, 'sh', sep='.')
     outfile <- file.path(args$out.dir.work, outfile)
-    
+
     # change to work directory and submit to queue
     cat(cmd, file = outfile)
     cmd <- paste0("cd ",dirname(outfile),'\n',"qsub ", outfile)
@@ -162,10 +162,10 @@ args <-  parse_args(OptionParser(option_list = option_list))
 {
   iqtree.pr <<- 'iqtree'
   iqtree.args <<- paste0('-m ',args$iqtree_method)
-  
+
   if(!is.null(args$iqtree_root))
     iqtree.args	<<- aste0(iqtree.args, ' -o ', args$iqtree_root)
-  
+
   if(!is.na(args$seed))
     iqtree.args	<<- paste0(iqtree.args, ' -seed ', args$seed)
 }
@@ -175,22 +175,18 @@ args <-  parse_args(OptionParser(option_list = option_list))
     hpc_array <- max(DT$CASE_ID)
     if(hpc_array <= 1)  hpc_array <- NA
   # Define PBS header for job scheduler
-  pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select, 
-                              hpc.nproc=hpc.nproc, hpc.mem=hpc.mem, 
+  pbshead <- cmd.hpcwrapper.cx1.ic.ac.uk(hpc.select=hpc.select,
+                              hpc.nproc=hpc.nproc, hpc.mem=hpc.mem,
                               hpc.walltime=hpc.walltime,
-                              hpc.q=hpc.q,  
-                              hpc.array = hpc_array, 
-                              hpc.load=paste0('\n module load anaconda3/personal \n source activate ',args$env_name)
+                              hpc.q=hpc.q,
+                              hpc.array = hpc_array,
+                              hpc.load=paste0('\nmodule load anaconda3/personal \nsource activate ',args$env_name)
                               )
-  
+
   if(is.na(hpc_array)){
     cmd <- DT$CMD
   }else{
-    job[, CASE_ID := 1:.N ]
-    cmd <- job[, list(CASE = paste0(CASE_ID, ')\n', CMD, ';;\n')), by = 'CASE_ID']
-    cmd <- cmd[, paste0('case $PBS_ARRAY_INDEX in\n',
-                             paste0(CASE, collapse = ''),
-                             'esac')]
+    cmd <- paste0(DT$CMD[1]) # just need the first generic command
   }
   cmd <- paste(pbshead, cmd, sep = '\n')
   cmd
@@ -223,13 +219,16 @@ if(0){
 # Source functions
 source(file.path(args$pkg.dir, "utility.R"))
 
-# 
+#
 # Chose PBS specifications according to PBS index
 # Idea is that this script can be run multiple times with increasing res reqs
 list(
-  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
-  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "40gb" ,hpc.q = NA, max.per.run=950),
-  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
+  #`1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=950),
+  #`2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "40gb" ,hpc.q = NA, max.per.run=950),
+  #`3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=475)
+  `1`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 4 , hpc.mem = "2gb" ,hpc.q = NA, max.per.run=10000),
+  `2`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 7, hpc.mem = "40gb" ,hpc.q = NA, max.per.run=10000),
+  `3`= list(hpc.select = 1, hpc.nproc = 1, hpc.walltime = 71, hpc.mem = "63gb",hpc.q = NA, max.per.run=5000)
 ) -> pbs_headers
 
 tmp <- pbs_headers[[args$walltime_idx]]
@@ -276,7 +275,7 @@ if(file.exists(cmds.path))
 
   # Load alignments:
   # and check how many did not run
-  infiles <- list.files(args$out.dir.output, 
+  infiles <- list.files(args$out.dir.output,
                         pattern='InWindow_(.*)?_v2.fasta$',
                         full.names=TRUE, recursive=TRUE)
 
@@ -285,34 +284,34 @@ if(file.exists(cmds.path))
   # If we haven't re-run alignments already, check if some are problematic:
   # This step should be taken care of automatically
   # if(cnd){.check.or.resubmit.incompleted.alignments()}
-  
+
   # Extract info from name
   .f <- function(reg, rep, x) as.integer(gsub(reg, rep, x))
-  
+
   infiles	<- data.table(FI=infiles)
   infiles[, FO:= gsub('.fasta$','',FI)]
   infiles[, PTY_RUN:= .f('^ptyr([0-9]+)_.*','\\1',basename(FI))]
   infiles[, W_FROM := .f( '^.*_([0-9]+)_to.*$' , '\\1', basename(FI) )]
   infiles[,EXCISED:=grepl('PositionsExcised',FI)]
-  
+
   # Delete the files without excision if the files with excision exist
   setkey(infiles, PTY_RUN, W_FROM)
   tmp <- infiles[,list(NUM=length(EXCISED)),by=c('PTY_RUN', 'W_FROM')]
   infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
   tmp <- infiles[(EXCISED==F & NUM==2),]
-  file.remove(tmp$FI)
-  
+  #file.remove(tmp$FI)
+
   infiles <- infiles[!(EXCISED==F & NUM==2),]
   infiles[,  `:=` (NUM=NULL, EXCISED=NULL) ]
-  
+
   if (args$dryrun){
      cat("Dry run: only running for first 2 ptyr\n")
      infiles <- subset(infiles, PTY_RUN %in% c(1,2))
   }
-  
+
   # check tree completed: treefiles.
   infiles[,FO_NAME:=paste0(FO,'.treefile')]
-  
+
   saveRDS(infiles, cmds.path)
 }
 
@@ -325,7 +324,7 @@ if( nrow(infiles) == 0 )
 {
   # ISN'T THIS BEAUTIFUL?
   qsub.next.step(file=args$controller,
-                 next_step='atr', 
+                 next_step='atr',
                  res=1,
                  redo=0
   )
@@ -336,12 +335,25 @@ if( nrow(infiles) == 0 )
 # Write command for each alignment
 djob <- infiles[, list(CMD=cmd.iqtree(infile.fasta=FI, outfile=FO, pr=iqtree.pr, pr.args=iqtree.args)), by=c('PTY_RUN','W_FROM')]
 
-# put 2 cmds per array job (not sure why XX did this but maybe some are really short)
-# at least permute though (so that allocation of long ones is random)
-djob <- djob[sample(1:.N),  ]
-djob[, ID:=ceiling(seq_len(.N)/2)]
-djob<- djob[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
-djob[,ID:=NULL]
+# save input_list for incomplete jobs
+ephemeral_dir <- Sys.getenv("EPHEMERAL")
+file_name <- "input_list_trees.txt"
+#file_path <- file.path(ephemeral_dir, file_name)
+file_path <- file.path(args$out.dir.work, file_name)
+input_list <- infiles[, c('PTY_RUN','W_FROM','FI')]
+input_list[, PTY_RUN:= paste0('ptyr', PTY_RUN)]
+input_list[, WINDOW:= paste(W_FROM,W_FROM + args$window_size - 1, sep=',')]
+input_list <- input_list[, c('PTY_RUN','WINDOW','FI')]
+fwrite(input_list, file_path, sep = " ", col.names=FALSE)
+cat("File saved to:", file_path, "\n")
+
+if(0){ # old script before new array job architecture
+  # put 2 cmds per array job (not sure why XX did this but maybe some are really short)
+  # at least permute though (so that allocation of long ones is random)
+  djob <- djob[sample(1:.N),  ]
+  djob[, ID:=ceiling(seq_len(.N)/2)]
+  djob< - djob[, list(CMD=paste(CMD, collapse='\n',sep='')), by='ID']
+}
 
 # group into jobs
 n_jobs <- ceiling( nrow(djob) / max.per.run)
@@ -365,9 +377,9 @@ if ( split_jobs_by_n == 1 | nrow(djob) <= 1000 )
 
     # qsub alignment step again, to check whether everything has run...
     qsub.next.step(file=args$controller,
-        ids=ids, 
-        next_step='btr', 
-        res=args$walltime_idx + 1, 
+        ids=ids,
+        next_step='btr',
+        res=args$walltime_idx + 1,
         redo=1
     )
 }else{

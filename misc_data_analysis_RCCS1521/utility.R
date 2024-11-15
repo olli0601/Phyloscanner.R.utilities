@@ -224,30 +224,43 @@ cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTR
   cmd<- paste("#######################################################
   # start: IQTREE
   #######################################################\n",sep='')
-  cmd<- paste0(cmd,"CWD=$(pwd)\n")
-  cmd<- paste0(cmd,"echo $CWD\n")
-  tmpdir.prefix	<- paste0('rx_',format(Sys.time(),"%y-%m-%d-%H-%M-%S"))
-  tmpdir			<- paste0("$CWD/",tmpdir.prefix)
-  tmp.in			<- basename(infile.fasta)
-  tmp.out			<- basename(outfile)
-  cmd<- paste0(cmd,"mkdir -p ",tmpdir,'\n')
-  cmd<- paste0(cmd,'cp "',infile.fasta,'" ',file.path(tmpdir,tmp.in),'\n')
-  cmd<- paste0(cmd,'cd "',tmpdir,'"\n')
+  out.dir    <-  dirname(dirname(infile.fasta))
+  work.dir  <- gsub('output','work',out.dir)
+  cmd <- paste(
+    paste0('\nLIST_NAME=',work.dir,'/input_list_trees.txt'),
+    'INPUTS=$(head -n $PBS_ARRAY_INDEX $LIST_NAME | tail -1)',
+    'PREFIX=$(awk \'{print $1}\' <<< "$INPUTS")',
+    'WINDOW=$(awk \'{print $2}\' <<< "$INPUTS")',
+    'WINDOW_START=$(echo $WINDOWS | awk -F\',\' \'{print $1}\')',
+    'WINDOW_END=$(echo $WINDOWS | awk -F\',\' \'{print $2}\')',
+    'INPUT_FILE=$(awk \'{print $3}\' <<< "$INPUTS")',
+    'INPUT_FILE_BASE=$(basename "${INPUT_FILE}" .fasta)',
+    '\n',
+    'echo "PBS Job Id PBS_JOBID is ${PBS_JOBID}"',
+    'echo "PBS job array index PBS_ARRAY_INDEX value is ${PBS_ARRAY_INDEX}"',
+    'echo "PTYR is ${PREFIX}"',
+    'echo "WINDOW ${WINDOW}"',
+    'echo "INPUT_FILE_BASE ${INPUT_FILE_BASE}"',
+    '\n',
+    sep = "\n"
+  )
+  cmd<- paste0(cmd,'cp "',out.dir, '${PREFIX}_trees/${INPUT_FILE}','" ','$TMPDIR','\n')
+  cmd<- paste0(cmd,'cd "','$TMPDIR','"\n')
   # cmd<- paste0(cmd, 'chmod a+r ', infile.fasta,' \n')
-  cmd<- paste0(cmd, pr,' ',pr.args,' -s ', tmp.in, ' -pre ',tmp.out,'\n')
-  cmd<- paste0(cmd, "rm ", tmp.in,'\n')
-  cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.iqtree'),' "',dirname(outfile),'"\n')
-  cmd	<- paste0(cmd, 'cp ',paste0(basename(outfile),'.treefile'),' "',dirname(outfile),'"\n')
-  cmd<- paste0(cmd, 'for file in *; do\n\tzip -ur9XTjq ',basename(outfile),'.zip "$file"\ndone\n')
-  cmd<- paste0(cmd, 'cp ',basename(outfile),'.zip "',dirname(outfile),'"\n')
-  cmd<- paste0(cmd,'cd $CWD\n')
-  cmd<- paste0(cmd, "rm -r ", tmpdir,'\n')
+  cmd<- paste0(cmd, pr,' ',pr.args,' -s ', '${INPUT_FILE}', ' -pre ','${INPUT_FILE_BASE}','\n')
+  out.dir2 <- file.path(out.dir,paste0('${PREFIX}','_trees'))
+  cmd		<- paste(cmd, '\n')
+  cmd <- paste0(cmd, 'OUTPUT_DIR=',out.dir2)
+  cmd<- paste0(cmd, "rm ", '${INPUT_FILE}','\n')
+  cmd	<- paste0(cmd, 'cp ',paste0('${INPUT_FILE_BASE}','.iqtree'),' "','$OUTPUT_DIR','"\n')
+  cmd	<- paste0(cmd, 'cp ',paste0('${INPUT_FILE_BASE}','.treefile'),' "','$OUTPUT_DIR','"\n')
+  cmd<- paste0(cmd, 'for file in *; do\n\tzip -ur9XTjq ','${INPUT_FILE_BASE}','.zip "$file"\ndone\n')
+  cmd<- paste0(cmd, 'cp ','${INPUT_FILE_BASE}','.zip "','$OUTPUT_DIR','"\n')
   cmd<- paste0(cmd, "#######################################################
   # end: IQTREE
   #######################################################\n")
   cmd
 }
-
 
 #' @export
 cmd.hpcwrapper.cx1.ic.ac.uk<- function(hpc.select=1, hpc.walltime=24, hpc.mem=HPC.MEM, hpc.nproc=1, hpc.q=NA, hpc.load=HPC.CX1.IMPERIAL.LOAD, hpc.array=NA)
@@ -505,23 +518,25 @@ submit_jobs_from_djob <- function(DT, output_type="id", prefix = "readali"){
   pbs_files <- DT[, list(
         ID=.store.and.submit(.SD, prefix=prefix, output_type = output_type)
     ), by=JOB_ID,
-    .SDcols=names(djob)]
+    .SDcols=names(DT)]
   pbs_files <- as.character(pbs_files$ID)
   cat('Submitted job ids are:', pbs_files, '...\n')
   return(pbs_files)
 }
 
 
-adapt_jobspecs_to_runner <- function(DT, DR, DC, idx)
+adapt_jobspecs_to_runner <- function(DT, DR, idx)
 {
     # DT usually a djob;
     # DR usually a data.table with the runner specs
     # idx is the index of the runner for which to adapt the job specs
 
-    values_to_replace <- names(DR)[names(DR) %like% 'path']
+    idx_user <- DR[ user_name==Sys.info()['user'],'index']
+    user_env <- DR[index==idx_user$index, 'env_name']
+    values_to_replace <- names(DR)[names(DR) %like% "path|env"]
 
     for (name in values_to_replace){
-      pat <- DR[index == 2,   get(name)] # index should reflect ordering in runners.csv (person who submits runall.sh)
+      pat <- DR[index == 2,   get(name)] # WARNING! index should reflect ordering in runners.csv (person who submits runall.sh)
       rep <- DR[index == idx, get(name)]
       DT$CMD <- gsub(
         x=DT$CMD,
