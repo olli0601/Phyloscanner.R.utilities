@@ -613,11 +613,13 @@ pty.c[, cat(sum(!is.na(OUT1)),
 pty.c <- pty.c[ is.na(OUT2)]
 pty.c <- .remove_problematic_windows(pty.c)
 
-# if intermediary output is there, change CMD.
-any_existing_v1 <- pty.c[ !is.na(OUT1), .N > 0]
-if( any_existing_v1)
-{
-  pty.c[ ! is.na(OUT1) , .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
+if(0){ # Note: cannot skip intermediary step for new batch jobs (single command for all windows). Must run all steps again.
+  # if intermediary output is there, change CMD.
+  any_existing_v1 <- pty.c[ !is.na(OUT1), .N > 0]
+  if( any_existing_v1)
+  {
+    pty.c[ ! is.na(OUT1) , .modify_cmd_for_existing_v1(cmd=CMD, outdir=OUTDIR, out1=OUT1)  , by='OUT1' ]
+  }
 }
 
 #
@@ -681,7 +683,7 @@ if(!is.na(args$runners))
   split_jobs_by_n <- nrow(drunners)
 }
 
-if (split_jobs_by_n == 1 | nrow(pty.c) <= 1000 ){
+if (split_jobs_by_n == 1 & nrow(pty.c) <= 10000 ){
   ids <- submit_jobs_from_djob(djob, output_type = "id")
   # qsub alignment step again,
   # to check whether everything has run...
