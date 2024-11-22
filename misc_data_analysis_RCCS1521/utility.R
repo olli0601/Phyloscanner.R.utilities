@@ -244,13 +244,13 @@ cmd.iqtree<- function(infile.fasta, outfile=infile.fasta, pr=PR, pr.args='-m GTR
     '\n',
     sep = "\n"
   )
-  cmd<- paste0(cmd,'cp "',out.dir, '${PREFIX}_trees/${INPUT_FILE}','" ','$TMPDIR','\n')
+  cmd<- paste0(cmd,'cp "','${INPUT_FILE}','" ','$TMPDIR','\n')
   cmd<- paste0(cmd,'cd "','$TMPDIR','"\n')
   # cmd<- paste0(cmd, 'chmod a+r ', infile.fasta,' \n')
   cmd<- paste0(cmd, pr,' ',pr.args,' -s ', '${INPUT_FILE}', ' -pre ','${INPUT_FILE_BASE}','\n')
   out.dir2 <- file.path(out.dir,paste0('${PREFIX}','_trees'))
   cmd		<- paste(cmd, '\n')
-  cmd <- paste0(cmd, 'OUTPUT_DIR=',out.dir2)
+  cmd <- paste0(cmd, 'OUTPUT_DIR=',out.dir2,'\n')
   cmd<- paste0(cmd, "rm ", '${INPUT_FILE}','\n')
   cmd	<- paste0(cmd, 'cp ',paste0('${INPUT_FILE_BASE}','.iqtree'),' "','$OUTPUT_DIR','"\n')
   cmd	<- paste0(cmd, 'cp ',paste0('${INPUT_FILE_BASE}','.treefile'),' "','$OUTPUT_DIR','"\n')
