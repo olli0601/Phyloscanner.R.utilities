@@ -268,7 +268,7 @@ cmds.path <- file.path(args$out.dir.work, 'trees_commands.rds')
 if(file.exists(cmds.path))
 {
   # Load commands
-  move.logs(args$out.dir.work)
+  #move.logs(args$out.dir.work)
   infiles <- readRDS(cmds.path)
 
 }else{
@@ -299,7 +299,7 @@ if(file.exists(cmds.path))
   tmp <- infiles[,list(NUM=length(EXCISED)),by=c('PTY_RUN', 'W_FROM')]
   infiles <- merge(infiles, tmp, by=c('PTY_RUN', 'W_FROM'))
   tmp <- infiles[(EXCISED==F & NUM==2),]
-  #file.remove(tmp$FI)
+  file.remove(tmp$FI)
 
   infiles <- infiles[!(EXCISED==F & NUM==2),]
   infiles[,  `:=` (NUM=NULL, EXCISED=NULL) ]
@@ -319,6 +319,13 @@ infiles[,FO_EXIST:=file.exists(FO_NAME)]
 infiles[, mean(FO_EXIST)]
 infiles[, sum(!FO_EXIST)]
 infiles <- infiles[FO_EXIST==FALSE]
+
+# check if any excised alignments have already been processed
+infiles[, FO_NAME_E:= gsub('InWindow','InWindow_PositionsExcised',FO_NAME)]
+infiles[,FO_E_EXIST:=file.exists(FO_NAME_E)]
+infiles[, mean(FO_E_EXIST)]
+infiles[, sum(!FO_E_EXIST)]
+infiles <- infiles[FO_E_EXIST==FALSE]
 
 if( nrow(infiles) == 0 )
 {
@@ -371,7 +378,7 @@ if(!is.na(args$runners))
   split_jobs_by_n <- nrow(drunners)
 }
 
-if ( split_jobs_by_n == 1 | nrow(djob) <= 1000 )
+if ( split_jobs_by_n == 1 | nrow(djob) <= 10000 )
 {
     ids <- submit_jobs_from_djob(djob2, output_type = "id", prefix = "srx")
 
@@ -393,6 +400,7 @@ if ( split_jobs_by_n == 1 | nrow(djob) <= 1000 )
 
   for (person in 1:split_jobs_by_n){
 
+    #cat(paste0('person = ',person,'\n'))
     # Subset to jobs for specific person
     djob_person <- djob2[person_to_run == person]
     # Adapt the specifications according to the person/runner

@@ -513,6 +513,9 @@ if(file.exists(cmds.path))
   tmp <- pty.runs[, uniqueN(SAMPLE_ID) == .N, by='PTY_RUN' ]
   stopifnot( all(tmp$V1) )
 
+  cat("Remove any rows with no sample id... \n")
+  pty.runs <- pty.runs[SAMPLE_ID !='PANGEA2_RCCS/NA',]
+
   cat("Load backgrounds and extract HXB2 for pairwise MSA... \n")
   consensus_seq <- seqinr::read.fasta(infile.consensus)
   consensus_seq_names <- names(consensus_seq)
